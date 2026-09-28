@@ -3,7 +3,7 @@ name: CLI installation
 on:
   push:
     branches: [main, 'codex/**']
-    paths: ['src/**', 'scripts/**', 'test/**', 'package.json', 'bun.lock', 'tsconfig.json', 'hapi', '.github/workflows/cli-install.yml']
+    paths: ['src/**', 'scripts/**', 'test/**', 'package.json', 'bun.lock', '.npmrc', 'tsconfig.json', 'hapi', '.github/workflows/cli-install.yml']
   workflow_dispatch:
 
 permissions:
