@@ -48,7 +48,7 @@ Runweft 查询返回 HAPI session、指定 localId 的消费/原生事实、当�
 
 ## 兼容和配置
 
-HAPI Hub 和会话分别声明执行契约版本 1；Runweft 调用前核对能力，缺少时提示更新配套 Hub/Runner。新增字段不要求其他 runtime 自动具备本能力；本轮只声明和验证内置 Codex/Claude Code。
+HAPI Hub 先声明 `spawnReceipts: 1` 管理能力；T2 完成后再与会话分别声明执行契约版本 1，不能提前声称具备原生事实与定向控制；Runweft 调用前核对能力，缺少时提示更新配套 Hub/Runner。新增字段不要求其他 runtime 自动具备本能力；本轮只声明和验证内置 Codex/Claude Code。
 
 现有 HAPI 环境与原生配置继承路径保持不变，按 runtime 向宿主适配提供身份事实：Claude wrapper 导出 `HAPI_SESSION_ID`；Codex 共享 engine 清除全局该变量，仅在 thread shell 和 HAPI MCP bridge 中注入。原生 sessionId 与 resume 返回的最新 HAPI sessionId 都需记录，不能承诺全局 Runweft MCP 已能取得它。首次 MCP 工具发现、原生子会话识别和角色工具分流由下一 Change 验证；不预先增加通用 env/MCP 注入参数。
 
@@ -66,6 +66,6 @@ HAPI Hub 和会话分别声明执行契约版本 1；Runweft 调用前核对能�
 - 专用 HAPI home/cwd 下两种真实 runtime 各完成启动、localId 输入、原生终态、archive、原生 resume；通过现有认证环境执行，不复制或改写模型凭据。审批与中断使用可控的专用任务，不对用户代码执行操作。
 - 传输故障通过仅作用于测试服务的代理注入；核对真实服务只有一次创建/输入，不以测试替身替代正常执行证据。
 - 配套编译程序完成同一调用验证；Runweft 类型检查和原有服务测试不能因新增封装退化。macOS 模型组合归最终集成，真实远端缺口单列。
-- HAPI 数据变更仅增加启动回执；备份沿既有部署规则。异常时保留已产生事实和关联，不清库修复。回退应用版本不自动删除原生会话或回执。
+- HAPI 数据变更仅增加启动回执；备份沿既有部署规则。异常时保留已产生事实和关联，不清库修复。HAPI schema 27 增加回执表，旧程序拒绝较新 schema；回退旧版本需恢复升级前的停服备份，不自动删表、清理会话或回执。
 
 尚无必须向用户索取的外部契约。各错误分支、观察事件的具体字段与消息分页实现可在上述约束内完成，不扩展成通用事件框架。

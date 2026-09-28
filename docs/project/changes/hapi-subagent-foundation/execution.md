@@ -17,5 +17,8 @@
 
 ## T1 可重查的启动与调用入口
 
-- 进展：评审与基线证据已完成，正在实施持久回执与类型化调用。
-- 验证：实现检查尚未运行；基线和故障复现见 [Research](research.md#故障复现与基线检查)。
+- 结果：HAPI 的可选 requestId 在 namespace 内持久去重；回执与原有预分配 session 原子写入，之后只调用一次既有 Runner。并发、参数冲突、模糊错误、删除 session 和重启均可重查，schema 27 与回退要求已说明。`spawnReceipts: 1` 仅声明已实现的管理能力。
+- Runweft：新增内部 ExecutionClient 的 start/lookup；必须提供调用方 requestId，只支持 Codex/Claude，丢响应后查原 ID；未找到或不可达返回 unknown，不自动再 POST。HTTP 错误保留状态与服务 code。
+- 验证：Runweft typecheck、17 项测试通过；HAPI typecheck 通过；`bun run gen:fixtures` 无漂移；全量 `bun run test` 退出 0（CLI 2,946、Hub 1,377、Web 3,249、shared 323、relay 118 通过，原有 CLI 11/Hub 3 跳过）。专门的回执/原预分配/机器路由/迁移合计 48 项通过。全量日志在 `.dev-smoke/hapi-foundation-t1/`，测试临时目录位于 Git 外并已清理。
+- 真实 Runner：05:10–05:11（Asia/Shanghai），编译后的修改版 HAPI、既有 Runweft 服务和新 ExecutionClient 在专用 home/cwd 验证两 runtime 的并发同 ID、代理断开响应后的重查、archive 退出、删除后不重启、Hub 重启后不重启；全部通过，无 prompt 投递，不当作原生终态验收。证据 `.dev-smoke/hapi-spawn-mKfoYK/evidence.json`。
+- Commit：HAPI `hapi-subagent-foundation T1: persist idempotent machine spawn receipts`；Runweft `hapi-subagent-foundation T1: expose recoverable HAPI startup calls`。

@@ -100,12 +100,25 @@ export async function stopChild(child: ChildProcess) {
     });
 }
 
+export class HapiRequestError extends RunweftError {
+    constructor(readonly status: number, code: string, message: string) {
+        super(code, message, '运行 runweft doctor 检查当前连接。');
+    }
+}
+
 export async function fetchJson(url: string, options: RequestInit = {}): Promise<any> {
     let response: Response;
     try { response = await fetch(url, { ...options, signal: options.signal ?? AbortSignal.timeout(10_000) }); }
     catch { throw new RunweftError('connection_failed', '无法连接服务。', '检查目标地址，或运行 runweft status / runweft doctor。'); }
-    if (!response.ok) throw new RunweftError(response.status === 401 || response.status === 403 ? 'authentication_failed' : 'request_failed', `服务请求失败（HTTP ${response.status}）。`, '运行 runweft doctor 检查当前连接。');
-    return response.json();
+    if (!response.ok) {
+        const body = await response.json().catch(() => null) as { code?: unknown; error?: unknown; message?: unknown } | null;
+        const code = typeof body?.code === 'string' ? body.code
+            : response.status === 401 || response.status === 403 ? 'authentication_failed' : 'request_failed';
+        const detail = typeof body?.error === 'string' ? body.error : typeof body?.message === 'string' ? body.message : undefined;
+        throw new HapiRequestError(response.status, code, detail ?? `服务请求失败（HTTP ${response.status}）。`);
+    }
+    try { return await response.json(); }
+    catch { throw new RunweftError('invalid_hapi_response', 'HAPI 返回了无法解析的响应。'); }
 }
 
 export class HapiClient {
