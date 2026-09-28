@@ -38,3 +38,27 @@
 - 修正：真实 fork/审批验证暴露 execution 事件缺少 consumed 回执、Claude 工具拒绝提前退出未关闭原生进程；复用已有确认及 cleanup 路径修复。仅清理确认后记录受控 interrupted；无法确认保留 unknown，不重新投递。
 - 验证：Runweft typecheck、24 项测试通过；HAPI typecheck 与 gen:fixtures 通过；全量 bun run test 退出 0（CLI 2,959、Hub 1,380、Web 3,249、shared 323、relay 118，通过数不含原有 CLI 11/Hub 3 跳过）。日志 `.dev-smoke/hapi-foundation-t3/` 及同名前缀文件；专用测试进程和临时目录已清理。尚未完成配套固定版本的 T4 整体验收。
 - Commit：HAPI `hapi-subagent-foundation T3: verify native resume and close controlled executions`；Runweft `hapi-subagent-foundation T3: expose stop resume and native permissions`。
+
+
+## T4 配套构建与整体验收
+
+- 结果：新增显式运行的 `scripts/smoke-execution.ts`，覆盖真实 Codex/Claude 执行与故障注入，不加入无凭据单元测试。使用已授权模型配置、独立 Runweft/HAPI home 和项目目录，审批用原生 default；未修改用户配置或凭据。
+- 配套构建：HAPI revision `cb2810dc09b0eeb831f4ed81930a506397992967`（0.30.7），`bun run build:hapi` 与 `bun run build` 成功。Linux x64 HAPI SHA-256 `5a466f30901e40c9770655c3c6bea8c28d1dcc60e8b7bc2603f6080fca7c3a9d`，Runweft SHA-256 `c6cdd3949e580362bae1fa874b96d2470b1066845fd8b6e6ab89348b71a45130`；配套 manifest 与实际二进制一致。证据 `.dev-smoke/hapi-foundation-t4-build-evidence.json`。
+- 编译验收：将验证脚本独立编译后调用 `dist/runweft`/`dist/hapi`，06:08–06:10（Asia/Shanghai）两种 runtime 全部通过。并发同 ID 与丢启动回执只保留一个 session；丢输入回执保留 unknown，随后读取同一执行的原生完成；项目说明与 skill 生效；迟到中断拒绝、当前中断成功；真实允许/拒绝影响文件副作用；停止后原生历史续接；Codex 共享 root 的兄弟仍可执行。证据 `.dev-smoke/execution-sZUDB8/evidence.json`，success=true、cleanupErrors 为空，按专用 HAPI_HOME 核对无残留进程。
+- 服务回归：`node scripts/smoke-service.mjs dist/runweft` 全部通过，包括本地/独立 Hub 客户端、HTTP/SSE/WebSocket、身份与数据保留、前台退出；证据 `.dev-smoke/service-nxExVm/evidence.json`。这是本机部署协议验证，不冒充真实远端协作。
+- 检查：Runweft typecheck 与 24 项测试通过；HAPI 源码保持 T3 全量检查通过后的版本，无需因文档/验证脚本再次重复全量测试。Change 结构、文档链接及 diff 检查通过。
+- 验收方式：沿用用户逐 Change 自动本地验收授权，主 agent 核对下表后同步 Specs 并归档；不要求用户再次手工验收。
+- Commit：`hapi-subagent-foundation T4: accept the pinned native execution contract`。
+
+| Requirement 验收项 | 实现与证据 |
+| --- | --- |
+| 原生输入、终态与结果 | T2 实际完成/失败与 T4 编译版本分别验证 Codex/Claude；保留原生 session/turn 或消息 UUID，REST 成功不等于完成 |
+| 丢回执与不重复执行 | T1 持久回执验证并发、重启和删除；T4 代理丢弃已成功的启动/输入响应并重查；T2 可控 Claude 模糊异常由三次调用降为一次 |
+| 审批、中断与恢复 | T4 真实允许/拒绝文件副作用、旧目标中断拒绝、当前中断与原生历史续接；T3 单元测试覆盖返回实际新旧 HAPI 身份 |
+| 不支持、认证和离线 | T1/T3 类型化错误与用例保留 HTTP/code；能力缺失明确拒绝，认证/离线/IO 不转为 session 缺失，无 runtime 切换分支 |
+| 用户配置与专用环境 | T3/T4 用专用 home/cwd 与随机项目说明/skill 标记，继承已有原生模型认证和配置；未写入用户客户端设置 |
+| 单执行关闭与续接 | T3/T4 记录宿主 PID 退出；Codex 共享进程只关闭一个 root 后兄弟仍执行；原生 session 相同且能复述历史标记 |
+| 复用内置执行基础 | 启动、配置、会话、队列、审批、archive/resume 均调用 HAPI；Runweft 只有内部调用封装，未建第二套执行器或会话库 |
+| 缺口增补有证据 | Research 保留启动去重/原生事实/定向中断、Claude 模糊重投、原生缺失诊断、事件消费与受控关闭的复现；各项仅在 HAPI 原路径增补，未照搬旧工程 |
+
+本 Change 的执行契约已满足验收。首次 MCP 身份、动态工具列表与父子关系仍归宿主适配；工作区、附件、真实远端与最终多平台组合按后续 Change 验收，不宣称完整产品交付。

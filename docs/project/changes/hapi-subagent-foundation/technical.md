@@ -69,3 +69,10 @@ HAPI Hub 先声明 `spawnReceipts: 1` 管理能力；T2 完成后再与会话分
 - HAPI 数据变更仅增加启动回执；备份沿既有部署规则。异常时保留已产生事实和关联，不清库修复。HAPI schema 27 增加回执表，旧程序拒绝较新 schema；回退旧版本需恢复升级前的停服备份，不自动删表、清理会话或回执。
 
 尚无必须向用户索取的外部契约。各错误分支、观察事件的具体字段与消息分页实现可在上述约束内完成，不扩展成通用事件框架。
+
+
+## 可重复的执行验收
+
+先运行 `bun run build:hapi` 与 `bun run build`，再显式运行 `bun run test:execution -- dist/runweft`。需要已授权的 Codex/Claude 登录与模型访问；若使用兼容 Claude 可执行程序，可通过原有 `HAPI_CLAUDE_PATH` 指定。脚本建立 `.dev-smoke/execution-*/` 专用服务及项目，使用原生 default 权限，不写全局配置，结束后关闭所建会话与服务并保留白名单证据。
+
+无需 Bun 的验收调用方也可先将脚本编译：`bun build scripts/smoke-execution.ts --compile --outfile .dev-smoke/smoke-execution`，再运行 `.dev-smoke/smoke-execution dist/runweft`。该验证会执行真实模型请求与限定到测试目录的文件操作，不属于默认单元测试。
