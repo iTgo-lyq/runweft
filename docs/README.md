@@ -4,6 +4,8 @@
 
 实现以当前 HAPI 为第一依据，Runweft 尽量只做上层流程封装与 MCP；旧工程技术方案不直接沿用。
 
+当前整体方案已由 iclaude 辅助评审，主 agent 的[复核与采纳记录](project/architecture-review.md)保留事实修正和前置验证安排。
+
 最终目标是交付完整可运行版本，不以 MVP 或演示链路结项。当前十一个领域 Change 加一个集成与发布 Change，按[六阶段交付结构](project/delivery-structure.md)推进；完整交付标准与尚需落实的技术架构见[项目架构](project/architecture.md#完整版本的交付目标)。
 
 原初始 Change 已按独立交付结果拆分；各 Requirement 内声明前置能力与验收边界，已确认结论继续有效：
