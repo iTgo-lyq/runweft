@@ -5,6 +5,7 @@ import pkg from '../package.json';
 import { configPath, dataPaths, initializeConfig, loadConfig, setConfig, type ResolvedConfig } from './config';
 import { errorDetails } from './errors';
 import { bindWorkspace, listWorkspaces } from './workspaces';
+import { addServiceCommands } from './service-commands';
 
 export const VERSION = pkg.version;
 
@@ -14,6 +15,7 @@ export function createProgram() {
         .version(VERSION)
         .option('--home <directory>', '配置与数据根目录（默认 ~/.runweft）')
         .option('--json', '输出结构化 JSON')
+        .enablePositionalOptions()
         .showHelpAfterError()
         .exitOverride();
     function context(): ResolvedConfig { return loadConfig(program.opts().home); }
@@ -26,7 +28,7 @@ export function createProgram() {
         .action(options => {
             const result = initializeConfig(program.opts().home, options);
             output({ created: result.created, file: result.file, mode: result.config.mode },
-                `${result.created ? '已创建' : '保留已有'}配置：${result.file}\n模式：${result.config.mode}\n查看生效配置：runweft config show`);
+                `${result.created ? '已创建' : '保留已有'}配置：${result.file}\n模式：${result.config.mode}\n${result.config.mode === 'hub' ? '下一步：runweft auth login，然后 runweft start。' : '下一步：runweft start，然后 runweft open。'}\n查看生效配置：runweft config show`);
         });
 
     const config = program.command('config').description('查看、检查或编辑全局配置');
@@ -65,7 +67,8 @@ export function createProgram() {
         const items = listWorkspaces(context());
         output({ workspaces: items }, items.length ? items.map(w => `${w.id}  ${w.path}`).join('\n') : '尚未绑定工作区。进入项目目录后运行 runweft workspace bind。');
     });
-    program.addHelpText('after', '\n开始使用：\n  runweft init\n  runweft config show\n  runweft workspace bind\n\n持久数据默认位于 ~/.runweft；使用 --home 可选择其他位置。');
+    addServiceCommands(program, context, output);
+    program.addHelpText('after', '\n开始使用：\n  runweft start\n  runweft open\n\n编辑配置：runweft init，然后 runweft config show。\n持久数据默认位于 ~/.runweft；使用 --home 可选择其他位置。');
     return program;
 }
 

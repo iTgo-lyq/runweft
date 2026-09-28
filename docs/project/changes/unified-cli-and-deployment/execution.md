@@ -13,3 +13,11 @@
 - 验证：`bun run typecheck`、`bun run test`（9 项 / 41 断言）、`bun run build` 通过。编译后的程序在专用 home、PATH 不含 Bun 的情况下完成 init、幂等 init、config check、paths 和跨进程稳定 workspaceId 验证。
 - 修正：初次使用 `bun test test` 被 Bun 当成名称过滤而包含 HAPI 测试，已中止并改为 `bun test ./test`；不把该误跑结果计为验证。HAPI 工作树保持干净。
 - Commit：`unified-cli-and-deployment T1: add configuration and workspace CLI`
+
+## T2 复用 HAPI 的双模式服务与认证
+
+- 结果：统一程序托管原有 Hub/Runner，提供本地和 Hub 客户端启停、前台中心部署、认证、Web 登录入口、版本/路径诊断及 HAPI 参数和信号透传；上层 HTTP 路由复用 HAPI JWT，原生 Web/SSE/WebSocket 通过同一地址访问。
+- 验证：类型检查与构建通过；12 项聚焦测试、54 个断言通过，含原样 argv、退出码、SIGTERM 转发与纯 HAPI 地址误配诊断。`node scripts/smoke-service.mjs` 使用编译程序和真实 HAPI，完成两模式的认证/Runner 注册、完整代理协议、幂等启动、重启身份保留、独立连接存储、停止和信号清理、无 Runner 的前台中心，并覆盖 localhost 配置。证据：`.dev-smoke/service-etZM8p/evidence.json`。
+- 修正：复用 HTTP 连接后升级 WebSocket 在 Bun 兼容层停滞，已让普通 HTTP 响应结束后关闭连接；HAPI 机器在线缓存延迟过期，改为结合本机原有 Runner 状态；构建用原子替换复制 HAPI，避免覆盖运行中的二进制失败。HAPI 源码未修改。
+- 范围：测试均使用专用 home，无真实模型任务或跨机远端验证。正式 npm 依赖安装与 macOS 验收继续由 T3/T4 完成。
+- Commit：`unified-cli-and-deployment T2: manage HAPI services through one CLI`

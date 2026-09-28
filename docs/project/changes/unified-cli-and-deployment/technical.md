@@ -25,6 +25,8 @@ HAPI 的源码、原生适配、Web 和协议沿 submodule；Runweft 不复制�
 
 Runweft 服务使用 Node HTTP 接口与 http-proxy 透传 HAPI 的 HTTP/SSE/WebSocket；自己的路由放在 `/api/runweft/`，复用 HAPI 生成的 JWT 密钥验证 uid/ns。认证仍由 HAPI `/api/auth` 处理。服务代码在本仓库，HAPI 通用能力仍在独立 fork；不向 HAPI 增加 Runweft 业务表。
 
+实际验证发现 Bun 的 Node HTTP 兼容层在复用 HTTP 连接后升级 WebSocket 会停滞；普通 HTTP 响应显式关闭连接，使 WebSocket 使用独立连接，SSE 在响应结束前持续流式传输。编译后的正式程序须覆盖先 HTTP/SSE、再 WebSocket 的顺序验证。
+
 后续 delegation/round/result、业务资源注册与文件对象在该服务侧落盘：本地模式服务就在本机，Hub 模式就在选定中心部署，CLI/MCP 都通过同一 HTTP 契约访问。HAPI 原生执行事实仍沿 HAPI 查询，不复制会话数据库。本 Change 只确定目录与路由承载，不预建下游表。
 
 | 位置（相对 RUNWEFT_HOME） | 用途 |
@@ -50,6 +52,8 @@ Runweft 服务使用 Node HTTP 接口与 http-proxy 透传 HAPI 的 HTTP/SSE/Web
 Hub/Runner 意外退出则服务报错并退出，避免显示虚假的可用状态，不构建无限重试监督器。端口冲突、缺少平台包、配置错误、认证失败分别给出可操作提示。日志只输出服务元信息；托管 Hub 使用已保存的原有令牌，避免首次生成令牌被打印到日志。
 
 `doctor` 检查配置、路径、捆绑 HAPI 版本、所选服务连通和认证，区分环境问题与尚未验证的模型登录。原生工具可发现不等于模型可用。
+
+HAPI Hub 的机器在线记录有 45 秒过期窗口；本机 Runner 状态同时核对原有 `runner.state.json` 与进程存活，停止等待本机记录退出，不把 Hub 缓存仍在线当作进程仍在运行。纯 HAPI Hub 缺少 Runweft 路由时明确提示部署不匹配；中心禁用本机 Runner 时不把该配置当作故障。
 
 ## 验证
 

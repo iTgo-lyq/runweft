@@ -4,18 +4,27 @@
   "private": true,
   "type": "module",
   "packageManager": "bun@1.4.2",
+  "hapi": {
+    "revision": "86c88df93baf5d1f738dd4b202078bdf6dec376e",
+    "version": "0.30.7",
+    "protocolVersion": 1
+  },
   "scripts": {
     "dev": "bun src/cli.ts",
     "typecheck": "tsc --noEmit",
     "test": "bun test ./test",
-    "build": "bun build src/cli.ts --compile --no-compile-autoload-dotenv --outfile dist/runweft"
+    "test:service": "node scripts/smoke-service.mjs",
+    "build": "bun scripts/build.ts"
   },
   "dependencies": {
     "commander": "15.0.0",
+    "http-proxy": "1.18.1",
+    "jose": "6.2.12",
     "yaml": "2.9.1",
     "zod": "4.6.5"
   },
   "devDependencies": {
+    "@types/http-proxy": "1.17.17",
     "@types/node": "26.3.0",
     "bun-types": "1.4.2",
     "typescript": "5.9.3"
