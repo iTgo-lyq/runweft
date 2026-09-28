@@ -1,0 +1,23 @@
+{
+  "name": "runweft-workspace",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "bun@1.4.2",
+  "scripts": {
+    "dev": "bun src/cli.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "bun test ./test",
+    "build": "bun build src/cli.ts --compile --no-compile-autoload-dotenv --outfile dist/runweft"
+  },
+  "dependencies": {
+    "commander": "15.0.0",
+    "yaml": "2.9.1",
+    "zod": "4.6.5"
+  },
+  "devDependencies": {
+    "@types/node": "26.3.0",
+    "bun-types": "1.4.2",
+    "typescript": "5.9.3"
+  }
+}

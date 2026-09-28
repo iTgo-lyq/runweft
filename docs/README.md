@@ -1,6 +1,6 @@
 # 项目文档
 
-当前处于需求与设计讨论阶段，没有已实现的 Runweft 产品功能。本地验收由 agent 自动完成，真实远端验收单独安排。先读[项目能力边界与讨论地图](project/architecture.md)，查看模块分工、Change 依赖和远端之外的讨论顺序。
+当前从[统一 CLI 与部署](project/changes/unified-cli-and-deployment/plan.md)开始实现，已有配置和工作区绑定基础 CLI；完整协作产品尚未交付。本地验收由 agent 自动完成，真实远端验收单独记录。先读[项目能力边界与讨论地图](project/architecture.md)，查看模块分工和 Change 依赖。
 
 实现以当前 HAPI 为第一依据，Runweft 尽量只做上层流程封装与 MCP；旧工程技术方案不直接沿用。
 
@@ -23,7 +23,7 @@
 | Subagent 看板 | [Requirement](project/changes/subagent-dashboard/requirement.md) | 简单全局状态；详情优先复用 HAPI |
 | 完整版本集成与发布 | [Requirement](project/changes/integrated-release/requirement.md) | 组合验收、正式安装及完整交付证据 |
 
-各 Change 整体需求仍为草稿，`design.md` 保存用户要求提前展开的方案讨论，不代替正式 Technical 或 Plan；没有进入实现。
+各 Change 的实际状态以其 Requirement/Technical/Plan 为准；用户已授权按顺序自主落实，每个 Change 的 Plan 经一次 iclaude 评审后执行。`design.md` 保存前期讨论，不代替正式 Technical 或 Plan。
 
 按照 [project-workflow](../.agents/skills/project-workflow/SKILL.md)：
 
