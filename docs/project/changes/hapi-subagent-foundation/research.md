@@ -31,7 +31,13 @@
 | 关闭与续接 | 既有 archive 确认 StopSession，遇 still_alive/unknown 拒绝；resume 已实测保留原生历史 | 优先直接复用；后续验证同进程兄弟会话不受影响、缺失 session 和失败路径，不预设改造 |
 | 无会话机器操作 | `apiMachine.ts` 已注册 common handlers，含 Git/文件/bash；Hub 的机器 REST 和私有 machineRpc 当前只暴露指定操作，不能直接把内部处理器存在视为上层已可调用 | 继续核对管理入口；公共 Git 与对象传输仍归对应 Change，不在这里新增另一套机器执行器 |
 
-这些缺口是正式 Technical 前的调查项目，尚未修改 HAPI 源码或确定增补方案。不得因为普通回复与 resume 成功，就把可靠轮次、初次工具发现身份或精确中断写为已验证。
+这些缺口的最小增补方案已记录在 [Technical](technical.md)；以下基线证据均来自未修改 HAPI。不得因为普通回复与 resume 成功，就把可靠轮次、初次工具发现身份或精确中断写为已验证。
+
+## 故障复现与基线检查
+
+2026-09-29 04:51，在独立 home/cwd 通过 `HAPI_CLAUDE_PATH` 运行可控 stream-json 测试客户端；它接收一次输入，输出 init 和根 assistant 片段后以 23 退出。一次 localId 投递实际启动了三个客户端进程、产生三个输出片段，证实 launcher 会重新投递消费状态不明的输入。archive 和测试清理后无残留进程。证据为 `.dev-smoke/hapi-failure-HZdvnI/evidence.json`；这是协议故障实验，不是真实模型验证，不使用凭据。
+
+修改前 HAPI 全量 typecheck 通过。全量测试首次在 CLI 停止：2,945 通过、11 跳过、1 失败；唯一失败的 skills 用例要求临时 cwd 不在 Git 中，但测试 TMPDIR 位于本仓库 `.dev-smoke`。改用 `/home/tiger/.dev-smoke/` 下的独立临时目录后，该文件 28 项全部通过，目录已清理。Hub 1,371、Web 3,249、shared 323、relay 118 项分别通过。日志保留在 `.dev-smoke/hapi-foundation-baseline/`；这是组合基线证据，不宣称首次全量命令退出成功。
 
 ## 仓库起点
 
