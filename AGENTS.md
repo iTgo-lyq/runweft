@@ -4,6 +4,8 @@
 
 - 先读 `docs/README.md`、相关 Change 和已有 Specs。
 - 项目工作流见 `.agents/skills/project-workflow/SKILL.md`；需求、技术、计划与验收的既有确认在会话间持续有效，不重复询问。
+- 用户已授权按顺序完成全部 Change：细节由主 agent 制定，每个 Change 的 Plan 形成后在当前工作区用 iclaude 评审一次，再独立判断并落实；仅 iclaude 额度耗尽时改用新 subagent。该授权覆盖方案/Plan 的工程决策与本地自动验收，不重复设置人工门禁。逐任务提交，通过验收后同步 Specs 并归档；远端实测无法完成时如实保留缺口。
+- 实现优先直观、易配置、易部署；不为假设边界堆叠防御框架。失败应清楚抛出并在入口呈现可操作的错误。
 - 当前只有需求与设计文档；已确认决策见 `docs/project/architecture.md` 与各 Change，不得将目标行为描述成已经实现。
 
 ## 架构边界
