@@ -39,6 +39,19 @@
 
 修改前 HAPI 全量 typecheck 通过。全量测试首次在 CLI 停止：2,945 通过、11 跳过、1 失败；唯一失败的 skills 用例要求临时 cwd 不在 Git 中，但测试 TMPDIR 位于本仓库 `.dev-smoke`。改用 `/home/tiger/.dev-smoke/` 下的独立临时目录后，该文件 28 项全部通过，目录已清理。Hub 1,371、Web 3,249、shared 323、relay 118 项分别通过。日志保留在 `.dev-smoke/hapi-foundation-baseline/`；这是组合基线证据，不宣称首次全量命令退出成功。
 
+## Claude 原生输入关联
+
+T2 前置试验在专用 cwd 使用 Claude Code 2.1.283 连续发送两条带 UUID 的 stream-json 输入，均正常结束。即使不启用 `--replay-user-messages`，原生 `command_lifecycle.command_uuid`、assistant/result 的 `user_message_uuid` 与 `user_message_uuids` 仍与传入 UUID 精确相同；每轮还发出独立 init。证据位于 `.dev-smoke/claude-correlation-probe/evidence.json`，只记录字段名称、关联 ID 和状态，不保存 prompt 或输出正文。可在既有 SDK 输入对象加 UUID 并保留这些原生关联，不需文本匹配或额外原生协议。
+
+## T2 执行事实验证
+
+2026-09-29 在专用 home/cwd 使用修改后的 HAPI 编译程序验证：
+
+- Codex 正常完成、原生输出关联、拒绝上一轮中断、当前轮中断及 archive 后历史查询通过，证据 `.dev-smoke/execution-facts-bgLNPB/evidence.json` 的 Codex 项。该次 Claude 启动回执早于 capability metadata 更新，未通过首次就绪判断；Runweft 增加明确的就绪等待，超时保留 sessionId，不重新派生。随后 Claude 同组用例全部通过，见 `.dev-smoke/execution-facts-5I91Fl/evidence.json`。不把首次混合实验写为全部通过。
+- 用不存在的测试模型触发真实原生错误；不修改模型配置文件或凭据。Codex 的 failed 已在 `.dev-smoke/native-failures-l5vWs7/evidence.json` 验证。Claude 原生实际返回 `subtype: success`、`is_error: true`、`terminal_reason: api_error`；据此修正已知 subtype 的映射，以 is_error 区分失败。修正后 Claude 失败及关闭通过，见 `.dev-smoke/native-failures-sRNYIj/evidence.json`。未知 subtype 继续保留未知。
+- 原来“回复片段后退出 23”的同一可控故障实验，修改后仅启动一次客户端，不自动重投；持久事件为 submitted → accepted → unknown，证据 `.dev-smoke/hapi-failure-csyu2Y/evidence.json` 及其专用 HAPI 消息库。该实验仍是测试客户端，不能替代真实原生结果证据。
+- 上述专用 HAPI home 对应进程均已清理。完成、失败、中断记录与现有输入消费信息分开保存；模型认证与默认权限继承路径未改动。
+
 ## 仓库起点
 
 旧 Runweft 主分支快照为 `0cbfa01f522488b2ede60e47adc1117698b54748`。新仓库独立初始化，仅迁入项目工作流并清除其不存在的委派 skill 依赖；不迁入旧应用代码、运行数据、HAPI 补丁、锁文件或认证产物。

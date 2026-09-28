@@ -32,7 +32,7 @@ HAPI 在已有持久消息通道增加一个小型执行观察事件，带版本
 | Runtime | 输入与结果关联 |
 | --- | --- |
 | Codex | 使用已有 clientUserMessageId、conversationHistoryTurns 和原生 turnId。原生 user item 证明接受；turn/completed 保留 status/error 及关联输入。历史重投影使用同一稳定 ID，不能把原生子线程事件归到根输入 |
-| Claude Code | 在已有 nextMessage 的批次交付处保留 localIds 和该次 observation ID；出队只记 submitted。根 assistant 或原生 result 证明该批输入得到处理；保留 SDK result 的 subtype/is_error/result/errors，并在下个批次前固定关联。未知 subtype 仍未知，不按文本猜测 |
+| Claude Code | 在已有 nextMessage 的批次交付处保留 localIds 和该次 observation ID；出队只记 submitted。将批次 UUID 传入原生 user 消息；根 command_lifecycle/assistant/result 的原生 user_message_uuid(s) 证明该批输入得到处理；保留 SDK result 的 subtype/is_error/result/errors，并在下个批次前固定关联。已知 subtype 且 is_error=true 记失败，包含 subtype=success 的 API 错误；未知 subtype 或缺少原生输入关联仍未知，不按文本猜测 |
 
 Claude 的现有异常分支在输入可能已交给原生进程、但没有原生结果时记录 unknown，停止自动重新入队该批输入；等待调用方明确处理。仅有明确的进程未创建/输入未写入证据时才允许恢复未投递批次；没有 init 或 assistant 输出不是未消费证明。可确认的启动或认证失败保留原错误，不以超时或静默推断。该修改必须有“已产出回复片段后进程异常”的复现及次数断言，不能只测正常完成。原生后台任务/侧链输出不作为主输入完成证据。Claude 自主根轮次与新输入交错时需要原生输入回显/轮次关联证据；不能把 push 后第一个 result 直接归给新输入，无法对应则保留未知。
 

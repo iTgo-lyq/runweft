@@ -22,3 +22,11 @@
 - 验证：Runweft typecheck、17 项测试通过；HAPI typecheck 通过；`bun run gen:fixtures` 无漂移；全量 `bun run test` 退出 0（CLI 2,946、Hub 1,377、Web 3,249、shared 323、relay 118 通过，原有 CLI 11/Hub 3 跳过）。专门的回执/原预分配/机器路由/迁移合计 48 项通过。全量日志在 `.dev-smoke/hapi-foundation-t1/`，测试临时目录位于 Git 外并已清理。
 - 真实 Runner：05:10–05:11（Asia/Shanghai），编译后的修改版 HAPI、既有 Runweft 服务和新 ExecutionClient 在专用 home/cwd 验证两 runtime 的并发同 ID、代理断开响应后的重查、archive 退出、删除后不重启、Hub 重启后不重启；全部通过，无 prompt 投递，不当作原生终态验收。证据 `.dev-smoke/hapi-spawn-mKfoYK/evidence.json`。
 - Commit：HAPI `hapi-subagent-foundation T1: persist idempotent machine spawn receipts`；Runweft `hapi-subagent-foundation T1: expose recoverable HAPI startup calls`。
+
+## T2 两种 runtime 的原生事实与定向中断
+
+- 结果：在已有持久消息通道保留原生输入、结果和稳定标识，根/侧链与 Claude 自主轮次分开；定向中断在执行侧检查目标，拒绝迟到调用。Claude 模糊退出不自动重发，Hub 不重新投递已消费的重复 localId。Runweft 提供就绪等待、投递、分页事实查询、排队取消与定向中断；原生完成、交付回执和界面 ready 不相互替代。
+- 真实验证：两种 runtime 的完成、原生输出、当前中断、迟到中断拒绝、原生失败与关闭后历史读取通过；Claude 控制故障从三次重复执行降为一次，所有专用进程已退出。[Research](research.md#t2-执行事实验证) 保留分次实验、失败原因和修正后的证据，默认权限及原生配置继承未改动。
+- 回归：Runweft typecheck、20 项测试通过；HAPI 全量 typecheck 和 gen:fixtures 通过、无生成漂移。CLI 2,953、Hub 1,379、Web 3,249、shared 323、relay 118 项通过，原有 CLI 11/Hub 3 项跳过。全量命令曾依次暴露标题测试缺少新事件 mock、无 localId 的首次消息被重复投递保护拦截；均已修正。CLI 使用修正 mock 后的完整通过结果，Hub 修正后重跑全包及其余包全部通过，未将中途失败的总命令记为退出 0。日志 `.dev-smoke/hapi-foundation-t2/`，临时目录已清理。
+- 契约：[HAPI 执行观察与定向中断](../../../../hapi/docs/api/execution-observations.md)。本任务不宣称完成后续宿主角色或业务委派。
+- Commit：HAPI `hapi-subagent-foundation T2: correlate native execution and target interrupts`；Runweft `hapi-subagent-foundation T2: expose native facts and targeted control`。

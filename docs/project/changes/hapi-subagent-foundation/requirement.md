@@ -10,7 +10,7 @@
 
 - **目标：** Runweft 能通过 HAPI 稳定关联一次执行、投递输入、读取原生结果并控制恢复。
 - **范围：** 验证已有 HAPI 执行事实，封装上层调用和兼容性诊断；不承担 Codex/Claude Code runtime 重写或主动改造，也不承载委派与远端 Git 全部实现。
-- **现状：** 统一 CLI 已验收；专用环境已验证原有 HAPI 启动两种 runtime、真实回复、archive 退出及原生续接。Runweft 执行封装尚未实现，可靠终态、精确中断及请求重查仍在调查，见 [Research](research.md#当前入口映射与待解决缺口)。
+- **现状：** 统一 CLI 已验收；专用环境已验证原有 HAPI 启动两种 runtime、真实回复、archive 退出及原生续接。T1/T2 已交付可重查启动、原生输入结果关联与定向中断；关闭/续接调用封装及整体验收尚未完成，见 [Research](research.md#当前入口映射与待解决缺口)。
 - **项目入口：** 完整能力分工、依赖图和待讨论模块见[跨 Change 架构](../../architecture.md)。
 
 ## Change 依赖

@@ -88,3 +88,68 @@ test('a mismatched receipt is never accepted as this request', async () => {
         expect(posts).toBe(1);
     } finally { await server.stop(true); }
 });
+
+test('query reads paginated native facts for only the selected input, without treating ready or invoked as success', async () => {
+    const observation = (localId: string, phase: string) => ({ type: 'execution', version: 1, runtime: 'codex',
+        executionId: 'codex:thread:turn', inputLocalIds: [localId], phase, source: 'native', nativeSessionId: 'thread', nativeTurnId: 'turn' });
+    const message = (id: string, seq: number, content: unknown, localId: string | null = null) => ({ id, seq, content, localId, createdAt: seq, invokedAt: seq, scheduledAt: null });
+    const event = (data: unknown) => ({ role: 'agent', content: { type: 'event', data } });
+    let pages = 0;
+    const { server, client } = serverFor(request => {
+        const url = new URL(request.url);
+        if (url.pathname === '/api/sessions/session') return Response.json({ session: { id: 'session', metadata: { capabilities: { execution: 1 } }, agentState: { requests: { approval: {} } } } });
+        if (url.pathname.endsWith('/queued-state')) return Response.json({ queuedLocalIds: [], indeterminateLocalIds: [], invokedLocalMessages: [{ localId: 'input', invokedAt: 1 }] });
+        pages++;
+        const before = url.searchParams.has('beforeSeq');
+        return Response.json({ messages: before ? [
+            message('input-row', 1, { role: 'user', content: { type: 'text', text: 'task' } }, 'input'),
+            message('accepted', 2, event(observation('input', 'accepted'))),
+        ] : [
+            message('unrelated', 3, event(observation('another-input', 'completed'))),
+            message('output', 4, { role: 'agent', content: { type: 'codex', data: { type: 'message', message: 'Native reply' } } }, 'codex:thread:turn:item:agent_message'),
+            message('ready', 5, event({ type: 'ready' })),
+        ], page: { hasMore: !before, nextBeforeAt: before ? 1 : 3, nextBeforeSeq: before ? 1 : 3 } });
+    });
+    try {
+        const result = await client.query('session', 'input');
+        expect(pages).toBe(2);
+        expect(result.facts.map(f => f.observation.phase)).toEqual(['accepted']);
+        expect(result.inputMessageId).toBe('input-row');
+        expect(result.output).toEqual([{ messageId: 'output', text: 'Native reply' }]);
+        expect(result.permissions).toHaveProperty('approval');
+    } finally { await server.stop(true); }
+});
+
+test('a lost input response is not resent and a targeted interrupt never falls back to abort', async () => {
+    const calls: string[] = [];
+    const { server, client } = serverFor(async request => {
+        const path = new URL(request.url).pathname;
+        calls.push(`${request.method} ${path}`);
+        if (path === '/api/sessions/session') return Response.json({ session: { id: 'session', metadata: { capabilities: { execution: 1 } } } });
+        if (path.endsWith('/messages')) return new Response('', { status: 502 });
+        if (path.endsWith('/execution/interrupt')) {
+            expect(await request.json()).toEqual({ inputLocalId: 'input', executionId: 'old' });
+            return Response.json({ status: 'target_mismatch', executionId: 'new', inputLocalIds: ['new-input'] });
+        }
+        throw new Error(`Unexpected ${path}`);
+    });
+    try {
+        expect(await client.send('session', { text: 'task', localId: 'input' })).toMatchObject({ outcome: 'unknown', localId: 'input' });
+        expect(await client.interrupt('session', 'input', 'old')).toMatchObject({ status: 'target_mismatch' });
+        expect(calls.filter(c => c.startsWith('POST'))).toEqual(['POST /api/sessions/session/messages', 'POST /api/sessions/session/execution/interrupt']);
+    } finally { await server.stop(true); }
+});
+
+test('runtime readiness is distinct from a launch receipt and timeout never starts another session', async () => {
+    let reads = 0;
+    const { server, client } = serverFor(request => {
+        expect(request.method).toBe('GET');
+        reads++;
+        return Response.json({ session: { id: 'session', active: true, metadata: { capabilities: reads > 1 ? { execution: 1 } : {} } } });
+    });
+    try {
+        await expect(client.waitUntilReady('session', 0)).rejects.toMatchObject({ code: 'execution_not_ready' });
+        expect((await client.waitUntilReady('session')).id).toBe('session');
+        expect(reads).toBe(2);
+    } finally { await server.stop(true); }
+});
