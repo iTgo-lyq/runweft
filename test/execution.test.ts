@@ -153,3 +153,56 @@ test('runtime readiness is distinct from a launch receipt and timeout never star
         expect(reads).toBe(2);
     } finally { await server.stop(true); }
 });
+
+test('resume returns both native identities and uses the actual returned HAPI session', async () => {
+    const calls: string[] = [];
+    const { server, client } = serverFor(async request => {
+        const path = new URL(request.url).pathname; calls.push(`${request.method} ${path}`);
+        if (request.method === 'POST') { expect(await request.json()).toEqual({}); return Response.json({ type: 'success', sessionId: 'new' }); }
+        const id = path.endsWith('/old') ? 'old' : 'new';
+        return Response.json({ session: { id, active: id === 'new', metadata: { flavor: 'codex', codexSessionId: `native-${id}`, capabilities: { execution: 1 } } } });
+    });
+    try {
+        expect(await client.resume('old')).toMatchObject({ outcome: 'resumed', previousSessionId: 'old', previousNativeSessionId: 'native-old', nativeSessionId: 'native-new', session: { id: 'new' } });
+        expect(calls).toEqual(['GET /api/sessions/old', 'POST /api/sessions/old/resume', 'GET /api/sessions/new']);
+    } finally { await server.stop(true); }
+});
+
+test('only confirmed native absence permits reconstruction; unavailable or lost resume replies never respawn', async () => {
+    for (const [status, code] of [[409, 'native_session_missing'], [503, 'no_machine_online'], [401, 'authentication_failed'], [500, 'resume_failed']] as const) {
+        let posts = 0;
+        const { server, client } = serverFor(request => {
+            if (request.method === 'GET') return Response.json({ session: { id: 'session', metadata: { flavor: 'claude', claudeSessionId: 'native' } } });
+            posts++; expect(new URL(request.url).pathname).toBe('/api/sessions/session/resume');
+            return Response.json({ error: 'native response', code }, { status });
+        });
+        try {
+            if (code === 'native_session_missing') expect(await client.resume('session')).toMatchObject({ outcome: 'missing', previousNativeSessionId: 'native' });
+            else if (code === 'resume_failed') expect(await client.resume('session')).toMatchObject({ outcome: 'unknown', sessionId: 'session' });
+            else await expect(client.resume('session')).rejects.toMatchObject({ status, code });
+            expect(posts).toBe(1);
+        } finally { await server.stop(true); }
+    }
+});
+
+test('stop requires HAPI archived and inactive facts, even after a lost response', async () => {
+    for (const stopped of [true, false]) {
+        let posts = 0;
+        const { server, client } = serverFor(request => {
+            if (request.method === 'POST') { posts++; return new Response('', { status: 502 }); }
+            return Response.json({ session: { id: 'session', active: !stopped, metadata: { lifecycleState: stopped ? 'archived' : 'running' } } });
+        });
+        try { expect((await client.stop('session')).outcome).toBe(stopped ? 'stopped' : 'unknown'); expect(posts).toBe(1); }
+        finally { await server.stop(true); }
+    }
+});
+
+test('permission responses preserve native request identity and do not override default permissions', async () => {
+    const { server, client } = serverFor(async request => {
+        expect(new URL(request.url).pathname).toBe('/api/sessions/session/permissions/native-request/approve');
+        expect(await request.json()).toEqual({ decision: 'approved', answers: { question: ['answer'] } });
+        return Response.json({ error: 'Request already resolved' }, { status: 409 });
+    });
+    try { await expect(client.respondPermission('session', 'native-request', 'approved', { question: ['answer'] })).rejects.toMatchObject({ status: 409 }); }
+    finally { await server.stop(true); }
+});

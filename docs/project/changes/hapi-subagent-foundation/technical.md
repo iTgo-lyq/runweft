@@ -42,9 +42,9 @@ Runweft 查询返回 HAPI session、指定 localId 的消费/原生事实、当�
 
 增加与旧 abort 分开的定向中断入口/RPC，携带 inputLocalId 及已知 executionId。Codex 在同一执行处理点核对该 localId 对应当前 native turn，再把明确 turnId 交给原生 interrupt；Claude 在同一处理点核对当前批次并立即捕获/中断其 controller。目标已结束、不匹配或能力未声明时返回明确结果，不调用无条件 abort。
 
-中断请求被接受只表示已请求；最终 interrupted 必须来自原生完成通知，或 Claude 对应执行已结束且其 abort 已完成的控制事实。处理新轮次前清理旧目标，测试迟到请求不影响下一轮。排队目标使用现有 cancel-queued；Codex steer 合并的输入返回同轮所有受影响 localIds。Claude 中断结束该会话原生进程及其后台任务，受控中断与崩溃分别记录。已有审批查询与允许/拒绝入口直接复用，不改默认权限。
+中断请求被接受只表示已请求；最终 interrupted 必须来自原生完成通知，或 Claude 对应执行已结束且其 abort 已完成的控制事实。处理新轮次前清理旧目标，测试迟到请求不影响下一轮。排队目标使用现有 cancel-queued；Codex steer 合并的输入返回同轮所有受影响 localIds。Claude 中断结束该会话原生进程及其后台任务，受控中断与崩溃分别记录。已有审批查询与允许/拒绝入口直接复用，不改默认权限。实测 Claude 拒绝工具走既有提前退出路径；SDK 清理必须完成后才报告受控 interrupted，停止无法确认则保留 unknown。带稳定 localId 的执行观察沿已有 agent 消息一样确认消费，不进入输入队列或阻止后续历史操作。
 
-本轮停止继续调用 archive，并核对 inactive/archived；遇 still_alive/unknown 不当作成功。共享 Codex runtime 的兄弟会话通过独立会话控制验证，不以整进程 kill 代替。续接继续调用 resume，返回新旧 HAPI/原生身份；认证失败、机器离线和暂时不可达不解释为 session 不存在。历史重建由后续委派 Change 实现，本 Change 只提供已确认缺失的错误依据。T3 先复现缺失路径；Claude 在 Runner 续接前复用原生 transcript 检查，保留权限/IO 错误；Codex 只映射原生结构化 not-found。补齐 `native_session_missing` 的机器到 Hub 透传，不把通用 resume_failed 或身份变化当作缺失。
+本轮停止继续调用 archive，并核对 inactive/archived；遇 still_alive/unknown 不当作成功。共享 Codex runtime 的兄弟会话通过独立会话控制验证，不以整进程 kill 代替。续接继续调用 resume，返回新旧 HAPI/原生身份；认证失败、机器离线和暂时不可达不解释为 session 不存在。历史重建由后续委派 Change 实现，本 Change 只提供已确认缺失的错误依据。T3 已复现缺失路径；Runner 在续接前检查原生历史。Claude 复用已有 transcript 路径，仅 ENOENT 证明缺失，权限/IO 错误保留。Codex 用与实际启动相同的程序、cwd 和原生配置，通过已有 app-server client 查询；thread/read 的 thread-not-loaded 不证明不存在，必要时调用原生 thread/resume，仅精确匹配该 ID 的原生 JSON-RPC 错误（code=-32600、no rollout found for thread id）为确认缺失。此检查不提交输入、不调用模型，结束后关闭查询进程；未知错误不做文本模糊匹配。补齐 `native_session_missing` 的机器到 Hub 透传，不把通用 resume_failed 或身份变化当作缺失。
 
 ## 兼容和配置
 

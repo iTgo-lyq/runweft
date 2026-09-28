@@ -30,3 +30,11 @@
 - 回归：Runweft typecheck、20 项测试通过；HAPI 全量 typecheck 和 gen:fixtures 通过、无生成漂移。CLI 2,953、Hub 1,379、Web 3,249、shared 323、relay 118 项通过，原有 CLI 11/Hub 3 项跳过。全量命令曾依次暴露标题测试缺少新事件 mock、无 localId 的首次消息被重复投递保护拦截；均已修正。CLI 使用修正 mock 后的完整通过结果，Hub 修正后重跑全包及其余包全部通过，未将中途失败的总命令记为退出 0。日志 `.dev-smoke/hapi-foundation-t2/`，临时目录已清理。
 - 契约：[HAPI 执行观察与定向中断](../../../../hapi/docs/api/execution-observations.md)。本任务不宣称完成后续宿主角色或业务委派。
 - Commit：HAPI `hapi-subagent-foundation T2: correlate native execution and target interrupts`；Runweft `hapi-subagent-foundation T2: expose native facts and targeted control`。
+
+## T3 关闭、续接与运行能力验证
+
+- 结果：Runweft 复用原有 archive/resume 与审批入口；关闭须确认 inactive/archived，续接返回前后 HAPI/原生身份，未确认不自动重发或另开执行。HAPI Runner 只在原生缺失有确证时返回 native_session_missing；认证、离线、IO 与模糊失败不能进入历史重建分支。预检查不提交 prompt，拒绝后保留归档状态。
+- 实测：两种 runtime 的项目说明/skill、关闭后的原生历史续接和再次退出通过；共享 Codex 关闭一个 root 后兄弟仍可真实执行。默认权限下原生允许/拒绝均控制了专用文件副作用。两种缺失历史都经实际 Runner/Hub 验证。[Research](research.md#t3-实际关闭配置继承与续接) 保存证据与源码验证边界。
+- 修正：真实 fork/审批验证暴露 execution 事件缺少 consumed 回执、Claude 工具拒绝提前退出未关闭原生进程；复用已有确认及 cleanup 路径修复。仅清理确认后记录受控 interrupted；无法确认保留 unknown，不重新投递。
+- 验证：Runweft typecheck、24 项测试通过；HAPI typecheck 与 gen:fixtures 通过；全量 bun run test 退出 0（CLI 2,959、Hub 1,380、Web 3,249、shared 323、relay 118，通过数不含原有 CLI 11/Hub 3 跳过）。日志 `.dev-smoke/hapi-foundation-t3/` 及同名前缀文件；专用测试进程和临时目录已清理。尚未完成配套固定版本的 T4 整体验收。
+- Commit：HAPI `hapi-subagent-foundation T3: verify native resume and close controlled executions`；Runweft `hapi-subagent-foundation T3: expose stop resume and native permissions`。

@@ -5,7 +5,7 @@
 
 ## 当前基线与真实探测
 
-当前固定 HAPI 为 `86c88df93baf5d1f738dd4b202078bdf6dec376e`、版本 `0.30.7`，与下文旧快照的 `2f72a80` 分开。Runweft 统一 CLI 已验收；本节直接使用其编译程序、原有 Hub/Runner 和未修改的内置适配。
+本 Change 调查基线 HAPI 为 `86c88df93baf5d1f738dd4b202078bdf6dec376e`、版本 `0.30.7`，与下文旧快照的 `2f72a80` 分开。Runweft 统一 CLI 已验收；本节直接使用其编译程序、原有 Hub/Runner 和未修改的内置适配。
 
 2026-09-29 04:37–04:39（Asia/Shanghai），在 `.dev-smoke/hapi-execution-X0KVCh/` 的专用 HAPI home 和两个专用 cwd 进行原型验证。Codex CLI 为 `0.156.1`，Claude Code 为 `2.1.283`；Claude 沿现有 `HAPI_CLAUDE_PATH` 选择本机 iclaude，模型配置与认证沿已有原生环境，不复制凭据或修改全局配置。未传 yolo、permissionMode 或模型覆盖参数。
 
@@ -51,6 +51,26 @@ T2 前置试验在专用 cwd 使用 Claude Code 2.1.283 连续发送两条带 UU
 - 用不存在的测试模型触发真实原生错误；不修改模型配置文件或凭据。Codex 的 failed 已在 `.dev-smoke/native-failures-l5vWs7/evidence.json` 验证。Claude 原生实际返回 `subtype: success`、`is_error: true`、`terminal_reason: api_error`；据此修正已知 subtype 的映射，以 is_error 区分失败。修正后 Claude 失败及关闭通过，见 `.dev-smoke/native-failures-sRNYIj/evidence.json`。未知 subtype 继续保留未知。
 - 原来“回复片段后退出 23”的同一可控故障实验，修改后仅启动一次客户端，不自动重投；持久事件为 submitted → accepted → unknown，证据 `.dev-smoke/hapi-failure-csyu2Y/evidence.json` 及其专用 HAPI 消息库。该实验仍是测试客户端，不能替代真实原生结果证据。
 - 上述专用 HAPI home 对应进程均已清理。完成、失败、中断记录与现有输入消费信息分开保存；模型认证与默认权限继承路径未改动。
+
+## T3 原生缺失复现
+
+专用 HAPI home 写入两条仅用于试验的 archived 行，其原生 ID 为从未创建的 UUID；未修改现有原生历史。既有 resume 对 Claude 返回 success/active，对 Codex 返回 resume_failed 及 thread-not-loaded，见 `.dev-smoke/native-missing-LzLUJ8/evidence.json`。因此普通 resume 响应与错误不足以作为原生历史缺失依据。
+
+Codex 0.156.1 的直接 JSON-RPC 试验显示，thread/read（includeTurns 真/假）对不存在 ID 返回 `code: -32600`、`thread not loaded: <id>`；thread/resume 才返回 `code: -32600`、`no rollout found for thread id <id>`。它没有专门的 not-found 数字码，不能把所有 -32600 或 not-loaded 都判为缺失。证据 `.dev-smoke/native-missing-rpc/evidence.json`；未发送 turn/start、输入或模型请求，查询进程已退出。采用精确错误组合，并使用与正式启动相同的 Codex 程序；其他协议版本若错误变化则保留失败，不自动构造新会话。
+
+## T3 关闭与审批验证中的修正
+
+- `.dev-smoke/native-missing-1ersGx/evidence.json`：修正后两种 runtime 都经实际 Runner/Hub 返回 native_session_missing，HAPI 行保留 inactive/archived；没有创建替代执行。
+- `.dev-smoke/native-lifecycle-FfRAI0/evidence.json` 已证明 Codex 能读取专用项目说明与 skill 中未放进 prompt 的标记，但 fork 时 HAPI thinking 尚未刷新；等待现有空闲条件后又被“有排队消息”拒绝。调查确认新增 execution 事件的稳定 localId 缺少已有 agent 消息的 consumed 回执，将观察误当作输入。补齐同一回执路径，不改队列数据库或新增调度机制。
+- `.dev-smoke/native-permissions-3dU4h3/evidence.json` 的 Codex 项通过 default 模式真实批准/拒绝：批准才生成指定测试文件。Claude 批准通过，拒绝后走既有 tool-result 提前退出，未取得原生终态。调查确认 SDK 迭代结束不会自行关闭进程；补齐已有 cleanup 的显式等待，停止得到确认后投影受控 interrupted，无法确认则保留 unknown。修正后 Claude 两种决策及目标文件副作用均通过，见 `.dev-smoke/native-permissions-7JKyFa/evidence.json`。
+
+## T3 实际关闭、配置继承与续接
+
+`.dev-smoke/native-lifecycle-gPHn0n/evidence.json` 记录两种 runtime 全部通过：由指定 cwd 自动读取项目说明及项目 skill，回复未出现在输入中的随机标记；archive 后对应 wrapper 退出；resume 保留原生 ID，未重述标记的第二轮仍能复述原标记；最后再次关闭并确认进程退出。Codex 在同一共享 wrapper 中 fork 后，关闭原会话仍可在兄弟会话执行真实输入，最后关闭兄弟才退出 wrapper。
+
+该试验没有传权限覆盖或替换原生模型配置；认证、全局配置继承路径仍是现有启动器。审批试验单独显式选择 HAPI default 模式，既未扩大权限，也未修改全局配置。机器到原生会话的身份由实际 metadata、resume 返回 ID 和原生结果共同验证；Claude 的环境导出及 Codex 的按线程注入仍是源码证据，首次 MCP 角色发现按下一 Change 进行，不能提前声称已验证。
+
+所有 T3 试验专用 HAPI home 已停止，按 `/proc` 环境中的专用 HAPI_HOME 查验无残留进程。全量回归和本任务提交见 [Execution](execution.md#t3-关闭续接与运行能力验证)。
 
 ## 仓库起点
 

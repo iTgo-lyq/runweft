@@ -18,10 +18,15 @@ export type StartResult =
 export class ExecutionClient {
     constructor(private readonly hapi: HapiClient) {}
 
+    async inspect(sessionId: string) {
+        const { session } = await this.hapi.request(`/api/sessions/${encodeURIComponent(sessionId)}`) as SessionResponse;
+        return session;
+    }
+
     async waitUntilReady(sessionId: string, timeoutMs = 15_000) {
         const until = Date.now() + timeoutMs;
         do {
-            const { session } = await this.hapi.request(`/api/sessions/${encodeURIComponent(sessionId)}`) as SessionResponse;
+            const session = await this.inspect(sessionId);
             if (session.active && session.metadata?.capabilities?.execution === 1) return session;
             if (session.metadata?.lifecycleState === 'archived') throw new RunweftError('execution_closed', '会话在就绪前已关闭。');
             if (Date.now() >= until) break;
@@ -31,7 +36,7 @@ export class ExecutionClient {
     }
 
     private async session(sessionId: string) {
-        const { session } = await this.hapi.request(`/api/sessions/${encodeURIComponent(sessionId)}`) as SessionResponse;
+        const session = await this.inspect(sessionId);
         if (session.metadata?.capabilities?.execution !== 1) {
             throw new RunweftError('execution_capability_missing', '该会话不具备原生结果关联和定向中断能力。', '更新配套 Runner，并重新启动 Codex 或 Claude Code 会话。');
         }
@@ -116,6 +121,61 @@ export class ExecutionClient {
         return this.hapi.request(`/api/sessions/${encodeURIComponent(current.session.id)}/messages/${encodeURIComponent(current.inputMessageId)}`, { method: 'DELETE' });
     }
 
+    async stop(sessionId: string) {
+        let failure: unknown;
+        try {
+            await this.hapi.request(`/api/sessions/${encodeURIComponent(sessionId)}/archive`, {
+                method: 'POST', signal: AbortSignal.timeout(45_000),
+            });
+        } catch (error) {
+            if (!isAmbiguous(error)) throw error;
+            failure = error;
+        }
+        try {
+            const session = await this.inspect(sessionId);
+            if (!session.active && session.metadata?.lifecycleState === 'archived') return { outcome: 'stopped' as const, session };
+        } catch (error) {
+            if (!isAmbiguous(error)) throw error;
+            failure = error;
+        }
+        return { outcome: 'unknown' as const, sessionId, error: errorDetails(failure
+            ?? new RunweftError('execution_stop_unconfirmed', 'HAPI 尚未确认该执行已关闭。')) };
+    }
+
+    async resume(previousSessionId: string) {
+        const previous = await this.inspect(previousSessionId);
+        const previousNativeSessionId = nativeIdentity(previous);
+        let sessionId = previous.id;
+        try {
+            const response = await this.hapi.request(`/api/sessions/${encodeURIComponent(previous.id)}/resume`, {
+                method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}', signal: AbortSignal.timeout(45_000),
+            });
+            if (response?.type !== 'success' || typeof response.sessionId !== 'string') {
+                throw new RunweftError('invalid_hapi_response', 'HAPI 未确认续接后的会话身份。');
+            }
+            sessionId = response.sessionId;
+            const session = await this.waitUntilReady(sessionId);
+            return { outcome: 'resumed' as const, previousSessionId, previousNativeSessionId,
+                session, nativeSessionId: nativeIdentity(session) };
+        } catch (error) {
+            if (error instanceof HapiRequestError && error.code === 'native_session_missing') {
+                return { outcome: 'missing' as const, previousSessionId, previousNativeSessionId, error: errorDetails(error) };
+            }
+            if (error instanceof HapiRequestError && ['no_machine_online', 'resume_unavailable', 'access_denied', 'authentication_failed'].includes(error.code)) throw error;
+            if (!isAmbiguous(error) && !(error instanceof RunweftError && ['execution_not_ready', 'execution_closed'].includes(error.code))) throw error;
+            return { outcome: 'unknown' as const, previousSessionId, previousNativeSessionId, sessionId, error: errorDetails(error) };
+        }
+    }
+
+    async respondPermission(sessionId: string, requestId: string, decision: 'approved' | 'denied' | 'abort',
+        answers?: Record<string, string[]> | Record<string, { answers: string[] }>) {
+        const action = decision === 'approved' ? 'approve' : 'deny';
+        // HAPI owns pending-request validation and default permissions. No mode override.
+        return this.hapi.request(`/api/sessions/${encodeURIComponent(sessionId)}/permissions/${encodeURIComponent(requestId)}/${action}`, {
+            method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ decision, ...(answers ? { answers } : {}) }),
+        });
+    }
+
     async lookupStart(machineId: string, requestId: string): Promise<SpawnReceipt | null> {
         try {
             return this.receipt(await this.hapi.request(`/api/machines/${encodeURIComponent(machineId)}/spawn-requests/${encodeURIComponent(requestId)}`), machineId, requestId);
@@ -170,4 +230,8 @@ function isAmbiguous(error: unknown): boolean {
 
 function record(value: unknown): Record<string, unknown> {
     return value !== null && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {};
+}
+
+function nativeIdentity(session: SessionResponse['session']): string | undefined {
+    return session.metadata?.flavor === 'codex' ? session.metadata.codexSessionId : session.metadata?.claudeSessionId;
 }
