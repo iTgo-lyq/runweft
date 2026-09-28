@@ -1,7 +1,37 @@
 # HAPI 复用与项目重建依据
 
-> 调查日期：2026-09-28
+> 调查日期：2026-09-28；执行入口复核与真实探测：2026-09-29
 > 用途：区分上游事实、旧实现与新项目决策；不代替需求或技术方案。
+
+## 当前基线与真实探测
+
+当前固定 HAPI 为 `86c88df93baf5d1f738dd4b202078bdf6dec376e`、版本 `0.30.7`，与下文旧快照的 `2f72a80` 分开。Runweft 统一 CLI 已验收；本节直接使用其编译程序、原有 Hub/Runner 和未修改的内置适配。
+
+2026-09-29 04:37–04:39（Asia/Shanghai），在 `.dev-smoke/hapi-execution-X0KVCh/` 的专用 HAPI home 和两个专用 cwd 进行原型验证。Codex CLI 为 `0.156.1`，Claude Code 为 `2.1.283`；Claude 沿现有 `HAPI_CLAUDE_PATH` 选择本机 iclaude，模型配置与认证沿已有原生环境，不复制凭据或修改全局配置。未传 yolo、permissionMode 或模型覆盖参数。
+
+| 操作 | 实际观察 |
+| --- | --- |
+| 机器 spawn | 两种 runtime 都返回 HAPI sessionId，分别启动到指定 cwd |
+| 投递与查询 | 使用自定义 localId 投递短标记请求；消息页保留 localId，queued-state 返回 invokedAt；两种 runtime 都返回真实模型标记回复 |
+| 完成相关输出 | Claude 有 `turn_duration/resultSummary` 和 `ready`；Codex 有原生回复、用量与 `ready`，metadata 含 localId → native turnId 映射。这些字段不足以单独宣告可靠成功终态，见下节 |
+| archive | HAPI 行变为 inactive/archived，对应 HAPI wrapper PID 已退出 |
+| 停止后续接 | 重启测试服务后调用既有 resume，两种 runtime 本次都保留原 HAPI ID 和原生 session ID；新请求未重述标记，模型仍正确复述上一轮标记，并产生新的 ready |
+| 再次关闭 | 续接后的 wrapper 均退出；测试结束后 `/proc` 中无使用该专用 HAPI home 的进程，服务定位文件已移除 |
+
+原型及白名单字段摘要在 `.dev-smoke/hapi-execution-X0KVCh/{evidence,resume-evidence}.json`；不提交测试 home、凭据或完整 prompt。该结果验证了既有执行、关闭与原生续接链路，未覆盖审批、中断竞态、回执丢失、共享 runtime 的兄弟会话、首次 MCP 身份或真实远端协作，不代替本 Change 正式验收。
+
+## 当前入口映射与待解决缺口
+
+| 能力 | 当前 HAPI 入口及事实 | 下一步 |
+| --- | --- | --- |
+| 启动关联 | `POST /api/machines/:id/spawn` 在 Hub 内预分配 ID；[spawnSession](../../../../hapi/hub/src/sync/syncEngine.ts) 保留不确定启动的 stub，但公开请求没有调用方 requestId/预分配 ID，模糊异常也未返回关联 ID | 核对现有 CLI 会话创建/保留入口能否组合使用；否则只补可重查的启动关联，不另造启动器，也不通过同 cwd/时间猜测唯一会话 |
+| 输入消费 | `/messages` 接受 localId，`/messages/queued-state` 返回 queued、indeterminate 和 invoked；Codex [queue](../../../../hapi/cli/src/codex/shared/queue.ts) 结合原生 clientUserMessageId/history 对账 | Claude [MessageQueue2](../../../../hapi/cli/src/utils/MessageQueue2.ts) 在出队时触发 consumed，不能把 invokedAt 一概解释为原生客户端已接受；继续核对原生 echo/result 关联和异常恢复语义 |
+| 原生结果 | Claude [结果转换](../../../../hapi/cli/src/claude/utils/sdkToLogConverter.ts) 把 SDK result 转为 turn_duration，只保存用量、耗时和轮次数，未保存 subtype/is_error；Codex [projection](../../../../hapi/cli/src/codex/shared/projection.ts) 不向根会话持久投影 turn/completed 的 status，[root](../../../../hapi/cli/src/codex/shared/root.ts) 只发布无轮次身份的 ready | 缺口已由源码和实际返回字段共同确认；继续核对现有原生历史查询入口。若必须增补，应保留已有原生事实及输入关联，不由 Runweft 推断或维护竞争状态机 |
+| 定向中断 | `POST /sessions/:id/abort` 不接受预期输入/轮次；[RpcGateway](../../../../hapi/hub/src/sync/rpcGateway.ts) 只发送 reason，Codex 收到后中断当时 currentTurn | 不能用调用前查询消除竞态；需核对可用的既有原子前置条件，必要时增补预期轮次校验，再测试迟到中断不会命中下一轮 |
+| 关闭与续接 | 既有 archive 确认 StopSession，遇 still_alive/unknown 拒绝；resume 已实测保留原生历史 | 优先直接复用；后续验证同进程兄弟会话不受影响、缺失 session 和失败路径，不预设改造 |
+| 无会话机器操作 | `apiMachine.ts` 已注册 common handlers，含 Git/文件/bash；Hub 的机器 REST 和私有 machineRpc 当前只暴露指定操作，不能直接把内部处理器存在视为上层已可调用 | 继续核对管理入口；公共 Git 与对象传输仍归对应 Change，不在这里新增另一套机器执行器 |
+
+这些缺口是正式 Technical 前的调查项目，尚未修改 HAPI 源码或确定增补方案。不得因为普通回复与 resume 成功，就把可靠轮次、初次工具发现身份或精确中断写为已验证。
 
 ## 仓库起点
 

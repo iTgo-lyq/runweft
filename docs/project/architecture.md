@@ -155,11 +155,11 @@ Runweft 只补必要协作与交付关联，原生会话/执行事实优先读�
 
 正式方案从[阶段 1](delivery-structure.md#阶段与可验收结果)的双模式安装与数据承载、全局资源注册、HAPI 执行和宿主接入开始。先固定跨 Change 的职责及必要契约，当前阶段落实其直接前置，不要求一次写完所有下游内部细节。后续能力仍在完整版本承诺内，按阶段逐项实现和验收；各领域不能把自己的核心功能留给最后的集成 Change。
 
-统一 CLI 已完成正式 Technical/Plan、一次 iclaude 评审、实现和四平台验收，并同步 Specs 归档。真实宿主委派和 HAPI 模型执行链路尚未验证，不能据此判断后续 Change 已技术就绪；宿主工具分流、配置继承和发布证据继续由所属 Change 落实。
+统一 CLI 已完成正式 Technical/Plan、一次 iclaude 评审、实现和四平台验收，并同步 Specs 归档。HAPI 两种 runtime 的基本执行、关闭与原生续接已有真实探测；可靠终态、请求重查、精确中断和宿主委派仍未验收，不能据此判断后续 Change 已技术就绪；宿主工具分流、配置继承和发布证据继续由所属 Change 落实。
 
 ## 调查与验证状态
 
 - HAPI/Multica 的源码与文档证据按主题保留在[执行基础调查](changes/hapi-subagent-foundation/research.md)、[远端准备调查](changes/remote-workspace-preparation/research.md)和[代码传输实验](changes/remote-result-delivery/research.md)。
 - 已验证临时 Git 仓库的 bundle 传出、worktree 修改和结果取回；另已在 macOS/Linux arm64/x64 的专用环境通过候选 npm 包验证 Runweft/HAPI 服务、认证、Runner、协议代理与配置/工作区绑定，见[部署执行记录](archive/2026-09-29-unified-cli-and-deployment/execution.md)与[调查](archive/2026-09-29-unified-cli-and-deployment/research.md)。未运行真实远端 HAPI/agent 链路。
 - 正式验收须覆盖两类主客户端与两种内置 runtime 的本地/远端组合，以及 macOS 正式安装；分别由所属 Change 记录实际证据，不能相互代替。
-- 宿主身份调查记录的版本是 Claude Code `2.1.269`、Codex `0.156.1`；2026-09-29 整体方案评审使用本机 iclaude（Claude Code `2.1.283`）。评审进程不是 Runweft 经 HAPI 启动的验收任务，不能代替两种内置 runtime 或宿主 MCP 的真实链路证据。
+- 宿主身份调查记录的版本是 Claude Code `2.1.269`、Codex `0.156.1`；2026-09-29 整体方案评审使用本机 iclaude（Claude Code `2.1.283`）。评审进程不是执行验收任务。其后通过 Runweft/HAPI 启动的两种内置 runtime 探测见[执行基础调查](changes/hapi-subagent-foundation/research.md#当前基线与真实探测)，仍不替代宿主 MCP 验收。
