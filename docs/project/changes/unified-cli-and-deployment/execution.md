@@ -42,3 +42,24 @@
 - 结果：项目显式使用公开 npm，锁文件只更换镜像前缀，包版本和 integrity 保持不变；不修改用户全局 npm 配置。
 - 验证：`.dev-smoke/public-registry-install/` 在独立空缓存下执行公开源 `bun install --frozen-lockfile` 成功。
 - Commit：`unified-cli-and-deployment T4.1: use public dependency sources for CI`
+
+## T5 实际平台与整体验收
+
+- 结果：[CI 36478994571](https://github.com/iTgo-lyq/runweft/actions/runs/36478994571) 在提交 `846caf386670997aca854bfee051c2ccf54a4712` 上全部通过。构建、类型检查、12 项测试及 Linux x64 安装通过；同批 tarball 在 macOS arm64/x64 和 Linux arm64 的实际 Runner 上安装并运行成功。
+- 证据：已下载并逐一读取四个平台各两份 `evidence.json`，全部 `success: true`；原件保留在 `.dev-smoke/ci-36478994571/evidence-<平台>/`。CI artifact 仅保存非秘密摘要，不上传测试 home、日志或凭据；artifact 有保留期限，本文保存持久结论和运行定位。
+- 验收方式：依据用户逐 Change 自主验收授权，主 agent 核对以下需求映射；无需再次安排用户手工测试。没有新增实现变更，不重复已通过的完整构建与平台测试。
+- Commit：`unified-cli-and-deployment T5: accept four-platform installation and services`
+
+| Requirement 验收项 | 可观察证据与边界 |
+| --- | --- |
+| 单一安装与操作入口 | 四个平台真实 npm 全局安装自动解析可选平台依赖；仅 Node/系统工具 PATH 下运行服务、透传 HAPI 参数和版本，不依赖 Bun 或源码目录 |
+| macOS 实际安装 | `macos-15` arm64、`macos-15-intel` x64 运行安装脚本成功；不是交叉构建推断，尚不包含模型协作 |
+| 公共命令、配置、服务及认证承载 | CLI 命令注册、统一 HTTP 路由和目录已实现；真实 HAPI JWT 访问 Runweft identity，匿名返回 401；不预建下游业务表 |
+| 本地与 Hub 模式 | 本机组合启停、独立 Hub 客户端认证和 Runner 注册通过；客户端停止后中心仍存活；连接目录和机器身份互不混用。该单机协议验证不等于远端协作 |
+| 配置与持久数据 | 聚焦测试覆盖默认值、注释保留、环境优先级、无效编辑及稳定目录绑定；重启保留令牌、机器与 workspaceId；附件和 worktree 待所属 Change 实现，届时使用已确定的数据归属 |
+| 自动验收及保留 | 安装和服务脚本自动完成；npm 卸载后保留服务数据，SIGTERM 后托管端口关闭。用户原有客户端 home 与 HAPI 数据未修改 |
+| 故障与兼容诊断 | 缺少平台包、配置错误、纯 HAPI 地址误配有明确诊断；status 区分已安装/运行版本，doctor 核对固定 HAPI/协议和本机 Runner；无切换执行目标的兜底路径 |
+| 原生配置与权限 | 代码沿原环境启动 HAPI，托管时仅处理部署配置；无新增账号或审批绕过参数；原生配置继承的模型实测归 HAPI 执行契约 Change |
+| 输出与日志 | 服务脚本核对普通输出和日志不含测试令牌，非交互 token 输出被拒绝；当前无模型 prompt/源码日志，也无 MCP 服务。MCP stdout 的真实协议验证归宿主适配 |
+
+本 Change 的基础安装、服务与配置能力已达到验收要求。候选包仍为 private，未公开发布；模型执行、MCP、业务工作区、附件及真实远端链路按后续 Change 交付，不能据此宣布完整产品完成。
