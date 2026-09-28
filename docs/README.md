@@ -1,6 +1,29 @@
 # 项目文档
 
-当前处于需求阶段，没有已实现的产品功能。已确认的架构决策与初始验收草案集中在 [HAPI subagent 适配需求](project/changes/hapi-subagent-foundation/requirement.md)，调查证据见同目录 [Research](project/changes/hapi-subagent-foundation/research.md)。
+当前处于需求与设计讨论阶段，没有已实现的 Runweft 产品功能。本地验收由 agent 自动完成，真实远端验收单独安排。先读[项目能力边界与讨论地图](project/architecture.md)，查看模块分工、Change 依赖和远端之外的讨论顺序。
+
+实现以当前 HAPI 为第一依据，Runweft 尽量只做上层流程封装与 MCP；旧工程技术方案不直接沿用。
+
+最终目标是交付完整可运行版本，不以 MVP 或演示链路结项。当前十一个领域 Change 加一个集成与发布 Change，按[六阶段交付结构](project/delivery-structure.md)推进；完整交付标准与尚需落实的技术架构见[项目架构](project/architecture.md#完整版本的交付目标)。
+
+原初始 Change 已按独立交付结果拆分；各 Requirement 内声明前置能力与验收边界，已确认结论继续有效：
+
+| Change | 需求入口 | 方案与依据 |
+| --- | --- | --- |
+| HAPI 内置能力验证与调用封装 | [Requirement](project/changes/hapi-subagent-foundation/requirement.md) | [Research](project/changes/hapi-subagent-foundation/research.md) |
+| 统一 CLI 与部署 | [Requirement](project/changes/unified-cli-and-deployment/requirement.md) | [Design](project/changes/unified-cli-and-deployment/design.md) |
+| 本地共享委派与生命周期 | [Requirement](project/changes/delegation-lifecycle/requirement.md) | [Design](project/changes/delegation-lifecycle/design.md) |
+| 任务附件交付 | [Requirement](project/changes/task-artifact-delivery/requirement.md) | [Design](project/changes/task-artifact-delivery/design.md) |
+| 远端工作区准备 | [Requirement](project/changes/remote-workspace-preparation/requirement.md) | [Design](project/changes/remote-workspace-preparation/design.md)、[Research](project/changes/remote-workspace-preparation/research.md) |
+| 远端代码回收 | [Requirement](project/changes/remote-result-delivery/requirement.md) | [Design](project/changes/remote-result-delivery/design.md)、[Research](project/changes/remote-result-delivery/research.md) |
+| 宿主身份与 MCP 适配 | [Requirement](project/changes/host-mcp-adapter/requirement.md) | [Design](project/changes/host-mcp-adapter/design.md)、[Research](project/changes/host-mcp-adapter/research.md) |
+| 本地独立工作区与公共 Git 能力 | [Requirement](project/changes/local-workspace-execution/requirement.md) | [Design](project/changes/local-workspace-execution/design.md) |
+| 全局机器与 Runtime 注册 | [Requirement](project/changes/execution-resource-registry/requirement.md) | [Research](project/changes/execution-resource-registry/research.md) |
+| Agent 定义 | [Requirement](project/changes/agent-definition/requirement.md) | 轻量定义；暂不集中管理 skill/MCP |
+| Subagent 看板 | [Requirement](project/changes/subagent-dashboard/requirement.md) | 简单全局状态；详情优先复用 HAPI |
+| 完整版本集成与发布 | [Requirement](project/changes/integrated-release/requirement.md) | 组合验收、正式安装及完整交付证据 |
+
+各 Change 整体需求仍为草稿，`design.md` 保存用户要求提前展开的方案讨论，不代替正式 Technical 或 Plan；没有进入实现。
 
 按照 [project-workflow](../.agents/skills/project-workflow/SKILL.md)：
 

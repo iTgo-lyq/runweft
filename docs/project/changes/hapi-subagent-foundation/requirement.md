@@ -1,15 +1,30 @@
-# 基于 HAPI 的 MCP subagent 适配
+# HAPI 内置能力验证与调用封装
 
 > 状态：草稿
 > 规模：大型
-> 更新：2026-09-28
-> 确认依据：本会话已确认产品方向、三个项目的边界、源码内 runtime 扩展及远端 Git 约定；本文件将其归纳为初始需求，验收条目尚未逐项确认。
+> 更新：2026-09-29
+> 确认依据：MCP 宿主只支持 Codex/Claude Code；执行侧复用 HAPI 内置适配，不主动改造 runtime。三个项目边界继续有效，私有 runtime 扩展不作为本轮交付前置。
 
 ## Review 导读
 
-- **目标：** Codex 和 Claude Code 通过 Runweft MCP 使用 HAPI 执行子任务，委派过程接近宿主原生 subagent 体验。
-- **当前状态：** 新仓库仅有工作流与文档；本文件描述目标，不代表功能已经实现。
-- **后续核实：** 宿主身份与结果交付方式、HAPI 可复用接口、远端执行及 macOS 安装路径。具体方法、schema、技术栈版本和进程部署方式尚未确定。
+- **目标：** Runweft 能通过 HAPI 稳定关联一次执行、投递输入、读取原生结果并控制恢复。
+- **范围：** 验证已有 HAPI 执行事实，封装上层调用和兼容性诊断；不承担 Codex/Claude Code runtime 重写或主动改造，也不承载委派与远端 Git 全部实现。
+- **现状：** 只有文档与 HAPI submodule 关联，未实现 Runweft 执行适配，也未验证真实 agent 链路。
+- **项目入口：** 完整能力分工、依赖图和待讨论模块见[跨 Change 架构](../../architecture.md)。
+
+## Change 依赖
+
+| 关系 | Change / 资源 | 依赖内容与满足条件 |
+| --- | --- | --- |
+| 前置 | [统一 CLI](../unified-cli-and-deployment/requirement.md) | 基础安装、HAPI 连接与诊断可用；不依赖完整业务发行 |
+| 外部基础 | 固定版本的 HAPI 构建 | 默认直接使用内置适配；先验证已有能力，不能把关联仓库视为链路已验证 |
+| 下游 | [宿主适配](../host-mcp-adapter/requirement.md)、[委派生命周期](../delegation-lifecycle/requirement.md)、[本地工作区](../local-workspace-execution/requirement.md) | 消费执行身份、真实状态和控制入口；各自验收不并入本 Change |
+
+## 独立验收与交付边界
+
+在自动准备的专用 cwd 中，直接通过已有入口验证两种内置 runtime 的启动、输入、原生结果、停止与续接；不要求父子调度、动态 Git 准备或附件先实现。HAPI 接口使用执行关联和已有启动上下文，不要求理解 Runweft 的 delegation 数据结构。
+
+本 Change 验证并调用 HAPI 已有的配置继承、启动上下文和单执行关闭能力，不重新实现这些行为；宿主角色解释和父子业务关联归下游。单独验收不等于已经完成用户侧委派体验。
 
 ## 已确认的架构决策
 
@@ -21,19 +36,29 @@
 | 通用 HAPI fork | 为 Runweft 暴露必要执行能力，复用并补齐 Hub、Runner、会话、审批、结果和控制能力 | 跟进 HAPI 上游，供 Runweft 与私有 fork 使用 |
 | 私有 HAPI fork | 接入内部 runtime、认证和远端环境 | 基于通用 fork 迭代，不要求 Runweft 识别内部厂商实现 |
 
-后两个仓库尚未在本次初始化中创建，名称和地址待建立时登记。
+通用 HAPI fork 已创建于 [iTgo-lyq/hapi](https://github.com/iTgo-lyq/hapi)，本仓库通过根目录 `hapi/` submodule 固定其版本；私有 HAPI fork 尚未创建，名称和地址待建立时登记。
 
 ### 复用 HAPI 执行基础
 
-优先复用 HAPI 现有接口；所需能力仅存在于内部时，在 HAPI 中暴露适合程序调用的入口；确实缺失的执行语义在 HAPI 中补齐。
+默认直接复用 HAPI 现有 Codex/Claude Code 适配和管理接口。本 Change 的正常交付是能力映射、Runweft 调用封装、错误处理与真实验证，不预先安排 launcher、原生协议、session、审批、恢复或共享 runtime 改造。
+
+仅当既定产品行为被可复现缺口阻断时，先排查版本、配置和调用方式，再判断是否需要最小管理入口增补。暴露已有能力与修改 runtime 内部行为必须区分，不能从“需要可靠轮次”直接推导出“必须改造 HAPI runtime”，也不能搬回旧补丁。
+
+2026-09-29 用户再次明确：Runweft 尽量只做 HAPI 上层流程封装并提供 MCP。每项方案先写出现有 HAPI 入口、能否直接满足及实际缺口；默认不是另建执行、会话索引、消息/状态、恢复、审批、文件或 UI 系统。HAPI 已实现就引用或薄封装，不把本 Change 理解成重写可靠执行引擎。
+
+旧工程只参考用户交互、历史证据和失效场景；内部方案须依据当前 HAPI 重新推导，不能完全照搬旧 daemon、状态机、认证锁、持久事件库或补丁组合。
 
 Runweft 不另建通用 runtime 协议、执行框架或与 HAPI 竞争的执行状态机。执行会话、轮次、审批、原生结果、中断和恢复由 HAPI 管理；Runweft 维护委派关系、调度策略及 MCP 调用与 HAPI 执行的关联。
 
 新增 HAPI 入口仍需明确身份、错误和兼容语义。已有接口被接受、连接断开或界面显示文本，不能单独证明任务完成。
 
-### runtime 按源码方式扩展
+### 宿主支持与执行目标分开
 
-Claude Code 和 Codex 是内置执行目标；内部及其他第三方 runtime 按 HAPI 原有代码组织方式直接修改对应 fork 接入。
+Runweft MCP 接入侧明确只支持 Codex 和 Claude Code。执行侧以 HAPI 已有能力为来源，本轮以内置 Codex/Claude Code 为验证基线；两种宿主不意味着需要各写一份执行适配。runtime 注册只建立机器、工具环境与引用，不负责实现工具协议。
+
+### 独立 runtime 扩展的后续边界
+
+Claude Code 和 Codex 已由 HAPI 内置，不在本轮重新接入。今后内部 runtime 的独立接入按 HAPI 原有源码组织在对应 fork 完成，不作为当前 Runweft 完整版本的交付依赖。
 
 不提供 npm runtime 插件、绝对路径动态插件加载、插件市场或 Runweft 插件 SDK。Runweft 自身的 npm 分发与 runtime 扩展机制是不同问题。
 
@@ -47,62 +72,43 @@ Claude Code 和 Codex 是内置执行目标；内部及其他第三方 runtime �
 
 ### ADDED
 
-#### `installation`：双客户端安装与调用
+#### `execution/lifecycle`：可关联的原生执行
 
-交付可安装的 Runweft CLI 与 MCP 入口，提供 Codex、Claude Code 的配置说明和诊断方式。安装目标包含 macOS，并验证通过 npm 安装到 Mac 的路径；打包方式及各平台认证范围在技术阶段确定。
+Codex 和 Claude Code 作为内置执行目标，由 HAPI 管理机器路由、进程、原生会话、轮次、审批、中断与恢复。Runweft 读取这些事实，不从输出文本或空闲时长猜测终态。
 
-客户端类型与执行 runtime 独立：Codex 或 Claude Code 主 agent 均可选择 HAPI 中配置的 Claude Code 或 Codex 执行目标。
+程序可以区分进程已启动、runtime 可接收输入、某次输入已接受和该轮结束；原生结果关联到具体输入。状态无法确认时显式保留未知，不能重发 prompt 或创建第二个执行来掩盖不确定性。
 
-#### `delegation`：接近原生的子任务协作
+#### `execution/recovery`：可查询的启动与控制
 
-主 agent 可以派生子任务、继续自己的工作、查看状态、等待并取得结果、追加任务和中断指定执行。Runweft 维持父子关联与结果归属，用户完成一次常规委派不需手工操作 HAPI 界面。
+启动和输入请求具有可查询的稳定关联。超时后先核对原操作；恢复导致 HAPI 身份改变时返回新旧关联。中断绑定目标轮次，不能误中随后启动的轮次。
 
-工具命名和参数以两类宿主的使用体验与 HAPI 能力为依据，不直接沿用旧接口。宿主原生面板、后台唤醒和共享上下文是否可用，需要分别验证，不能由 MCP 接入成功推断。
+子任务本轮结束后通过 HAPI 关闭该 subagent 执行进程，不为等待 follow-up 保持 agent 空跑；保留 HAPI/原生 session 记录。下一轮优先原生续接，session 确认不存在时才按[委派方案](../delegation-lifecycle/design.md)组合已有历史开始新 session。读取、关闭和续接优先沿 HAPI 已有入口，不直连原生 CLI 再造执行器。共享进程不能因一个任务结束而误杀其他会话。
 
-#### `agent-configuration`：全局与项目级 agent 配置
+主宿主关闭后的恢复不属于目标。执行权限遵循 HAPI 与原生客户端已有默认，不额外建立权限隔离，也不自动改为跳过审批。
 
-用户通过全局配置和项目级配置定义 agent、职责说明、适用场景、委派提示词及 HAPI 执行目标。主 agent 根据这些说明选择是否委派。
+#### `execution/compatibility`：兼容能力声明
 
-配置路径、覆盖规则和提示词传递方式待技术方案确定。运行生命周期与“什么时候适合调用子 agent”的说明分别定义，不把说明文本当作定时或自动启动规则。
-
-#### `execution`：本地与远端执行
-
-Claude Code、Codex 均覆盖本地和远端执行目标，执行位置通过 HAPI 的机器、Runner 或对应 runtime 接入确定。网络连接、原生认证和执行环境准备属于 HAPI 及其 runtime 适配。
-
-私有 runtime 在相同 HAPI 接入边界内暴露能力，Runweft 不增加内部 runtime 专属分支。能力未配置或不支持时应给出明确结果，不静默切换 runtime。
-
-#### `remote-workspace`：以 Git 为远端任务边界
-
-只有当前工作区使用 Git 跟踪时才允许远端委派。发起委派的主 agent 必须明确指定基于哪个分支或 commit；执行前固定具体 commit，并保留其与仓库、工作区的关联。
-
-本地未提交或未跟踪文件不会因为指定分支而自动出现在远端。远端初始化可以由 HAPI runtime 适配程序化完成，也可以由该适配将准备任务交给执行 agent；实现必须遵守本次指定的基线。
-
-结果可以包含新分支或 commit，也允许仅返回报告而没有新的 Git 引用。声明交付代码时，应提供调用方能够取回的 Git 结果；无法访问的远端 SHA 不能被当作已经交付。
-
-不归 Git 跟踪的产物是否支持远端访问，由对应 HAPI runtime 适配决定，并向调用方表明支持范围。
+按实际 runtime 与版本声明启动、输入、结果、中断、恢复能力；不支持时明确返回。私有 runtime 在 HAPI 源码内接入，Runweft 不因内部厂商增加执行分支。具体能力映射在调查后确定，不新增通用 runtime SDK。
 
 ## 验收标准草案
 
-- [ ] Codex 与 Claude Code 均通过正式安装配置使用同一个 Runweft MCP 服务入口。
-- [ ] 两类客户端均能选择 Claude Code 与 Codex 执行目标，完成派生、状态查看、等待结果、追加任务和中断。
-- [ ] 两种内置 runtime 分别通过本地与远端真实任务验证；未经验证的组合不声明可用。
-- [ ] 全局与项目级 agent 定义能够影响可选执行目标与委派说明，覆盖行为可解释。
-- [ ] 非 Git 工作区或缺少明确基线的远端请求被拒绝；远端实际基线与本次指定 commit 一致。
-- [ ] Git 改动可被调用方取回；仅报告的任务无需制造提交；不支持的非 Git 产物访问明确反馈。
-- [ ] 中断命中指定执行，结果能关联到正确父任务；状态不确定时不误报完成或自动重复执行。
-- [ ] 私有 fork 可在 Runweft 无厂商专属修改的情况下接入内部 runtime。
-- [ ] macOS 上通过 npm 安装 CLI、注册 MCP 并完成真实委派；构建成功不能替代实机运行验证。
+- [ ] 两种内置 runtime 分别提供输入关联、原生终态和结果的真实验证；仅凭 REST 成功不能通过。
+- [ ] 启动或输入回执丢失时可核对原执行；未知结果不会自动导致重复 agent 或重复输入。
+- [ ] 审批、中断和恢复反映 HAPI 真实事实；中断不误中下一轮，恢复可追踪身份变化。
+- [ ] 能力不具备或认证无效时给出明确结果，不静默切换 runtime。
+- [ ] 不改造用户现有模型配置；真实验证使用已授权的专用环境。
+- [ ] 本轮结束后子执行进程已关闭，原生会话可供后续优先续接；其他 HAPI 执行不受影响。
+- [ ] 默认使用未主动改造的 HAPI 内置适配；调用封装与测试不重复实现会话、状态、恢复等能力。
+- [ ] 若确有阻断缺口，有复现证据、现有入口排查结果与最小影响说明，不能凭假设增加 runtime 改造任务。
 
-## 可行性与限制
+本 Change 验收执行契约；两类宿主的体验、Mac 安装、工作区准备与代码取回分别由其所属 Change 验收。
 
-- **有条件可行：** 锁定的旧 HAPI 源码已有多 runtime、Hub/Runner、ACP backend 和会话能力，可作为新方案调查入口。
-- **尚未验证：** 新的客户端接入、HAPI 接口选择、可靠轮次语义、远端 Git 交付及 macOS 安装。旧仓库的 Linux / Claude 证据不作为新架构认证。
-- **需要调查：** HAPI 接口与内部能力到上述用户流程的映射、两类宿主的身份与结果交付、通用及私有 fork 的兼容边界。结论进入后续 Technical，再拆分可独立验收的实现 Changes。
+## 调查与后续讨论
+
+已有证据见 [Research](research.md)。需要继续核对已有轮次边界、消息接受、停止与恢复入口；这些是可主动调查的事实，不要求用户猜测，也不预设要修改其实现。私有 runtime 的环境属于独立后续接入，不阻塞本轮内置能力复用。
 
 ## 协作资源
 
-### 输入
-
-- [旧 Runweft 实现快照](https://github.com/iTgo-lyq/runweft-archive/tree/0cbfa01f522488b2ede60e47adc1117698b54748)（读取 2026-09-28）：保留旧实现与认证证据，仅供调查，不构成新项目规格。
-- [HAPI 插件提案 #653](https://github.com/tiann/hapi/issues/653)（读取 2026-09-28）：记录社区需求，后续跟踪；不采用插件化接入。
-- [HAPI 插件实现 PR #695](https://github.com/tiann/hapi/pull/695)（读取 2026-09-28）：作者已关闭且未合并，不作为当前依赖；状态与证据见 [Research](research.md)。
+- [HAPI REST 契约](https://hapi.run/docs/api/client-contract/rest)（读取 2026-09-28）：已有消息、审批、中断与恢复入口，尚不能据此证明全部可靠轮次语义。
+- [旧 Runweft 快照](https://github.com/iTgo-lyq/runweft-archive/tree/0cbfa01f522488b2ede60e47adc1117698b54748)（读取 2026-09-28）：仅用于调查，不继承旧功能完成状态与认证结论。
+- [HAPI 插件提案 #653](https://github.com/tiann/hapi/issues/653)与[实现 PR #695](https://github.com/tiann/hapi/pull/695)（读取 2026-09-28）：不采用其插件方案或作为交付依赖，证据保留在 Research。

@@ -23,6 +23,18 @@
 
 HAPI 的本地/远程交互模式不直接等价于本项目的同机/跨主机执行目标；跨主机文件准备与 Git 结果取回必须单独验证。
 
+## 关联调查
+
+[远端工作区调查](../remote-workspace-preparation/research.md)保存 HAPI 多机/工作树与 Multica 准备、执行和成果分工的源码证据。[代码回收实验](../remote-result-delivery/research.md)保存 Git bundle 的本地验证，避免在各 Change 复制同一份证据。
+
+## 远端设计补充证据
+
+2026-09-28 在上述 HAPI 锚点继续核对：
+
+- [SyncEngine.spawnSession](https://github.com/tiann/hapi/blob/86c88df93baf5d1f738dd4b202078bdf6dec376e/hub/src/sync/syncEngine.ts#L2165)已为新机器会话预分配 ID；启动后发生不确定错误时保留记录，只有明确没有启动子进程才清理。可复用这一基础，但公开 API 尚不等于具备 Runweft 的客户端请求去重和准备回执。
+- [目录预检查](https://github.com/tiann/hapi/blob/86c88df93baf5d1f738dd4b202078bdf6dec376e/cli/src/runner/validateWorkspaceDirectory.ts)负责目录存在性、创建和 symlink 异常，不负责仓库基线准备。
+- [会话 upload](https://github.com/tiann/hapi/blob/86c88df93baf5d1f738dd4b202078bdf6dec376e/hub/src/web/routes/sessions.ts#L287)要求活跃会话，经 RPC 向会话提供文件；[scratchlist 上传](https://github.com/tiann/hapi/blob/86c88df93baf5d1f738dd4b202078bdf6dec376e/hub/src/sync/syncEngine.ts#L815)已有 Hub 侧文件存储与配额检查。上游并非没有集中存储；待补的是启动前输入和独立于子会话的委派成果生命周期。
+
 ## 社区插件提案跟踪
 
 | 材料 | 核对结果 |
