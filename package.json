@@ -14,7 +14,10 @@
     "typecheck": "tsc --noEmit",
     "test": "bun test ./test",
     "test:service": "node scripts/smoke-service.mjs",
-    "build": "bun scripts/build.ts"
+    "test:install": "node scripts/smoke-install.mjs",
+    "build": "bun scripts/build.ts",
+    "build:hapi": "bun scripts/build-hapi.ts",
+    "package": "bun scripts/package.ts"
   },
   "dependencies": {
     "commander": "15.0.0",

@@ -21,3 +21,10 @@
 - 修正：复用 HTTP 连接后升级 WebSocket 在 Bun 兼容层停滞，已让普通 HTTP 响应结束后关闭连接；HAPI 机器在线缓存延迟过期，改为结合本机原有 Runner 状态；构建用原子替换复制 HAPI，避免覆盖运行中的二进制失败。HAPI 源码未修改。
 - 范围：测试均使用专用 home，无真实模型任务或跨机远端验证。正式 npm 依赖安装与 macOS 验收继续由 T3/T4 完成。
 - Commit：`unified-cli-and-deployment T2: manage HAPI services through one CLI`
+
+## T3 平台包与安装路径
+
+- 结果：已有固定源码的 HAPI 构建脚本、四个平台的 Runweft/HAPI 二进制包、带信号转发的 Node npm 启动器、源码及许可材料、可跨机器使用的包索引。产物在 `dist/packages/`；候选包保持 private，没有公开发布。
+- 验证：类型检查通过；macOS arm64/x64、Linux arm64/x64 均实际完成交叉构建与 npm pack。临时 registry 的真实 `npm install --global` 自动安装主包和 Linux x64 可选依赖，在无 Bun 的 PATH 与独立消费目录完成全部 T2 服务流程、前台启动器信号、缺包诊断、npm 卸载及持久数据保留。证据：`.dev-smoke/install-SsdXG8/evidence.json`。
+- 限制：交叉构建不是 macOS 或 Linux arm64 的运行验收；T4 使用实际平台运行同一候选包。公开包名占用/发布权限及自身许可在集成发行处理，不以当前 registry 查询未占用承诺将来可发布。
+- Commit：`unified-cli-and-deployment T3: package standalone platform distributions`

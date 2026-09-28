@@ -11,6 +11,10 @@
 
 HAPI 的源码、原生适配、Web 和协议沿 submodule；Runweft 不复制其源码进 src，不改造 Codex/Claude launcher。包内保留 HAPI 许可、NOTICE、源码 URL 与固定 revision。具体构建步骤见 [Research](research.md)。
 
+`bun run package --all` 先检查 HAPI revision、版本和干净工作树，再沿其构建流程生成四个平台包。主包 `runweft` 通过固定版本的 `runweft-<os>-<arch>` 可选依赖选平台；Linux 使用 glibc，启动器需要 Node 20+。候选包暂标记 private，公开发布与 Runweft 自身许可在集成发行阶段处理；本任务不发布注册表。平台包附带匹配的 HAPI 源码归档、工具许可与构建来源；`--reuse-hapi` 只接受源码一致且二进制 hash 匹配的缓存。
+
+`node scripts/smoke-install.mjs` 用一次性 loopback registry、独立 npm 配置/缓存/前缀和仅含 Node/系统工具的 PATH，执行真实全局安装、整套服务验证、缺失平台包诊断及卸载。产物索引使用相对路径，可交给 macOS CI 验收同一批 tarball。
+
 ## 命令与配置
 
 基础命令为 `init`、`config show/path/check/set`、`paths`、`workspace bind/list`、`start/status/stop/restart`、`serve`、`auth login/status/token`、`open`、`doctor` 和 `hapi …`。业务命令在所属后续 Change 增加，当前不显示占位命令。
