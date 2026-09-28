@@ -45,4 +45,4 @@ Multica 的 daemon 在执行机器上领取任务、准备目录、启动 agent 
 **本项目的采用边界：** 参考程序、prompt 与工具的分工，但用户已明确要求从主仓库派生独立 worktree，且必须在 subagent 会话启动前准备 Git、目录、输入和上下文。不能沿用 Multica 由 agent 按需初始化任务根仓库的时机。项目依赖仍由启动后的 agent 处理，具体方案见[工作区准备设计](design.md)。
 
 
-启动关联及上传证据见[执行基础调查](../hapi-subagent-foundation/research.md#远端设计补充证据)；代码传输实验见[结果回收调查](../remote-result-delivery/research.md)。Multica 表格中的结果相关证据供相应 Change 引用，不扩大本 Change 实现范围。
+启动关联及上传证据见[执行基础调查](../../archive/2026-09-29-hapi-subagent-foundation/research.md#远端设计补充证据)；代码传输实验见[结果回收调查](../remote-result-delivery/research.md)。Multica 表格中的结果相关证据供相应 Change 引用，不扩大本 Change 实现范围。

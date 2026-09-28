@@ -57,4 +57,4 @@ ID 或 hash 不是读取权限。文件名不直接成为存储路径，拒绝�
 
 ## 协作资源
 
-- [HAPI 上传和存储调查](../hapi-subagent-foundation/research.md#远端设计补充证据)（2026-09-28）：活跃会话 upload 与中心 scratchlist 已有实现，但不等价于本 Change 的任务生命周期。
+- [HAPI 上传和存储调查](../../archive/2026-09-29-hapi-subagent-foundation/research.md#远端设计补充证据)（2026-09-28）：活跃会话 upload 与中心 scratchlist 已有实现，但不等价于本 Change 的任务生命周期。

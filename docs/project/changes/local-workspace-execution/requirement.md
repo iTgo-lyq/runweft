@@ -13,7 +13,7 @@
 
 | 关系 | Change | 依赖内容与满足条件 |
 | --- | --- | --- |
-| 前置 | [HAPI 执行契约](../hapi-subagent-foundation/requirement.md) | 在指定 cwd 启动、结束和续接执行 |
+| 前置 | [HAPI 执行契约](../../archive/2026-09-29-hapi-subagent-foundation/requirement.md) | 在指定 cwd 启动、结束和续接执行 |
 | 前置 | [委派生命周期](../delegation-lifecycle/requirement.md) | CLI/MCP 协作、准备/收尾条件与串行轮次可消费 Git 证据 |
 | 下游 | [远端准备](../remote-workspace-preparation/requirement.md)、[远端结果](../remote-result-delivery/requirement.md) | 复用仓库/环境身份、准备与固定成果，不重新实现一套 Git 生命周期 |
 

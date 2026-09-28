@@ -15,7 +15,7 @@
 
 | 关系 | Change | 依赖内容与满足条件 |
 | --- | --- | --- |
-| 前置 | [HAPI 执行契约](../hapi-subagent-foundation/requirement.md) | 执行、输入、终态和控制可可靠关联；不能用模拟终态作为最终验收 |
+| 前置 | [HAPI 执行契约](../../archive/2026-09-29-hapi-subagent-foundation/requirement.md) | 执行、输入、终态和控制可可靠关联；不能用模拟终态作为最终验收 |
 | 前置 | [统一 CLI 与部署](../../archive/2026-09-29-unified-cli-and-deployment/requirement.md) | 主体、工作区绑定入口及 HAPI 目标配置可供协作服务使用 |
 | 前置 | [宿主适配](../host-mcp-adapter/requirement.md) | 可信身份、角色、MCP 工具承载与结果传递已有证据；调度不再反向定义宿主身份 |
 | 前置 | [Agent 定义](../agent-definition/requirement.md) | 职责、指令与 HAPI 目标可解析；发现工具由本 Change 注册 |

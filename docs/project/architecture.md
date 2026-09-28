@@ -9,7 +9,7 @@
 
 执行侧直接复用 HAPI 已内置的 Codex/Claude Code 适配，不预设新增或主动改造其 launcher、原生协议、会话、审批与恢复。下文“执行契约”指已有能力的验证与调用封装；只有可复现缺口阻断既定行为时才评估最小增补。后续私有 runtime 接入不作为本轮交付前置。
 
-**HAPI 已有能力优先复用。** 技术方案按“当前入口 → 是否足够 → 最小缺口”推导；已有会话、消息、状态、恢复、审批、文件与 UI 不重复实现。旧工程只参考交互和历史证据，不能完全照搬其 daemon、状态机、认证锁或补丁；具体边界见[执行基础需求](changes/hapi-subagent-foundation/requirement.md#已确认的架构决策)。
+**HAPI 已有能力优先复用。** 技术方案按“当前入口 → 是否足够 → 最小缺口”推导；已有会话、消息、状态、恢复、审批、文件与 UI 不重复实现。旧工程只参考交互和历史证据，不能完全照搬其 daemon、状态机、认证锁或补丁；具体边界见[执行基础需求](archive/2026-09-29-hapi-subagent-foundation/requirement.md#已确认的架构决策)。
 
 协作服务的运行位置已在[统一 CLI 技术方案](archive/2026-09-29-unified-cli-and-deployment/technical.md#服务与数据归属)中落实：Runweft 服务与原有 HAPI Hub 同机部署，共用 HTTP 入口和 HAPI 认证；本地模式部署在本机，Hub 模式部署在所选中心。只补父子关联、角色分流、工作区准备与成果交付，不复制 HAPI 原生会话库。基础安装与部署已通过四个平台验收并归档，当前行为见[部署 Spec](specs/deployment/spec.md)；业务关联与协作仍由后续 Change 实现。
 
@@ -30,7 +30,7 @@
 | Change | 独立交付结果 | 前置 Change |
 | --- | --- | --- |
 | [统一 CLI 与部署（已完成）](archive/2026-09-29-unified-cli-and-deployment/requirement.md) | 可安装的基础入口、公共配置/数据位置、HAPI 管理与诊断 | 无；固定现有 HAPI 构建 |
-| [HAPI 内置能力验证与调用封装](changes/hapi-subagent-foundation/requirement.md) | 验证并封装已有启动、输入、原生结果、停止与续接入口 | 统一 CLI |
+| [HAPI 内置能力验证与调用封装（已完成）](archive/2026-09-29-hapi-subagent-foundation/requirement.md) | 验证并封装已有启动、输入、原生结果、停止与续接入口 | 统一 CLI |
 | [宿主适配](changes/host-mcp-adapter/requirement.md) | 两宿主可信身份、工具分流与结果传递机制 | 统一 CLI、HAPI 执行契约 |
 | [全局资源注册](changes/execution-resource-registry/requirement.md) | 分别注册机器和 runtime，查询真实可用性 | 统一 CLI |
 | [Agent 定义](changes/agent-definition/requirement.md) | 可发现、校验及解析的全局/项目定义，引用 runtime | 统一 CLI、全局资源注册 |
@@ -61,7 +61,7 @@ flowchart TD
     B --> F
 ```
 
-图省略传递依赖，完整直接前置以表格及各 Requirement 为准。前置表示实现与验收所需能力，不限制只读调查。统一 CLI 已验收归档，其余 Change 待逐项细化，既有确认继续有效；design.md 和阶段说明不代替正式 Technical/Plan。
+图省略传递依赖，完整直接前置以表格及各 Requirement 为准。前置表示实现与验收所需能力，不限制只读调查。统一 CLI 与 HAPI 执行契约已验收归档，其余 Change 待逐项细化，既有确认继续有效；design.md 和阶段说明不代替正式 Technical/Plan。
 
 ## 本轮已经收敛的范围
 
@@ -140,7 +140,7 @@ Runweft 只补必要协作与交付关联，原生会话/执行事实优先读�
 | 技术缺口 | 完整交付前需落实的结论 |
 | --- | --- |
 | 协作逻辑的部署与存储 | 统一 CLI 已验证服务进程、HAPI JWT 复用、服务端持久目录、双模式生命周期和协议代理。业务关联表及迁移由所属 Change 落实，不预建下游表 |
-| HAPI 原生执行契约 | 两种内置 runtime 的输入接受、轮次结束、最终结果、停止写入和续接如何沿现有入口关联；默认不修改适配，实际阻断须先复现和排查，保护共享 runtime 中其他会话 |
+| HAPI 原生执行契约 | 两种内置 runtime 的输入关联、原生结果、请求重查、定向中断、审批、停止与续接已通过真实验收；共享进程兄弟会话可继续执行，已证实缺口在 HAPI 原路径最小增补 |
 | 宿主身份与结果交互 | 首次工具发现和每次调用的身份、原生子会话工具列表分流、会话切换、等待与可支持的结果注入；公开能力有缺口时说明对既定行为的影响，不静默降级 |
 | 工作区与交付一致性 | 基线准备、启动校验、轮次封存、成果取回、跨轮次复用、失败保留和最终回收的契约；落实 LFS/子模块等既定验收边界 |
 | 发行与运行维护 | 基础包组织、版本固定、启停诊断与四平台安装已验收；完整业务版本的数据升级、组合验收和公开发行由集成 Change 落实 |
@@ -155,11 +155,11 @@ Runweft 只补必要协作与交付关联，原生会话/执行事实优先读�
 
 正式方案从[阶段 1](delivery-structure.md#阶段与可验收结果)的双模式安装与数据承载、全局资源注册、HAPI 执行和宿主接入开始。先固定跨 Change 的职责及必要契约，当前阶段落实其直接前置，不要求一次写完所有下游内部细节。后续能力仍在完整版本承诺内，按阶段逐项实现和验收；各领域不能把自己的核心功能留给最后的集成 Change。
 
-统一 CLI 已完成正式 Technical/Plan、一次 iclaude 评审、实现和四平台验收，并同步 Specs 归档。HAPI 两种 runtime 的基本执行、关闭与原生续接已有真实探测；可靠终态、请求重查、精确中断和宿主委派仍未验收，不能据此判断后续 Change 已技术就绪；宿主工具分流、配置继承和发布证据继续由所属 Change 落实。
+统一 CLI 与 HAPI 执行契约均完成正式 Technical/Plan、各一次 iclaude 评审、实现与验收，并同步 Specs 归档。基础安装通过四平台运行验证，执行契约在本机完成两种 runtime 的编译版本真实验收；宿主工具分流、业务委派和最终发行仍按后续 Change 推进，不能据此宣布完整产品完成。
 
 ## 调查与验证状态
 
-- HAPI/Multica 的源码与文档证据按主题保留在[执行基础调查](changes/hapi-subagent-foundation/research.md)、[远端准备调查](changes/remote-workspace-preparation/research.md)和[代码传输实验](changes/remote-result-delivery/research.md)。
+- HAPI/Multica 的源码与文档证据按主题保留在[执行基础调查](archive/2026-09-29-hapi-subagent-foundation/research.md)、[远端准备调查](changes/remote-workspace-preparation/research.md)和[代码传输实验](changes/remote-result-delivery/research.md)。
 - 已验证临时 Git 仓库的 bundle 传出、worktree 修改和结果取回；另已在 macOS/Linux arm64/x64 的专用环境通过候选 npm 包验证 Runweft/HAPI 服务、认证、Runner、协议代理与配置/工作区绑定，见[部署执行记录](archive/2026-09-29-unified-cli-and-deployment/execution.md)与[调查](archive/2026-09-29-unified-cli-and-deployment/research.md)。未运行真实远端 HAPI/agent 链路。
 - 正式验收须覆盖两类主客户端与两种内置 runtime 的本地/远端组合，以及 macOS 正式安装；分别由所属 Change 记录实际证据，不能相互代替。
-- 宿主身份调查记录的版本是 Claude Code `2.1.269`、Codex `0.156.1`；2026-09-29 整体方案评审使用本机 iclaude（Claude Code `2.1.283`）。评审进程不是执行验收任务。其后通过 Runweft/HAPI 启动的两种内置 runtime 探测见[执行基础调查](changes/hapi-subagent-foundation/research.md#当前基线与真实探测)，仍不替代宿主 MCP 验收。
+- 宿主身份调查记录的版本是 Claude Code `2.1.269`、Codex `0.156.1`；2026-09-29 整体方案评审使用本机 iclaude（Claude Code `2.1.283`）。评审进程不是执行验收任务。其后通过 Runweft/HAPI 启动的两种内置 runtime 探测见[执行基础调查](archive/2026-09-29-hapi-subagent-foundation/research.md#当前基线与真实探测)，仍不替代宿主 MCP 验收。

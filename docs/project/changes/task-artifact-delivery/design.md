@@ -35,7 +35,7 @@ HAPI 已有会话上传和 Hub scratchlist 附件存储；应复用合适的底�
 
 ## 4. 验证边界
 
-可在没有 agent 会话的情况下验证：上传后校验、启动前下载、重复请求、断线重传、跨主体拒绝、路径逃逸拒绝、配额不足与删除保护。HAPI 已有上传与 scratchlist 存储的证据见[共同调查](../hapi-subagent-foundation/research.md#远端设计补充证据)；本 Change 尚未实现上述行为。
+可在没有 agent 会话的情况下验证：上传后校验、启动前下载、重复请求、断线重传、跨主体拒绝、路径逃逸拒绝、配额不足与删除保护。HAPI 已有上传与 scratchlist 存储的证据见[共同调查](../../archive/2026-09-29-hapi-subagent-foundation/research.md#远端设计补充证据)；本 Change 尚未实现上述行为。
 
 ## 5. 领域接入边界
 
