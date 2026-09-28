@@ -81,7 +81,7 @@
 
 当前固定 HAPI `cb2810dc` 的机器 spawn 可指定 cwd、runtime、模型和权限等，但没有逐执行附加 MCP 配置/环境参数。Claude 原生 SDK 已接受 mcpServers，HAPI 已有 HAPI_SESSION_ID；Codex 共享 root 已在原生 thread 配置注入自己的 hapi MCP 和 shell 的 HAPI_SESSION_ID，但 engine 全局环境明确删除该 ID。因此不能假定全局 Runweft MCP 进程在首次发现时已经拿到 HAPI 子身份。
 
-受控子列表的候选最小增补是复用上述已有原生配置入口，在管理层承载逐执行的 MCP 启动上下文，而非重写 runtime。具体字段、持久续接与共享 root 范围仍待 Technical 核对；业务方先提供子角色，不能让模型自报，也不能依赖尚未创建的 delegation 记录猜测。
+受控子列表的候选最小增补是复用上述已有原生配置入口，在管理层承载逐执行的 MCP 启动上下文，而非重写 runtime。业务方先提供子角色，不能让模型自报，也不能依赖尚未创建的 delegation 记录猜测。
 
 ## 全局安装隔离实验
 
@@ -94,3 +94,17 @@
 ## 结果通知边界
 
 [Claude MCP channels](https://code.claude.com/docs/en/mcp#push-messages-with-channels)要求启动时通过 channels 明确启用；普通全局 MCP 注册不等于获得推送能力。[asyncRewake hook](https://code.claude.com/docs/en/hooks#run-hooks-in-the-background)提供在线唤醒候选，但需单独实测；普通异步 hook 结果等下一轮交互。本 Change 先保证工具响应、等待与取消传递，主动唤醒仅对实际接通路径声明，不把列表刷新作为完成通知。
+
+
+### 逐线程配置与续接承载
+
+`.dev-smoke/host-probe/per-thread-nkDvYo/evidence.json` 使用 HAPI 现有 CodexAppServerClient 启动一个原生 app-server，在同一 cwd 创建两条线程，分别传入不同 `mcp_servers.runweft_probe` 启动配置。没有提交 prompt 或执行模型请求：
+
+- parent 的首次 tools/list 返回 probe_parent/probe_report；child 的首次 tools/list 仅返回 probe_report。
+- 两个 MCP 进程收到各自独立 contextId，均早于任何工具调用取得正确配置；配置没有跨线程覆盖。关闭原生 app-server 后两个 MCP 进程均退出。
+- 这是底层原生配置入口的真实验证，不是 Runweft/HAPI spawn 已支持该参数，更不证明原生自行派生的子会话会自动获得不同配置。
+- 验证命令退出 0、证据 success=true；Bun 在退出后额外报告 tsconfig-override directory mismatch 的内部诊断，不影响已收到并核对的两条真实协议结果，未忽略此诊断。
+
+源码定位进一步明确了后续增补范围：机器 REST SpawnSessionRequestSchema、Runner SpawnSessionOptions/buildCliArgs 和 Hub resumeSession 都没有传入附加 MCP 配置；Codex root.config 已经在 thread start/resume/fork 处注入 HAPI 自身 MCP，Claude runClaude 已把 mcpServers 交给既有 loop/SDK。不能只给首次启动加进程级环境，否则共享 Codex root 会混用，停止后由 Hub 重启也可能丢角色。
+
+候选管理契约应在已有 HAPI 会话元数据中保留非秘密的启动上下文，spawn 与 resume 沿原有管理路径转交，在各 root/Claude session 的原生配置位置应用；工具条目只覆盖显式附加的同名入口，其他用户配置继承。上下文不携带模型凭据、不重新实现原生身份或执行状态。字段与最终方案等工具可见性边界确认后统一纳入本 Change Technical/Plan，当前未修改 HAPI 源码。
