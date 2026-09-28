@@ -1,0 +1,83 @@
+name: CLI installation
+
+on:
+  push:
+    branches: [main, 'codex/**']
+    paths: ['src/**', 'scripts/**', 'test/**', 'package.json', 'bun.lock', 'tsconfig.json', 'hapi', '.github/workflows/cli-install.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cli-install-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          submodules: true
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '24'
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: '1.4.2'
+      - run: bun install --frozen-lockfile
+      - run: bun run typecheck && bun run test
+      - run: bun run package --all
+      - run: node scripts/smoke-install.mjs
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: cli-candidate
+          path: |
+            dist/packages/index.json
+            dist/packages/*/package.json
+            dist/packages/tarballs/*.tgz
+          compression-level: 0
+          retention-days: 7
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: evidence-linux-x64
+          path: .dev-smoke/**/evidence.json
+          include-hidden-files: true
+          if-no-files-found: ignore
+          retention-days: 7
+
+  install:
+    needs: build
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-15
+            platform: darwin-arm64
+          - runner: macos-15-intel
+            platform: darwin-x64
+          - runner: ubuntu-24.04-arm
+            platform: linux-arm64
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '24'
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: cli-candidate
+          path: dist/packages
+      - run: node scripts/smoke-install.mjs
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: evidence-${{ matrix.platform }}
+          path: .dev-smoke/**/evidence.json
+          include-hidden-files: true
+          if-no-files-found: ignore
+          retention-days: 7

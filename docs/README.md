@@ -1,5 +1,7 @@
 # 项目文档
 
+基础入口的安装、配置、部署与数据维护见[使用说明](usage.md)；完整协作功能仍按下列 Change 推进。
+
 当前从[统一 CLI 与部署](project/changes/unified-cli-and-deployment/plan.md)开始实现，已有配置和工作区绑定基础 CLI；完整协作产品尚未交付。本地验收由 agent 自动完成，真实远端验收单独记录。先读[项目能力边界与讨论地图](project/architecture.md)，查看模块分工和 Change 依赖。
 
 实现以当前 HAPI 为第一依据，Runweft 尽量只做上层流程封装与 MCP；旧工程技术方案不直接沿用。

@@ -28,3 +28,10 @@
 - 验证：类型检查通过；macOS arm64/x64、Linux arm64/x64 均实际完成交叉构建与 npm pack。临时 registry 的真实 `npm install --global` 自动安装主包和 Linux x64 可选依赖，在无 Bun 的 PATH 与独立消费目录完成全部 T2 服务流程、前台启动器信号、缺包诊断、npm 卸载及持久数据保留。证据：`.dev-smoke/install-SsdXG8/evidence.json`。
 - 限制：交叉构建不是 macOS 或 Linux arm64 的运行验收；T4 使用实际平台运行同一候选包。公开包名占用/发布权限及自身许可在集成发行处理，不以当前 registry 查询未占用承诺将来可发布。
 - Commit：`unified-cli-and-deployment T3: package standalone platform distributions`
+
+## T4 平台验收配置与操作文档
+
+- 结果：添加固定 Actions revision 的工作流，同一 Linux 构建批次由 macOS arm64/x64 与 Linux arm64 运行 npm 安装和服务验收；补齐基础安装、三种机器角色、配置切换、数据备份、升级和诊断说明。
+- 验证：工作流结构与官方平台标签已核对；使用 T3 已通过的真实 npm 安装脚本，不增加模型凭据、不发布公共包；文档链接、Change 结构和 diff 检查通过。
+- 计划调整：原 T4 分成配置/文档交付与 T5 实际平台验收。CI 需要先取得提交后的代码，当前提交不表示 macOS 已验证成功；运行证据由 T5 收回。
+- Commit：`unified-cli-and-deployment T4: add platform acceptance CI and operations guide`
