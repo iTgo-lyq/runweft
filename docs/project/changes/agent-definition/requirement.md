@@ -9,7 +9,7 @@
 
 | 关系 | Change | 依赖内容与满足条件 |
 | --- | --- | --- |
-| 前置 | [统一 CLI 与部署](../unified-cli-and-deployment/requirement.md) | 读取全局/项目定义并解析 HAPI 目标，不建立新的 runtime 注册平台 |
+| 前置 | [统一 CLI 与部署](../../archive/2026-09-29-unified-cli-and-deployment/requirement.md) | 读取全局/项目定义并解析 HAPI 目标，不建立新的 runtime 注册平台 |
 | 前置 | [全局资源注册](../execution-resource-registry/requirement.md) | 解析 runtime 引用及所属机器，agent 文件不承担资源注册 |
 | 下游 | [委派生命周期](../delegation-lifecycle/requirement.md) | 消费解析后的定义，通过 CLI/MCP 向主 agent 提供描述和可用目标 |
 

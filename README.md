@@ -4,9 +4,9 @@
 
 本仓库从新的 Git 历史开始，正在按阶段实现完整产品。目前已有配置、工作区绑定、双模式 HAPI 服务管理及候选 npm 平台包；MCP 与任务协作尚未交付。旧实现保留在 [runweft-archive](https://github.com/iTgo-lyq/runweft-archive)，不继承其功能完成度或认证结论。
 
-从 [项目文档](docs/README.md) 阅读已确认的架构决策与初始需求规格。后续开发使用仓库内的 [project-workflow](.agents/skills/project-workflow/SKILL.md)。
+从 [项目文档](docs/README.md) 阅读已确认的架构决策、当前 Specs 与后续需求。后续开发使用仓库内的 [project-workflow](.agents/skills/project-workflow/SKILL.md)。
 
-安装、配置、本地/Hub 部署、数据维护和源码构建见[使用说明](docs/usage.md)。候选包尚未公开发布；当前验证状态见各 Change 的执行记录。
+安装、配置、本地/Hub 部署、数据维护和源码构建见[使用说明](docs/usage.md)。候选包尚未公开发布；四个平台基础安装已验收，当前能力见 Specs，后续验证状态见各 Change 的执行记录。
 
 开发环境使用 Bun：`bun install --frozen-lockfile`，然后 `bun run build:hapi` 和 `bun run build`。入口为 `dist/runweft`；`bun run test:service` 验证真实服务，`bun run package --all` 生成平台包，`bun run test:install` 验证 npm 安装。
 

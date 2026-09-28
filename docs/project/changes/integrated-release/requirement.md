@@ -15,7 +15,7 @@
 
 | 关系 | Change | 依赖内容与满足条件 |
 | --- | --- | --- |
-| 前置 | [统一 CLI](../unified-cli-and-deployment/requirement.md) | 安装包组织、配置、版本兼容、服务启停与诊断已验收 |
+| 前置 | [统一 CLI](../../archive/2026-09-29-unified-cli-and-deployment/requirement.md) | 安装包组织、配置、版本兼容、服务启停与诊断已验收 |
 | 前置 | [全局资源注册](../execution-resource-registry/requirement.md) | 机器/runtime 全局注册与 agent 引用语义已验收 |
 | 前置 | [HAPI 执行契约](../hapi-subagent-foundation/requirement.md) | 两种内置 runtime 的真实执行证据与兼容构建可用 |
 | 前置 | [宿主适配](../host-mcp-adapter/requirement.md) | 两种宿主身份、工具分流与结果传递边界已验证 |

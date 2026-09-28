@@ -17,7 +17,7 @@
 
 | 关系 | Change | 依赖内容与满足条件 |
 | --- | --- | --- |
-| 前置 | [统一 CLI 与部署](../unified-cli-and-deployment/requirement.md) | 主体与 namespace 授权、服务配置和存储位置；可用专用授权主体独立验收 |
+| 前置 | [统一 CLI 与部署](../../archive/2026-09-29-unified-cli-and-deployment/requirement.md) | 主体与 namespace 授权、服务配置和存储位置；可用专用授权主体独立验收 |
 | 前置 | [委派生命周期](../delegation-lifecycle/requirement.md) | 任务输入/输出关联和查询契约可用，供本 Change 接入附件；对象上传本身不要求先创建任务 |
 | 下游 | [远端工作区准备](../remote-workspace-preparation/requirement.md) | 消费启动前可读取的输入对象和完整性信息 |
 | 下游 | [远端代码回收](../remote-result-delivery/requirement.md) | 复用持久对象与引用保留，另外验证 Git 语义 |

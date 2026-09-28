@@ -10,7 +10,7 @@
 | 关系 | Change | 依赖内容与满足条件 |
 | --- | --- | --- |
 | 前置 | [委派生命周期](../delegation-lifecycle/requirement.md) | 父子关联、任务身份与交付摘要；原生执行状态从 HAPI 获取 |
-| 前置 | [统一 CLI 与部署](../unified-cli-and-deployment/requirement.md) | 复用现有用户入口和 HAPI 访问范围，不额外设计看板账号系统 |
+| 前置 | [统一 CLI 与部署](../../archive/2026-09-29-unified-cli-and-deployment/requirement.md) | 复用现有用户入口和 HAPI 访问范围，不额外设计看板账号系统 |
 
 ## 独立验收与交付边界
 

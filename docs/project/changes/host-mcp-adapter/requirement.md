@@ -17,7 +17,7 @@
 
 | 关系 | Change | 依赖内容与满足条件 |
 | --- | --- | --- |
-| 前置 | [统一 CLI](../unified-cli-and-deployment/requirement.md) | MCP 进程入口、配置、真实 cwd 绑定及 HAPI 连接可用 |
+| 前置 | [统一 CLI](../../archive/2026-09-29-unified-cli-and-deployment/requirement.md) | MCP 进程入口、配置、真实 cwd 绑定及 HAPI 连接可用 |
 | 前置 | [HAPI 执行契约](../hapi-subagent-foundation/requirement.md) | 原生身份、受控启动上下文和已有会话读取能力可用 |
 | 下游 | [委派生命周期](../delegation-lifecycle/requirement.md) | 消费宿主身份、角色、工具承载和结果传递能力，注册实际协作操作 |
 

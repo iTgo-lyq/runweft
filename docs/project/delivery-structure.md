@@ -24,7 +24,7 @@
 
 | 阶段 | Change | 该阶段可独立证明的结果 | 不需要等待 |
 | --- | --- | --- | --- |
-| 1. 运行与接入基础 | [统一 CLI](changes/unified-cli-and-deployment/requirement.md) → [HAPI 执行契约](changes/hapi-subagent-foundation/requirement.md) → [宿主适配](changes/host-mcp-adapter/requirement.md)；[资源注册](changes/execution-resource-registry/requirement.md)依赖 CLI，[Agent 定义](changes/agent-definition/requirement.md)依赖 CLI 与资源注册 | 本地/Hub 模式、统一数据布局与基础安装可用；机器/runtime 分别全局注册；MCP 可一键辅助全局安装；两种 runtime 在已准备目录可靠执行/停止/续接；两种宿主身份与角色分流有真实证据；agent 定义可解析 | 委派数据库、Git 工作区、附件、远端业务链路、看板 |
+| 1. 运行与接入基础 | [统一 CLI](archive/2026-09-29-unified-cli-and-deployment/requirement.md) → [HAPI 执行契约](changes/hapi-subagent-foundation/requirement.md) → [宿主适配](changes/host-mcp-adapter/requirement.md)；[资源注册](changes/execution-resource-registry/requirement.md)依赖 CLI，[Agent 定义](changes/agent-definition/requirement.md)依赖 CLI 与资源注册 | 本地/Hub 模式、统一数据布局与基础安装可用；机器/runtime 分别全局注册；MCP 可一键辅助全局安装；两种 runtime 在已准备目录可靠执行/停止/续接；两种宿主身份与角色分流有真实证据；agent 定义可解析 | 委派数据库、Git 工作区、附件、远端业务链路、看板 |
 | 2. 本地共享协作 | [委派生命周期](changes/delegation-lifecycle/requirement.md) | 从原生宿主通过 MCP 派生本地任务，等待、收回报告、中断和追加；每轮结束关闭执行，保留 cwd/session；CLI 调用同一能力 | 独立 worktree、中心附件和远端环境 |
 | 3. 工作区与文件交付 | [本地独立工作区](changes/local-workspace-execution/requirement.md)、[任务附件](changes/task-artifact-delivery/requirement.md) | 前者在本机独立 worktree 完成协作、封存与续接；后者在无 agent 会话时完成文件上传、下载与保留；阶段组合验收启动前输入和任务输出附件 | 远端 Runner 上的仓库传输、远端成果回收、看板 |
 | 4. 远端完整协作 | [远端准备](changes/remote-workspace-preparation/requirement.md) → [远端结果](changes/remote-result-delivery/requirement.md) | 精确基线与附件先到达，远端执行后主仓库取得可合入成果；失败重试与续接可验证 | 看板和最终发行整合 |
