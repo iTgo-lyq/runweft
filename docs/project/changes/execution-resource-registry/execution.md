@@ -47,3 +47,24 @@
 - 使用说明：说明机器/runtime/agent 的区别、后续按 ID 引用、取消/恢复、不自动迁移 Hub 引用、环境修改后重启 Runner，以及版本未知不等于认证失败。paths 与数据表说明中心 state.sqlite；Hub 客户端明确指出权威库位于中心，项目目录不生成资源配置。
 - 验证：`bun run typecheck`、`bun test ./test`（51 项、616 断言）、`bun run build` 通过；编译版 machine/runtime 帮助完整。新增实际 CLI 子进程对接真实网关/SQLite 的三项组合测试，覆盖空环境、输入错误、两个 cwd 同 ID、全部管理命令、名称保留、分别取消与恢复、JSON/人类一致、check 退出码、历史观察、版本超时及缺少命令。测试共用受控原生响应，不冒充真实模型或完整原生组合；T4 使用配套 Runner 验收正式 CLI。
 - Commit：`execution-resource-registry T3: expose machine and runtime commands with clear resource guidance`
+
+## T4 配套注册整体验收
+
+- 结果：新增显式 `bun run test:resources`，使用配套二进制、专用数据根和空原生配置完成完整 CLI 流程及版本查询，不调用模型或复制用户凭据；覆盖 local 与保留 local 配置的公开 Hub、独立 Hub 客户端/Runner、取消/恢复、原生离线超时和环境故障。macOS 的原生 Codex.app 回退路径在脚本中单独识别，不伪造 CLI 缺失证据。
+- 最终原生证据：`.dev-smoke/resources-WoH4DZ/evidence.json`，Linux x64，success=true、cleanupErrors=[]、codexMissingVerified=true。Codex 0.156.1 与 Claude Code 2.1.283 实际版本可发现；切换 cwd 和中心重启保持 ID；公开中心接受另一机器身份，local CLI 拒绝该目标，其他 namespace 不可见，Hub 客户端没有权威资源库。机器/runtime 分别取消和恢复、名称保留、默认/全部列表通过。
+- 真实故障：停止 Runner 后等待 HAPI 原有 45 秒活跃超时，离线记录与历史时间保留；重连恢复同 ID。专用 PATH 缺少实际 Codex、有效旧覆盖仍通过 preflight 时，新解析正确拒绝；无效 Codex 覆盖与实际命令可发现分别表达。专用 Claude 无效路径报告命令缺失；仅版本命令退出失败时保留工具可发现和目标可选，认证/执行仍为未检查。随后恢复原环境，两种版本再次可读。
+- 脚本修正：首次故障 PATH 同时移除了系统 ps，HAPI 因无法核对 Runner 进程身份而拒绝停止，restart 如实超时。失败证据 `.dev-smoke/resources-fyZWm1/evidence.json` 保留，cleanupErrors=[]；最终只移除原生工具、保留 Node 与 ps 后完整重跑通过。未绕过 HAPI 身份核对、未改变执行/停止实现。
+- 配套构建与回归：`bun run package --reuse-hapi` 通过；HAPI 固定 `56ec77f19322619a429304e7a948ba2c46eaca4d` 未改。最终 Runweft/HAPI SHA-256 分别为 `e395b56d66ee1b52ce3a22a93f74eee59962e12a00ce27592aa6c48013ee13cc`、`b99f90e5e0fcfdf64e7b1e4a41da3cc4d8c45ff6aafcc694c999f529f55646a5`。`bun run test:install` 经专用 npm registry 安装候选包，在无 Bun/源码 PATH 下通过服务组合、信号清理、缺失平台包诊断及卸载保留数据，证据 `.dev-smoke/install-1Ogyzu/evidence.json`，success=true。资源原生脚本也通过正式 MCP 安装、stdio/连接检查及卸载，不冒充模型调用验证。
+- 常规检查：最终脚本 typecheck 与 diff 检查通过。应用代码沿 T3 的 51 项/616 断言全量回归；T4 仅增加验证脚本、说明与一处测试文件尾空行修正，未重复未改代码的全量模型或 HAPI 测试。真实跨机器和 macOS 完整组合仍按后续远端/集成阶段取证。
+- Commit：`execution-resource-registry T4: verify packaged resource lifecycle and native diagnostics`
+
+## 需求验收映射
+
+| 验收项 | 实现与可观察证据 |
+| --- | --- |
+| 无 agent 定义即可登记机器与两种 runtime，重启稳定 | T2 中心重启 API 组合；T4 正式 local/Hub CLI、实际版本与重启 |
+| 机器/runtime/agent 分开，稳定 ID 可重复引用 | T2 分表、同目标并发 16 次唯一 ID、不可改绑与不可变目标快照；未创建 agent 记录，定义消费留给下一 Change |
+| 全局作用域与项目分离 | T2 namespace、Hub 切换与本机策略；T3 两个 cwd 同一登记；T4 客户端无权威库、无项目资源文件 |
+| 离线、缺失、无效配置及未知认证分别表达 | T1 原生探测契约；T2 受控故障；T4 实际 Runner 停止/重连与命令环境注入，始终认证/执行未检查 |
+| 失效引用无替代，取消/恢复稳定且不改变已接受目标 | T2 探测期间取消、旧快照、跨 namespace、未知 ID、无原生执行控制请求；T3/T4 分开取消与 ID/名称恢复 |
+| 自动本地验收，明确远端边界 | 上述检查自主完成；本机两个 Runner/连接不作为跨机器证据，真实远端留给其所属阶段 |

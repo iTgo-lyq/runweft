@@ -16,6 +16,7 @@
     "test:service": "node scripts/smoke-service.mjs",
     "test:execution": "bun scripts/smoke-execution.ts",
     "test:mcp": "bun scripts/smoke-mcp.ts",
+    "test:resources": "bun scripts/smoke-resources.ts",
     "test:install": "node scripts/smoke-install.mjs",
     "build": "bun scripts/build.ts",
     "build:hapi": "bun scripts/build-hapi.ts",

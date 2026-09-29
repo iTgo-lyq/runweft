@@ -1,6 +1,6 @@
 # Runweft 基础入口使用说明
 
-当前实现包含配置、HAPI 服务管理、机器/runtime 登记及 Codex/Claude Code 的 MCP 安装与身份诊断；资源登记正在完成整体组合验收，agent 定义、任务委派与看板尚未交付。这里不是完整协作版本的完成声明。
+当前实现包含配置、HAPI 服务管理、机器/runtime 登记及 Codex/Claude Code 的 MCP 安装与身份诊断；这些模块已通过相应本地验收，agent 定义、任务委派与看板尚未交付。这里不是完整协作版本的完成声明。
 
 ## 安装与首次使用
 
@@ -211,6 +211,7 @@ bun run build
 bun run typecheck
 bun run test
 bun run test:service
+bun run test:resources
 bun run package --all
 bun run test:install
 ```
@@ -218,6 +219,8 @@ bun run test:install
 构建使用固定版本 Bun 1.4.2。`build` 会核对 HAPI 源码 revision、工作区状态及已构建文件的校验和；修改固定版本后须先重新运行 `build:hapi`，不能混用旧二进制。`package --all` 生成四个平台的 npm 包和可移交的 `dist/packages/index.json`；`package --platform darwin-arm64` 可只构建一个平台。`--reuse-hapi` 使用相同核对规则跳过 HAPI 重建。
 
 安装验收启动一次性 registry，并使用 `.dev-smoke/` 下的专用 npm 配置、缓存、安装前缀和数据目录；不改用户的全局 Runweft、HAPI 或模型配置。平台包附有 HAPI 许可、NOTICE、工具许可和对应源码归档。候选包保持 private，不会由构建或 CI 自动发布到 npm。
+
+`test:resources` 需要已安装 Codex 和 Claude Code（优先 iclaude，可设置 `RUNWEFT_SMOKE_CLAUDE`），仅执行版本查询，不需要模型登录。它使用专用空原生配置和配套编译程序验证本地与 Hub 资源命令、MCP 安装/握手、稳定 ID、离线、恢复和环境故障；离线等待沿 HAPI 的 45 秒活跃超时。脚本保存证据并关闭自建服务，故障环境只作用于测试 Runner；macOS 若发现原生 Codex.app 回退路径，会如实记录，命令缺失仍通过专用 Claude 覆盖验证。
 
 已有 Codex/Claude Code 模型登录的开发环境可显式运行原生验收：
 

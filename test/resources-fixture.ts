@@ -85,4 +85,3 @@ export async function resourceFixture(cleanups: (() => Promise<void> | void)[]) 
     return { home, config, statePath, url, alpha, beta, machines, inspections, calls, tokens, failures, hooks, register,
         setInventorySupported(value: boolean) { inventorySupported = value; } };
 }
-
