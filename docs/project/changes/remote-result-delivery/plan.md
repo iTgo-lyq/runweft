@@ -19,7 +19,7 @@
 
 ### T2 HAPI 向原主仓库取回对象
 
-- 状态：待开始
+- 状态：已完成
 - 依赖：T1。
 - 交付：fetch-result 持久机器操作；独立验证后追加根/递归模块 Git 对象和 LFS，固定专用 refs，明确查询/重试及中间副本释放。支持 existing/linked worktree 的原仓库身份，不改变已有配置或执行工程 hook。
 - 验收：parent staged/unstaged/untracked/HEAD/FETCH_HEAD/config 保持逐字节不变；相同 ref 重取成功、不同 SHA 拒绝、目标错误拒绝。删除源分支、隐藏执行机后取回可实际合入；无 remote、sha1/sha256、基线和成果的新旧 LFS（先删除原主机旧实体）、自定义 storage、未初始化/嵌套/重名模块和已有模块映射验证。配置了 reference-transaction hook、递归 fetch、commitGraph/maintenance 的目标也不执行 hook/联网/改已有配置；未知/失败保留已追加对象并如实报告，不清理用户数据。

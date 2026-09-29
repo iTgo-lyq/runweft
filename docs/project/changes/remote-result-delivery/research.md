@@ -52,3 +52,8 @@
 方案据此选择完整成果快照，复用 C9 的导出/独立验证/文件通道；同结果 HEAD 复用快照，LFS 按内容复用。初始设计中的增量 bundle 是建议而非已确认交付条件，本轮不增加增量前置链。中心继续无 Git/Runner：可信机器导出回执提供 Git 语义验证，中心核对封存关联、清单和持久文件，取回端再次独立验证；不能把字节上传成功等同于语义或业务验收。
 
 评审复核补充：完整 Git bundle 只含 LFS 指针，不含初始基线中后来被替换或删除的 LFS 字节。去掉 result consumer 后，代码清单须内嵌基线与成果两端的恢复文件映射、直接 pin 去重集合；不能把“完整 Git 历史”误写成“全部旧 LFS 已在结果包”。模块 bundle 可按固定 commit/format/映射复用已验证 artifact，保留原 bundleRef/摘要，不以重新打包得到的随机 hash 判断内容身份。
+
+
+### T2 原生模块对象库的最小初始化
+
+`.dev-smoke/c10-fetch-module-7mgxkg2d/evidence.json` 成功：原生 submodule deinit 后移走模块 Git 目录和上游，仅新建同名 bare 对象库、设自有 core.bare=false、导入专用 ref，不设置 HEAD 或复制旧配置，后续显式 `submodule update --init --no-fetch` 可恢复 checkout。因此 fetch 只为新建模块对象库写初始配置；含 LFS 的新模块库还需初始本地 filters（`lfs install --local --skip-repo`，不安装 hooks）；否则在没有全局 LFS 配置时，原生命令无法把已恢复实体检出。已有模块的 config/HEAD 保留，校验其 gitDir/commonDir/format/core.worktree 与预期层级映射。模块成果 ref 在根成果 ref 前发布，原工作文件由后续显式 Git 接纳命令处理。

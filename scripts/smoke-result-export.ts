@@ -3,7 +3,7 @@ import { createServer } from 'node:http';
 import { ArtifactClient } from '../src/artifacts/client';
 import { randomUUID, createHash } from 'node:crypto';
 import { spawn, spawnSync, type ChildProcess } from 'node:child_process';
-import { closeSync, existsSync, mkdirSync, mkdtempSync, openSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, closeSync, existsSync, mkdirSync, mkdtempSync, openSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { HapiClient } from '../src/hapi';
 import { freePort } from '../src/services';
@@ -12,13 +12,14 @@ import type { ArtifactTransfer } from '../hapi/shared/src/artifactTransfers';
 import type { ManagedWorkspace, WorkspaceSource } from '../hapi/shared/src/workspaces';
 
 // Real Hub and two Runner identities/data roots; source paths disappear before import.
-const binary = resolve(process.argv[2] ?? 'dist/runweft'), hapiBinary = resolve(process.argv[3] ?? 'dist/hapi');
-mkdirSync('.dev-smoke', { recursive: true }); const root = mkdtempSync(resolve('.dev-smoke/repository-result-export-'));
+const fetchResults = process.argv.includes('--fetch'), paths = process.argv.slice(2).filter(arg => arg !== '--fetch');
+const binary = resolve(paths[0] ?? 'dist/runweft'), hapiBinary = resolve(paths[1] ?? 'dist/hapi');
+mkdirSync('.dev-smoke', { recursive: true }); const root = mkdtempSync(resolve(fetchResults ? '.dev-smoke/repository-result-fetch-' : '.dev-smoke/repository-result-export-'));
 const center = join(root, 'center'), sourceHome = join(root, 'source-runner'), targetHome = join(root, 'target-runner');
 const env = { ...process.env }; for (const key of Object.keys(env)) if (key.startsWith('RUNWEFT_')) delete env[key];
 env.GIT_CONFIG_GLOBAL = '/dev/null'; env.GIT_CONFIG_NOSYSTEM = '1';
 const evidence = { root, binary, hapiBinary, startedAt: new Date().toISOString(), finishedAt: '', success: false,
-    sourceMachineId: '', targetMachineId: '', exportId: '', importId: '', resultExports: [] as RepositoryOperation[], environments: [] as string[], checks: [] as string[], error: '', cleanupErrors: [] as string[] };
+    sourceMachineId: '', targetMachineId: '', exportId: '', importId: '', resultExports: [] as RepositoryOperation[], fetches: [] as RepositoryOperation[], lostResponses: [] as string[], environments: [] as string[], checks: [] as string[], error: '', cleanupErrors: [] as string[] };
 let token: string | undefined, hapi: HapiClient, foreground: ChildProcess | undefined;
 const homes: string[] = [];
 function cli(home: string, args: string[], input?: string) {
@@ -38,6 +39,27 @@ function commit(path: string) { git(path, 'add', '.'); git(path, 'commit', '-qm'
 const note = (message: string) => { evidence.checks.push(message); console.log(message); };
 async function call(machine: string, domain: string, body: unknown) {
     return hapi.request(`/api/machines/${machine}/${domain}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+}
+async function loseResponse(url: string, machine: string, request: { action: string; operationId: string }) {
+    let dropped = false;
+    const proxy = createServer(async (incoming, outgoing) => {
+        try {
+            const chunks: Buffer[] = []; for await (const chunk of incoming) chunks.push(Buffer.from(chunk)); const body = Buffer.concat(chunks);
+            const headers = new Headers(); for (const [key, value] of Object.entries(incoming.headers)) if (value && !['host', 'connection', 'content-length'].includes(key)) headers.set(key, Array.isArray(value) ? value.join(',') : value);
+            const response = await fetch(url + incoming.url, { method: incoming.method, headers, body: body.length ? body : undefined });
+            const bytes = Buffer.from(await response.arrayBuffer());
+            if (incoming.url?.endsWith('/repositories') && body.length && JSON.parse(body.toString()).action === request.action && response.ok) {
+                dropped = true; outgoing.socket?.destroy(); outgoing.destroy(); return;
+            }
+            outgoing.writeHead(response.status, { 'content-type': response.headers.get('content-type') ?? 'application/json' }); outgoing.end(bytes);
+        } catch { outgoing.writeHead(502); outgoing.end(); }
+    });
+    try {
+        await new Promise<void>(resolve => proxy.listen(0, '127.0.0.1', resolve)); const address = proxy.address(); assert(address && typeof address !== 'string');
+        const losing = new HapiClient(`http://127.0.0.1:${address.port}`, token!);
+        await assert.rejects(() => losing.request(`/api/machines/${machine}/repositories`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(request) }), { code: 'connection_failed' }); assert(dropped);
+    } finally { proxy.closeAllConnections(); await new Promise<void>(resolve => proxy.close(() => resolve())); }
+    evidence.lostResponses.push(request.operationId);
 }
 async function until<T>(read: () => Promise<T>, complete: (value: T) => boolean): Promise<T> {
     const deadline = Date.now() + 120_000;
@@ -122,24 +144,7 @@ try {
     assert(sealed.results[a.request.roundId], JSON.stringify(sealed.operations));
     assert.equal((await hapi.request('/api/machines')).machines.find((item: any) => item.id === evidence.targetMachineId).runnerState.capabilities.repositoryResults, 1);
     const resultRequest = { action: 'export-result', operationId: randomUUID(), environmentId: a.request.environmentId, roundId: a.request.roundId };
-    let dropped = false;
-    const proxy = createServer(async (incoming, outgoing) => {
-        try {
-            const chunks: Buffer[] = []; for await (const chunk of incoming) chunks.push(Buffer.from(chunk)); const body = Buffer.concat(chunks);
-            const headers = new Headers(); for (const [key, value] of Object.entries(incoming.headers)) if (value && !['host', 'connection', 'content-length'].includes(key)) headers.set(key, Array.isArray(value) ? value.join(',') : value);
-            const response = await fetch(url + incoming.url, { method: incoming.method, headers, body: body.length ? body : undefined });
-            const bytes = Buffer.from(await response.arrayBuffer());
-            if (incoming.url?.endsWith('/repositories') && body.length && JSON.parse(body.toString()).action === 'export-result' && response.ok) {
-                dropped = true; outgoing.socket?.destroy(); outgoing.destroy(); return;
-            }
-            outgoing.writeHead(response.status, { 'content-type': response.headers.get('content-type') ?? 'application/json' }); outgoing.end(bytes);
-        } catch { outgoing.writeHead(502); outgoing.end(); }
-    });
-    try {
-        await new Promise<void>(resolve => proxy.listen(0, '127.0.0.1', resolve)); const address = proxy.address(); assert(address && typeof address !== 'string');
-        const losing = new HapiClient(`http://127.0.0.1:${address.port}`, token);
-        await assert.rejects(() => losing.request(`/api/machines/${evidence.targetMachineId}/repositories`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(resultRequest) }), { code: 'connection_failed' }); assert(dropped);
-    } finally { proxy.closeAllConnections(); await new Promise<void>(resolve => proxy.close(() => resolve())); }
+    await loseResponse(url, evidence.targetMachineId, resultRequest);
     const first = await done<RepositoryOperation>(evidence.targetMachineId, 'repositories', resultRequest.operationId);
     assert.equal(first.status, 'succeeded', JSON.stringify(first.error)); assert.deepEqual(first.sealed!.result, sealed.results[a.request.roundId]); evidence.resultExports.push(first);
     const frozen = readFileSync(join(first.directory, first.snapshot!.repositories[0]!.file));
@@ -191,6 +196,58 @@ try {
         }
     }
     note('both source/target Runners are stopped and target Git storage hidden; center downloads restore each full root/module bundle and binary LFS with exact hashes and independent ancestry/fsck checks, without native sessions');
+    if (fetchResults) {
+        renameSync(join(root, 'source-offline'), join(root, 'source')); cli(sourceHome, ['start']);
+        await until(async () => (await hapi.request('/api/machines')).machines.find((item: any) => item.id === evidence.sourceMachineId)?.active, active => active === true);
+        git(repo, 'checkout', '--detach', source.baseCommit);
+        for (const ref of git(repo, 'for-each-ref', '--format=%(refname)', 'refs/heads').split('\n').filter(Boolean)) git(repo, 'update-ref', '-d', ref);
+        git(repo, 'submodule', 'deinit', '-f', '--all'); renameSync(join(repo, '.git/modules'), join(root, 'old-parent-modules'));
+        renameSync(join(repo, '.git/lfs/objects'), join(root, 'old-parent-lfs'));
+        writeFileSync(join(repo, '.gitattributes'), '*.bin filter=lfs diff=lfs merge=lfs -text\n# staged parent change\n'); git(repo, 'add', '.gitattributes');
+        writeFileSync(join(repo, '.gitattributes'), '*.bin filter=lfs diff=lfs merge=lfs -text\n# unstaged parent change\n');
+        writeFileSync(join(repo, 'untracked'), 'parent untracked'); writeFileSync(join(repo, '.git/FETCH_HEAD'), 'retained parent fetch head\n');
+        const hooks = join(root, 'parent-hooks'), marker = join(root, 'parent-hook-ran'); mkdirSync(hooks);
+        writeFileSync(join(hooks, 'reference-transaction'), `#!/bin/sh\necho unexpected > '${marker}'\nexit 77\n`); chmodSync(join(hooks, 'reference-transaction'), 0o700);
+        git(repo, 'config', 'core.hooksPath', hooks); git(repo, 'config', 'submodule.recurse', 'true'); git(repo, 'config', 'fetch.writeCommitGraph', 'true');
+        const protectedFiles = ['.git/index', '.git/config', '.git/HEAD', '.git/FETCH_HEAD', '.gitattributes', 'untracked'];
+        const state = () => protectedFiles.map(file => readFileSync(join(repo, file)).toString('base64'));
+        const before = state();
+        async function materialize(transfer: ArtifactTransfer, snapshot: NonNullable<RepositoryOperation['snapshot']>) {
+            const operationId = randomUUID();
+            await call(evidence.sourceMachineId, 'artifacts', { action: 'materialize', operationId, files: transfer.deliveries!.map(file => {
+                assert(file.status === 'available'); return { artifactId: file.artifact.id, name: file.name, size: file.artifact.size, sha256: file.artifact.sha256 };
+            }) });
+            const ready = await done<ArtifactTransfer>(evidence.sourceMachineId, 'artifacts', operationId); assert.equal(ready.status, 'succeeded', JSON.stringify(ready.error));
+            return { operationId, material: { snapshot, files: ready.files.map(file => ({ name: file.name, path: file.path })) } };
+        }
+        const base = await materialize(delivered, exported.snapshot!);
+        for (const item of published) {
+            const output = await materialize(item.transfer, item.operation.snapshot!);
+            const request = { action: 'fetch-result', operationId: randomUUID(), target: { machineId: source.machineId, repositoryId: source.repositoryId,
+                commonDir: source.commonDir, objectFormat: source.objectFormat, cwd: source.sourcePath }, result: item.operation.sealed!.result, baseline: base.material, output: output.material };
+            await loseResponse(url, evidence.sourceMachineId, request);
+            const fetched = await done<RepositoryOperation>(evidence.sourceMachineId, 'repositories', request.operationId);
+            assert.equal(fetched.status, 'succeeded', JSON.stringify(fetched.error)); assert(fetched.fetched); evidence.fetches.push(fetched);
+            assert.deepEqual(state(), before); assert(!existsSync(marker)); assert.equal(git(repo, 'rev-parse', fetched.fetched.ref), item.operation.sealed!.result.resultHead);
+            for (const file of fetched.fetched.lfs) assert.equal(createHash('sha256').update(readFileSync(file.path)).digest('hex'), file.oid);
+            await call(evidence.sourceMachineId, 'artifacts', { action: 'release', operationId: output.operationId });
+            cli(sourceHome, ['restart']); assert.deepEqual((await call(evidence.sourceMachineId, 'repositories', request)).operation, fetched);
+            await call(evidence.sourceMachineId, 'repositories', { action: 'release', operationId: request.operationId });
+            assert.equal(git(repo, 'rev-parse', fetched.fetched.ref), item.operation.sealed!.result.resultHead);
+        }
+        await call(evidence.sourceMachineId, 'artifacts', { action: 'release', operationId: base.operationId });
+        assert.deepEqual(state(), before); assert(!existsSync(marker));
+        // Explicit parent acceptance is separate from fetch. Disable only this fixture's rejecting hook.
+        rmSync(join(hooks, 'reference-transaction')); git(repo, '-c', 'submodule.recurse=false', 'merge', '--ff-only', evidence.fetches.at(-1)!.fetched!.ref);
+        git(repo, 'lfs', 'checkout');
+        renameSync(join(root, 'source/child'), join(root, 'child-offline'));
+        git(repo, 'submodule', 'update', '--init', '--no-fetch'); git(join(repo, 'vendor/module'), 'lfs', 'checkout');
+        assert.deepEqual(readFileSync(join(repo, 'root.bin')), Buffer.from('partial second binary result\0'.repeat(1024)));
+        assert.deepEqual(readFileSync(join(repo, 'vendor/module/asset.bin')), content); assert(!existsSync(join(repo, 'app')));
+        assert.equal(readFileSync(join(repo, 'untracked'), 'utf8'), 'parent untracked');
+        assert.equal(readFileSync(join(repo, '.gitattributes'), 'utf8'), '*.bin filter=lfs diff=lfs merge=lfs -text\n# unstaged parent change\n');
+        note('public fetch-result restores both rounds and baseline/result LFS from center with executor offline, preserves staged/unstaged/untracked/index/config/HEAD/FETCH_HEAD, suppresses configured hooks, recovers lost responses/restarts, and then explicit merge/module initialization succeeds offline');
+    }
     evidence.success = true;
 } catch (error) { evidence.error = error instanceof Error ? error.stack ?? error.message : String(error); process.exitCode = 1; }
 finally {

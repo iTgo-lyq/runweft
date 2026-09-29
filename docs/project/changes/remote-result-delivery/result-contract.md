@@ -1,6 +1,6 @@
 # 代码成果与取回契约
 
-> 来源：[Technical](technical.md)；状态：T1 已实现机器成果导出；其余字段在各切片以协议类型和验收结果落实。
+> 来源：[Technical](technical.md)；状态：T1/T2 已实现机器成果导出与原仓库取回；其余字段在各切片以协议类型和验收结果落实。
 
 ## 身份与不变事实
 
@@ -13,11 +13,13 @@
 | 操作 | 输入与返回 |
 | --- | --- |
 | export-result | operationId、environmentId、roundId；返回 `sealed: { source, result, verifiedAt }`、已独立验证的完整 snapshot 和自有候选 directory；source 是准确 checkout 根/resultHead 的机器来源，result 保留原 base/start/head |
-| fetch-result | operationId、原仓库目标身份/实际 cwd、environmentId/roundId、固定 Git facts、基线与成果 snapshot/本地验证材料；返回已导入 ref/head、各仓库对象/LFS 恢复事实 |
+| fetch-result | `operationId`、`target: { machineId, repositoryId, commonDir, objectFormat, cwd }`、`result: WorkspaceResult`、`baseline/output: { snapshot, files: [{ name, path }] }`；返回 `fetched` 的 ref/head、target、repositories/LFS 恢复路径及 fetchedAt |
 | inspect/release | 沿 repositories 原操作身份查询或释放自有候选/下载验证中间副本；不以 release 自动删除用户仓库对象 |
 | workspaces.remove 可选 ref 释放 | 精确 roundId/resultHead 名单，持久核对本环境成果后才能释放自有 refs；默认省略保持原行为 |
 
 两端要求 repositoryResults:1；export/fetch 的 accepted/running/succeeded/failed/unknown 继续原 repository 回执。操作请求和身份在副作用前固定，参数冲突拒绝；unknown 沿原记录核对，明确失败的显式重试可以新 attempt，但仍引用原封存 head，不重新运行模型或 checkpoint。
+
+基线和成果材料分开映射，同名 bundle 不共用逻辑文件名空间。取回同时恢复两树需要的 LFS；根结果完整 Git 历史包含初始 base。机器候选/独立验证副本在 `HAPI_HOME/workspaces/fetches/<operationId>/data`，release 只清理该操作副本。
 
 fetch 的专用引用为 `refs/hapi/results/<environmentId>/<roundId>`。调用方不能指定当前分支或任意 ref；同名不同 SHA 拒绝。目标身份按 machine/commonDir/format 核对，不依赖 URL、HEAD 或原 base 仍存在。完整结果包须包含初始 base/startHead 的可达关系，模块与 LFS 清单必须逐项匹配固定树；不能用目标已有对象掩盖坏包。
 
