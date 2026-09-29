@@ -5,7 +5,7 @@ import { hapiClient, type HapiClient } from '../hapi';
 import { hostDirectory, type HostIdentity } from '../mcp/identity';
 import { ResourceClient } from '../resources/client';
 import type { TaskCoordinator } from './coordinator';
-import { SpawnIntentSchema, parseTask, type Acceptance, type Parent, type SendIntent } from './types';
+import { SpawnIntentSchema, parseTask, type Acceptance, type ArtifactInput, type Parent, type SendIntent } from './types';
 
 export class TaskClient {
     readonly parent: Parent;
@@ -19,9 +19,9 @@ export class TaskClient {
         return this.hapi.request(`/api/runweft/tasks/${path}`, { method: 'POST', headers: { 'content-type': 'application/json' },
             body: JSON.stringify({ parent: this.parent, ...value }), signal });
     }
-    async spawn(agentType: string, message: string, requestId: string, workspaceMode = 'shared', signal?: AbortSignal, baseRef?: string): Promise<Acceptance> {
+    async spawn(agentType: string, message: string, requestId: string, workspaceMode = 'shared', signal?: AbortSignal, baseRef?: string, inputs?: ArtifactInput[]): Promise<Acceptance> {
         if (!['shared', 'worktree'].includes(workspaceMode)) throw new RunweftError('capability_unavailable', '当前支持 shared 和本机 worktree 模式；远端模式尚未交付。');
-        const intent = parseTask(SpawnIntentSchema, { agentType, message, workspaceMode, ...(baseRef === undefined ? {} : { baseRef }) });
+        const intent = parseTask(SpawnIntentSchema, { agentType, message, workspaceMode, ...(inputs?.length ? { inputs } : {}), ...(baseRef === undefined ? {} : { baseRef }) });
         const previous = await this.request('lookup', { requestId, intent }, signal);
         if (previous.accepted) return previous.accepted;
         const resolved = await new AgentClient(this.config, this.parent.cwd, this.hapi).resolve(agentType, undefined, signal);
@@ -33,8 +33,8 @@ export class TaskClient {
         return accepted;
     }
     async list(all = false, signal?: AbortSignal): Promise<ReturnType<TaskCoordinator['list']>> { return this.request('list', { all }, signal); }
-    async send(id: string, message: string, requestId: string, options: { mode?: SendIntent['mode']; roundId?: string } = {}, signal?: AbortSignal): Promise<Acceptance> {
-        const { namespace: _, ...accepted } = await this.request('send', { requestId, intent: { id, message, mode: options.mode ?? 'next', roundId: options.roundId } }, signal);
+    async send(id: string, message: string, requestId: string, options: { mode?: SendIntent['mode']; roundId?: string; inputs?: ArtifactInput[] } = {}, signal?: AbortSignal): Promise<Acceptance> {
+        const { namespace: _, ...accepted } = await this.request('send', { requestId, intent: { id, message, mode: options.mode ?? 'next', roundId: options.roundId, ...(options.inputs?.length ? { inputs: options.inputs } : {}) } }, signal);
         return accepted;
     }
     async interrupt(id: string, roundId: string, signal?: AbortSignal): Promise<Awaited<ReturnType<TaskCoordinator['interrupt']>>> {

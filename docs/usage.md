@@ -1,6 +1,6 @@
 # Runweft 基础入口使用说明
 
-当前实现包含配置、HAPI 服务管理、机器/runtime 登记、Agent 定义，以及 Codex/Claude Code 经 MCP 或 CLI 进行本机共享目录、独立 worktree 协作。附件、远端任务和看板仍按后续 Change 推进；当前候选包不是完整项目的最终发布。
+当前实现包含配置、HAPI 服务管理、机器/runtime 登记、Agent 定义，以及 Codex/Claude Code 经 MCP 或 CLI 进行本机共享目录、独立 worktree 协作。已支持文件上传和 CLI 任务输入；成果附件、远端任务和看板仍按后续任务推进；当前候选包不是完整项目的最终发布。
 
 ## 安装与首次使用
 
@@ -266,7 +266,22 @@ runweft artifact remove <文件ID>
 
 下载流式校验后才保存目标，默认不覆盖已有文件；明确替换时加 `--overwrite`。只接受显式普通文件，目录请先自行打包。`--name` 可指定显示文件名，支持中文和空格。列表按 `--offset`、`--limit` 分页（最多 200），也展示删除记录。
 
-默认单文件 512 MiB，每 namespace 的已保存文件与上传预约合计 10 GiB。用 `artifact limits` 查看当前服务的真实用量和限制。有留存引用的对象不能删除，`artifact refs` 会列出引用原因；不要直接删数据目录来腾空间。当前已开放独立文件 CLI，任务输入/成果清单与 MCP 文件工具仍按附件 Change 后续任务接入。
+默认单文件 512 MiB，每 namespace 的已保存文件与上传预约合计 10 GiB。用 `artifact limits` 查看当前服务的真实用量和限制。有留存引用的对象不能删除，`artifact refs` 会列出引用原因；不要直接删数据目录来腾空间。成果清单、留存释放与 MCP 文件工具仍按附件 Change 后续任务接入。
+
+### 将文件带入任务
+
+先上传，再把文件 ID 传给任务；不需要把文件内容复制到 prompt：
+
+```sh
+runweft artifact upload './需求 brief.pdf'
+runweft task spawn reviewer --message '读取输入并评审需求' --input <文件ID>
+runweft task send <任务ID> --message '结合这份补充继续评审' --input '补充说明.pdf=<文件ID>'
+runweft task show <任务ID>
+```
+
+`--input` 可重复，默认采用上传对象的文件名；同轮有重名时用 `名称=文件ID` 区分。shared 和 worktree 均先下载、核验输入，再启动或续接模型。实际读取路径在任务提示和 `task show` 的 `input_files` 中展示；文件保存在连接数据根，不写入主工作区。worktree 会复制到自己的输入目录，随后自动释放下载中间副本。
+
+附件列表属于本轮请求，重试须保留相同 request ID 和参数。下一轮显式传入需要的附件；省略 `--input` 表示该轮没有新输入，不自动沿用上一轮列表。`--steer` 不接受新附件。已接受的输入带留存引用，排队、执行和完成后的普通删除都会拒绝；释放入口在本 Change 后续留存任务交付。输入缺失或校验失败会显示原因，模型不会替代程序补做下载，也不会因文件传输失败被重新执行。
 
 ## 配置
 

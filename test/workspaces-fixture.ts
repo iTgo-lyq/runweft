@@ -16,7 +16,7 @@ export function workspaces() {
                 operation.status = control.failPrepare ? 'failed' : 'succeeded';
                 if (control.failPrepare) operation.error = { code: 'git_failed', message: 'Checkout initialization failed' };
                 else workspace.preparations[request.preparationId] = { environmentId: request.environmentId, preparationId: request.preparationId,
-                    roundId: request.roundId, cwd: workspace.cwd, startHead: request.expectedHead, inputs: [], readyAt: Date.now() };
+                    roundId: request.roundId, cwd: workspace.cwd, startHead: request.expectedHead, inputs: request.inputs.map(input => ({ ...input, path: `/workspace-inputs/${request.preparationId}/${input.name}` })), readyAt: Date.now() };
             } else if (request.action === 'finalize') {
                 if (control.holdFinish) continue;
                 operation.status = control.failFinish ? 'failed' : 'succeeded';

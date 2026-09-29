@@ -13,7 +13,7 @@ export function openState(path: string) {
         db.exec('PRAGMA busy_timeout=5000; PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON;');
         db.transaction(() => {
             const { user_version: version } = db.query('PRAGMA user_version').get() as { user_version: number };
-            if (version > 2) throw new ResourceError(503, 'state_version_newer', '业务数据版本高于当前程序。', '使用创建该数据的新版 Runweft；不要删除数据库。');
+            if (version > 3) throw new ResourceError(503, 'state_version_newer', '业务数据版本高于当前程序。', '使用创建该数据的新版 Runweft；不要删除数据库。');
             if (version < 1) db.exec(`
                 CREATE TABLE machine_registrations (
                     namespace TEXT NOT NULL, machineId TEXT NOT NULL, registered INTEGER NOT NULL,
@@ -54,6 +54,14 @@ export function openState(path: string) {
                 );
                 CREATE INDEX delegation_child_native ON delegation_sessions(namespace, flavor, nativeId);
                 PRAGMA user_version=2;
+            `);
+            if (version < 3) db.exec(`
+                CREATE TABLE delegation_artifact_intents (
+                    namespace TEXT NOT NULL, requestId TEXT NOT NULL, fingerprint TEXT NOT NULL,
+                    data TEXT NOT NULL, taskId TEXT REFERENCES delegation_tasks(id), createdAt INTEGER NOT NULL,
+                    PRIMARY KEY(namespace, requestId)
+                );
+                PRAGMA user_version=3;
             `);
         }).immediate();
         return db;

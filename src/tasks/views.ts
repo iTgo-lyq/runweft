@@ -27,6 +27,7 @@ export function overview(bundle: TaskBundle, round: Round = bundle.rounds.at(-1)
         report: { text: round.report.slice(0, 4000), total: round.report.length, next_offset: round.report.length > 4000 ? 4000 : null, structuredMissing: round.structuredMissing,
             structured: round.structuredReport ? Object.fromEntries(Object.entries(round.structuredReport).map(([key, value]) => [key, value.slice(0, 1000)])) : undefined,
             incomplete: !round.executionAbsent && !!round.cancellation?.confirmed && !inputs.every(input => nativeTerminal(input.observation)) },
+        input_files: { status: round.inputFiles?.status ?? 'none', count: round.inputFiles?.files.length ?? 0 },
         cwd: bundle.task.environment.cwd, workspace_mode: bundle.task.environment.mode, git: gitDelivery(bundle, round), runtime_id: bundle.task.target.runtimeId, machine_id: bundle.task.target.machineId,
         native_status: inputs.map(input => ({ local_id: input.id, delivery: input.delivery,
             phase: round.executionAbsent ? 'not_started' : round.cancellation?.confirmed && !nativeTerminal(input.observation) ? 'unknown' : input.observation?.phase ?? 'not_observed',
@@ -41,6 +42,8 @@ export function detail(bundle: TaskBundle, options: { roundId?: string; offset?:
         preparation: round.preparation, phase: round.phase, session_id: round.sessionId, native_session_id: round.nativeSessionId,
         resume: round.resume, reconstruction: round.reconstruction ? { reason: round.reconstruction.reason, source_round_ids: round.reconstruction.sourceRoundIds } : undefined,
         cancellation: round.cancellation,
+        input_files: round.inputFiles ? { status: round.inputFiles.status, files: round.inputFiles.files, paths: round.inputFiles.paths,
+            operation_id: round.inputFiles.operationId, reference: round.inputFiles.reference, error: round.inputFiles.error } : null,
         observed_at: round.observedAt, permissions: round.permissions, host_pid: round.hostPid,
         inputs: bundle.inputs.filter(input => input.roundId === round.id).map(({ output, text, ...input }) => ({ ...input,
             // Claude's native result contains the same full report; expose it only through report pagination.

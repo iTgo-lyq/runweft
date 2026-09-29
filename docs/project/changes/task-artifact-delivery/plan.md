@@ -37,7 +37,7 @@
 
 ### T3 CLI 任务输入与真实原生续接
 
-- 状态：待开始
+- 状态：已完成
 - 依赖：T2。
 - 交付：spawn/next input 参数、输入冻结/pin/接受意图对账/业务归属，shared/worktree preparing 接入机器文件，实际输入映射进入 prompt；输入错误不启动。
 - 验收：真实 Codex/Claude 从准备文件读取内容后报告，第二轮新增附件且续接相同 native session；共享 cwd 不被植入配置，worktree 工程指令与输入同时可用；已接受 input 防删除，输入损坏/缺失/断线没有重复启动。输出参数在 T4 连同成果功能一起开放，不公开只接受但不交付的参数。

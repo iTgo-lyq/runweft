@@ -56,6 +56,14 @@ export class ArtifactClient {
     async refs(id: string, signal?: AbortSignal): Promise<{ references: ArtifactReference[] }> {
         return this.hapi.request(`/api/artifacts/${encodeURIComponent(id)}/references`, { signal });
     }
+    async pin(id: string, reference: string, purpose: string) {
+        return this.hapi.request(`/api/artifacts/${encodeURIComponent(id)}/references/${encodeURIComponent(reference)}`, {
+            method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ reference, purpose }),
+        });
+    }
+    async unpin(id: string, reference: string) {
+        return this.hapi.request(`/api/artifacts/${encodeURIComponent(id)}/references/${encodeURIComponent(reference)}`, { method: 'DELETE' });
+    }
     async remove(id: string, signal?: AbortSignal) { return artifact((await this.hapi.request(`/api/artifacts/${encodeURIComponent(id)}`, { method: 'DELETE', signal })).artifact); }
     async upload(source: string, requestId: string, options: { name?: string; signal?: AbortSignal; progress?: TransferProgress } = {}) {
         const path = await realpath(resolve(source));

@@ -10,6 +10,7 @@ import { AcceptSchema, LookupSchema, SendSchema, InterruptSchema, PermissionSche
 import { detail, overview } from './views';
 import { historyContext, parseReport } from './reports';
 import { TaskWorkspaces, preparedReference } from './workspaces';
+import { TaskFiles, preparedFiles } from './files';
 
 export class TaskCoordinator {
     readonly store: TaskStore;
@@ -27,6 +28,11 @@ export class TaskCoordinator {
     }
     private resourceService(namespace: string) {
         return new ResourceService(this.resources, namespace, (path, options) => this.client(namespace).request(path, options));
+    }
+    async reconcileFileIntents() {
+        for (const intent of this.store.pendingArtifactIntents()) {
+            if (!this.store.artifactIntentAccepted(intent)) await new TaskFiles(this.client(intent.namespace)).abandon(this.store, intent);
+        }
     }
     start() {
         if (this.timer) return;
@@ -68,23 +74,27 @@ export class TaskCoordinator {
     }
     async accept(namespace: string, value: unknown) {
         const { parent, requestId, intent, agent } = parseTask(AcceptSchema, value);
-        if (this.closing) throw new TaskError(503, 'service_stopping', '服务正在停止；请用同一 request ID 查询接受结果。');
-        this.store.assertCanDelegate(namespace, parent);
-        const previous = this.store.lookup(namespace, parent, requestId, intent);
-        if (previous) return previous;
-        if (agent.namespace !== namespace || agent.id !== intent.agentType) throw new TaskError(409, 'agent_snapshot_mismatch', 'Agent 快照不属于当前请求或连接。');
-        const target = await this.resourceService(namespace).resolveExecutionTarget(agent.runtimeId);
-        if (this.closing) throw new TaskError(503, 'service_stopping', '服务正在停止；请用同一 request ID 查询接受结果。');
-        if (agent.machineId !== target.machineId || agent.flavor !== target.flavor || (agent.definition.flavor && agent.definition.flavor !== target.flavor)) {
-            throw new TaskError(409, 'agent_target_changed', 'Agent 快照与当前 runtime 不一致。', '重新运行 agent check 后创建新任务。');
-        }
-        this.requireLocal(target, parent, intent.workspaceMode);
-        const source = intent.workspaceMode === 'worktree' ? await new TaskWorkspaces(this.client(namespace), target.machineId).resolve(parent.cwd, intent.baseRef) : undefined;
-        if (this.closing) throw new TaskError(503, 'service_stopping', '服务正在停止；请用同一 request ID 查询接受结果。');
-        const accepted = this.store.accept(namespace, parent, requestId, intent, agent, target, source);
-        this.kick(namespace, accepted.agent_id);
-        return accepted;
+        return this.serial(`accept:${namespace}:${requestId}`, async () => {
+            if (this.closing) throw new TaskError(503, 'service_stopping', '服务正在停止；请用同一 request ID 查询接受结果。');
+            this.store.assertCanDelegate(namespace, parent);
+            const previous = this.store.lookup(namespace, parent, requestId, intent);
+            if (previous) return previous;
+            if (agent.namespace !== namespace || agent.id !== intent.agentType) throw new TaskError(409, 'agent_snapshot_mismatch', 'Agent 快照不属于当前请求或连接。');
+            const target = await this.resourceService(namespace).resolveExecutionTarget(agent.runtimeId);
+            if (this.closing) throw new TaskError(503, 'service_stopping', '服务正在停止；请用同一 request ID 查询接受结果。');
+            if (agent.machineId !== target.machineId || agent.flavor !== target.flavor || (agent.definition.flavor && agent.definition.flavor !== target.flavor)) {
+                throw new TaskError(409, 'agent_target_changed', 'Agent 快照与当前 runtime 不一致。', '重新运行 agent check 后创建新任务。');
+            }
+            this.requireLocal(target, parent, intent.workspaceMode);
+            const source = intent.workspaceMode === 'worktree' ? await new TaskWorkspaces(this.client(namespace), target.machineId).resolve(parent.cwd, intent.baseRef) : undefined;
+            if (this.closing) throw new TaskError(503, 'service_stopping', '服务正在停止；请用同一 request ID 查询接受结果。');
+            const accepted = await new TaskFiles(this.client(namespace)).accept(this.store, namespace, parent, requestId, intent,
+                () => this.store.accept(namespace, parent, requestId, intent, agent, target, source));
+            this.kick(namespace, accepted.agent_id);
+            return accepted;
+        });
     }
+
     private requireLocal(target: ExecutionTarget, parent: Parent, mode: Task['environment']['mode']) {
         if (target.machineId !== parent.machineId) throw new TaskError(409, mode === 'shared' ? 'shared_target_required' : 'remote_workspace_unavailable',
             '当前任务需要发起机上的 runtime，Hub 模式也支持同机执行。', '绑定本机 runtime；跨机工作区准备与结果回收尚未交付。');
@@ -111,9 +121,16 @@ export class TaskCoordinator {
     async send(namespace: string, value: unknown) {
         const { parent, requestId, intent } = parseTask(SendSchema, value);
         if (this.closing) throw new TaskError(503, 'service_stopping', '服务正在停止；请查询已接受记录。');
-        const accept = () => this.store.append(namespace, parent, requestId, intent);
-        // New rounds do not modify the active round. Steer must serialize with its completion/close.
-        const accepted = intent.mode === 'steer' ? await this.serial(intent.id, accept) : accept();
+        const accepted = await this.serial(`accept:${namespace}:${requestId}`, async () => {
+            this.store.assertCanDelegate(namespace, parent);
+            const previous = this.store.lookup(namespace, parent, requestId, intent);
+            if (previous) return previous;
+            this.store.require(namespace, intent.id, parent);
+            const accept = () => this.store.append(namespace, parent, requestId, intent);
+            // Only steer changes the active execution; new rounds have their own acceptance lock.
+            return intent.mode === 'steer' ? this.serial(intent.id, accept)
+                : new TaskFiles(this.client(namespace)).accept(this.store, namespace, parent, requestId, intent, accept);
+        });
         this.kick(namespace, intent.id);
         return accepted;
     }
@@ -183,6 +200,7 @@ export class TaskCoordinator {
     private async advance(namespace: string, id: string) {
         const { task, rounds, inputs: allInputs } = this.store.require(namespace, id);
         const workspaces = new TaskWorkspaces(this.client(namespace), task.target.machineId);
+        const files = new TaskFiles(this.client(namespace));
         if (task.environment.mode === 'worktree' && task.environment.status === 'deleting') {
             try { await workspaces.remove(task, () => this.store.saveEnvironment(task)); }
             catch (error) {
@@ -205,13 +223,15 @@ export class TaskCoordinator {
                     const prior = [...rounds].reverse().find(item => item.ordinal < round.ordinal && item.git?.status === 'sealed');
                     round.preparation.expectedHead = prior?.git?.result?.resultHead ?? task.environment.source.baseCommit;
                     round.phase = 'preparing';
-                } else round.preparation = { mode: 'shared', status: 'ready', checkedAt: Date.now() };
+                } else { round.preparation = { mode: 'shared', status: 'ready', checkedAt: Date.now() }; round.phase = 'preparing'; }
                 round.attention = null; save();
             }
             if (round.phase === 'preparing') {
-                if (!await workspaces.prepare(task, round, save)) return;
+                if (!await files.prepare(task, round, save)) return;
+                if (task.environment.mode === 'worktree' && round.preparation.status !== 'ready' && !await workspaces.prepare(task, round, save)) return;
+                if (round.preparation.status === 'ready') await files.releaseIntermediate(task, round, save);
             }
-            if ((round.phase === 'queued' || round.phase === 'preparing') && round.preparation.status === 'ready') {
+            if (round.phase === 'preparing' && round.preparation.status === 'ready') {
                 if (round.cancellation) this.finishUnstarted(task, round);
                 else {
                     const previous = [...rounds].reverse().find(item => item.ordinal < round.ordinal && item.sessionId && item.stop === 'stopped' && !item.startupFailure);
@@ -230,7 +250,7 @@ export class TaskCoordinator {
                 const resume = round.resume!;
                 if (!resume.attempted) {
                     resume.attempted = true; save();
-                    const result = await execution.resume(resume.previousSessionId, preparedReference(task, round));
+                    const result = await execution.resume(resume.previousSessionId, preparedReference(task, round), preparedFiles(task, round) ?? null);
                     resume.outcome = result.outcome;
                     if (result.outcome === 'missing') {
                         round.reconstruction = historyContext({ task, rounds, inputs: allInputs }, round);
@@ -256,7 +276,7 @@ export class TaskCoordinator {
                     const receipt = attempted ? await execution.lookupStart(task.target.machineId, round.spawnRequestId)
                         : await execution.start(task.target.machineId, {
                             requestId: round.spawnRequestId, directory: task.environment.cwd, agent: task.target.flavor,
-                            disabledMcpServers: ['runweft'], startingMode: 'remote', preparedWorkspace: preparedReference(task, round),
+                            disabledMcpServers: ['runweft'], startingMode: 'remote', preparedWorkspace: preparedReference(task, round), preparedFiles: preparedFiles(task, round),
                             ...(definition.model ? { model: definition.model } : {}),
                             ...(definition.reasoningEffort ? task.target.flavor === 'codex' ? { modelReasoningEffort: definition.reasoningEffort } : { effort: definition.reasoningEffort } : {}),
                         }).then(result => result.outcome === 'recorded' ? result.receipt : null);
@@ -282,6 +302,7 @@ export class TaskCoordinator {
                     round.hostPid = session.metadata?.hostPid; save(); // Persist role before any task input.
                     const prepared = preparedReference(task, round);
                     if (session.metadata?.machineId !== task.target.machineId || session.metadata.path !== task.environment.cwd || session.metadata.flavor !== task.target.flavor
+                        || (task.environment.mode === 'shared' && session.metadata.preparedFiles?.operationId !== preparedFiles(task, round)?.operationId)
                         || (prepared && (session.metadata.preparedWorkspace?.environmentId !== prepared.environmentId
                             || session.metadata.preparedWorkspace.preparationId !== prepared.preparationId))) {
                         round.startupFailure = { code: 'execution_target_mismatch', message: 'HAPI 返回的执行目录、机器或 runtime 与绑定目标不一致。' };
@@ -388,14 +409,16 @@ export class TaskCoordinator {
             }
         } catch (error) {
             const problem = errorDetails(error);
-            const workspacePhase = round.phase === 'preparing' || round.phase === 'finishing';
-            round.attention = { ...problem, stage: round.phase, ...(workspacePhase ? { scope: 'workspace' as const } : {}) };
-            if (round.phase === 'preparing' && round.preparation.mode === 'worktree') round.preparation.status = 'unknown';
+            const artifactPhase = round.phase === 'preparing' && !!round.inputFiles && (round.inputFiles.status !== 'ready' || round.attention?.scope === 'artifacts');
+            const workspacePhase = !artifactPhase && (round.phase === 'preparing' || round.phase === 'finishing');
+            round.attention = { ...problem, stage: round.phase, ...(artifactPhase ? { scope: 'artifacts' as const } : workspacePhase ? { scope: 'workspace' as const } : {}) };
+            if (round.phase === 'preparing' && !artifactPhase && round.preparation.mode === 'worktree') round.preparation.status = 'unknown';
             if (round.phase === 'finishing' && round.git) round.git.status = 'unknown';
             // Preparation and explicit pre-dispatch rejection are business failures, never invented native failures.
-            if (round.phase === 'queued' || (round.phase === 'starting' && !round.sessionId && !['connection_failed', 'invalid_hapi_response', 'request_failed'].includes(problem.code))
-                || (round.phase === 'resuming' && ['no_machine_online', 'resume_unavailable', 'access_denied', 'authentication_failed', 'workspace_not_prepared'].includes(problem.code))) {
+            if ((artifactPhase && round.inputFiles?.status === 'failed') || round.phase === 'queued' || (round.phase === 'starting' && !round.sessionId && !['connection_failed', 'invalid_hapi_response', 'request_failed'].includes(problem.code))
+                || (round.phase === 'resuming' && ['no_machine_online', 'resume_unavailable', 'access_denied', 'authentication_failed', 'workspace_not_prepared', 'files_not_prepared'].includes(problem.code))) {
                 round.startupFailure = problem; this.finishUnstarted(task, round);
+                if (artifactPhase) round.attention = { ...problem, scope: 'artifacts', stage: 'preparing' };
             }
             save();
         }
@@ -428,6 +451,7 @@ export class TaskCoordinator {
                 : `模式：独立 Git worktree；来源 ${task.environment.source.sourcePath}，固定基线 ${task.environment.source.baseCommit}，本轮起点 ${round.preparation.mode === 'worktree' ? round.preparation.startHead : ''}。\n`
                     + `${task.environment.source.dirty ? '主工作区有未提交改动，未带入本工作区。' : ''}工程指令/skills 来自该基线；未提交或 ignored 内容不会自动复制。\n`
                     + '在此目录完成任务，按需安装依赖；可以自行提交完成的修改。进程停止后 HAPI 会为遗留修改创建 checkpoint 并保留 worktree。不要修改主目录；合入与冲突由主 agent 处理。',
+            round.inputFiles?.paths.length ? `本轮输入文件已准备并校验，按以下实际路径读取；不要覆盖这些输入：\n${JSON.stringify(round.inputFiles.paths.map(file => ({ name: file.name, path: file.path, sha256: file.sha256, size: file.size })))}` : '',
             '请完成以下任务并报告结果。不要通过 Runweft 再次委派；原生内置工具按原有规则使用。', round.reconstruction?.context ?? '', input.text,
             '最后给出完成内容、测试结果和未解决事项；可用 fenced runweft-report JSON，字段 summary、changes、tests、remaining。'].filter(Boolean).join('\n\n');
     }

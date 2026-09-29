@@ -40,3 +40,12 @@
 - HAPI：独立 Commit `Prepare persistent machine inputs before native spawn and resume`（`96acb4c1fce3badd7b79077caf6c055b64a8c467`），root pin 已同步。
 - 后续：T3 接通实际 task spawn/next 输入、任务引用与接受意图；当前机器准备接口不等于任务附件业务已交付。
 - Commit：`task-artifact-delivery T2: prepare machine inputs before native execution`
+
+## T3 CLI 任务输入与真实原生续接
+
+- 结果：task spawn/send 的重复 --input 支持对象默认名或显式中文/空格名；按轮次冻结对象 ID/名称/hash/大小。state schema 升至 3，先持久化接受意图再 pin，业务接受事务绑定引用；相同 request ID 返回原接受结果，不重复启动。服务开放入口前回收已登记且未接受的引用，保留已接受和外部引用。
+- 准备：shared 使用 preparedFiles，worktree 将已校验下载交给既有 prepare.inputs，得到最终路径后释放中间副本；准备完成前不派生模型。路径进入 prompt 和 task show；第二轮新输入替换原生绑定，无输入显式清除，steer 不支持新附件。纯文字请求保持原有指纹。
+- 自动验证：root typecheck 通过，全量 111 pass / 2061 assertions；补充未发布对象拒绝后聚焦文件任务测试 6 pass / 128 assertions、最终 typecheck 通过。覆盖真实中心 SQLite/HTTP 引用、并发相同请求、丢响应/重启对账、校验失败无模型、输入替换和清除、worktree 中间副本释放与 parent 归属。日志 `.dev-smoke/artifact-t3-*.log`。
+- 原生验证：配套 Linux x64 编译 CLI 的 `bun scripts/smoke-task-inputs.ts` 通过 Codex/Claude × shared/worktree × 两轮，共 8 轮。模型实际读回每轮随机输入与项目指令标记；各组轮次之间重启服务，第二轮仍复用同一 native session。核对输入 hash、真实目录、引用防删除、主仓库 HEAD/状态不变、受控 MCP 禁用 metadata 与每轮停止。证据 `.dev-smoke/task-inputs-YvyIt7/evidence.json`，success=true、cleanupErrors=[]，8 个记录 PID 均已退出。沿专用配置副本继承本环境权限，不将 Codex 的既有 yolo 配置称为严格沙箱验证。
+- 构建：`bun run build` 通过；HAPI 源码与 revision 保持 `96acb4c1fce3badd7b79077caf6c055b64a8c467`，无需重复其已通过的检查。四平台安装、Hub/MCP 附件组合仍在 T6；本任务不开放尚未实现的输出参数。
+- Commit：`task-artifact-delivery T3: attach frozen inputs to CLI task rounds`

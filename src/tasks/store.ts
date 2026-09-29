@@ -3,11 +3,14 @@ import { openState } from '../state';
 import { contentVersion } from '../agents/definitions';
 import type { WorkspaceSource } from '../../hapi/shared/src/workspaces';
 import type { ExecutionTarget } from '../resources/types';
-import { parentKey, pendingPreparation, TaskError, type Acceptance, type AgentSnapshot, type Input, type Parent, type Round, type SendIntent, type SpawnIntent, type Task, type TaskBundle } from './types';
+import { parentKey, pendingPreparation, TaskError, type ArtifactIntent, type InputFiles, type Acceptance, type AgentSnapshot, type Input, type Parent, type Round, type SendIntent, type SpawnIntent, type Task, type TaskBundle } from './types';
 
 type TaskRow = { data: string; revision: number; updatedAt: number };
 const read = <T>(row: { data: string }): T => JSON.parse(row.data);
-const semantic = (parent: Parent, intent: SpawnIntent | SendIntent) => contentVersion({ parentKey: parentKey(parent), machineId: parent.machineId, cwd: parent.cwd, intent });
+const semantic = (parent: Parent, intent: SpawnIntent | SendIntent) => {
+    const normalized = { ...intent }; if (!normalized.inputs?.length) delete normalized.inputs;
+    return contentVersion({ parentKey: parentKey(parent), machineId: parent.machineId, cwd: parent.cwd, intent: normalized });
+};
 
 export class TaskStore {
     private readonly db;
@@ -36,7 +39,11 @@ export class TaskStore {
     }
     lookup(namespace: string, parent: Parent, requestId: string, intent: SpawnIntent | SendIntent): Acceptance | null {
         const row = this.db.query('SELECT fingerprint, accepted FROM delegation_requests WHERE namespace=? AND requestId=?').get(namespace, requestId) as { fingerprint: string; accepted: string } | null;
-        if (!row) return null;
+        if (!row) {
+            const pending = this.db.query('SELECT fingerprint FROM delegation_artifact_intents WHERE namespace=? AND requestId=?').get(namespace, requestId) as { fingerprint: string } | null;
+            if (pending && pending.fingerprint !== semantic(parent, intent)) throw new TaskError(409, 'task_request_conflict', '同一 request ID 已固定其他附件接受意图。');
+            return null;
+        }
         if (row.fingerprint !== semantic(parent, intent)) throw new TaskError(409, 'task_request_conflict', '同一 request ID 已用于不同任务意图。', '重试原请求请保持参数；新任务使用新的 request ID。');
         const accepted: Acceptance = JSON.parse(row.accepted);
         this.require(namespace, accepted.agent_id, parent);
@@ -45,6 +52,39 @@ export class TaskStore {
     requests(namespace: string, taskId: string) {
         return (this.db.query('SELECT accepted, createdAt FROM delegation_requests WHERE namespace=? AND taskId=? ORDER BY createdAt DESC, rowid DESC LIMIT 20')
             .all(namespace, taskId) as { accepted: string; createdAt: number }[]).map(row => ({ ...JSON.parse(row.accepted) as Acceptance, created_at: row.createdAt }));
+    }
+    beginArtifactIntent(namespace: string, parent: Parent, requestId: string, intent: SpawnIntent | SendIntent): ArtifactIntent {
+        const fingerprint = semantic(parent, intent);
+        const previous = this.db.query('SELECT fingerprint, data FROM delegation_artifact_intents WHERE namespace=? AND requestId=?')
+            .get(namespace, requestId) as { fingerprint: string; data: string } | null;
+        if (previous) {
+            if (previous.fingerprint !== fingerprint) throw new TaskError(409, 'task_request_conflict', '同一 request ID 已固定其他附件接受意图。');
+            return read<ArtifactIntent>(previous);
+        }
+        const value: ArtifactIntent = { namespace, requestId, reference: `runweft:input:${requestId}`, requests: intent.inputs ?? [] };
+        this.db.query('INSERT INTO delegation_artifact_intents VALUES (?, ?, ?, ?, NULL, ?)').run(namespace, requestId, fingerprint, JSON.stringify(value), Date.now());
+        return value;
+    }
+    saveArtifactIntent(value: ArtifactIntent) {
+        this.db.query('UPDATE delegation_artifact_intents SET data=? WHERE namespace=? AND requestId=?').run(JSON.stringify(value), value.namespace, value.requestId);
+    }
+    pendingArtifactIntents(): ArtifactIntent[] {
+        return (this.db.query('SELECT data FROM delegation_artifact_intents WHERE taskId IS NULL').all() as { data: string }[]).map(read<ArtifactIntent>);
+    }
+    artifactIntentAccepted(value: ArtifactIntent) {
+        const result = this.db.query('UPDATE delegation_artifact_intents SET taskId=(SELECT taskId FROM delegation_requests WHERE namespace=? AND requestId=?) WHERE namespace=? AND requestId=? AND EXISTS(SELECT 1 FROM delegation_requests WHERE namespace=? AND requestId=?)')
+            .run(value.namespace, value.requestId, value.namespace, value.requestId, value.namespace, value.requestId);
+        return result.changes > 0;
+    }
+    deleteArtifactIntent(value: ArtifactIntent) {
+        this.db.query('DELETE FROM delegation_artifact_intents WHERE namespace=? AND requestId=? AND taskId IS NULL').run(value.namespace, value.requestId);
+    }
+    private inputFiles(namespace: string, requestId: string, intent: SpawnIntent | SendIntent): InputFiles | undefined {
+        if (!intent.inputs?.length) return;
+        const row = this.db.query('SELECT data FROM delegation_artifact_intents WHERE namespace=? AND requestId=?').get(namespace, requestId) as { data: string } | null;
+        const value = row ? read<ArtifactIntent>(row) : null;
+        if (!value?.files || value.files.length !== intent.inputs.length) throw new TaskError(409, 'artifact_acceptance_incomplete', '附件尚未完成冻结和留存。');
+        return { reference: value.reference, files: value.files, operationId: randomUUID(), attempted: false, status: 'pending', downloaded: [], paths: [], intermediateReleased: false };
     }
     assertCanDelegate(namespace: string, parent: Parent) {
         const match = this.db.query(`SELECT taskId FROM delegation_sessions WHERE namespace=? AND
@@ -65,7 +105,7 @@ export class TaskStore {
                     : { mode: 'worktree', machineId: parent.machineId, environmentId: id, source: source!, cwd: source!.sourcePath, status: 'retained' },
                 createdAt: now, updatedAt: now, revision: 1 };
             const round: Round = { id: roundId, taskId: id, ordinal: 1, requestId, message: intent.message, phase: 'queued',
-                preparation: pendingPreparation(task.environment), ...(task.environment.mode === 'worktree' ? { git: { status: 'pending' as const, attempted: false } } : {}),
+                preparation: pendingPreparation(task.environment), inputFiles: this.inputFiles(namespace, requestId, intent), ...(task.environment.mode === 'worktree' ? { git: { status: 'pending' as const, attempted: false } } : {}),
                 spawnRequestId: randomUUID(), spawnAttempted: false,
                 report: '', structuredMissing: true, stop: 'not_started', finish: 'pending', attention: null, createdAt: now, permissions: {} };
             const input: Input = { id: randomUUID(), roundId, kind: 'initial', text: intent.message, delivery: 'pending', output: [] };
@@ -74,6 +114,7 @@ export class TaskStore {
             this.db.query('INSERT INTO delegation_rounds VALUES (?, ?, ?, ?, ?, NULL)').run(roundId, id, 1, round.phase, JSON.stringify(round));
             this.db.query('INSERT INTO delegation_inputs VALUES (?, ?, ?)').run(input.id, roundId, JSON.stringify(input));
             this.db.query('INSERT INTO delegation_requests VALUES (?, ?, ?, ?, ?, ?, ?)').run(namespace, requestId, semantic(parent, intent), id, roundId, JSON.stringify(accepted), now);
+            this.db.query('UPDATE delegation_artifact_intents SET taskId=? WHERE namespace=? AND requestId=?').run(accepted.agent_id, namespace, requestId);
             return accepted;
         }).immediate();
     }
@@ -87,7 +128,7 @@ export class TaskStore {
             if (bundle.task.environment.mode === 'worktree' && bundle.task.environment.status !== 'retained') throw new TaskError(409, 'workspace_not_retained', '工作区正在删除或已删除，无法继续委派。');
             if (intent.mode === 'next') {
                 round = { id: randomUUID(), taskId: intent.id, ordinal: bundle.rounds.at(-1)!.ordinal + 1, requestId, message: intent.message,
-                    phase: 'queued', preparation: pendingPreparation(bundle.task.environment),
+                    phase: 'queued', preparation: pendingPreparation(bundle.task.environment), inputFiles: this.inputFiles(namespace, requestId, intent),
                     ...(bundle.task.environment.mode === 'worktree' ? { git: { status: 'pending' as const, attempted: false } } : {}),
                     spawnRequestId: randomUUID(), spawnAttempted: false,
                     report: '', structuredMissing: true, stop: 'not_started', finish: 'pending', attention: null, createdAt: now, permissions: {} };
@@ -105,6 +146,7 @@ export class TaskStore {
             this.db.query('UPDATE delegation_tasks SET revision=?, updatedAt=? WHERE id=?').run(revision, now, intent.id);
             const accepted: Acceptance = { agent_id: intent.id, round_id: round.id, request_id: requestId, input_id: input.id, revision, accepted: true };
             this.db.query('INSERT INTO delegation_requests VALUES (?, ?, ?, ?, ?, ?, ?)').run(namespace, requestId, semantic(parent, intent), intent.id, round.id, JSON.stringify(accepted), now);
+            this.db.query('UPDATE delegation_artifact_intents SET taskId=? WHERE namespace=? AND requestId=?').run(accepted.agent_id, namespace, requestId);
             return accepted;
         }).immediate();
     }

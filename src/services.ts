@@ -163,6 +163,7 @@ export async function serve(c: ResolvedConfig, publicly = false): Promise<void> 
         const secret = JSON.parse(readFileSync(join(paths.hapiServer, 'jwt-secret.json'), 'utf8'));
         const key = Buffer.from(secret.secretBase64, 'base64');
         tasks = new TaskCoordinator(paths.state, namespace => new HapiClient(privateUrl, namespace === 'default' ? token : `${token}:${namespace}`));
+        await tasks.reconcileFileIntents();
         gateway = await createGateway({ host, port: c.config.server.port, target: privateUrl,
             handle: createRunweftHandler({ key, hapiUrl: privateUrl, statePath: paths.state, tasks,
                 health: () => ({ service: 'runweft', protocolVersion: 1, ready, version: BUILD.version,

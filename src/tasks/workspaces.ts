@@ -1,3 +1,4 @@
+import { isAbsolute } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { WorkspaceSourceSchema, type PreparedWorkspace, type WorkspaceRequest, type WorkspaceResponse,
     type WorkspaceMutation } from '../../hapi/shared/src/workspaces';
@@ -55,11 +56,19 @@ export class TaskWorkspaces {
         preparation.attempted = true; save();
         const { workspace, operation } = await this.receipt({ action: 'prepare', environmentId: environment.environmentId,
             preparationId: preparation.preparationId, roundId: round.id, source: environment.source,
-            expectedHead: preparation.expectedHead, inputs: [] }, attempted);
+            expectedHead: preparation.expectedHead, inputs: (round.inputFiles?.downloaded ?? []).map(({ name, path, size, sha256 }) => ({ name, path, size, sha256 })) }, attempted);
         environment.checkout = workspace.checkout; environment.branch = workspace.branch;
         if (operation.status === 'succeeded') {
             const ready = workspace.preparations[preparation.preparationId];
             if (!ready || ready.roundId !== round.id || ready.startHead !== preparation.expectedHead) throw new RunweftError('invalid_hapi_response', 'HAPI 的准备结果与本轮固定基线不一致。');
+            if (round.inputFiles) {
+                if (ready.inputs.length !== round.inputFiles.files.length) throw new RunweftError('invalid_hapi_response', '工作区输入数量与本轮不一致。');
+                round.inputFiles.paths = round.inputFiles.files.map(file => {
+                    const mapped = ready.inputs.find(input => input.name === file.name);
+                    if (!mapped || !isAbsolute(mapped.path) || mapped.size !== file.size || mapped.sha256 !== file.sha256) throw new RunweftError('invalid_hapi_response', '工作区输入路径或摘要与本轮不一致。');
+                    return { ...file, path: mapped.path };
+                });
+            }
             preparation.status = 'ready'; preparation.startHead = ready.startHead; preparation.checkedAt = ready.readyAt;
             environment.cwd = ready.cwd;
             round.attention = null; save(); return true;

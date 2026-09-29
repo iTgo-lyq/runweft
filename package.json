@@ -30,7 +30,8 @@
     "build:hapi": "bun scripts/build-hapi.ts",
     "package": "bun scripts/package.ts",
     "test:artifacts": "bun scripts/smoke-artifacts.ts",
-    "test:inputs": "bun scripts/smoke-inputs.ts"
+    "test:inputs": "bun scripts/smoke-inputs.ts",
+    "test:task-inputs": "bun scripts/smoke-task-inputs.ts"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.25.1",

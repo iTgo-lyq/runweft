@@ -4,12 +4,14 @@ import { readFileSync } from 'node:fs';
 import { z } from 'zod';
 import { targetUrl, type ResolvedConfig } from '../config';
 import { RunweftError } from '../errors';
+import { ArtifactInputSchema, parseTask, type ArtifactInput } from './types';
 import { TaskClient } from './client';
 import type { overview } from './views';
 
 type Summary = ReturnType<typeof overview>;
-function taskText(task: Pick<Summary, 'agent_id' | 'round_id' | 'status' | 'attention' | 'report' | 'git'>) {
+function taskText(task: Pick<Summary, 'agent_id' | 'round_id' | 'status' | 'attention' | 'report' | 'git'> & { input_files?: { status: string; count?: number; files?: ArtifactInput[] } | null }) {
     return `${task.agent_id} · ${task.status}\n轮次：${task.round_id}`
+        + (task.input_files && task.input_files.status !== 'none' ? `\n输入文件：${task.input_files.count ?? task.input_files.files?.length ?? 0} · ${task.input_files.status}` : '')
         + (task.attention ? `\n需处理：${task.attention.message}${task.attention.hint ? `\n${task.attention.hint}` : ''}` : '')
         + (task.git === 'not_applicable' ? '' : `\nGit：${task.git.status}${task.git.checkout ? ` · ${task.git.checkout}` : ''}`
             + `\n工作区：${task.git.retained}`
@@ -18,6 +20,13 @@ function taskText(task: Pick<Summary, 'agent_id' | 'round_id' | 'status' | 'atte
         + (task.report.text ? `\n${task.report.text}` : '')
         + (task.report.next_offset !== null ? `\n后续内容：runweft task show ${task.agent_id} --round ${task.round_id} --offset ${task.report.next_offset}` : '');
 }
+export function taskInputs(values: string[] = []): ArtifactInput[] {
+    return values.map(value => {
+        const split = value.lastIndexOf('=');
+        return parseTask(ArtifactInputSchema, { artifactId: value.slice(split + 1), ...(split < 0 ? {} : { name: value.slice(0, split) }) });
+    });
+}
+const addInput = (value: string, values: string[]) => [...values, value];
 export function taskMessage(options: { message?: string; messageFile?: string }) {
     if ((options.message !== undefined) === (options.messageFile !== undefined)) throw new RunweftError('task_message_required', '请指定 --message 或 --message-file，两者选一个。');
     return options.message ?? readFileSync(options.messageFile === '-' ? 0 : options.messageFile!, 'utf8');
@@ -42,9 +51,10 @@ export function addTaskCommands(program: Command, context: () => ResolvedConfig,
         .option('--message <text>', '任务描述').option('--message-file <path>', '从文件读取任务；- 读取 stdin')
         .option('--request-id <uuid>', '相同请求重试时复用 ID').option('--workspace-mode <shared|worktree>', '共享当前目录或准备独立 Git worktree', 'shared')
         .option('--base <ref>', 'worktree 的已提交 Git 基线，默认 HEAD；不包含主目录未提交内容')
+        .option('--input <name=id|id>', '使用已上传文件；可重复，默认采用对象文件名', addInput, [])
         .action(async (agent, options) => {
             const message = taskMessage(options), id = announceRequest(program, options.requestId);
-            const result = await client().spawn(agent, message, id, options.workspaceMode, undefined, options.base);
+            const result = await client().spawn(agent, message, id, options.workspaceMode, undefined, options.base, taskInputs(options.input));
             output(result, `任务已接受：${result.agent_id}\n轮次：${result.round_id}\n原生执行尚待确认。\n等待：runweft task wait ${result.agent_id}`);
         });
     task.command('list').description('列出当前发起目录的任务').option('--all', '查看当前 namespace 全部任务').action(async options => {
@@ -52,10 +62,11 @@ export function addTaskCommands(program: Command, context: () => ResolvedConfig,
     });
     task.command('send <id>').description('默认排队下一轮；--steer 追加到指定活跃 Codex 轮次')
         .option('--message <text>', '任务描述').option('--message-file <path>', '从文件读取任务；- 读取 stdin')
+        .option('--input <name=id|id>', '下一轮的已上传输入文件；可重复，steer 不支持', addInput, [])
         .option('--request-id <uuid>', '重试相同追加请求时复用 ID').option('--steer', '运行中追加，需 --round').option('--round <id>', 'steer 的目标轮次')
         .action(async (id, options) => {
             const message = taskMessage(options), request = announceRequest(program, options.requestId);
-            const result = await client().send(id, message, request, { mode: options.steer ? 'steer' : 'next', roundId: options.round });
+            const result = await client().send(id, message, request, { mode: options.steer ? 'steer' : 'next', roundId: options.round, inputs: taskInputs(options.input) });
             output(result, `${options.steer ? '追加已接受，实际原生交付请查询任务' : '下一轮已排队'}：${result.agent_id}\n轮次：${result.round_id}\n输入：${result.input_id}\n查看：runweft task show ${result.agent_id} --round ${result.round_id}`);
         });
     task.command('interrupt <id>').description('取消指定轮次；已结束的轮次不影响后续执行').requiredOption('--round <id>', '固定业务轮次')
@@ -84,7 +95,8 @@ export function addTaskCommands(program: Command, context: () => ResolvedConfig,
             const permissions = Object.entries(result.permissions ?? {}).map(([requestId, request]) => `\n待审批：${requestId} · ${request.tool}\n参数：${JSON.stringify(request.arguments).slice(0, 1200)}\n`
                 + `响应：runweft task permission ${id} --round ${result.round_id} --request ${requestId} --decision <approved|denied|abort>`).join('\n');
             output(result, taskText(result) + `\n原生会话：${result.session_id ?? '未建立'}\n执行关闭：${result.stop} · 收尾：${result.finish}`
-                + (result.session_id ? `\nHAPI 详情：${targetUrl(context().config)}/sessions/${encodeURIComponent(result.session_id)}` : '') + permissions);
+                + (result.session_id ? `\nHAPI 详情：${targetUrl(context().config)}/sessions/${encodeURIComponent(result.session_id)}` : '') + permissions
+                + (result.input_files?.paths.map(file => `\n输入 ${file.name}：${file.path}`).join('') ?? ''));
         });
     task.command('wait <ids...>').description('等待完成或需要处理；超时和取消不终止任务').option('--timeout <ms>', '等待毫秒数（0–540000）', '30000')
         .option('--after-revision <json>', '按任务 ID 提供已读版本，如 {"任务ID":12}')

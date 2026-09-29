@@ -6,6 +6,8 @@ import type { SessionResponse } from '../../hapi/shared/src/apiTypes';
 import type { WorkspaceSource, WorkspaceResult } from '../../hapi/shared/src/workspaces';
 import type { HistoryCursor } from '../execution';
 import type { ExecutionTarget, Problem } from '../resources/types';
+import { ArtifactNameSchema } from '../../hapi/shared/src/artifacts';
+import type { MaterializedInput, MaterializeRequest } from '../../hapi/shared/src/artifactTransfers';
 import { RunweftError } from '../errors';
 
 const identifier = z.string().min(1).max(512);
@@ -16,14 +18,18 @@ export const ParentSchema = z.discriminatedUnion('kind', [
         hapiSessionId: identifier.optional() }),
 ]);
 export type Parent = z.infer<typeof ParentSchema>;
-const spawnFields = { agentType: AgentIdSchema, message: z.string().trim().min(1).max(200_000) };
+export const ArtifactInputSchema = z.strictObject({ artifactId: z.uuid(), name: ArtifactNameSchema.optional() });
+export type ArtifactInput = z.infer<typeof ArtifactInputSchema>;
+const fileInputs = z.array(ArtifactInputSchema).max(100).optional();
+const spawnFields = { agentType: AgentIdSchema, message: z.string().trim().min(1).max(200_000), inputs: fileInputs };
 export const SpawnIntentSchema = z.discriminatedUnion('workspaceMode', [
     z.strictObject({ ...spawnFields, workspaceMode: z.literal('shared') }),
     z.strictObject({ ...spawnFields, workspaceMode: z.literal('worktree'), baseRef: z.string().trim().min(1).default('HEAD') }),
 ]);
 export type SpawnIntent = z.infer<typeof SpawnIntentSchema>;
-export const SendIntentSchema = z.strictObject({ id: z.uuid(), message: z.string().trim().min(1).max(200_000), mode: z.enum(['next', 'steer']), roundId: z.uuid().optional() })
-    .refine(value => value.mode === 'steer' ? !!value.roundId : value.roundId === undefined, 'steer 必须指定 roundId；next 不接受 roundId');
+export const SendIntentSchema = z.strictObject({ id: z.uuid(), message: z.string().trim().min(1).max(200_000), mode: z.enum(['next', 'steer']), roundId: z.uuid().optional(), inputs: fileInputs })
+    .refine(value => value.mode === 'steer' ? !!value.roundId : value.roundId === undefined, 'steer 必须指定 roundId；next 不接受 roundId')
+    .refine(value => value.mode !== 'steer' || !value.inputs?.length, '运行中追加不支持新附件；请使用 next 排队下一轮');
 export type SendIntent = z.infer<typeof SendIntentSchema>;
 export const SnapshotSchema = z.strictObject({ id: AgentIdSchema, definition: DefinitionSchema,
     source: z.strictObject({ scope: ScopeSchema, path: z.string(), key: z.string(), linkTarget: z.string().nullable() }),
@@ -37,7 +43,7 @@ export const InterruptSchema = z.strictObject({ parent: ParentSchema, id: z.uuid
 export const RemoveWorkspaceSchema = z.strictObject({ parent: ParentSchema, id: z.uuid(), discardIgnored: z.boolean().default(false) });
 export const PermissionSchema = InterruptSchema.extend({ requestId: z.string().min(1), decision: z.enum(['approved', 'denied', 'abort']),
     answers: z.union([z.record(z.string(), z.array(z.string())), z.record(z.string(), z.object({ answers: z.array(z.string()) }))]).optional() });
-export type Attention = Problem & { stage: string; scope?: 'workspace'; permissionIds?: string[] };
+export type Attention = Problem & { stage: string; scope?: 'workspace' | 'artifacts'; permissionIds?: string[] };
 export type Status = 'running' | 'needs_attention' | 'completed' | 'failed' | 'interrupted' | 'unknown';
 export type Acceptance = { agent_id: string; round_id: string; request_id: string; revision: number; accepted: true; input_id?: string };
 export type StructuredReport = { summary: string; changes: string; tests: string; remaining: string };
@@ -57,9 +63,14 @@ export function pendingPreparation(environment: TaskEnvironment): Preparation {
     return environment.mode === 'shared' ? { mode: 'shared', status: 'pending' }
         : { mode: 'worktree', preparationId: crypto.randomUUID(), status: 'pending', attempted: false };
 }
+export type FrozenInput = MaterializeRequest['files'][number];
+export type InputFiles = { reference: string; files: FrozenInput[]; operationId: string; attempted: boolean;
+    status: 'pending' | 'accepted' | 'ready' | 'failed' | 'unknown'; downloaded: MaterializedInput[]; paths: MaterializedInput[];
+    intermediateReleased: boolean; error?: Problem };
+export type ArtifactIntent = { namespace: string; requestId: string; reference: string; requests: ArtifactInput[]; files?: FrozenInput[] };
 export type Round = { id: string; taskId: string; ordinal: number; requestId: string; message: string;
     phase: 'queued' | 'preparing' | 'starting' | 'resuming' | 'running' | 'stopping' | 'finishing' | 'finished' | 'failed';
-    preparation: Preparation; git?: GitDelivery;
+    preparation: Preparation; git?: GitDelivery; inputFiles?: InputFiles;
     spawnRequestId: string; spawnAttempted: boolean; sessionId?: string; nativeSessionId?: string;
     cursor?: HistoryCursor; report: string; structuredMissing: boolean;
     stop: 'not_started' | 'stopping' | 'stopped'; finish: 'pending' | 'complete';
