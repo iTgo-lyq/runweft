@@ -2,6 +2,8 @@
 
 同一 delegation 的 next 持久排队，等待前轮停止及当前工作区模式收尾后才开始。任务始终沿用既有目录、runtime 与定义快照；后来修改 YAML、个人绑定或 CLI cwd 不重定向旧任务。
 
+有附件时，preparing 先完成[本轮输入](../../artifacts/inputs/spec.md)。原生停止和 Git 封存后进行[文件交付](../../artifacts/delivery/spec.md)，传输未确定前不开放下一轮；确认部分交付后可结束本轮。文件 retry/collect 的恢复独立于模型轮次，不改 completed_revision。
+
 首轮通过 HAPI 启动。后轮优先 resume 前轮已停止的原生 session，核对实际返回的 machineId/path/flavor 与能力就绪后才投递新输入。只有明确 native_session_missing 才按[上下文规则](../context/spec.md)构造历史并新建 session；离线、权限、读取失败或未知响应不当作历史缺失。真实新旧 HAPI/native 身份在输入前关联。
 
 独立模式在 preparing 取得当前准备引用，spawn/resume 都消费该引用；每轮完成前须经 finishing 固定 Git 成果。收尾失败/未知阻塞后轮，显式 retry_finish 只重试收尾；已排队的轮次不重建目录或重新选择基线。环境删除与 next 在同一事务互斥，已删除环境拒绝续接。

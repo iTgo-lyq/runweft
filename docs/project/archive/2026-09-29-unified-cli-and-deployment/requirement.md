@@ -17,7 +17,7 @@
 | 关系 | Change | 依赖内容与满足条件 |
 | --- | --- | --- |
 | 外部基础 | 固定版本的现有 HAPI 构建 | 验证已有安装、认证、Hub/Runner 管理及诊断，不要求新执行契约先实现 |
-| 下游 | [HAPI 执行契约](../2026-09-29-hapi-subagent-foundation/requirement.md)、[资源注册](../2026-09-29-execution-resource-registry/requirement.md)、[Agent 定义](../2026-09-29-agent-definition/requirement.md)、[附件交付](../../changes/task-artifact-delivery/requirement.md) | 使用统一配置、公共数据位置及命令承载；各模块实现自己的领域操作 |
+| 下游 | [HAPI 执行契约](../2026-09-29-hapi-subagent-foundation/requirement.md)、[资源注册](../2026-09-29-execution-resource-registry/requirement.md)、[Agent 定义](../2026-09-29-agent-definition/requirement.md)、[附件交付](../2026-09-29-task-artifact-delivery/requirement.md) | 使用统一配置、公共数据位置及命令承载；各模块实现自己的领域操作 |
 | 下游 | [集成与发布](../../changes/integrated-release/requirement.md) | 消费安装与兼容机制，验收包含全部领域能力的最终候选版本 |
 
 ## 独立验收与交付边界

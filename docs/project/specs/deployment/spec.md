@@ -39,9 +39,11 @@ HAPI Hub 只监听本机私有端口，省略端口配置时自动选择。Runwe
 | `config.yaml` | 可编辑全局配置 |
 | `agents/` | 全局 Agent YAML；项目定义保留于对应项目目录 |
 | `server/hapi/` | 托管 Hub 的原有数据库、令牌和状态 |
+| `server/hapi/artifacts/` | 所托管中心的持久文件字节；Hub 客户端从中心读取 |
 | `server/runweft/state.sqlite` | 中心机器/runtime 登记、最后原生探测及委派任务/轮次/请求关联和报告；WAL、事务化 schema version，不保存模型凭据 |
 | `connections/local/hapi/` 或 `connections/<主机名>-<URL hash>/hapi/` | 当前机器 Runner 的连接身份、配置与原生日志 |
 | `connections/<连接>/hapi/workspaces/environments/<任务ID>/` | 独立任务 checkout、树外输入与准备/成果/操作回执；持久数据，不是缓存 |
+| `connections/<连接>/hapi/artifact-transfers/` | 机器输入下载副本、持久操作回执及未交付的输出候选 |
 | `client.sqlite` | 本机工作区与 Agent 个人 runtime 绑定及 Claude MCP hook 的短期调用身份 |
 | `logs/` | 服务日志，由部署方管理保留和轮转 |
 | `backups/mcp/` | 显式 MCP 配置修改前的快照，可能含原配置秘密，仅当前用户可读写 |
@@ -52,7 +54,9 @@ Hub 客户端不保存权威资源库；paths 明确指出登记位于中心，�
 
 paths.taskWorkspaces 指向当前连接的本机环境根。doctor 的 task_workspaces 检查只读统计实际 checkout 目录（含失败准备现场），即使中心离线仍可取得本机数量；读取失败明确报告错误，不推断零目录或成功任务数，不统计其他连接/机器。具体状态通过 task list/show 查询。
 
-任务协调器复用 serve，CLI/MCP 无需再安装独立 daemon。业务表及请求恢复见[委派生命周期](../delegation/lifecycle/spec.md)；当前 schema v2 事务保留既有资源，遇到更高版本明确拒绝，不自动删除数据或降级。
+任务协调器复用 serve，CLI/MCP 无需再安装独立 daemon。业务表及请求恢复见[委派生命周期](../delegation/lifecycle/spec.md)；当前 schema v4 事务保留既有资源、任务和文件清单，遇到更高版本明确拒绝，不自动删除数据或降级。
+
+server.artifacts 配置本机托管服务的大小、配额和期限，Hub 客户端以中心 limits 为准。paths/doctor 展示文件根、用量和恢复/清理提示，见[留存](../artifacts/retention/spec.md)。二进制接口流式转发，Hub body ceiling 随 maxFile 提高；反向代理须同时允许对应体积、关闭请求/响应缓冲且不另加总传输时限。备份/恢复覆盖中心数据库、字节、业务清单以及机器上未交付候选，不能只回退数据库或删除 spool。
 
 Codex/Claude 配置和历史仍沿各自原生位置；已有 HAPI 数据不自动搬迁，工作区留在原处。停止后备份数据根及相应原生数据，恢复使用兼容版本；不承诺任意版本间回退。
 

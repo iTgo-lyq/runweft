@@ -22,7 +22,7 @@
 | 前置 | [Agent 定义](../../archive/2026-09-29-agent-definition/requirement.md) | 定义解析、默认参数与配置继承规则可用 |
 | 前置 | [委派生命周期](../../archive/2026-09-29-delegation-lifecycle/requirement.md) | 本地共享模式 CLI/MCP 完整协作已验收 |
 | 前置 | [本地独立工作区](../../archive/2026-09-29-local-workspace-execution/requirement.md) | 公共 Git 生命周期、本地独立执行与续接已验收 |
-| 前置 | [任务附件](../task-artifact-delivery/requirement.md) | 独立文件交付和任务输入/输出集成已验收 |
+| 前置 | [任务附件](../../archive/2026-09-29-task-artifact-delivery/requirement.md) | 独立文件交付和任务输入/输出集成已验收 |
 | 前置 | [远端准备](../remote-workspace-preparation/requirement.md) | 跨机准备、固定基线及准备失败禁止启动已验收 |
 | 前置 | [远端结果](../remote-result-delivery/requirement.md) | 主仓库实际取回成果、失败重试与保留已验收 |
 | 前置 | [Subagent 看板](../subagent-dashboard/requirement.md) | 全局查询与 HAPI 详情链接已验收 |

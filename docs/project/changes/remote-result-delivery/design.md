@@ -58,7 +58,7 @@ Git 收尾由[公共工作区设计](../../archive/2026-09-29-local-workspace-ex
 
 ## 5. 附件接口
 
-输入和输出文件复用[任务附件与交付记录](../task-artifact-delivery/design.md)，本 Change 不再定义上传、访问控制或配额。它负责在发布 Git 成果前校验 bundle 语义，登记基线与输出对象之间的保留关系，并把 Git 校验结论组合进每轮结果清单。
+输入和输出文件复用[任务附件与交付记录](../../archive/2026-09-29-task-artifact-delivery/design.md)，本 Change 不再定义上传、访问控制或配额。它负责在发布 Git 成果前校验 bundle 语义，登记基线与输出对象之间的保留关系，并把 Git 校验结论组合进每轮结果清单。
 
 ## 6. 发布与交付确认
 

@@ -25,17 +25,17 @@ HAPI 已有会话上传和 Hub scratchlist 附件存储；应复用合适的底�
 
 结果清单引用不可变对象；补交通过新版本体现，不能悄悄改变已经引用的内容。清单中逐项说明哪些必需附件未交付，不能用一个成功上传掩盖其他失败。普通报告不要求包含代码或绑定活跃 HAPI 会话。
 
-委派与轮次的业务关联由[委派生命周期](../../archive/2026-09-29-delegation-lifecycle/requirement.md)维护；本 Change 只校验已授权的归属信息，不创建委派或推断任务终态。Git bundle 可复用对象传输，但它的前置对象、引用与祖先关系由[远端代码回收](../remote-result-delivery/requirement.md)验证。
+委派与轮次的业务关联由[委派生命周期](../2026-09-29-delegation-lifecycle/requirement.md)维护；本 Change 只校验已授权的归属信息，不创建委派或推断任务终态。Git bundle 可复用对象传输，但它的前置对象、引用与祖先关系由[远端代码回收](../../changes/remote-result-delivery/requirement.md)验证。
 
 ## 3. 保留与删除
 
 附件保留期限独立于 HAPI 会话在线状态。可删除条件需要检查活跃输入、结果清单与恢复引用；普通缓存清理不得删除仍被引用的对象。删除后读取返回明确的失效状态。
 
-配额、保留期限、备份和访问凭据沿[统一部署设计](../../archive/2026-09-29-unified-cli-and-deployment/design.md)配置。调用方取回确认不等于业务验收，不能单凭一次下载删除唯一副本。
+配额、保留期限、备份和访问凭据沿[统一部署设计](../2026-09-29-unified-cli-and-deployment/design.md)配置。调用方取回确认不等于业务验收，不能单凭一次下载删除唯一副本。
 
 ## 4. 验证边界
 
-可在没有 agent 会话的情况下验证：上传后校验、启动前下载、重复请求、断线重传、跨主体拒绝、路径逃逸拒绝、配额不足与删除保护。HAPI 已有上传与 scratchlist 存储的证据见[共同调查](../../archive/2026-09-29-hapi-subagent-foundation/research.md#远端设计补充证据)；此处为需求阶段的验证目标，实际结果见 [Execution](execution.md)。
+可在没有 agent 会话的情况下验证：上传后校验、启动前下载、重复请求、断线重传、跨主体拒绝、路径逃逸拒绝、配额不足与删除保护。HAPI 已有上传与 scratchlist 存储的证据见[共同调查](../2026-09-29-hapi-subagent-foundation/research.md#远端设计补充证据)；此处为需求阶段的验证目标，实际结果见 [Execution](execution.md)。
 
 ## 5. 领域接入边界
 

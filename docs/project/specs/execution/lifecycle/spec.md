@@ -15,3 +15,5 @@ Codex 通过原生 user item 与 turn ID 关联输入，以 turn/completed 的 s
 真实执行继承原有模型配置和认证；专用项目的说明与 skill 由原生客户端加载。调用层不集中管理 skill/MCP，不写用户全局配置。
 
 独立工作区启动/续接可携带 `preparedWorkspace: { environmentId, preparationId }`，与 HAPI 原有 sessionType=worktree 快捷创建互斥。该引用贯穿持久启动指纹、Hub/RPC、Runner 和会话 metadata；Runner 在目录创建前及真正启动点核对当前准备，不重建丢失目录。此能力由通用启动路径提供，不要求修改 Codex/Claude runtime adapter；Git 准备见[公共生命周期](../../git-workspace/lifecycle/spec.md)。
+
+共享目录可带 `preparedFiles: { operationId }`，引用本机 materialize 的输入；与 preparedWorkspace 分别用于 shared/worktree。Runner 在启动前核对操作、文件大小/摘要及留存，缺失或已释放明确拒绝。引用沿原 spawn/resume 指纹和 metadata 保存，不增加 runtime 执行循环；具体准备见[输入](../../artifacts/inputs/spec.md)。

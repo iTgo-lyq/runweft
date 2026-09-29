@@ -36,7 +36,7 @@
 | [Agent 定义（已完成）](archive/2026-09-29-agent-definition/requirement.md) | 可发现、校验及解析的全局/项目定义，引用 runtime | 统一 CLI、全局资源注册 |
 | [委派生命周期（已完成）](archive/2026-09-29-delegation-lifecycle/requirement.md) | CLI/MCP 本地共享目录的完整协作与统一查询 | 统一 CLI、HAPI 执行契约、宿主适配、Agent 定义、全局资源注册 |
 | [本地工作区执行（已完成）](archive/2026-09-29-local-workspace-execution/requirement.md) | 独立本地协作及公共 Git 准备/封存/保留能力 | HAPI 执行契约、委派生命周期 |
-| [任务附件交付](changes/task-artifact-delivery/requirement.md) | 独立文件交付及既有任务的输入/输出接入 | 统一 CLI、委派生命周期 |
+| [任务附件交付](archive/2026-09-29-task-artifact-delivery/requirement.md) | 独立文件交付及既有任务的输入/输出接入 | 统一 CLI、委派生命周期 |
 | [远端工作区准备](changes/remote-workspace-preparation/requirement.md) | 跨机基线与输入落地，复用公共工作区启动校验 | HAPI 执行契约、本地工作区、任务附件 |
 | [远端代码回收](changes/remote-result-delivery/requirement.md) | 真实远端协作至主仓库取得成果的完整链路 | 远端准备、本地工作区、委派生命周期、任务附件 |
 | [Subagent 看板](changes/subagent-dashboard/requirement.md) | 基于统一查询的全局概览，详情复用 HAPI | 委派生命周期、统一 CLI |
@@ -139,10 +139,10 @@ Runweft 只补必要协作与交付关联，原生会话/执行事实优先读�
 
 | 技术缺口 | 完整交付前需落实的结论 |
 | --- | --- |
-| 协作逻辑的部署与存储 | serve 内中心协调已运行，schema v2 事务保留资源 ID 并保存任务/轮次/请求与报告；HAPI JWT 续期、重复接受及重启查询已验证。后续工作区/附件表由所属 Change 按需增加 |
+| 协作逻辑的部署与存储 | serve 内中心协调已运行，schema v4 保存资源、任务/轮次、请求、输入意图及不可变文件清单；HAPI 保存中心字节和机器传输。重复接受、文件恢复及重启查询已验证 |
 | HAPI 原生执行契约 | 两种内置 runtime 的输入关联、原生结果、请求重查、定向中断、审批、停止与续接已通过真实验收；共享进程兄弟会话可继续执行，已证实缺口在 HAPI 原路径最小增补 |
 | 宿主身份与结果交互 | 身份、安装、工具禁用及真实派生/等待/续接/控制已通过两宿主 × 两 runtime、local/同机 Hub 验收；支持工具响应，不声明后台唤醒 |
-| 工作区与交付一致性 | 基线准备、启动校验、轮次封存、成果取回、跨轮次复用、失败保留和最终回收的契约；落实 LFS/子模块等既定验收边界 |
+| 工作区与交付一致性 | 本机 shared/worktree、LFS/子模块、启动前输入、停止后 Git/文件收尾、续接及留存清理已验收；远端仓库准备和 Git bundle 成果回收继续由后续 Change 落实 |
 | 发行与运行维护 | 基础包组织、版本固定、启停诊断与四平台安装已验收；完整业务版本的数据升级、组合验收和公开发行由集成 Change 落实 |
 | 真实验收条件 | 专用本地/远端机器、两种原生 CLI 的可用认证及 macOS 环境；只记录资源与授权状态，不读取或搬运凭据来替代配置 |
 

@@ -18,7 +18,7 @@
 | 前置 | [远端工作区准备](../remote-workspace-preparation/requirement.md) | 环境归属、确定基线与可恢复 Git 对象可用 |
 | 前置 | [本地工作区执行](../../archive/2026-09-29-local-workspace-execution/requirement.md) | 公共 Git 封存和成果引用可用，本 Change 不再实现第二份提交或回收规则 |
 | 前置 | [委派生命周期](../../archive/2026-09-29-delegation-lifecycle/requirement.md) | round/HAPI 关联、原生结束事实及下一轮写入调度；未知状态不能触发封存 |
-| 前置 | [任务附件](../task-artifact-delivery/requirement.md) | 持久对象上传、校验、访问控制和引用保留 |
+| 前置 | [任务附件](../../archive/2026-09-29-task-artifact-delivery/requirement.md) | 持久对象上传、校验、访问控制和引用保留 |
 
 ## 独立验收与交付边界
 
