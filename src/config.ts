@@ -169,6 +169,7 @@ export function dataPaths(resolved: ResolvedConfig) {
     return {
         home, config: resolved.file,
         server, hapiServer: join(server, 'hapi'), runweftServer: join(server, 'runweft'),
+        state: join(server, 'runweft', 'state.sqlite'),
         hapiClient: join(home, 'connections', connectionName(config), 'hapi'),
         bindings: join(home, 'client.sqlite'), process: join(server, 'process.json'),
         logs: join(home, 'logs'), backups: join(home, 'backups'), cache: join(home, 'cache'), temporary: join(home, 'tmp'),

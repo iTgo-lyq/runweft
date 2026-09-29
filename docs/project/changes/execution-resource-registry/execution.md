@@ -29,3 +29,14 @@
 - 配套构建：`bun run build:hapi`、`bun run build` 通过，新固定版本的 Linux x64 配套二进制已生成；业务资源接口仍按 T2–T4 继续落实。
 - HAPI 提交：`feat: expose offline machine inventory and native tool details`，Runweft 固定为 `56ec77f19322619a429304e7a948ba2c46eaca4d`。
 - Commit：`execution-resource-registry T1: pin native machine inventory and tool inspection`
+
+## T2 双模式全局资源登记与目标解析
+
+- 结果：中心 state.sqlite 保存分开的机器/runtime 登记，WAL、事务化 schema version 和唯一约束保障稳定 ID；取消保留引用、恢复复用原 ID，名称不能改绑目标。新增认证资源 API 和 ResourceClient/ResourceService，转交调用者原 JWT，按 namespace 读取与写入；local 本机限制只位于客户端，中心不按自身部署配置拒绝其他 Runner。API 保留结构化 code/message/hint，不自动重放变更。
+- 目标判断：每次解析查询实际 Runner，同时检查原 preflight 和真实命令；版本失败本身不拒绝已发现工具。列表每台机器探测一次，明确当前/历史观察、不可选原因和模型认证/执行未检查。探测期间取消机器或 runtime 会在返回前重新核对，阻止新解析，不改已有快照或控制原生任务。
+- 检查：`bun run typecheck`、`bun test ./test`（48 项、471 断言）、`bun run build` 通过。10 项资源组合测试使用真实 SQLite、HTTP 网关和 JWT，覆盖并发 16 次登记去重、namespace/连接隔离、目标不可改绑、取消/恢复、探测期间取消、离线历史、不一致 preflight/命令、版本失败、单机故障与结构化错误。原生查询在此组使用受控响应，不视为模型执行验收。最后名称上限复用 HAPI 常量和数据库错误传播调整后，重新通过 typecheck、10 项/245 断言资源测试及编译。
+- 测试修正：首轮并发取消用例在释放探测前调用 Bun 的异步 expect matcher，测试自身等待导致超时。改为先收集 Promise 结果、完成取消并释放后断言，最终整组通过；未为通过测试修改取消行为或放宽断言。
+- 编译服务回归：`bun run test:service` 通过认证、HTTP/SSE/WebSocket、重启、独立 Hub 客户端、公开中心及信号清理，证据 `.dev-smoke/service-9fci7z/evidence.json`，success=true。最后调整未改变该网关/服务路径。
+- 真实 API 组合：最终配套编译程序、专用中心和独立 Hub 客户端/Runner、空原生配置，仅查询版本。实际发现 Codex 0.156.1 与 Claude Code 2.1.283；登记两种 runtime、重复登记、重命名、分开取消/恢复、namespace 隔离和中心重启后解析均通过；中心 local 配置可解析 Hub 客户端，客户端没有权威资源库。证据 `.dev-smoke/resources-api-dKomWj/evidence.json`，success=true、cleanupErrors=[]。不改真实用户配置、不运行模型、不冒充跨机器验收。
+- 范围：本任务提供资源 API 和调用层，正式资源 CLI、使用说明及可重复整体验收仍按 T3/T4 推进；HAPI 固定源码未变，不重复 T1 全量检查。
+- Commit：`execution-resource-registry T2: persist scoped resources and resolve execution targets`

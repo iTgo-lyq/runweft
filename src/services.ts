@@ -3,11 +3,11 @@ import { closeSync, existsSync, openSync, readFileSync, unlinkSync } from 'node:
 import { join, resolve } from 'node:path';
 import { createServer } from 'node:net';
 import { spawn, type ChildProcess } from 'node:child_process';
-import { jwtVerify } from 'jose';
 import { atomicWrite, dataPaths, ensureDirectory, localUrl, targetUrl, type ResolvedConfig } from './config';
 import { RunweftError, errorDetails } from './errors';
 import { BUILD, deploymentKeys, fetchJson, hapiClient, hapiEnvironment, hapiExecutable, readSettings, runHapi, serverToken, stopChild } from './hapi';
-import { createGateway, jsonResponse } from './proxy';
+import { createGateway } from './proxy';
+import { createRunweftHandler } from './api';
 
 export type ServiceState = {
     pid: number; instanceId: string; version: string; hapiRevision: string;
@@ -159,28 +159,10 @@ export async function serve(c: ResolvedConfig, publicly = false): Promise<void> 
         const secret = JSON.parse(readFileSync(join(paths.hapiServer, 'jwt-secret.json'), 'utf8'));
         const key = Buffer.from(secret.secretBase64, 'base64');
         gateway = await createGateway({ host, port: c.config.server.port, target: privateUrl,
-            async handle(request, response) {
-                const path = new URL(request.url ?? '/', 'http://localhost').pathname;
-                if (path === '/api/runweft/health' && request.method === 'GET') {
-                    jsonResponse(response, 200, { service: 'runweft', protocolVersion: 1, ready, version: BUILD.version,
-                        hapiRevision: BUILD.hapi.revision, instanceId: state.instanceId, role: publicly ? 'hub-server' : 'local' });
-                    return true;
-                }
-                if (!path.startsWith('/api/runweft/')) return false;
-                let identity;
-                try {
-                    const bearer = request.headers.authorization?.replace(/^Bearer /, '');
-                    if (!bearer) throw new Error('no bearer');
-                    identity = (await jwtVerify(bearer, key, { algorithms: ['HS256'] })).payload;
-                    if (typeof identity.uid !== 'number' || typeof identity.ns !== 'string') throw new Error('invalid claims');
-                } catch {
-                    jsonResponse(response, 401, { error: { code: 'authentication_failed', message: '需要有效的 HAPI 登录。' } }); return true;
-                }
-                if (path === '/api/runweft/identity' && request.method === 'GET') {
-                    jsonResponse(response, 200, { userId: identity.uid, namespace: identity.ns }); return true;
-                }
-                jsonResponse(response, 404, { error: { code: 'not_found', message: '没有此 Runweft 接口。' } }); return true;
-            },
+            handle: createRunweftHandler({ key, hapiUrl: privateUrl, statePath: paths.state,
+                health: () => ({ service: 'runweft', protocolVersion: 1, ready, version: BUILD.version,
+                    hapiRevision: BUILD.hapi.revision, instanceId: state.instanceId, role: publicly ? 'hub-server' : 'local' }),
+            }),
         });
         // Hosting a Hub is independent of the CLI's selected remote connection.
         const local: ResolvedConfig = { ...c, config: { ...c.config, mode: 'local' } };

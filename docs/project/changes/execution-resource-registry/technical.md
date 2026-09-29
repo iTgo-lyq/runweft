@@ -53,6 +53,22 @@ HAPI 机器名称直接沿原 PATCH 修改，runtime 名称只改自己的展示
 
 参数和响应复用项目 Zod/错误约定；新接口保留 code/message/hint，CLI 顶层输出非零状态。读取失败不自动创建、补注册或重放变更。登记操作本身以 machineId/flavor 幂等，网络未知结果可查询同一目标；不因此引入通用任务重试器。
 
+实现接口固定如下，前缀均为 `/api/runweft/resources`。响应带当前 `namespace`，ID 使用 URL 编码，名称复用 HAPI 的 64 字符上限。
+
+| 路径 | 方法与结果 |
+| --- | --- |
+| `/machines` | GET 返回完整 namespace 库存；POST `{machineId,name?}` 登记已知机器 |
+| `/machines/:id` | GET 返回机器；PATCH `{name}` 修改 HAPI 名称；DELETE 取消登记并返回 affectedRuntimeIds |
+| `/machines/:id/discover` | GET 查询两种实际工具，不创建登记 |
+| `/runtimes` | GET 默认登记项，`?all=true` 包含取消项；POST `{machineId,flavor,name?}` 登记或恢复 |
+| `/runtimes/:id` | GET 返回当前检查及历史观察；PATCH `{name}` 只修改名称；DELETE 取消登记 |
+| `/runtimes/:id/check` | GET 返回重新探测后的 runtime |
+| `/runtimes/:id/resolve` | GET 返回固定 runtimeId/machineId/flavor 及当次原生 inspection，任一前提不成立时失败 |
+
+`eligibility` 表示对应资源是否满足选用条件，不是已验证模型可运行；runtime 明确返回 `modelAuthentication: not_checked`、`execution: not_checked`。`inspectionCurrent` 区分当次查询与保留的原始 checkedAt，不在探测失败或离线时刷新历史时间。列表按机器查询一次，两种 runtime 共用该次详情；认证错误整次失败，单台 Runner 探测失败在对应项表达。登记和目标解析在异步探测之后再次读取取消标记，避免查询期间的取消被旧读取覆盖。
+
+公共 `ResourceClient` 执行 local 本机限制及默认列表过滤；中心 `ResourceService` 不依赖部署模式。JWT 验证沿现有网关提取为共用 handler，只有认证后的资源请求打开服务端数据库，并在请求完成后关闭连接；并发初始化和登记使用 SQLite 事务及唯一约束。
+
 ## 验证与就绪性
 
 HAPI 查询扩展覆盖默认/离线列表、namespace、旧 Runner、实际 override 解析、版本失败与超时；共享契约按仓库要求执行类型与全测试。Runweft 覆盖并发重复登记、取消/恢复稳定 ID、目标不可改绑、namespace/连接分离、离线和 CLI 缺失、版本未知、结构化错误以及从任意 cwd 访问同一全局资源。
