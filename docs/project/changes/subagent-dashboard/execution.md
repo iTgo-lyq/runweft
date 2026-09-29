@@ -14,3 +14,11 @@
 | 同源 iframe 浏览器驱动、纯函数测试与千任务检查 | 采纳。测试代理/页面不进产品；运行中/未知/失败用专用合成 fixture，真实 C10 记录用于已完成任务。真实浏览器打开尚排队，不冒称实际通过。 |
 
 原件在 `.dev-smoke/reviews/subagent-dashboard/`，包括首调用和同 session 结论的独立进程记录。方案保留无新账号、无数据迁移、无原生 adapter/HAPI UI 改动；只读 API、嵌入页面和候选验收三个任务顺序执行。
+
+## T1 全局只读任务查询
+
+- 结果：新增 JWT namespace 下的 GET `/api/runweft/tasks/overview`，跨父会话、按父 cwd/会话/执行状态筛选，默认 50 条、最多 100 条分页。复用既有 overview 与最早未结束轮次，显式投影阶段/停止/观察时间、Agent/runtime/机器、报告摘要、代码与附件状态；输入、定义、原生日志及完整清单不返回。无真实 HAPI session 不构造身份。
+- 结果：库存读取总计 3 秒超时，失败保留持久任务并返回 online=null；离线/未知执行机的未完成行提示陈旧，已结束事实保持。Runtime 只读取已有名称，不探测工具。无数据库迁移或 HAPI 改动，dashboard 能力尚未公开。
+- 验证：`bun test ./test/tasks-overview.test.ts` 8 pass / 0 fail、117 assertions；真实 SQLite/HTTP 覆盖 namespace、筛选分页、unknown/未执行/停止、代码交付/取回/释放、附件失败、受限响应、超时、PRAGMA data_version 无变化及无原生执行调用。1000 任务返回 100 条用时 72.0ms；这是当前开发机测量，不作为吞吐承诺。
+- 验证：`bun test ./test/tasks.test.ts ./test/task-results.test.ts ./test/task-workspaces.test.ts ./test/task-outputs.test.ts ./test/resources.test.ts` 53 pass / 0 fail；`bun run typecheck`、`git diff --check` 通过。日志 `.dev-smoke/c11-t1-{overview,regression,types}.log`。页面/浏览器/安装在后续任务验证。
+- Commit：`subagent-dashboard T1: add authenticated read-only task overview`

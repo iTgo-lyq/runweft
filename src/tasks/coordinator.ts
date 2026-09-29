@@ -12,6 +12,7 @@ import { ResourceService } from '../resources/service';
 import { TaskStore } from './store';
 import { AcceptSchema, ArtifactActionSchema, ArtifactReleaseSchema, LookupSchema, SendSchema, InterruptSchema, PermissionSchema, RemoveWorkspaceSchema, validateWorkspaceTarget, nativeTerminal, parseTask, TaskError, type Input, type Parent, type Round, type Task } from './types';
 import { detail, overview } from './views';
+import { taskOverview, type OverviewQuery, type TaskInventory } from './query';
 import { historyContext, parseReport } from './reports';
 import { TaskWorkspaces, preparedReference } from './workspaces';
 import { TaskFiles, preparedFiles } from './files';
@@ -287,6 +288,15 @@ export class TaskCoordinator {
     list(namespace: string, parent: Parent, all = false) {
         return { agents: this.store.list(namespace, parent, all).map(bundle => ({ ...overview(bundle, bundle.rounds.find(round => !['finished', 'failed'].includes(round.phase)) ?? bundle.rounds.at(-1)!),
             accepted_requests: this.store.requests(namespace, bundle.task.id) })) };
+    }
+    async overview(namespace: string, query: OverviewQuery) {
+        // A single bounded read covers authentication, health and inventory; no runtime discovery/probes.
+        const signal = AbortSignal.timeout(3000);
+        const resources = new ResourceService(this.resources, namespace, (path, options) => this.client(namespace).request(path, { ...options, signal }));
+        let inventory: TaskInventory;
+        try { inventory = { machines: await resources.machines(), error: null }; }
+        catch { inventory = { machines: [], error: { code: 'inventory_unavailable', message: '无法读取 HAPI 机器状态；以下保留已记录的任务事实。', hint: '检查 Hub 连接与版本，稍后刷新。' } }; }
+        return taskOverview(this.store.listNamespace(namespace), this.resources.runtimes(namespace, true), inventory, query);
     }
     read(namespace: string, parent: Parent, id: string, options?: { roundId?: string; offset?: number; limit?: number }) {
         const result = detail(this.store.require(namespace, id, parent), options);

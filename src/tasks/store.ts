@@ -38,6 +38,12 @@ export class TaskStore {
                 parent.kind === 'cli' ? 1 : 0, parentKey(parent)) as { id: string }[];
         return ids.map(row => this.require(namespace, row.id, parent));
     }
+    /** Namespace-wide inspection has no fabricated parent identity and cannot advance work. */
+    listNamespace(namespace: string): TaskBundle[] {
+        const ids = this.db.query('SELECT id FROM delegation_tasks WHERE namespace=? ORDER BY updatedAt DESC, id')
+            .all(namespace) as { id: string }[];
+        return ids.map(row => this.require(namespace, row.id));
+    }
     pending(): { namespace: string; id: string }[] {
         return this.db.query(`SELECT DISTINCT t.namespace, t.id FROM delegation_tasks t JOIN delegation_rounds r ON t.id=r.taskId
             WHERE r.phase NOT IN ('finished', 'failed') OR json_extract(t.data, '$.environment.status')='deleting'

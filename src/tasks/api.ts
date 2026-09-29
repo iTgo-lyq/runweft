@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { jsonResponse } from '../proxy';
 import { TaskCoordinator } from './coordinator';
 import { ParentSchema, InterruptSchema, TaskError, parseTask } from './types';
+import { OverviewQuerySchema } from './query';
 
 async function body(request: IncomingMessage) {
     const chunks: Buffer[] = []; let size = 0;
@@ -21,7 +22,15 @@ const WaitSchema = z.strictObject({ parent: ParentSchema, ids: z.array(z.uuid())
     afterRevision: z.record(z.uuid(), z.number().int().min(0)).optional() });
 
 export async function handleTaskRequest(request: IncomingMessage, response: ServerResponse, namespace: string, coordinator: TaskCoordinator) {
-    const path = new URL(request.url ?? '/', 'http://localhost').pathname;
+    const url = new URL(request.url ?? '/', 'http://localhost'), path = url.pathname;
+    if (path === '/api/runweft/tasks/overview') {
+        if (request.method !== 'GET') throw new TaskError(405, 'method_not_allowed', '总览接口只接受 GET。');
+        if (new Set(url.searchParams.keys()).size !== [...url.searchParams].length) throw new TaskError(400, 'invalid_task_request', '总览筛选参数不能重复。');
+        const query = parseTask(OverviewQuerySchema, Object.fromEntries(url.searchParams));
+        const result = await coordinator.overview(namespace, query);
+        if (!response.destroyed) jsonResponse(response, 200, { namespace, ...result });
+        return;
+    }
     if (request.method !== 'POST') throw new TaskError(405, 'method_not_allowed', '此任务接口需要 POST。');
     const value = await body(request);
     let result: unknown;

@@ -2,7 +2,7 @@
 
 > 来源：[Requirement](requirement.md)
 > 技术方案：[Technical](technical.md)
-> 状态：待执行
+> 状态：执行中
 > 执行模式：主 agent 逐任务本地提交；本 Change 唯一一次 iclaude 评审已完成并由主 agent 复核，见 [Execution](execution.md)。
 
 ## 交付目标
@@ -11,7 +11,7 @@
 
 ### T1 无需本机 Runner 的全局只读查询
 
-- 状态：待开始
+- 状态：已完成
 - 依赖：已验收任务查询、资源库存与 namespace 认证。
 - 交付：任务领域总览投影、筛选/分页、必要父子与 session 关联；公开只读 API，复用 overview 状态和现有资源名称；HAPI 库存不可用时保留业务事实及查询错误，离线/未知执行端的活跃行显示可能过期。
 - 验收：多工作区/父会话与 namespace 隔离，执行/stop/代码/附件分开，unknown 与未启动准确，无真实 session 不造链接；查询不写业务状态或调用模型/原生探测，返回有界内容。
