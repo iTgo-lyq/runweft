@@ -54,7 +54,7 @@ export function createProgram() {
         output(paths, [
             `数据根：${paths.home}`, `配置：${paths.config}`, `Hub 数据：${paths.server}`,
             `当前连接 HAPI 数据：${paths.hapiClient}`, `本机工作区绑定：${paths.bindings}`,
-            `日志：${paths.logs}`, `可再生缓存：${paths.cache}`, `临时目录：${paths.temporary}`,
+            `日志：${paths.logs}`, `配置备份：${paths.backups}`, `可再生缓存：${paths.cache}`, `临时目录：${paths.temporary}`,
             `原生 Codex：${paths.nativeCodex}`, `原生 Claude Code：${paths.nativeClaude}`,
             '备份：停止托管服务后备份配置、server、connections 和 client.sqlite；原生目录按各工具规则备份。',
         ].join('\n'));
@@ -69,7 +69,7 @@ export function createProgram() {
         output({ workspaces: items }, items.length ? items.map(w => `${w.id}  ${w.path}`).join('\n') : '尚未绑定工作区。进入项目目录后运行 runweft workspace bind。');
     });
     addServiceCommands(program, context, output);
-    addMcpCommands(program, context);
+    addMcpCommands(program, context, output);
     program.addHelpText('after', '\n开始使用：\n  runweft start\n  runweft open\n\n编辑配置：runweft init，然后 runweft config show。\n持久数据默认位于 ~/.runweft；使用 --home 可选择其他位置。');
     return program;
 }

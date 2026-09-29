@@ -38,7 +38,8 @@
 
 ### T3 一键全局安装、诊断与维护
 
-- 状态：待开始
+- 状态：已完成
+- 技术修正：原生 Codex 仅生成自己的定义，按 TOML AST range 合回原文，保留其他 server 注释；不重新执行本 Change 的 iclaude Plan 评审。
 - 交付：install/check/uninstall/restore CLI，Codex 原生编辑器 staging、Claude 自有条目合并，集中备份与用户说明。
 - 依赖：T2
 - 验收：默认检测与显式选择清晰；重复安装、更新、卸载均可用；其他 MCP、配置及注释保留；失败能恢复，备份路径明确；两个项目使用同一全局安装仍绑定各自 cwd。

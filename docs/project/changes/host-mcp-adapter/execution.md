@@ -35,3 +35,12 @@
 - 验证修正：交互式首次探测停在专用空目录的信任界面，未进入模型调用；终端脚本误读 ANSI 增量画面及选择，未据此判断产品失败。关闭这些未启动任务的实验后，在专用 Claude 配置副本中仅信任该实验目录，完成上述真实 clear 验证。没有用模拟 session 切换替代该证据。
 - 回归：`bun run typecheck`、`bun test ./test` 全部通过（32 项、143 断言），覆盖缺失/冲突身份、fork 根身份差异、hook 一次消费/并发/过期、静态发现无副作用、取消/断开/超时、认证中止以及真实 stdio CLI。`bun run build` 成功编译 MCP 入口；此处不声明配套 HAPI 编译验收，T4 重新构建并验证完整组合。
 - Commit：`host-mcp-adapter T2: bind MCP calls to native host identities`
+
+## T3 一键全局安装、诊断与维护
+
+- 结果：提供 `mcp install/check/uninstall/backups/restore`，支持自动检测或明确选择两个原生客户端；注册固定 home 和可执行入口，不固定项目 cwd、不写入连接令牌。只维护自己的 server/hook，备份统一位于 `backups/mcp`，`paths` 展示目录。check 分开报告 stdio 握手与服务，明确没有运行模型；能识别禁用入口、失效命令、不同 home 及不匹配 hook。
+- 配置写入：Codex 在专用 staging 调用原生编辑器生成自己的定义，再通过 TOML AST range 合回原文，校验其他语义不变。Claude 合并自己两份 JSON 条目；修改前集中备份，写入失败回退已写文件，不覆盖用户并发修改。卸载保留外来同名 server 和无关 hook；显式 restore 拒绝覆盖后续更改，恢复操作也备份。
+- 技术修正：真实回归暴露原生 Codex 编辑器会丢失其他 MCP table 内部注释，按流程暂停、核对并修正 Technical，采用固定 toml-eslint-parser 1.0.3 做局部编辑。新增覆盖带引号键、dotted keys、内联 table、多行字符串及其他配置注释的回归；没有自写 TOML 解析器或清空其他 MCP。
+- 验证：`bun run typecheck`、`bun test ./test`（38 项、226 断言）、`bun run build` 通过。专用配置覆盖幂等更新、默认 Claude HOME 路径、CLAUDE_CONFIG_DIR、冲突、双文件失败回退、并发编辑保护、显式恢复及卸载。原生 Codex 编辑器用例仅在提供 codex 的环境运行，本机确实执行并通过；无 codex 的常规 CI 显式跳过该项，AST 和 Claude 用例仍运行。
+- 真实安装：编译版可执行文件及 home 均置于含空格路径，执行正式 CLI 全局安装后，Codex 与 iclaude/Claude Code 分别在两个 cwd 实际调用诊断，身份、工作区和 home 均正确。幂等安装、卸载、恢复及恢复后握手通过；最终构建再次通过默认检测的无修改安装及握手。证据 `.dev-smoke/host-mcp-t3/installed-rnozxq/evidence.json`，无残留测试进程。本任务未启动服务，因此不以配置握手替代 T4 的配套连接验收。
+- Commit：`host-mcp-adapter T3: install and maintain global MCP configuration`

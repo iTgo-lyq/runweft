@@ -1,6 +1,6 @@
 # Runweft 基础入口使用说明
 
-当前版本交付配置、HAPI 服务管理和安装基础；MCP 安装、agent 定义、任务委派与看板仍在后续 Change 实现，不能把本说明当作完整协作版本已经交付。
+当前实现包含配置、HAPI 服务管理及 Codex/Claude Code 的 MCP 安装与身份诊断；宿主适配整体验收仍在推进，agent 定义、任务委派与看板尚未交付。这里不是完整协作版本的完成声明。
 
 ## 安装与首次使用
 
@@ -24,6 +24,29 @@ runweft stop
 ```
 
 `doctor` 不运行模型，也不把机器在线视为模型登录已验证。服务停止会保留配置、数据库和原生会话；正在运行的模型会话由 HAPI 管理，停止 Runner 不等于停止所有模型任务。
+
+## 接入 Codex 与 Claude Code
+
+原生客户端安装并完成自己的模型登录后，运行一次：
+
+```sh
+runweft mcp install
+runweft mcp check
+```
+
+默认检测本机的 Codex 和 Claude Code，也可用 `--client codex`、`--client claude` 或 `--client all` 明确选择。然后进入实际项目目录启动原生会话，调用 `runweft_status` 检查当前身份、工作区和服务连接。全局注册不会固定安装时所在的项目目录；当前仅提供诊断工具，业务委派工具由后续 Change 接入。
+
+`mcp check` 分开报告配置、stdio 握手与服务连接，不执行模型，不把握手当作原生会话已经调用成功。服务未连接时继续用 `runweft status`、`runweft doctor` 检查。不同数据目录使用全局 `--home`：例如 `runweft --home /srv/runweft mcp install`；检查及恢复时也使用相同目录。
+
+安装只维护名为 `runweft` 的 MCP 及 Claude 身份 hook，其他 MCP、原生配置、注释和模型凭据保留。Codex 使用 `CODEX_HOME/config.toml`（默认 `~/.codex/config.toml`）；Claude 默认使用 `~/.claude.json` 和 `~/.claude/settings.json`，设置 `CLAUDE_CONFIG_DIR` 时改用该目录下的 `.claude.json` 和 `settings.json`。重复安装会更新自己的入口，命令路径变化后重新运行安装即可。已存在非 Runweft 管理的同名条目时会明确报冲突。
+
+```sh
+runweft mcp uninstall --client claude
+runweft mcp backups
+runweft mcp restore <备份ID>
+```
+
+每次实际修改先备份到 Runweft 数据目录的 `backups/mcp/`，输出备份位置与恢复命令。卸载只删除自己的注册及 hook，不删除其他设置或会话数据。恢复会还原该次操作前的完整文件快照；如果相关配置已有后续修改，会拒绝覆盖，此时可选择卸载自己的条目或根据备份手动处理。恢复操作自身也会备份。
 
 ## 配置
 
@@ -72,7 +95,7 @@ hub:
 | 主宿主机器 | Runweft 与原生 Codex/Claude Code；Hub 模式连接该中心 |
 | 执行机器 | 兼容版本的 Runweft 包、所需原生 runtime 和该账户的模型配置；Hub 模式 `start` 注册本机 Runner |
 
-同一机器可兼任多种角色。纯 HAPI Hub 不包含 Runweft 上层路由，不能直接当作 Runweft 中心；doctor 会明确提示。原生模型 CLI 的认证仍按其原有方式配置，不复制其他机器的 home、skill 或凭据。Runweft MCP 接入在对应 Change 完成后提供，不由当前基础安装暗中注册。
+同一机器可兼任多种角色。纯 HAPI Hub 不包含 Runweft 上层路由，不能直接当作 Runweft 中心；doctor 会明确提示。原生模型 CLI 的认证仍按其原有方式配置，不复制其他机器的 home、skill 或凭据。MCP 注册只在显式运行 `runweft mcp install` 时修改原生配置。
 
 中心保留 `mode: local`，配置公开地址。以下示例假设已有反向代理把公开 HTTPS 地址转到本机 3210 端口：
 
@@ -113,6 +136,7 @@ Hub 客户端 `stop` 只停止该机器在当前连接上的 Runner，不关闭�
 | `connections/<连接>/hapi/` | 本机 Runner 的连接配置、机器身份和原生日志；各连接分开 |
 | `client.sqlite` | 本机真实工作目录绑定；Claude MCP hook 的逐调用身份用后删除，未消费记录保留 24 小时 |
 | `logs/` | 托管服务日志；当前由部署方按磁盘需要归档或轮转 |
+| `backups/mcp/` | MCP 安装、更新、卸载及恢复前的原生配置快照；可能包含原配置中的秘密，权限仅限当前用户 |
 | `cache/`、`tmp/` | 可再生缓存与临时文件；服务停止后可清理，不保存唯一成果 |
 | `server/process.json` | 当前托管服务定位信息；正常停止会移除 |
 

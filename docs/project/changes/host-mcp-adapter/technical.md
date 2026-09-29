@@ -42,11 +42,13 @@ Claude hook 的短期记录放入已有 `client.sqlite` 的独立表，按 toolU
 
 ## 全局安装与维护
 
+T3 核对后调整：原生 Codex 编辑器会丢失其他 MCP table 内部注释，因此只用它生成 Runweft 定义，禁止整份候选写回。固定 `toml-eslint-parser` 1.0.3，利用 AST 的语义键及原文 range 局部替换 Runweft table/键值或内联字段，其他内容保留原文；最后再次解析并核对仅自身 server 变化。此为保留既定产品行为的技术修正，按既有自主落实授权执行。
+
 `runweft mcp install` 为检测到的支持客户端注册入口，也支持显式选择 codex、claude 或两者；重复运行即检查和更新自己的配置。`mcp check` 展示实际配置文件、Runweft 命令、home、服务模式、stdio 握手及服务可达性；不把握手成功称作模型已成功调用。`mcp uninstall` 移除自己的注册与 hook，保留其他配置。真实客户端的首次调用另由验收脚本验证。
 
 所有安装均使用固定 server ID `runweft`；命令包含所选 Runweft home，不固定 cwd、不嵌入认证令牌。编译版记录自身可执行路径，开发版显式记录 Bun 与源码路径，check 能指出失效路径。已有同名非 Runweft 配置明确报冲突，显示原文件和处理办法，不盲目覆盖。
 
-Codex 使用实际 CODEX_HOME/config.toml；复制文件到 Runweft 临时 staging，复用 `codex mcp add/remove` 的原生编辑器，仅将 Runweft server 差异写回。核对其他 TOML 配置语义及注释保留，不复制凭据至 staging。Claude 分别解析两份文件：未设置 CLAUDE_CONFIG_DIR 时 MCP 位于 `~/.claude.json`、hook 位于 `~/.claude/settings.json`；设置时分别为该目录下 `.claude.json`、`settings.json`。只合并自己的 mcpServers 与 hook，不触发原生 CLI 的额外迁移字段。
+Codex 使用实际 CODEX_HOME/config.toml；复制配置文件到 Runweft 临时 staging，复用 `codex mcp add/remove` 的原生编辑器，仅将生成的 Runweft server 按上述 AST 范围合回原文。核对其他 TOML 配置语义及注释保留，不复制 auth 文件至 staging。Claude 分别解析两份文件：未设置 CLAUDE_CONFIG_DIR 时 MCP 位于 `~/.claude.json`、hook 位于 `~/.claude/settings.json`；设置时分别为该目录下 `.claude.json`、`settings.json`。只合并自己的 mcpServers 与 hook，不触发原生 CLI 的额外迁移字段。
 
 备份与操作记录统一放在 Runweft home 的 `backups/mcp`，文件权限限制为当前用户。修改前校验原文件；候选配置校验成功后原子替换。Claude 两文件写入出现错误时恢复本次已改的文件；若发现用户并发修改，停止并展示备份与恢复方法，不覆盖后来变更。安装输出备份路径；提供显式 restore 命令和影响说明，不自动撤销后续用户修改。卸载仅删除仍属于 Runweft 的条目，不整份恢复旧备份。
 

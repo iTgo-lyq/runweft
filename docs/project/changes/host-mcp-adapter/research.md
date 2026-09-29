@@ -135,3 +135,9 @@ iclaude 指出先前 Codex 探测传入完整定义，不能证明缺少原条�
 冷续接第一次探测试图用空 gitInfo 物化无输入线程，被原生明确拒绝；第二次填写 gitInfo 后仍未产生可恢复 rollout。没有把这两次当成功或重复提交任务；后续用真实的无工具简短 turn 生成历史，再验证冷续接。HAPI 已有执行验收覆盖有输入历史的续接，不能由此次空历史探测推断该能力失效。
 
 最终 `.dev-smoke/host-probe/disabled-definition-resume-OZDQDF/definition-evidence.json` 为 success=true：三种完整禁用定义各完成真实 turn，关闭 app-server 后重启，逐一恢复相同 thread ID 成功。命令退出 0，仍附带已记录的 Bun tsconfig-override 内部诊断。原生可行性缺口关闭；HAPI 产品承载仍由 T1 验收。
+
+## T3 原生配置编辑器的注释缺口
+
+真实安装回归在 Codex 的另一个 MCP table 内加入独立注释。原生 `codex mcp add` 保留 model 顶层注释，却重写 `[mcp_servers.keep]`，使其中的 `# keep server comment` 消失；原先安装探测只覆盖顶层注释，未覆盖此结构。证据 `.dev-smoke/tests/mcp-install-ylGQER/codex/config.toml`，相关回归 `test/mcp-install.test.ts`。因此不能把 staging 生成的整个文件写回；需复用原生生成的 Runweft 定义，再对原文实施局部替换，继续核对其他配置语义不变。
+
+[toml-eslint-parser 官方 AST 文档](https://github.com/ota-meshi/toml-eslint-parser/blob/main/docs/AST.md)提供语义 table key、键值节点、token/comment 与原文 range。已安装并探测 1.0.3：带引号的 Runweft table 可按真实键匹配，table range 不吞掉后面其他 server 的独立注释。采用现成解析器处理多行字符串、引号键、内联 table 和范围定位；不自行用正则解析 TOML，也不整份重新序列化其他 server。

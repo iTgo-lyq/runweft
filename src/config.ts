@@ -171,7 +171,7 @@ export function dataPaths(resolved: ResolvedConfig) {
         server, hapiServer: join(server, 'hapi'), runweftServer: join(server, 'runweft'),
         hapiClient: join(home, 'connections', connectionName(config), 'hapi'),
         bindings: join(home, 'client.sqlite'), process: join(server, 'process.json'),
-        logs: join(home, 'logs'), cache: join(home, 'cache'), temporary: join(home, 'tmp'),
+        logs: join(home, 'logs'), backups: join(home, 'backups'), cache: join(home, 'cache'), temporary: join(home, 'tmp'),
         nativeCodex: resolved.env.CODEX_HOME || join(homedir(), '.codex'),
         nativeClaude: resolved.env.CLAUDE_CONFIG_DIR || join(homedir(), '.claude'),
     };
