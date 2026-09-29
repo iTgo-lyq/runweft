@@ -2,7 +2,7 @@
 
 > 来源：[Requirement](requirement.md)
 > 技术方案：[Technical](technical.md)
-> 状态：执行中
+> 状态：已完成
 > 执行模式：逐任务提交
 > 评审方式：当前工作区 iclaude 一次 Plan 评审，主 agent 独立复核采纳；真实额度不足时才使用替代 subagent。
 
@@ -37,7 +37,7 @@
 
 ### T3 配套定义验收与使用说明
 
-- 状态：待开始
+- 状态：已完成
 - 交付：paths/清晰示例与继承说明、配套编译 CLI 的 global/project/local/Hub 组合验收、需求映射。
 - 依赖：T2
 - 验收：无需实际模型任务，能从创建定义到指定 runtime 的完整解析；不会生成项目资源注册或修改原生配置。通过后同步 Specs 并归档。

@@ -57,10 +57,10 @@ export function createProgram() {
         output(paths, [
             `数据根：${paths.home}`, `配置：${paths.config}`, `Hub 数据：${paths.server}`,
             `本机中心业务库：${paths.state}${c.config.mode === 'hub' ? '（当前为 Hub 客户端，权威资源库位于所连中心）' : ''}`,
-            `当前连接 HAPI 数据：${paths.hapiClient}`, `本机工作区绑定：${paths.bindings}`,
+            `当前连接 HAPI 数据：${paths.hapiClient}`, `本机工作区/Agent 绑定与身份数据：${paths.bindings}`, `全局 Agent 定义：${paths.agents}`,
             `日志：${paths.logs}`, `配置备份：${paths.backups}`, `可再生缓存：${paths.cache}`, `临时目录：${paths.temporary}`,
             `原生 Codex：${paths.nativeCodex}`, `原生 Claude Code：${paths.nativeClaude}`,
-            '备份：停止托管服务后备份配置、server、connections 和 client.sqlite；原生目录按各工具规则备份。',
+            '备份：停止托管服务后备份配置、agents、server、connections 和 client.sqlite；原生目录按各工具规则备份。',
         ].join('\n'));
     });
     const workspace = program.command('workspace').description('绑定本机真实工作目录');

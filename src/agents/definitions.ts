@@ -23,7 +23,7 @@ export const DefinitionSchema = z.strictObject({
     if ((value.model || value.reasoningEffort) && !value.flavor) ctx.addIssue({ code: 'custom', path: ['flavor'], message: '配置模型或推理参数时必须填写 codex 或 claude' });
 });
 export type AgentDefinition = Omit<z.infer<typeof DefinitionSchema>, 'name'> & { name: string };
-export type AgentContext = { sourceCwd: string; projectRoot: string; gitCommonDir: string | null; globalDirectory: string; projectDirectory: string };
+export type AgentContext = { sourceCwd: string; projectRoot: string; gitCommonDir: string | null; globalDirectory: string; projectDirectory: string | null };
 export type AgentSource = { scope: AgentScope; path: string; key: string; linkTarget: string | null };
 export type AgentDocument = {
     id: string; definition: AgentDefinition; definitionVersion: string;
@@ -57,6 +57,7 @@ export function agentContext(c: ResolvedConfig, cwd: string): AgentContext {
     if (git.error) throw new RunweftError('git_unavailable', '无法运行 Git 来定位 Agent 项目。', '安装 Git 后重试。');
     const globalDirectory = join(c.home, 'agents');
     let projectRoot = sourceCwd, gitCommonDir: string | null = null;
+    let projectAllowed = true;
     if (git.status === 0) {
         const [root, common] = git.stdout.trimEnd().split('\n');
         projectRoot = realpathSync(root!); gitCommonDir = realpathSync(resolve(sourceCwd, common!));
@@ -65,15 +66,22 @@ export function agentContext(c: ResolvedConfig, cwd: string): AgentContext {
         const userHome = c.env.HOME ?? homedir();
         const homePath = exists(userHome) ? realpathSync(userHome) : resolve(userHome);
         const globalPath = exists(globalDirectory) ? realpathSync(globalDirectory) : globalDirectory;
+        projectAllowed = sourceCwd !== homePath;
         for (let directory = sourceCwd; directory !== homePath; directory = dirname(directory)) {
             const candidate = join(directory, '.runweft', 'agents');
             if (exists(candidate) && realpathSync(candidate) !== globalPath) { projectRoot = directory; break; }
             if (directory === dirname(directory)) break;
         }
     }
-    return { sourceCwd, projectRoot, gitCommonDir, globalDirectory, projectDirectory: join(projectRoot, '.runweft', 'agents') };
+    const candidate = join(projectRoot, '.runweft', 'agents');
+    const sameAsGlobal = (exists(candidate) ? realpathSync(candidate) : candidate) === (exists(globalDirectory) ? realpathSync(globalDirectory) : globalDirectory);
+    return { sourceCwd, projectRoot, gitCommonDir, globalDirectory, projectDirectory: projectAllowed && !sameAsGlobal ? candidate : null };
 }
-function directory(context: AgentContext, scope: AgentScope) { return scope === 'global' ? context.globalDirectory : context.projectDirectory; }
+function directory(context: AgentContext, scope: AgentScope): string {
+    const path = scope === 'global' ? context.globalDirectory : context.projectDirectory;
+    if (!path) throw new RunweftError('agent_project_unavailable', '当前目录没有独立的项目 Agent 作用域。', '进入项目目录后使用 --scope project；用户 home 中使用 --scope global。');
+    return path;
+}
 function sourceKey(context: AgentContext, scope: AgentScope, id: string) {
     return scope === 'global' ? `global/${id}` : `${context.gitCommonDir ? 'git' : 'project'}/${context.gitCommonDir ?? context.projectRoot}/${id}`;
 }
@@ -97,6 +105,7 @@ function read(context: AgentContext, id: string, scope: AgentScope, shadowed: Ag
         source: { scope, path, key: sourceKey(context, scope, id), linkTarget: lstatSync(path).isSymbolicLink() ? realpathSync(path) : null } };
 }
 function has(context: AgentContext, scope: AgentScope, id: string) {
+    if (scope === 'project' && !context.projectDirectory) return false;
     return ['yaml', 'yml'].some(extension => exists(join(directory(context, scope), `${id}.${extension}`)));
 }
 function selected(context: AgentContext, id: string, scope?: AgentScope) {
@@ -113,6 +122,7 @@ export function listAgents(c: ResolvedConfig, cwd: string): AgentCatalog {
     const context = agentContext(c, cwd), ids = new Set<string>();
     const errors: AgentFileError[] = [];
     for (const scope of ['global', 'project'] as const) {
+        if (scope === 'project' && !context.projectDirectory) continue;
         const path = directory(context, scope);
         if (!exists(path)) continue;
         for (const file of readdirSync(path).sort()) {

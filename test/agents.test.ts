@@ -98,6 +98,10 @@ test('non-Git discovery stops before user home and supports read-only dotfile sy
     writeFileSync(join(defaultAgents, 'accidental.yaml'), '{}');
     expect(listAgents(h.c, h.project).agents).toEqual([]);
     expect(agentContext(h.c, h.userHome).projectRoot).toBe(h.userHome);
+    expect(listAgents(h.c, h.userHome).agents).toEqual([]);
+    expect(() => initAgent(h.c, h.userHome, 'local', { scope: 'project' })).toThrow('项目 Agent 作用域');
+    const defaultHome = loadConfig(join(h.userHome, '.runweft'), h.env);
+    expect(readAgent(defaultHome, h.userHome, 'accidental').source.scope).toBe('global');
     const global = initAgent(h.c, h.project, 'linked');
     const target = join(h.root, 'dotfile.yaml'); writeFileSync(target, 'instructions: linked instructions');
     rmSync(global.source.path); symlinkSync(target, global.source.path);

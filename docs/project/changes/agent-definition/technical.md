@@ -27,7 +27,7 @@ schemaVersion 默认 1，name 默认文件标识，description/instructions 默�
 
 ## 项目定位与快照
 
-库函数必须显式接收宿主 cwd，不读 process.cwd()；MCP 调用方从已验证身份取得 cwd，CLI 从命令当前目录传入。从实际 cwd 的 realpath 只读查询 Git worktree 根；Git 不可执行与非仓库分开处理。Git 内只使用 worktree 根的项目定义，不沿子目录重新选择项目。非 Git 时向上寻找最近 `.runweft/agents`，排除与全局目录相同的位置，在用户 home 前停止（不包含 home）；未发现则将当前 cwd 作为项目创建位置。缺少定义时读取不建目录或 client.sqlite。
+库函数必须显式接收宿主 cwd，不读 process.cwd()；MCP 调用方从已验证身份取得 cwd，CLI 从命令当前目录传入。从实际 cwd 的 realpath 只读查询 Git worktree 根；Git 不可执行与非仓库分开处理。Git 内只使用 worktree 根的项目定义，不沿子目录重新选择项目。非 Git 时向上寻找最近 `.runweft/agents`，排除与全局目录相同的位置，在用户 home 前停止（不包含 home）；未发现则将当前 cwd 作为项目创建位置。用户 home（非 Git）不作为项目创建/发现位置，全局目录也不重解释为项目来源；显式项目创建提示进入项目目录。缺少定义时读取不建目录或 client.sqlite。
 
 解析保留 sourceCwd、projectRoot、定义 scope/path、遮蔽来源、声明 runtime、个人绑定来源、实际 runtimeId/machineId/flavor。definitionVersion 是规范化生效定义的 SHA-256，resolvedVersion 加入本次明确绑定、目标、connectionName 和已认证 namespace；不把探测时间、mtime 或绝对来源路径当内容版本。快照为普通可序列化 JSON，包含连接与 namespace；下游续接必须检查连接身份匹配。返回内容副本，之后文件编辑不改变已取得的快照。
 

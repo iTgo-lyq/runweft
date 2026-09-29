@@ -167,7 +167,7 @@ export function dataPaths(resolved: ResolvedConfig) {
     const { home, config } = resolved;
     const server = join(home, 'server');
     return {
-        home, config: resolved.file,
+        home, config: resolved.file, agents: join(home, 'agents'),
         server, hapiServer: join(server, 'hapi'), runweftServer: join(server, 'runweft'),
         state: join(server, 'runweft', 'state.sqlite'),
         hapiClient: join(home, 'connections', connectionName(config), 'hapi'),

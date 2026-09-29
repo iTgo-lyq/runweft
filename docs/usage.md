@@ -1,6 +1,6 @@
 # Runweft 基础入口使用说明
 
-当前实现包含配置、HAPI 服务管理、机器/runtime 登记及 Codex/Claude Code 的 MCP 安装与身份诊断；这些模块已通过相应本地验收，agent 定义、任务委派与看板尚未交付。这里不是完整协作版本的完成声明。
+当前实现包含配置、HAPI 服务管理、机器/runtime 登记、Agent 定义及 Codex/Claude Code 的 MCP 安装与身份诊断；任务委派与看板尚未交付。这里不是完整协作版本的完成声明。
 
 ## 安装与首次使用
 
@@ -52,7 +52,7 @@ runweft mcp restore <备份ID>
 
 ## 机器与 runtime
 
-机器是 HAPI Runner 的身份，runtime 是该机器上的 Codex 或 Claude Code。二者分别登记；后续 agent 定义通过 runtime ID 选择执行目标，不把展示名称当作路由。资源属于当前中心的 namespace，进入另一个项目目录仍使用同一份登记。
+机器是 HAPI Runner 的身份，runtime 是该机器上的 Codex 或 Claude Code。二者分别登记；agent 定义通过 runtime ID 选择执行目标，不把展示名称当作路由。资源属于当前中心的 namespace，进入另一个项目目录仍使用同一份登记。
 
 ```sh
 runweft start
@@ -96,6 +96,55 @@ runweft machine unregister <machine-ID>
 取消 runtime 登记禁止新任务选用它，保留原 ID；对同 machineId/flavor 再次 register 会恢复该 ID 和原名称。取消机器登记会列出受影响 runtime，使它们不可用于新任务，但保留它们各自的登记；恢复机器后可重新检查和选用。两种取消都不会停止原生任务、删除会话或修改 agent 定义；已有 agent 引用需恢复登记或显式重新选择。
 
 工具缺失或配置无效时，检查执行机器上的 PATH、原生 home 和命令覆盖。Runner 使用启动时的环境，修改后在那台机器运行 `runweft restart`，再 `runtime check`。资源操作无需工程初始化、Git 仓库或 agent 定义。
+
+## Agent 定义与个人绑定
+
+机器标识执行位置，runtime 标识该机器上的工具，Agent 定义职责与指令。机器/runtime 属于当前中心；Agent 可以全局或项目共享，不会自行注册资源或触发任务。
+
+```sh
+runweft agent init reviewer
+runweft agent init reviewer --scope project
+runweft agent list
+runweft agent show reviewer
+runweft agent validate
+runweft agent bind reviewer --runtime <runtime-ID>
+runweft agent check reviewer
+runweft agent list --check
+```
+
+`init` 输出可直接编辑的 YAML 路径，默认全局 `<数据根>/agents/<id>.yaml`，项目文件位于 `<项目根>/.runweft/agents/<id>.yaml`。id 满足 `^[a-z][a-z0-9-]{0,63}$`，已有文件不会覆盖。只用 `.yaml`；`.yml` 会提示改名，符号链接可读取且 `show` 显示实际目标。
+
+```yaml
+schemaVersion: 1
+name: 代码评审
+description: 检查变更正确性、回归和验证缺口
+instructions: |
+  阅读工程约定与相关变更，按严重性报告有依据的问题。
+runtime: null
+flavor: null
+model: null
+reasoningEffort: null
+```
+
+`description` 供主 agent 发现和选择，`instructions` 由后续委派作为每轮任务指令传入；二者不自动互相混用。模型和推理参数留空继承执行工具的默认值。设置非空 `model` 或 `reasoningEffort` 时必须填写 `flavor: codex` 或 `flavor: claude`；指定 flavor 的定义只能绑定同类型 runtime。Runweft 不维护模型清单，`check` 验证资源与参数映射，不证明模型登录或模型/推理参数组合已执行成功。
+
+项目同 id 定义整体覆盖全局项，包括空值；`show` 显示两处来源。用 `show/check/bind/unbind <id> --scope global` 可维护被遮蔽的全局项。坏的项目定义不会退回全局；`list` 和 `validate` 列出有效项及错误，有错误时非零退出；无关坏文件不阻止检查指定 id。
+
+Git 项目从当前 worktree 根读取定义；从子目录调用仍使用该根。无 Git 时向上找到最近的 `.runweft/agents`，不会把用户 home 下的默认全局目录当作祖先项目；没有项目定义时 `init --scope project` 在当前目录创建；非 Git 的用户 home 只使用全局作用域，创建项目定义需先进入项目目录。
+
+共享 YAML 可以保留 `runtime: null`。`agent bind` 将个人选择存入集中 `client.sqlite`，不会编辑项目文件；优先于 YAML 中的 runtime。全局绑定跨项目；Git 项目绑定在同一仓库的 worktree 间复用，不同 clone 和非 Git 项目各自独立。worktree 的定义内容仍来自各自基线，绑定不混合职责。
+
+```sh
+runweft agent bind reviewer --scope global --runtime <runtime-ID>
+runweft agent unbind reviewer
+runweft --json agent check reviewer
+```
+
+绑定按当前连接与认证 namespace 隔离；local 改端口不丢失绑定，local 与 hub 即使指向同一个 URL 仍是不同连接。切换 Hub 或 namespace 要明确绑定该处 runtime。离线 `list/show` 将已有个人绑定标为“namespace 尚未认证”，在线 `check` 才选择准确身份的引用。
+
+已知离线或取消登记的 runtime 可以保存绑定，命令会提示当前不可选；`check` 和 `list --check` 在目标不可选时返回非零，不自动切换目标。`unbind` 只移除当前身份的个人选择，随后使用 YAML 引用；YAML 也为空则保持未绑定。离线 `validate` 允许 runtime 为空。
+
+定义解析提供带版本、连接及 namespace 的内容快照，供后续委派消费；它不创建会话。执行工具继续加载执行账户已有的原生全局配置，并从主 cwd 或准备完成的 worktree cwd 加载工程配置。远端接收解析后的定义和项目基线，不会自动同步发起机器的全局 skills、其他 MCP 或凭据。受控执行只禁用 Runweft MCP，其他 MCP 和原生子代理能力保留。
 
 ## 配置
 
@@ -180,10 +229,11 @@ Hub 客户端 `stop` 只停止该机器在当前连接上的 Runner，不关闭�
 | 目录或文件 | 生命周期 |
 | --- | --- |
 | `config.yaml` | 可编辑配置；升级保留 |
+| `agents/` | 可编辑全局 Agent YAML；项目定义留在项目 `.runweft/agents/` |
 | `server/hapi/` | 托管 Hub 的原有数据库、令牌、JWT 密钥及状态；备份保留 |
 | `server/runweft/state.sqlite` | 中心的全局机器/runtime 登记、稳定 ID 和最后一次工具观察；不保存模型凭据或原生会话 |
 | `connections/<连接>/hapi/` | 本机 Runner 的连接配置、机器身份和原生日志；各连接分开 |
-| `client.sqlite` | 本机真实工作目录绑定；Claude MCP hook 的逐调用身份用后删除，未消费记录保留 24 小时 |
+| `client.sqlite` | 本机工作目录与 Agent 个人 runtime 绑定；Claude MCP hook 的逐调用身份用后删除，未消费记录保留 24 小时 |
 | `logs/` | 托管服务日志；当前由部署方按磁盘需要归档或轮转 |
 | `backups/mcp/` | MCP 安装、更新、卸载及恢复前的原生配置快照；可能包含原配置中的秘密，权限仅限当前用户 |
 | `cache/`、`tmp/` | 可再生缓存与临时文件；服务停止后可清理，不保存唯一成果 |
@@ -195,7 +245,7 @@ local 模式的资源库位于本机中心；hub 模式只读写所连中心的�
 
 升级时安装同一批次的主包与平台包，再按角色重启相应服务。`status` 区分已安装与正在运行的服务版本；`doctor` 检查固定 HAPI 兼容版本。更换二进制不自动删除旧数据，也不主动迁移用户已有 `~/.hapi`。有活跃模型任务时先收尾再更新执行组件。
 
-备份前停止对应服务；备份 `config.yaml`、`server/`、`connections/` 和 `client.sqlite`。SQLite 使用 WAL，整个停止后的数据根一起备份最直接。恢复时使用匹配的 Runweft/HAPI 版本；未来数据升级由所属 Change 定义，当前不承诺跨任意版本回退。npm 卸载只删除软件包，数据根需另行管理。
+备份前停止对应服务；备份 `config.yaml`、`agents/`、`server/`、`connections/` 和 `client.sqlite`。SQLite 使用 WAL，整个停止后的数据根一起备份最直接。恢复时使用匹配的 Runweft/HAPI 版本；未来数据升级由所属 Change 定义，当前不承诺跨任意版本回退。npm 卸载只删除软件包，数据根需另行管理。
 
 常见排查顺序是 `config check` → `status` → `doctor` → `paths` 所列日志。端口占用先修正 `server.port`；纯 HAPI 地址改为 Runweft 中心；认证失败核对当前连接与令牌来源。错误不会静默切回本地或其他执行目标。
 
@@ -212,6 +262,7 @@ bun run typecheck
 bun run test
 bun run test:service
 bun run test:resources
+bun run test:agents
 bun run package --all
 bun run test:install
 ```
@@ -221,6 +272,8 @@ bun run test:install
 安装验收启动一次性 registry，并使用 `.dev-smoke/` 下的专用 npm 配置、缓存、安装前缀和数据目录；不改用户的全局 Runweft、HAPI 或模型配置。平台包附有 HAPI 许可、NOTICE、工具许可和对应源码归档。候选包保持 private，不会由构建或 CI 自动发布到 npm。
 
 `test:resources` 需要已安装 Codex 和 Claude Code（优先 iclaude，可设置 `RUNWEFT_SMOKE_CLAUDE`），仅执行版本查询，不需要模型登录。它使用专用空原生配置和配套编译程序验证本地与 Hub 资源命令、MCP 安装/握手、稳定 ID、离线、恢复和环境故障；离线等待沿 HAPI 的 45 秒活跃超时。脚本保存证据并关闭自建服务，故障环境只作用于测试 Runner；macOS 若发现原生 Codex.app 回退路径，会如实记录，命令缺失仍通过专用 Claude 覆盖验证。
+
+`test:agents` 同样只需要已安装的原生工具，不需要模型登录。它用配套编译 CLI 和专用 Hub/Runner 验证定义创建、worktree 绑定、local/Hub 连接、真实 token namespace 后缀、目标失效与恢复；保存证据并停止自建服务，不启动模型会话。
 
 已有 Codex/Claude Code 模型登录的开发环境可显式运行原生验收：
 
