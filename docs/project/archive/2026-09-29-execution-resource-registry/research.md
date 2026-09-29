@@ -24,7 +24,7 @@ Runweft 采用这一分离；用户明确机器/runtime 全局、agent 可全局
 
 [CLI 配置](../../../../hapi/cli/src/configuration.ts)支持 `HAPI_HOME`，默认 `~/.hapi`，并在其下组织 settings、日志和 Runner 状态；[Hub 配置](../../../../hapi/hub/src/configuration.ts)使用 `HAPI_HOME` 与可覆盖的 `DB_PATH`，默认数据库为该目录的 `hapi.db`。[Hub 命令](../../../../hapi/cli/src/commands/hub.ts)可在 CLI 内启动 HAPI Hub。
 
-**已验证的前置：** [统一 CLI 验收](../../archive/2026-09-29-unified-cli-and-deployment/execution.md)已证明本地模式托管 HAPI 与受控数据目录、Hub 模式连接和数据分离；[宿主适配验收](../../archive/2026-09-29-host-mcp-adapter/execution.md#t4-配套构建与宿主整体验收)再次覆盖配套服务。当前资源登记沿这套基础增加上层持久关系，不额外实现本地执行器。
+**已验证的前置：** [统一 CLI 验收](../2026-09-29-unified-cli-and-deployment/execution.md)已证明本地模式托管 HAPI 与受控数据目录、Hub 模式连接和数据分离；[宿主适配验收](../2026-09-29-host-mcp-adapter/execution.md#t4-配套构建与宿主整体验收)再次覆盖配套服务。当前资源登记沿这套基础增加上层持久关系，不额外实现本地执行器。
 
 
 ## 当前接口与实际缺口

@@ -1,6 +1,6 @@
 # CLI 安装与命令承载
 
-Runweft 提供一个 `runweft` 命令，包含配置、工作区绑定、HAPI 服务管理、认证、诊断和 [MCP 安装](../mcp/spec.md)。`runweft hapi …` 调用配套的原生 HAPI，保留参数、终端交互、退出码与信号；覆盖同一托管 Hub/Runner 的操作提示改用统一启停命令。
+Runweft 提供一个 `runweft` 命令，包含配置、工作区绑定、HAPI 服务管理、认证、诊断、[MCP 安装](../mcp/spec.md)和全局[机器](../../resources/machines/spec.md)/[Runtime](../../resources/runtimes/spec.md)登记。`runweft hapi …` 调用配套的原生 HAPI，保留参数、终端交互、退出码与信号；覆盖同一托管 Hub/Runner 的操作提示改用统一启停命令。
 
 ## 安装包
 

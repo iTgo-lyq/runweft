@@ -32,7 +32,7 @@
 | [统一 CLI 与部署（已完成）](archive/2026-09-29-unified-cli-and-deployment/requirement.md) | 可安装的基础入口、公共配置/数据位置、HAPI 管理与诊断 | 无；固定现有 HAPI 构建 |
 | [HAPI 内置能力验证与调用封装（已完成）](archive/2026-09-29-hapi-subagent-foundation/requirement.md) | 验证并封装已有启动、输入、原生结果、停止与续接入口 | 统一 CLI |
 | [宿主适配（已完成）](archive/2026-09-29-host-mcp-adapter/requirement.md) | 两宿主可信身份、受控子执行的 MCP 禁用与结果传递机制 | 统一 CLI、HAPI 执行契约 |
-| [全局资源注册](changes/execution-resource-registry/requirement.md) | 分别注册机器和 runtime，查询真实可用性 | 统一 CLI |
+| [全局资源注册](archive/2026-09-29-execution-resource-registry/requirement.md) | 分别注册机器和 runtime，查询真实可用性 | 统一 CLI |
 | [Agent 定义](changes/agent-definition/requirement.md) | 可发现、校验及解析的全局/项目定义，引用 runtime | 统一 CLI、全局资源注册 |
 | [委派生命周期](changes/delegation-lifecycle/requirement.md) | CLI/MCP 本地共享目录的完整协作与统一查询 | 统一 CLI、HAPI 执行契约、宿主适配、Agent 定义、全局资源注册 |
 | [本地工作区执行](changes/local-workspace-execution/requirement.md) | 独立本地协作及公共 Git 准备/封存/保留能力 | HAPI 执行契约、委派生命周期 |

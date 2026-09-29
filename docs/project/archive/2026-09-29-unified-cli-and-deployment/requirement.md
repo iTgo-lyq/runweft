@@ -17,7 +17,7 @@
 | 关系 | Change | 依赖内容与满足条件 |
 | --- | --- | --- |
 | 外部基础 | 固定版本的现有 HAPI 构建 | 验证已有安装、认证、Hub/Runner 管理及诊断，不要求新执行契约先实现 |
-| 下游 | [HAPI 执行契约](../2026-09-29-hapi-subagent-foundation/requirement.md)、[资源注册](../../changes/execution-resource-registry/requirement.md)、[Agent 定义](../../changes/agent-definition/requirement.md)、[附件交付](../../changes/task-artifact-delivery/requirement.md) | 使用统一配置、公共数据位置及命令承载；各模块实现自己的领域操作 |
+| 下游 | [HAPI 执行契约](../2026-09-29-hapi-subagent-foundation/requirement.md)、[资源注册](../2026-09-29-execution-resource-registry/requirement.md)、[Agent 定义](../../changes/agent-definition/requirement.md)、[附件交付](../../changes/task-artifact-delivery/requirement.md) | 使用统一配置、公共数据位置及命令承载；各模块实现自己的领域操作 |
 | 下游 | [集成与发布](../../changes/integrated-release/requirement.md) | 消费安装与兼容机制，验收包含全部领域能力的最终候选版本 |
 
 ## 独立验收与交付边界
@@ -82,4 +82,4 @@ Runweft 管理的配置、数据库/状态、附件、托管 worktree、日志�
 
 ## 协作资源
 
-- [HAPI 模式与存储源码核对](../../changes/execution-resource-registry/research.md#本地模式与存储可复用入口)（读取 2026-09-29）：HAPI 已有可配置 home、SQLite 数据路径和 CLI 启动 Hub 的入口；支持本地模式封装的方向，但尚未验证 Runweft 的安装及数据布局。
+- [HAPI 模式与存储源码核对](../2026-09-29-execution-resource-registry/research.md#本地模式与存储可复用入口)（读取 2026-09-29）：HAPI 已有可配置 home、SQLite 数据路径和 CLI 启动 Hub 的入口；支持本地模式封装的方向，但尚未验证 Runweft 的安装及数据布局。

@@ -19,7 +19,7 @@
 | 前置 | [统一 CLI 与部署](../../archive/2026-09-29-unified-cli-and-deployment/requirement.md) | 主体、工作区绑定入口及 HAPI 目标配置可供协作服务使用 |
 | 前置 | [宿主适配](../../archive/2026-09-29-host-mcp-adapter/requirement.md) | 可信身份、角色、MCP 工具承载与结果传递已有证据；调度不再反向定义宿主身份 |
 | 前置 | [Agent 定义](../agent-definition/requirement.md) | 职责、指令与 HAPI 目标可解析；发现工具由本 Change 注册 |
-| 前置 | [全局资源注册](../execution-resource-registry/requirement.md) | runtime 引用解析到机器；启动前重新核对目标，不混淆业务 agent 和执行资源 |
+| 前置 | [全局资源注册](../../archive/2026-09-29-execution-resource-registry/requirement.md) | runtime 引用解析到机器；启动前重新核对目标，不混淆业务 agent 和执行资源 |
 | 下游 | [本地独立工作区](../local-workspace-execution/requirement.md) | 消费协作工具和准备/收尾条件，增加独立模式 |
 | 下游集成 | [远端代码回收](../remote-result-delivery/requirement.md) | 消费 delegation/round 关联，向调度方报告成果封存和交付；不是本 Change 的反向前置 |
 
