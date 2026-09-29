@@ -16,4 +16,6 @@ stop 调用原有 archive，并确认 inactive 且 archived；丢响应后只读
 
 resume 沿原有入口返回实际 HAPI session、新旧原生身份，等待该执行就绪。只有 Runner 确认原生历史缺失才返回 missing；离线、认证、权限、IO 或模糊失败均不等于缺失。调用层不自动创建新执行，也不实现历史重建。
 
+上层业务委派消费这一明确缺失结果，按[轮次规则](../../delegation/rounds/spec.md)选择续接或构造业务历史；不改变原生执行调用层的上述职责。
+
 Claude 缺失检查读取当前 cwd 对应原生 transcript；Codex 用既有 native app-server 查询指定 thread，仅精确的原生缺失响应可判缺失。预检查不发送 prompt，查询进程随后关闭；明确拒绝时保留原归档状态。

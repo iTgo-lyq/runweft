@@ -4,7 +4,7 @@
 > 来源：[本 Change 需求](requirement.md)、[跨 Change 架构](../../architecture.md)
 > 按用户要求保留需求阶段的方案讨论；本文件不是已确认 Technical，也不代表已实现。
 
-本 Change 负责共用委派语义、实际 CLI/MCP 协作工具，以及本地共享 cwd 的完整流程。宿主适配只提供身份和传递机制；共享目录并发由主 agent 安排，不自动提交或清理。下文的 Git 基线、准备回执和封存要求适用于远端组合；公共 Git 准备和封存归属[本地工作区](../local-workspace-execution/requirement.md)，跨机传输分别归属[远端准备](../remote-workspace-preparation/requirement.md)与[代码回收](../remote-result-delivery/requirement.md)。
+本 Change 负责共用委派语义、实际 CLI/MCP 协作工具，以及本地共享 cwd 的完整流程。宿主适配只提供身份和传递机制；共享目录并发由主 agent 安排，不自动提交或清理。下文的 Git 基线、准备回执和封存要求适用于远端组合；公共 Git 准备和封存归属[本地工作区](../../changes/local-workspace-execution/requirement.md)，跨机传输分别归属[远端准备](../../changes/remote-workspace-preparation/requirement.md)与[代码回收](../../changes/remote-result-delivery/requirement.md)。
 
 先复用当前 HAPI 的状态、消息、历史和控制入口，再补必要父子关联。Agent 定义解析到全局 runtime，runtime 再关联机器；启动前核对当前模式允许的目标，不能由业务 agent 名称替代资源身份。下文的记录与对账是逻辑要求，不预设照搬旧 daemon、独立执行状态库或 durable inbox。
 
@@ -41,7 +41,7 @@ prompt 可以要求 agent 测试、整理报告、登记附件及说明阻塞；
 - 代码成果已形成不可变快照后，其网络上传可以与下一轮并行；封存失败而工作树仍未固定时不放行下一轮，避免混入两轮改动。纯报告委派不要求 Git 快照。
 - 活跃轮次的 steer 只在 HAPI 与该 runtime 确认支持时开放，并单独标注为本轮追加输入；不把新任务排队和即时 steer 混成一个含糊动作。
 - 单次 MCP 连接断开或 wait 取消不等于执行被取消。主宿主关闭后不恢复其对话或自动注入结果，已接受任务和结果沿 HAPI 生命周期保留用于收尾与看板。
-- 只允许主会话派生任务；CLI 与 MCP 入口共用宿主适配的可信调用上下文，在服务端检查子角色，子 shell 直接调用 CLI 也不能派生。工具分流由[宿主 MCP](../../archive/2026-09-29-host-mcp-adapter/design.md)负责；模型自报角色或任意 session ID 不能代替身份解析。受控子执行不需要 Runweft MCP 汇报，结果由 HAPI 原生输出收回；原生内置 subagent 的使用和递归不管控。此规则不增加同一用户进程间的权限隔离。业务方 skill 决定启动什么 agent，Runweft 不增加自动业务路由。
+- 只允许主会话派生任务；CLI 与 MCP 入口共用宿主适配的可信调用上下文，在服务端检查子角色，子 shell 直接调用 CLI 也不能派生。工具分流由[宿主 MCP](../2026-09-29-host-mcp-adapter/design.md)负责；模型自报角色或任意 session ID 不能代替身份解析。受控子执行不需要 Runweft MCP 汇报，结果由 HAPI 原生输出收回；原生内置 subagent 的使用和递归不管控。此规则不增加同一用户进程间的权限隔离。业务方 skill 决定启动什么 agent，Runweft 不增加自动业务路由。
 
 Runweft 只补 HAPI 尚无的父子关联。主会话在线时的通知/注入按宿主可用入口实现；基础路径是当前工具响应和显式查看/等待，不承诺结束主 turn 后的自动唤醒，更不恢复已关闭主宿主。
 

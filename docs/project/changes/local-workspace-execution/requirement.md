@@ -7,14 +7,14 @@
 
 ## Review 导读
 
-在已有本地共享协作上增加独立 worktree，并成为本地/远端共用的 Git 生命周期提供方。负责确定基线、创建与识别 worktree、启动就绪、固定成果、保留和清理条件；不负责跨机传输或中心文件服务。共享目录行为由[委派 Change](../delegation-lifecycle/requirement.md)交付，不在此重复实现。
+在已有本地共享协作上增加独立 worktree，并成为本地/远端共用的 Git 生命周期提供方。负责确定基线、创建与识别 worktree、启动就绪、固定成果、保留和清理条件；不负责跨机传输或中心文件服务。共享目录行为由[委派 Change](../../archive/2026-09-29-delegation-lifecycle/requirement.md)交付，不在此重复实现。
 
 ## Change 依赖
 
 | 关系 | Change | 依赖内容与满足条件 |
 | --- | --- | --- |
 | 前置 | [HAPI 执行契约](../../archive/2026-09-29-hapi-subagent-foundation/requirement.md) | 在指定 cwd 启动、结束和续接执行 |
-| 前置 | [委派生命周期](../delegation-lifecycle/requirement.md) | CLI/MCP 协作、准备/收尾条件与串行轮次可消费 Git 证据 |
+| 前置 | [委派生命周期](../../archive/2026-09-29-delegation-lifecycle/requirement.md) | CLI/MCP 协作、准备/收尾条件与串行轮次可消费 Git 证据 |
 | 下游 | [远端准备](../remote-workspace-preparation/requirement.md)、[远端结果](../remote-result-delivery/requirement.md) | 复用仓库/环境身份、准备与固定成果，不重新实现一套 Git 生命周期 |
 
 ## 独立验收与交付边界

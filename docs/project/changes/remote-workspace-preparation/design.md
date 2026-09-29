@@ -77,7 +77,7 @@ runtime 对仓库外输入/上下文目录的访问规则必须实测；若只�
 
 ## 7. 续接与基线变化
 
-同一 delegation 复用 worktree、分支、依赖目录，原生 session 优先续接，但每轮结束都关闭子执行进程。第二轮通过 HAPI 重新启动/续接，从上一轮成果继续；session 缺失时按[委派设计](../delegation-lifecycle/design.md#7-一轮结束与下一轮续接)构造历史。初始 `baseCommit` 仍保留，每轮另外记录开始 HEAD。
+同一 delegation 复用 worktree、分支、依赖目录，原生 session 优先续接，但每轮结束都关闭子执行进程。第二轮通过 HAPI 重新启动/续接，从上一轮成果继续；session 缺失时按[委派设计](../../archive/2026-09-29-delegation-lifecycle/design.md#7-一轮结束与下一轮续接)构造历史。初始 `baseCommit` 仍保留，每轮另外记录开始 HEAD。
 
 主工作区的新提交不会自动同步到活跃 subagent。建议基线变化创建新 delegation；显式同步旧环境可作为后续能力，不能偷偷 reset 或 rebase 正在协作的分支。
 

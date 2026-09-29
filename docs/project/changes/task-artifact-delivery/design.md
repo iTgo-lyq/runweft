@@ -25,7 +25,7 @@ HAPI 已有会话上传和 Hub scratchlist 附件存储；应复用合适的底�
 
 结果清单引用不可变对象；补交通过新版本体现，不能悄悄改变已经引用的内容。清单中逐项说明哪些必需附件未交付，不能用一个成功上传掩盖其他失败。普通报告不要求包含代码或绑定活跃 HAPI 会话。
 
-委派与轮次的业务关联由[委派生命周期](../delegation-lifecycle/requirement.md)维护；本 Change 只校验已授权的归属信息，不创建委派或推断任务终态。Git bundle 可复用对象传输，但它的前置对象、引用与祖先关系由[远端代码回收](../remote-result-delivery/requirement.md)验证。
+委派与轮次的业务关联由[委派生命周期](../../archive/2026-09-29-delegation-lifecycle/requirement.md)维护；本 Change 只校验已授权的归属信息，不创建委派或推断任务终态。Git bundle 可复用对象传输，但它的前置对象、引用与祖先关系由[远端代码回收](../remote-result-delivery/requirement.md)验证。
 
 ## 3. 保留与删除
 

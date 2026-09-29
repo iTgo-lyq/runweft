@@ -12,13 +12,13 @@ Claude Code 通过匹配 Runweft 工具的 PreToolUse hook 保存该次 toolUseI
 
 ## 工具、结果与取消
 
-产品工具列表当前仅包含 `runweft_status`，返回原生身份、工作区、数据根和当前 local/hub 连接诊断；没有业务委派工具。服务认证和连通性失败在结果中可见，诊断不启动托管服务或模型任务。
+runweft_status 返回原生身份、工作区、数据根和当前 local/hub 连接诊断，诊断不启动服务或模型任务；另提供定义发现、派生、列表、读取、等待、追加、中断和审批工具，见[委派入口](../delegation/interface/spec.md)。服务认证与连通性失败在结果中可见。
 
 工具处理器返回结构化结果及相同 JSON 文本。请求取消、超时、stdio 断开和终止信号传递到处理器及等待中的 HTTP 认证；不重放工具请求，不将等待取消转换为执行中断或归档。结果通过工具响应进入主上下文，不声明后台唤醒、主动注入或主宿主关闭后的恢复。
 
 ## 受控执行的工具禁用
 
-HAPI 启动参数 `disabledMcpServers` 可按执行禁用指定 MCP，保存在会话 metadata，停止后续接保留。Runweft 子执行可传 `['runweft']`；业务委派尚未实现，当前执行调用层提供该参数能力。
+HAPI 启动参数 disabledMcpServers 按执行禁用指定 MCP，保存在会话 metadata，停止后续接保留；Runweft 委派始终传入 `['runweft']`。
 
 Codex 将完整禁用定义应用于目标 root 的原生 thread/start、thread/resume，未安装该 MCP 时也可启动；同一共享 runtime 的无关 root 不受影响。Claude 使用原生 disallowedTools 排除指定 server 的工具，保留其他原生设置；其 MCP 进程仍可能连接，但工具不进入模型可用目录。
 

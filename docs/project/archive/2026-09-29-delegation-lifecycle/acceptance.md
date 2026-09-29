@@ -15,7 +15,7 @@
 | 执行、交付、接纳分离 | detail/overview 区分原生状态、stop、finish、报告和外部接纳；共享 Git/附件为 not_applicable。T1/T2 fixture 验证未知终态和关闭失败不冒充完成；上传不存在于本 Change，未声称上传重试已验收 |
 | 纯报告独立完成 | T1 目录不新增文件；T4 续接轮次只从原生历史回忆标记，文件内容及 mtime 保留，无提交/bundle/PR 前置 |
 | 受控子限制和原生能力保留 | T3 两 runtime 子 CLI 的 spawn/send 均实际返回 subagent_delegation_denied；T4 启动/续接原生目录无 Runweft 工具，其他 MCP 被实际调用，Claude 原生 Agent/Task 保留；原生递归不受 Runweft 管理 |
-| 每轮关闭，优先 resume，精确缺失重建 | T2/T4 可靠原生终态、inactive/archived 与 PID 退出，真实 resume 保留 native ID/记忆；[前置执行验收](../../archive/2026-09-29-hapi-subagent-foundation/execution.md#t3-关闭续接与运行能力验证)已验证两 runtime 的原生缺失诊断。此 Change 的缺失重建/未知不重放通过真实 HTTP + SQLite fixture 验证，不冒充真实删除历史后的模型验收 |
+| 每轮关闭，优先 resume，精确缺失重建 | T2/T4 可靠原生终态、inactive/archived 与 PID 退出，真实 resume 保留 native ID/记忆；[前置执行验收](../2026-09-29-hapi-subagent-foundation/execution.md#t3-关闭续接与运行能力验证)已验证两 runtime 的原生缺失诊断。此 Change 的缺失重建/未知不重放通过真实 HTTP + SQLite fixture 验证，不冒充真实删除历史后的模型验收 |
 
 对应新增能力：`delegation/interface` 由 CLI/MCP 工具及安装验证覆盖；`local-workspace/shared` 由八组合共享文件证据覆盖；`delegation/lifecycle`/`delegation/rounds` 由中心事务、原生完成/关闭、续接和控制覆盖；`delegation/results`/`delegation/context` 由有界报告、历史构造、缺失结构化结果及分页用例覆盖。正式实现见 [coordinator](../../../../src/tasks/coordinator.ts)、[store](../../../../src/tasks/store.ts)、[MCP](../../../../src/mcp/tasks.ts)、[视图](../../../../src/tasks/views.ts)及 [rounds 测试](../../../../test/task-rounds.test.ts)。
 

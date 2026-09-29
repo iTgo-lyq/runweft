@@ -39,7 +39,7 @@ HAPI Hub 只监听本机私有端口，省略端口配置时自动选择。Runwe
 | `config.yaml` | 可编辑全局配置 |
 | `agents/` | 全局 Agent YAML；项目定义保留于对应项目目录 |
 | `server/hapi/` | 托管 Hub 的原有数据库、令牌和状态 |
-| `server/runweft/state.sqlite` | 中心机器/runtime 登记与原生工具的最后观察；WAL、事务化 schema version，不保存模型凭据 |
+| `server/runweft/state.sqlite` | 中心机器/runtime 登记、最后原生探测及委派任务/轮次/请求关联和报告；WAL、事务化 schema version，不保存模型凭据 |
 | `connections/local/hapi/` 或 `connections/<主机名>-<URL hash>/hapi/` | 当前机器 Runner 的连接身份、配置与原生日志 |
 | `client.sqlite` | 本机工作区与 Agent 个人 runtime 绑定及 Claude MCP hook 的短期调用身份 |
 | `logs/` | 服务日志，由部署方管理保留和轮转 |
@@ -48,5 +48,7 @@ HAPI Hub 只监听本机私有端口，省略端口配置时自动选择。Runwe
 | `server/process.json` | 托管服务定位信息，正常停止后移除 |
 
 Hub 客户端不保存权威资源库；paths 明确指出登记位于中心，备份资源须停止中心后保留其业务库与尚存 WAL 文件。全局范围见[资源范围](../resources/scope/spec.md)。
+
+任务协调器复用 serve，CLI/MCP 无需再安装独立 daemon。业务表及请求恢复见[委派生命周期](../delegation/lifecycle/spec.md)；当前 schema v2 事务保留既有资源，遇到更高版本明确拒绝，不自动删除数据或降级。
 
 Codex/Claude 配置和历史仍沿各自原生位置；已有 HAPI 数据不自动搬迁，工作区留在原处。停止后备份数据根及相应原生数据，恢复使用兼容版本；不承诺任意版本间回退。

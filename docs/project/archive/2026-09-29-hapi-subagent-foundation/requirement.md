@@ -19,7 +19,7 @@
 | --- | --- | --- |
 | 前置 | [统一 CLI](../2026-09-29-unified-cli-and-deployment/requirement.md) | 基础安装、HAPI 连接与诊断可用；不依赖完整业务发行 |
 | 外部基础 | 固定版本的 HAPI 构建 | 默认直接使用内置适配；先验证已有能力，不能把关联仓库视为链路已验证 |
-| 下游 | [宿主适配](../2026-09-29-host-mcp-adapter/requirement.md)、[委派生命周期](../../changes/delegation-lifecycle/requirement.md)、[本地工作区](../../changes/local-workspace-execution/requirement.md) | 消费执行身份、真实状态和控制入口；各自验收不并入本 Change |
+| 下游 | [宿主适配](../2026-09-29-host-mcp-adapter/requirement.md)、[委派生命周期](../2026-09-29-delegation-lifecycle/requirement.md)、[本地工作区](../../changes/local-workspace-execution/requirement.md) | 消费执行身份、真实状态和控制入口；各自验收不并入本 Change |
 
 ## 独立验收与交付边界
 
@@ -83,7 +83,7 @@ Codex 和 Claude Code 作为内置执行目标，由 HAPI 管理机器路由、�
 
 启动和输入请求具有可查询的稳定关联。超时后先核对原操作；恢复导致 HAPI 身份改变时返回新旧关联。中断绑定目标轮次，不能误中随后启动的轮次。
 
-子任务本轮结束后通过 HAPI 关闭该 subagent 执行进程，不为等待 follow-up 保持 agent 空跑；保留 HAPI/原生 session 记录。下一轮优先原生续接，session 确认不存在时才按[委派方案](../../changes/delegation-lifecycle/design.md)组合已有历史开始新 session。读取、关闭和续接优先沿 HAPI 已有入口，不直连原生 CLI 再造执行器。共享进程不能因一个任务结束而误杀其他会话。
+子任务本轮结束后通过 HAPI 关闭该 subagent 执行进程，不为等待 follow-up 保持 agent 空跑；保留 HAPI/原生 session 记录。下一轮优先原生续接，session 确认不存在时才按[委派方案](../2026-09-29-delegation-lifecycle/design.md)组合已有历史开始新 session。读取、关闭和续接优先沿 HAPI 已有入口，不直连原生 CLI 再造执行器。共享进程不能因一个任务结束而误杀其他会话。
 
 主宿主关闭后的恢复不属于目标。执行权限遵循 HAPI 与原生客户端已有默认，不额外建立权限隔离，也不自动改为跳过审批。
 

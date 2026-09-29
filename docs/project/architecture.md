@@ -32,9 +32,9 @@
 | [统一 CLI 与部署（已完成）](archive/2026-09-29-unified-cli-and-deployment/requirement.md) | 可安装的基础入口、公共配置/数据位置、HAPI 管理与诊断 | 无；固定现有 HAPI 构建 |
 | [HAPI 内置能力验证与调用封装（已完成）](archive/2026-09-29-hapi-subagent-foundation/requirement.md) | 验证并封装已有启动、输入、原生结果、停止与续接入口 | 统一 CLI |
 | [宿主适配（已完成）](archive/2026-09-29-host-mcp-adapter/requirement.md) | 两宿主可信身份、受控子执行的 MCP 禁用与结果传递机制 | 统一 CLI、HAPI 执行契约 |
-| [全局资源注册](archive/2026-09-29-execution-resource-registry/requirement.md) | 分别注册机器和 runtime，查询真实可用性 | 统一 CLI |
+| [全局资源注册（已完成）](archive/2026-09-29-execution-resource-registry/requirement.md) | 分别注册机器和 runtime，查询真实可用性 | 统一 CLI |
 | [Agent 定义（已完成）](archive/2026-09-29-agent-definition/requirement.md) | 可发现、校验及解析的全局/项目定义，引用 runtime | 统一 CLI、全局资源注册 |
-| [委派生命周期](changes/delegation-lifecycle/requirement.md) | CLI/MCP 本地共享目录的完整协作与统一查询 | 统一 CLI、HAPI 执行契约、宿主适配、Agent 定义、全局资源注册 |
+| [委派生命周期（已完成）](archive/2026-09-29-delegation-lifecycle/requirement.md) | CLI/MCP 本地共享目录的完整协作与统一查询 | 统一 CLI、HAPI 执行契约、宿主适配、Agent 定义、全局资源注册 |
 | [本地工作区执行](changes/local-workspace-execution/requirement.md) | 独立本地协作及公共 Git 准备/封存/保留能力 | HAPI 执行契约、委派生命周期 |
 | [任务附件交付](changes/task-artifact-delivery/requirement.md) | 独立文件交付及既有任务的输入/输出接入 | 统一 CLI、委派生命周期 |
 | [远端工作区准备](changes/remote-workspace-preparation/requirement.md) | 跨机基线与输入落地，复用公共工作区启动校验 | HAPI 执行契约、本地工作区、任务附件 |
@@ -108,7 +108,7 @@ sequenceDiagram
 
 | 对象 | 定义归属 | 稳定范围 |
 | --- | --- | --- |
-| 主体、namespace、`workspaceId` 与主工作区绑定入口 | 统一 CLI 与部署 | 授权主体与真实主机目录；宿主父身份的取得方式另待调查 |
+| 主体、namespace、`workspaceId` 与主工作区绑定入口 | 统一 CLI 与部署 | 授权主体与真实主机目录；原生父身份由宿主适配提供 |
 | `hapiSessionId`、原生输入/轮次身份 | HAPI 执行契约 | 真实执行与恢复关联，不能假定恢复后 ID 永远不变 |
 | machineId、runtimeId 与已解析执行目标 | 全局资源注册 | 当前用户/所选 Hub 的全局范围，项目定义只能引用；沿 HAPI 身份和查询映射 |
 | 全局/项目 agent 标识与定义版本 | Agent 定义 | 职责和 runtime 引用，与机器及 runtime 注册分开 |
@@ -126,9 +126,9 @@ Runweft 只补必要协作与交付关联，原生会话/执行事实优先读�
 | 事项 | 当前证据与下一步 |
 | --- | --- |
 | 宿主身份与工具禁用 | 两宿主身份、Claude clear/resume、全局安装及 HAPI 子执行启动/续接的工具禁用已实测，见[宿主验收](archive/2026-09-29-host-mcp-adapter/execution.md#t4-配套构建与宿主整体验收)；原生子 agent 不管控 |
-| 子进程关闭与 session 续接 | HAPI 已有原生读取/恢复路径，先核对何处可直接使用；共享 runtime 不得因关闭一个子执行而影响其他任务 |
+| 子进程关闭与 session 续接 | 两 runtime 已实测每轮停止和优先 resume，同一 delegation 保留原生记忆；定向关闭不影响共享 runtime 的兄弟会话 |
 | 配置继承 | 核对 HAPI 是否保留原生全局/项目配置与 cwd；远端不自动拥有发起机的全局 skill/MCP，ignored 项目配置不凭空随 Git 同步 |
-| 通知与结果进入上下文 | 旧 wait 工具响应可作交互参考，但不等同原生后台唤醒。在线宿主注入能力按公开入口验证，不增加主宿主退出恢复目标 |
+| 通知与结果进入上下文 | 两宿主通过实际 MCP wait/read 响应取得报告，等待游标保留未读轮次完成；不声明原生后台唤醒，不增加主宿主退出恢复目标 |
 | Git 成果方案 | 独立 worktree 自动 checkpoint 与默认 bundle 已确认；后续落实提交身份、hook/签名、对象保留及传输验证，不改动共享主目录 |
 
 这些可调查事项继续进入对应 Research，不要求用户猜测技术事实。后续正式方案逐项列出 HAPI 复用点和确实需要新增的部分，不迁回旧实现框架。
@@ -139,9 +139,9 @@ Runweft 只补必要协作与交付关联，原生会话/执行事实优先读�
 
 | 技术缺口 | 完整交付前需落实的结论 |
 | --- | --- |
-| 协作逻辑的部署与存储 | 统一 CLI 已验证服务进程、HAPI JWT 复用、服务端持久目录、双模式生命周期和协议代理。业务关联表及迁移由所属 Change 落实，不预建下游表 |
+| 协作逻辑的部署与存储 | serve 内中心协调已运行，schema v2 事务保留资源 ID 并保存任务/轮次/请求与报告；HAPI JWT 续期、重复接受及重启查询已验证。后续工作区/附件表由所属 Change 按需增加 |
 | HAPI 原生执行契约 | 两种内置 runtime 的输入关联、原生结果、请求重查、定向中断、审批、停止与续接已通过真实验收；共享进程兄弟会话可继续执行，已证实缺口在 HAPI 原路径最小增补 |
-| 宿主身份与结果交互 | 身份、安装、工具禁用、结果返回及取消已通过配套本地验收；当前支持工具响应，不声明后台唤醒。实际派生/等待流程由委派 Change 接入 |
+| 宿主身份与结果交互 | 身份、安装、工具禁用及真实派生/等待/续接/控制已通过两宿主 × 两 runtime、local/同机 Hub 验收；支持工具响应，不声明后台唤醒 |
 | 工作区与交付一致性 | 基线准备、启动校验、轮次封存、成果取回、跨轮次复用、失败保留和最终回收的契约；落实 LFS/子模块等既定验收边界 |
 | 发行与运行维护 | 基础包组织、版本固定、启停诊断与四平台安装已验收；完整业务版本的数据升级、组合验收和公开发行由集成 Change 落实 |
 | 真实验收条件 | 专用本地/远端机器、两种原生 CLI 的可用认证及 macOS 环境；只记录资源与授权状态，不读取或搬运凭据来替代配置 |
@@ -155,7 +155,7 @@ Runweft 只补必要协作与交付关联，原生会话/执行事实优先读�
 
 正式方案从[阶段 1](delivery-structure.md#阶段与可验收结果)的双模式安装与数据承载、全局资源注册、HAPI 执行和宿主接入开始。先固定跨 Change 的职责及必要契约，当前阶段落实其直接前置，不要求一次写完所有下游内部细节。后续能力仍在完整版本承诺内，按阶段逐项实现和验收；各领域不能把自己的核心功能留给最后的集成 Change。
 
-统一 CLI、HAPI 执行契约、宿主 MCP 适配与全局资源注册均完成正式 Technical/Plan、各一次 iclaude 评审、实现与验收，并同步 Specs 归档。基础安装通过四平台运行验证，执行契约、宿主适配与资源注册在本机完成配套编译版本真实验收；agent 定义、业务委派和最终发行仍按后续 Change 推进，不能据此宣布完整产品完成。
+统一 CLI、HAPI 执行契约、宿主 MCP 适配、全局资源注册、Agent 定义与本地共享委派均完成正式 Technical/Plan、各一次 iclaude 评审、实现与验收，并同步 Specs 归档。基础安装通过四平台运行验证；新增委派完成四平台候选包构建，真实协作与本轮安装证据来自 Linux x64。本地独立工作区、附件、远端准备/回收、看板及完整发行仍按后续 Change 推进，不能据此宣布完整产品完成。
 
 ## 调查与验证状态
 

@@ -55,3 +55,9 @@
 - 最终回归：`bun run typecheck`、`bun test ./test` 85 项/1509 次断言、四平台构建、Change 校验及 git diff --check 通过。此前真实模型 smoke 的 HAPI/Runweft 产品代码未再修改，其证据继续有效；当前没有未解释失败或待清理测试进程。
 - 关闭依据：用户已授权本地自主验收和归档，按 acceptance.md 逐项核对满足本 Change；T5 提交后按独立关闭流程同步 Specs、更新依赖引用并归档。本地独立工作区及其他下游能力继续按顺序推进，完整目标未完成。
 - Commit：`delegation-lifecycle T5: document collaboration and verify installable candidate packages`
+
+## 验收与归档
+
+- 按用户明确授权的本地自主验收完成逐项核对，范围与证据见 [acceptance.md](acceptance.md)；T1–T5 均已独立提交，无未解决的本阶段失败。
+- Specs 新增委派入口、持久协调、轮次、结果、上下文与共享工作区；同步宿主 MCP、安装超时、中心存储、资源范围和执行恢复，保留未实现的独立/远端能力边界。
+- 更新项目入口与依赖引用后，将本 Change 完整归档为 `2026-09-29-delegation-lifecycle`；关闭独立提交 `delegation-lifecycle: sync specs and archive`。下一 Change 为本地独立工作区，完整交付目标继续推进。

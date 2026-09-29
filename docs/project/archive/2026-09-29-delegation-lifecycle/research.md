@@ -4,7 +4,7 @@
 
 ## 已验证基础
 
-- [ExecutionClient](../../../../src/execution.ts) 已封装持久 spawn requestId、消息 localId、原生执行观察、按输入/执行定向中断、archive 后停止确认、原生 resume 与精确缺失。真实 Codex/Claude 证据见[执行验收](../../archive/2026-09-29-hapi-subagent-foundation/execution.md)。本 Change 不再建立执行器或原生历史索引。
+- [ExecutionClient](../../../../src/execution.ts) 已封装持久 spawn requestId、消息 localId、原生执行观察、按输入/执行定向中断、archive 后停止确认、原生 resume 与精确缺失。真实 Codex/Claude 证据见[执行验收](../2026-09-29-hapi-subagent-foundation/execution.md)。本 Change 不再建立执行器或原生历史索引。
 - [宿主身份](../../../../src/mcp/identity.ts) 从 Codex 每次调用 metadata、Claude PreToolUse + toolUseId 获取真实宿主与 cwd；[MCP](../../../../src/mcp/server.ts) 已区分请求取消与连接关闭，当前只注册诊断。工具响应可用，普通 MCP 没有已验证的主 turn 结束后后台唤醒；不承诺自动注入或恢复主宿主。
 - [AgentClient](../../../../src/agents/client.ts) 显式接收 cwd，返回序列化快照和 launchOptions；默认不覆盖原生模型/权限，包含 Runweft MCP 禁用。个人绑定按连接/namespace/来源解析；共享执行仍须核对目标机器就是发起机，不能把 Hub 中另一台机器上的同名路径当作共享目录。
 - [ResourceStore](../../../../src/resources/store.ts) 是中心 state.sqlite 的 schema v1，资源表通过 PRAGMA user_version 管理。新增委派表应将迁移集中到一个入口并升级 v2，不能让资源构造器拒绝自己新增的版本，也不能把中央任务写入发起机 client.sqlite。
