@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, test } from 'bun:test';
+import { Database } from 'bun:sqlite';
 import { randomUUID } from 'node:crypto';
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
@@ -90,6 +91,25 @@ describe('artifact client and CLI', () => {
         expect((await cli(['remove', uploaded.id])).value.state).toBe('deleted');
         expect((await cli(['lookup', requestId])).value.state).toBe('deleted');
     }, 20_000);
+    test('CLI prune defaults to preview, obeys Hub policy, and returns tombstones with honest usage', async () => {
+        const { root, cli, client, service } = await fixture();
+        const source = join(root, 'result.txt'); await writeFile(source, 'retained result');
+        const unreferenced = await client.upload(source, randomUUID());
+        const protectedFile = await client.upload(source, randomUUID());
+        await client.pin(protectedFile.id, 'external:recovery', 'recovery');
+        const db = new Database(join(root, 'hapi.db'));
+        db.query('UPDATE artifacts SET published_at=?').run(Date.now() - 8 * 86400000); db.close();
+        const preview = (await cli(['prune'])).value;
+        expect(preview.applied).toBe(false); expect(preview.candidates.map((file: any) => file.id)).toEqual([unreferenced.id]);
+        expect((await client.show(unreferenced.id)).state).toBe('available');
+        expect((await cli(['limits'])).value.usage).toMatchObject({ referencedCount: 1, referencedBytes: protectedFile.size });
+        const applied = (await cli(['prune', '--apply'])).value;
+        expect(applied.deleted[0].state).toBe('deleted'); expect(applied.usedBytes).toBe(protectedFile.size);
+        expect((await cli(['lookup', unreferenced.requestId])).value.state).toBe('deleted');
+        expect((await cli(['prune', '--apply'])).value.deleted).toEqual([]);
+        expect((await cli(['prune', '--limit', '0'], 1)).stderr).toContain('invalid_artifact_request');
+        expect(service.store.references('default', protectedFile.id)).toHaveLength(1);
+    });
     test('does not replay a published upload when its response fails; same ID recovers the original file', async () => {
         const { root, client, loseResponse, uploads } = await fixture();
         const source = join(root, 'report.txt'), requestId = randomUUID(); await writeFile(source, 'captured bytes');

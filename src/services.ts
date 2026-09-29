@@ -8,6 +8,7 @@ import { RunweftError, errorDetails } from './errors';
 import { BUILD, deploymentKeys, fetchJson, HapiClient, hapiClient, hapiEnvironment, hapiExecutable, readSettings, runHapi, serverToken, stopChild } from './hapi';
 import { createGateway } from './proxy';
 import { createRunweftHandler } from './api';
+import { ArtifactClient } from './artifacts/client';
 import { TaskCoordinator } from './tasks/coordinator';
 
 export type ServiceState = {
@@ -277,6 +278,14 @@ export async function doctor(c: ResolvedConfig) {
         const hapi = await fetchJson(`${targetUrl(c.config)}/health`);
         checks.push({ name: 'hapi_protocol', ok: hapi.protocolVersion === BUILD.hapi.protocolVersion, detail: hapi.protocolVersion });
         checks.push({ name: 'authentication', ok: true, detail: await hapiClient(c).authenticate() });
+        try {
+            const usage = await new ArtifactClient(hapiClient(c)).limits();
+            checks.push({ name: 'artifacts', ok: true, detail: { authority: targetUrl(c.config), ...usage,
+                hostedStorage: c.config.mode === 'local' ? dataPaths(c).artifacts : 'on_connected_hub',
+                localTransfers: dataPaths(c).artifactTransfers,
+                cleanup: 'runweft artifact prune（默认预览）；artifact refs <id> 查看引用；artifact remove <id> 删除无引用文件。',
+                recovery: '备份和恢复应同时包含中心 HAPI 数据库、artifacts 字节、Runweft state.sqlite；未交付候选另存于执行机 artifact-transfers。' } });
+        } catch (error) { checks.push({ name: 'artifacts', ok: false, detail: errorDetails(error) }); }
         const runnerEnabled = c.config.mode === 'hub' || c.config.server.runner;
         checks.push({ name: 'runner', ok: !runnerEnabled || await runnerOnline(c), detail: runnerEnabled ? '当前连接的本机 Runner' : '配置明确禁用本机 Runner' });
     } catch (error) { checks.push({ name: 'connection', ok: false, detail: errorDetails(error) }); }

@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { constants } from 'node:fs';
 import { link, lstat, mkdir, open, realpath, rename, rm, type FileHandle } from 'node:fs/promises';
 import { basename, dirname, resolve } from 'node:path';
-import { ArtifactSchema, ArtifactReserveSchema, ArtifactLimitsSchema, type Artifact, type ArtifactLimits, type ArtifactReference } from '../../hapi/shared/src/artifacts';
+import { ArtifactSchema, ArtifactReserveSchema, ArtifactLimitsSchema, ArtifactUsageSchema, ArtifactPruneSchema, ArtifactPruneResultSchema, type ArtifactPrune, type Artifact, type ArtifactLimits, type ArtifactReference } from '../../hapi/shared/src/artifacts';
 import { HapiClient } from '../hapi';
 import { RunweftError } from '../errors';
 
@@ -40,11 +40,22 @@ export type TransferProgress = (bytes: number, total: number) => void;
 
 export class ArtifactClient {
     constructor(readonly hapi: HapiClient) {}
-    async limits(signal?: AbortSignal): Promise<{ limits: ArtifactLimits; usedBytes: number }> {
+    async limits(signal?: AbortSignal) {
         const result = await this.hapi.request('/api/artifacts/limits', { signal });
         const parsed = ArtifactLimitsSchema.safeParse(result.limits);
         if (!parsed.success || !Number.isSafeInteger(result.usedBytes) || result.usedBytes < 0) throw new RunweftError('invalid_hapi_response', '服务未返回有效的文件限制与用量。');
-        return { limits: parsed.data, usedBytes: result.usedBytes };
+        const usage = ArtifactUsageSchema.safeParse(result.usage);
+        if (!usage.success) throw new RunweftError('invalid_hapi_response', '服务未返回有效的文件用量明细；请更新配套 Hub。');
+        return { limits: parsed.data, usedBytes: result.usedBytes as number, usage: usage.data };
+    }
+    async prune(options: Partial<ArtifactPrune> = {}, signal?: AbortSignal) {
+        const request = ArtifactPruneSchema.safeParse(options);
+        if (!request.success) throw new RunweftError('invalid_artifact_request', '清理参数无效。', 'limit 为 1–200；after 使用上页 nextCursor。');
+        const result = ArtifactPruneResultSchema.safeParse(await this.hapi.request('/api/artifacts/prune', {
+            method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(request.data), signal,
+        }));
+        if (!result.success) throw new RunweftError('invalid_hapi_response', '服务未返回有效的清理结果；请查询对象状态后再继续。');
+        return result.data;
     }
     async show(id: string, signal?: AbortSignal) { return artifact((await this.hapi.request(`/api/artifacts/${encodeURIComponent(id)}`, { signal })).artifact); }
     async lookup(requestId: string, signal?: AbortSignal) { return artifact((await this.hapi.request(`/api/artifacts/requests/${encodeURIComponent(requestId)}`, { signal })).artifact); }

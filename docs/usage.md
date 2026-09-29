@@ -470,3 +470,47 @@ bun run test:worktree-tasks
 `test:task-mcp` 由两个真实原生宿主分别完成派生、等待、结果读取，验证子 CLI 拒绝递归委派和超过 60 秒的 MCP 等待；`RUNWEFT_SMOKE_HOST=codex|claude` 可只验证一个宿主。
 
 `test:collaboration` 覆盖 local 与同机 Hub 下两宿主 × 两 runtime 的八个组合，包括共享编辑、纯报告续接、其他 MCP 保留、Runweft 工具过滤、进程退出及实际 MCP 连接中断。`RUNWEFT_SMOKE_CASE=hub-claude-codex` 可选择一个组合；指定组合后加 `RUNWEFT_SMOKE_CONTROLS=1` 验证原生 MCP steer/不支持分支与定向中断。证据保存在 `.dev-smoke/collaboration-*`。这些测试会调用模型，只修改专用原生配置；同机 Hub 结果不代替真实跨机远端验收。
+
+
+### 文件清理与用量
+
+```sh
+runweft artifact limits
+runweft artifact prune
+runweft artifact prune --apply
+runweft artifact refs <文件ID>
+runweft artifact remove <无引用文件ID>
+runweft doctor
+```
+
+`prune` 默认只预览，`--apply` 才删除本页符合条件的字节。默认一页 100 个，`--limit` 可选 1–200；按返回的 `nextCursor` 用 `--after` 继续。apply 时重新检查引用、期限、对象状态和活跃上传，逐项列出失败原因；失败项不阻止其他项。响应丢失时用 show/lookup 查原对象，重新从第一页清理也不会重复删除已删除对象。删除保留元数据墓碑及原 request ID，下载返回已删除，已发布内容不能以旧 request ID 复活。
+
+默认只清理没有任何引用的对象：已发布对象从发布时间满 7 天，未完成上传预约从创建时间满 24 小时。释放引用不重置这些期限；删除中断的对象可继续清理。单对象 remove 不要求满期限，但同样拒绝任何引用。任务输入、成果、恢复和其他来源的引用均受保护，完成任务不会自动删掉唯一文件副本，也不会隐式定时清理。轮次留存释放将在下一阶段接通；不要手工删数据库引用或数据目录以绕过保护。
+
+limits 与 doctor 展示当前中心的已发布、预约、删除中及引用保留用量；同一对象的多个引用只计一次，引用字节已包含在前三项总额中。这是配额占用，不是磁盘实际占用，Runner 输入/候选和数据库另计。Hub 客户端的本地 server.artifacts 设置不覆盖所连 Hub；修改服务端配置后重启托管服务。配额不足时先预览可清文件，查看被引用对象的留存原因；按需提高中心 namespaceQuotaGiB。
+
+### 文件部署与恢复
+
+`runweft paths` 标出本机托管中心的 artifacts、连接对应的 artifact-transfers 以及中心业务库。Hub 模式的权威对象字节在 Hub，执行机只保留准备文件与未交付候选；成功候选会在清单确认后自动回收。所有这些路径都在配置的数据根内，用户显式下载的位置由用户选择。
+
+备份前停止业务中心与对应 Runner，保存中心 Runweft state.sqlite、HAPI 数据库与整个 artifacts 目录；保留执行机 artifact-transfers 中的未交付候选和回执。恢复时数据库与字节来自同一次备份，不单独回滚数据库；恢复后运行 doctor，并查询原任务/文件操作。未知来源引用保守保留，无法仅凭缺少本地任务记录判定可删除。原生凭据继续由原生配置管理，不进入文件对象存储。
+
+反向代理需允许配置的单文件体积和持续流式传输。以下 Nginx 示例适用于默认 512 MiB 上限，服务端和各级网关的限制需要一致；此环境未安装 Nginx，示例尚未经过 Nginx 实测：
+
+```nginx
+location / {
+    proxy_pass http://127.0.0.1:3210;
+    proxy_http_version 1.1;
+    client_max_body_size 512m;
+    proxy_request_buffering off;
+    proxy_buffering off;
+    client_body_timeout 60s;
+    proxy_send_timeout 60s;
+    proxy_read_timeout 60s;
+    proxy_set_header Host $host;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "upgrade";
+}
+```
+
+这些超时约束两次 I/O 之间的空闲时间，不能另加限制整个文件传输时长的网关规则；依据 [Nginx proxy 超时与缓冲说明](https://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_read_timeout)及 [client body 限制说明](https://nginx.org/en/docs/http/ngx_http_core_module.html#client_body_timeout)。遇到 413 或代理 HTML 错误，检查入口代理与 Hub 的体积限制；不要重复派生任务。公开 Hub 的 TLS、访问控制和已有 WebSocket 配置仍按部署要求设置。

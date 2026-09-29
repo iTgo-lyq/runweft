@@ -26,13 +26,15 @@ SQLite 保存对象和 references，字节保存到 `HAPI_HOME/artifacts/<namesp
 | bytes | PUT/GET `/:id/content` | application/octet-stream 流；下载加 attachment 与 nosniff，不接受外部 URL |
 | refs | GET/PUT/DELETE `/:id/references/:reference?` | namespace 内稳定字符串引用，可写 purpose/说明；无任务生命周期含义 |
 | remove | DELETE `/:id` | pinned 拒绝，重复删除返回同一墓碑 |
-| prune | POST `/prune` | 默认预览，apply 才执行；每项再次检查 pin/年龄/状态，返回删除及失败列表 |
+| prune | POST `/prune` | 默认预览，apply 才执行；每项再次检查 pin/年龄/状态，返回删除及失败列表；limit 1–200、after/nextCursor 按 ID 稳定翻页 |
 
 控制请求有小型 JSON body 限制，二进制路由有大小和空闲超时限制，无固定总时长；Bun server body ceiling 随 maxFile 提升，不能让原 68 MiB 限制挡住文件。客户端下载以相邻临时文件写入/hash校验后原子落点，网络失败不留下冒称成功的目标。已有目标默认拒绝，覆盖需显式指定。
 
 限速流验证上传/下载仍持续进展时不会因固定总时限截断，空闲超时默认 60 秒。413 与非 JSON 代理响应返回明确操作提示。
 
 服务与 Runner 分别声明 `artifacts: 1`、`artifactTransfers: 1` 能力；输出另声明 `artifactOutputs: 1`，旧输入 Runner 不被误判为支持输出。需要附件时先核对；既有无附件会话不要求新增能力。shared 协议导出 schema/types，Runweft 直接消费，不自行再造另一套 wire 格式。
+
+清理以服务端时间和策略为准：available 按 publishedAt 计龄，reserved 按 createdAt 计龄，释放引用不重置这两个时间；deleting 可恢复清理。先核对落盘后未发布的对象，再判断期限。limits 的 usage 将预约/发布/删除中用量分开，引用用量按对象去重；这些是配额占用，非磁盘物理用量。
 
 ## 3. 机器操作
 

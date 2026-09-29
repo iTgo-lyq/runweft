@@ -69,3 +69,14 @@
 - 真实执行：`bun run test:task-outputs` 使用配套编译 CLI，通过 Codex/Claude × shared/worktree × 两轮，共 8 轮。首轮降低 Hub 文件限额制造部分交付，恢复限额后重传原候选，再补收遗漏文件，清单生成 v1/v2/v3；原生身份、执行 PID 和 completedRevision 没有因文件操作变化。第二轮复用同一 native session、改写同名输出，旧发布内容仍可下载。核对项目指令、输入/输出内容、引用保护、成功 spool 回收、主仓库无修改、子 MCP 禁用及每轮停止。证据 `.dev-smoke/task-outputs-u3MJua/evidence.json`，success=true、cleanupErrors=[]，8 个记录 PID 均已退出。
 - 验证边界：专用配置副本继承原生权限；Claude 的测试文件写入审批按具体命令批准并记在证据中，未改权限模式或用户配置。真实矩阵使用的构建先于最后新增的未准备 worktree 补收门禁，该门禁另有聚焦测试且最终构建已包含；矩阵全部使用成功准备的 worktree，无需重跑模型。Runner 离线下载和 72 MiB 固定候选复用 T4 实测；跨机与四平台安装未在本任务宣称完成。
 - Commit：`task-artifact-delivery T4b: publish task output versions and explicit file recovery`
+
+
+## T5 中心过期清理、用量与部署说明
+
+- 结果：HAPI 的 POST artifacts/prune 默认预览、apply 逐项清理无引用且过期的对象，复用对象锁和引用事务；稳定 ID 游标翻页，部分失败与活跃上传明确列出。清理前恢复已落盘但未发布的对象，并重新检查时间和引用；删除中断可继续，配额仅在字节删除后释放。limits 新增各状态和去重引用用量，Runweft artifact prune/limits/doctor 暴露同一事实及路径、恢复提示；部署文档补齐备份、期限和代理配置。原 T5 按中心对象与业务轮次拆为 T5/T5b，不减少留存范围，未再次评审。
+- 验证：root typecheck 通过，全量 120 pass / 2277 assertions；HAPI 跨包 typecheck 通过，fixturegen 无差异，Hub 1410 pass / 3 skip、Web 3249 pass、Shared 323 pass、Relay 118 pass。Hub 聚焦 11 pass / 86 assertions，真实 SQLite/文件/HTTP 覆盖预览、所有 purpose 的 pin、晚到引用、活跃上传、恢复发布后重新计龄、删除故障保留占额、重启继续及稳定翻页。日志 `.dev-smoke/artifact-t5-*.log`。
+- 检查限制：HAPI CLI 全量 2995 pass / 11 skip / 2 fail。Claude seam 在全量并发中超时，单独复测 3 pass（未改其代码）；另一个为已记录的 `/tmp/.git` 导致 skills 非 Git cwd 用例失败，未删除环境目录或改无关代码。
+- 编译与实测：配套 Linux x64 构建后，`bun run test:artifact-prune` 通过独立 local/同机 Hub 的真实服务、配置、预览、分页删除、配额和 doctor 检查。停止专用服务后只调整测试数据库时间，再启动验证过期对象；自建 HTTP 代理在实际删除后丢弃响应，通过原 request ID 查询准确墓碑，重启后保留。四种 pin 和近期对象未被清掉，受保护对象可下载，原生 session 数为零。证据 `.dev-smoke/artifact-prune-iPItLX/evidence.json`，success=true、cleanupErrors=[]。
+- 探针修正：首轮代理探针将 fetch 已解压的响应仍标为 gzip，预览解析失败；清理完整结束，未运行模型。移除测试代理的失真编码/长度 header 后重新验证成功，产品网关无此改动。Nginx/Caddy 等未安装；Nginx 示例已核对官方缓冲、体积和空闲超时文档，未冒称通过 Nginx 实测。四平台候选包仍留至 T6。
+- HAPI：独立 Commit `Add explicit expiry cleanup and retained file usage diagnostics`（`c4c432ab0b376d254bf21571f4aaf51cbe3251f4`），root pin 与配套产物已同步。
+- Commit：`task-artifact-delivery T5: expose expiry cleanup and storage diagnostics`

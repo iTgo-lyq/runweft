@@ -23,8 +23,21 @@ export function addArtifactCommands(program: Command, context: () => ResolvedCon
     const client = () => new ArtifactClient(hapiClient(context()));
     const command = program.command('artifact').description('上传、下载与管理当前中心的持久文件；无需活跃 agent');
     command.command('limits').description('查看服务端文件限制与 namespace 用量').action(async () => {
-        const result = await client().limits(); output(result, `单文件：${result.limits.maxFileBytes} 字节\n已预约/保留：${result.usedBytes} / ${result.limits.namespaceQuotaBytes} 字节\n这些限制来自当前所连服务。`);
+        const result = await client().limits(); output(result, `单文件：${result.limits.maxFileBytes} 字节\n已预约/保留：${result.usedBytes} / ${result.limits.namespaceQuotaBytes} 字节\n已发布：${result.usage.availableBytes} 字节；待上传：${result.usage.reservedBytes} 字节；删除中：${result.usage.deletingBytes} 字节\n引用保留：${result.usage.referencedCount} 个对象 / ${result.usage.referencedBytes} 字节\n未引用文件按发布时间满 ${result.limits.unreferencedDays} 天、未引用预约按创建时间满 ${result.limits.pendingHours} 小时可清理。\n这些限制来自当前所连服务；用 artifact prune 预览。`);
     });
+    command.command('prune').description('预览已过期且无引用的文件；--apply 才删除字节')
+        .option('--apply', '实际删除本页仍满足清理条件的对象').option('--limit <n>', '每页数量，最多 200', '100')
+        .option('--after <cursor>', '上页返回的 nextCursor').action(async options => {
+            const result = await client().prune({ apply: !!options.apply, limit: Number(options.limit), after: options.after });
+            const bytes = result.candidates.reduce((sum, file) => sum + file.size, 0);
+            output(result, `${result.applied ? '已执行清理' : '清理预览，尚未删除'}：本页 ${result.candidates.length} 个候选 / ${bytes} 字节\n`
+                + result.candidates.map(file => `${file.id} · ${file.filename} · ${file.state} · ${file.size} 字节`).join('\n')
+                + `\n已删除 ${result.deleted.length} 个，未处理 ${result.failures.length} 个；当前预约/保留 ${result.usedBytes} 字节。`
+                + result.failures.map(item => `\n${item.id} · ${item.error.code}: ${item.error.message}`).join('')
+                + (result.nextCursor ? `\n下一页：runweft artifact prune --after ${result.nextCursor}${result.applied ? ' --apply' : ''}` : '')
+                + (!result.applied ? '\n确认此页后以相同参数加 --apply 执行；执行时重新检查引用和期限。' : ''));
+            if (result.failures.length) process.exitCode = 1;
+        });
     command.command('upload <path>').description('流式上传一个文件，校验并发布后返回稳定 ID')
         .option('--name <filename>', '显示文件名，默认源文件名').option('--request-id <uuid>', '重试同一内容时复用请求 ID')
         .action(async (path, options) => {
