@@ -1,7 +1,7 @@
 # 任务附件实施计划
 
 > 来源：[Requirement](requirement.md)、[Technical](technical.md)、[契约](artifact-contract.md)
-> 状态：执行中
+> 状态：已完成
 > 执行模式：逐任务本地提交
 > 评审：当前工作区 iclaude 一次已完成，主 agent 已独立复核采纳；见 [Execution](execution.md)，不重复评审。
 
@@ -79,7 +79,7 @@
 
 ### T6 MCP 组合、候选安装与整体验收
 
-- 状态：待开始
+- 状态：已完成
 - 依赖：T5b。
 - 交付：两原生宿主使用上传/元数据/下载工具和 task inputs/outputs、补交/重试，与 CLI 共用业务实现；四平台候选包、安装说明与完整需求验收映射。
 - 验收：Codex/Claude 宿主 × Codex/Claude runtime 在 local/同机 Hub 的真实输入、输出、续接与结果读取；shared 为主并覆盖 worktree 组合，子执行无 Runweft MCP，其他原生配置/工具保留。MCP 文件路径限制和取消/超时不重放任务；安装包可运行，无源码/Bun PATH 依赖。

@@ -128,6 +128,9 @@ describe('artifact client and CLI', () => {
         const empty = await client.upload(source, randomUUID());
         await client.download(empty.id, target); expect((await readFile(target)).length).toBe(0);
         await expect(client.upload(root, randomUUID())).rejects.toMatchObject({ code: 'artifact_not_file' });
+        const pipe = join(root, 'named-pipe');
+        expect(Bun.spawnSync(['mkfifo', pipe]).exitCode).toBe(0);
+        await expect(client.upload(pipe, randomUUID())).rejects.toMatchObject({ code: 'artifact_not_file' });
         expect((await client.list()).artifacts).toHaveLength(1);
     });
 });

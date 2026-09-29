@@ -78,7 +78,9 @@ export class ArtifactClient {
     async remove(id: string, signal?: AbortSignal) { return artifact((await this.hapi.request(`/api/artifacts/${encodeURIComponent(id)}`, { method: 'DELETE', signal })).artifact); }
     async upload(source: string, requestId: string, options: { name?: string; signal?: AbortSignal; progress?: TransferProgress } = {}) {
         const path = await realpath(resolve(source));
-        const file = await open(path, constants.O_RDONLY | constants.O_NOFOLLOW);
+        if (!(await lstat(path)).isFile()) throw new RunweftError('artifact_not_file', '只支持上传普通文件；目录请先自行打包。');
+        // A source replaced by a FIFO must not block before fstat or cancellation can run.
+        const file = await open(path, constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK);
         const transfer = progressSignal(options.signal);
         try {
             const { limits } = await this.limits(transfer.signal);

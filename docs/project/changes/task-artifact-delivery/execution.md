@@ -91,3 +91,14 @@
 - 原生续接：`bun run test:task-inputs dist/runweft --shared-only` 另开专用环境，实际通过 Codex/Claude 各两轮，共 4 轮。确认首轮输入目录已消失、中心输入仍受保护，重启服务后第二轮读取新随机输入并保持同一 native session；工程指令与 Runweft 子工具禁用保持。证据 `.dev-smoke/task-inputs-uLpknW/evidence.json`，success=true、cleanupErrors=[]，记录的 4 个 PID 均已退出。未改全局配置或权限模式，worktree 原生组合沿用 T4b。
 - 最后修正的验证范围：整轮 capture 释放（含无成功候选）用上述真实输入任务追加一次缺失文件 collect，再通过编译 CLI 普通 release；真实 Runner receipt 变 released、spool 目录移除、清单/完成版本/原生 session 数保持，证据 `.dev-smoke/artifact-t5b-empty-capture.json`。之后提示恢复和 wait 通知的修正由最终聚焦测试覆盖并进入最终构建，没有重复运行未受影响的模型轮次。MCP 附件与四平台安装仍在 T6，不提前验收完整 Change。
 - Commit：`task-artifact-delivery T5b: release round retention and reclaim stopped input copies`
+
+## T6 MCP 组合、候选安装与整体验收
+
+- 结果：MCP 新增 upload_artifact/read_artifact/download_artifact、retry_artifacts/collect_artifacts；spawn/next 接受原有 inputs/outputs schema。复用 CLI 的 ArtifactClient/TaskClient；源、目标及已有祖先按宿主 cwd 校验 realpath，只返回元数据。上传错误提示原 request ID，文件操作接受记录可从 list_agents 查回；文件传输沿空闲超时与宿主取消，不加服务端总时限。共同上传入口先拒绝非普通文件，并使用非阻塞打开避免 FIFO 在类型检查前卡住。
+- 检查：最终根工程 `bun test ./test` 为 129 pass / 2608 assertions，typecheck、Linux x64 编译通过；最终文件相关聚焦组 22 pass / 564 assertions。涵盖两宿主身份、目录/symlink/FIFO、取消无残留、丢响应查回、文件操作的父归属和 native call 幂等。正向 MCP 重传验证固定候选不随源文件变化、补收才生成新内容，原生调用次数不增加；类型与完整目录发现无副作用。日志 `.dev-smoke/artifact-t6-final-*.log`。
+- 真实 MCP：`bun scripts/smoke-artifact-mcp.ts dist/runweft` 的两宿主 × 两 runtime × local/同机 Hub 八组全部通过，共 16 个业务轮次。Hub 两个交叉 runtime 组合使用 worktree，其他为 shared。主宿主实际上传、查询、带附件派生、读取部分结果、核对缺失项没有重传候选、补收、下一轮续接和四次下载；每组复用同一 native session，旧对象字节不变，worktree 源仓库不变。真实 Codex/Claude 工具目录在启动和续接时均无 Runweft，其他 MCP 实际可调用，Claude 原生 Agent/Task 保留。证据 `.dev-smoke/artifact-mcp-DT6NQU/evidence.json`，success=true、8 cases、cleanupErrors=[]。
+- 探针修正：首轮 `.dev-smoke/artifact-mcp-6mUJRn/evidence.json` 错误预期缺失文件 retry 会产生清单版本，实际返回 artifact_no_retry_candidate；宿主为满足错误版本要求多做一次 collect，严格次数断言失败。旧环境两轮已完成并完整清理，未重放旧任务；修正探针后在上述新专用环境验证。真实原生矩阵覆盖明确拒绝分支，固定候选的成功重传另由两宿主 MCP 的真实 SQLite/HTTP 测试及 T4b 实际 Runner/模型证据覆盖。
+- 构建与安装：`bun run build:hapi --all`、`bun run package --all --reuse-hapi` 通过，五个候选包包含 macOS/Linux arm64/x64 二进制、固定 HAPI c4c432ab0b376d254bf21571f4aaf51cbe3251f4 的源码和许可。HAPI 无源码变化，不重复其 T5 跨包检查；既有 CLI 环境限制仍以 T5 记录为准。
+- 实际 Linux x64 npm 安装：`.dev-smoke/install-j9xFCC/evidence.json` success=true，15 个 MCP 工具目录和 task/artifact 命令在无 Bun/源码 PATH 下可用；local、Hub 客户端、无 Runner Hub、SSE/WebSocket、信号、卸载留存由其 `services/service-tSd5GP/evidence.json` 验证。安装后 CLI 重启上述真实夹具服务，核对所有 16 轮的原生身份、完成 revision、报告和成果 hash；`.dev-smoke/artifact-package-o91pXd/evidence.json` success=true、cleanupErrors=[]。其他三个平台本次是编译/打包证据，未冒称实际执行；未公开发布。
+- 边界：专用原生配置继承现有认证和权限，测试只批准夹具内已审阅文件操作。全矩阵最初构建先于最后的错误提示文字和 FIFO 拒绝修正，正常普通文件路径未变；最终检查、候选包及安装后的下载验证包含最终代码。真实跨机网络/仓库回收仍属后续 Change。完整 R1–R8 映射见 [验收](acceptance.md)。
+- Commit：`task-artifact-delivery T6: expose artifact MCP workflows and verify candidate installation`

@@ -236,9 +236,18 @@ runweft task workspace remove <任务ID> --discard-ignored
 | `send_input` | 传 `id`、`message`，默认 `mode=next`；Codex 的 `mode=steer` 还须传活跃 `round_id` |
 | `interrupt_agent` | 传 `id`、`round_id`，请求取消该轮次，再通过读取/等待确认停止 |
 | `retry_finish` | 修复 Git 收尾错误后，传 `id`、`round_id` 重试成果封存；不重跑模型 |
+| `upload_artifact` | 上传宿主工作目录内的普通文件；传 `path`，可指定 `name` 和稳定的 `request_id`，返回 `artifact.id`、大小及摘要 |
+| `read_artifact` | 传 `id` 或 `request_id` 之一，查询中心文件元数据和状态，不返回字节内容 |
+| `download_artifact` | 传 `id`、目标文件 `path`，校验后保存；明确替换已有文件才设 `overwrite=true` |
+| `retry_artifacts` | 传任务 `id`、`round_id`，重传该轮固定候选；缺失文件须补收，不重跑模型 |
+| `collect_artifacts` | 传任务 `id`、`round_id`、`files: [{name, relativePath}]`，在任务静止后补收并生成新版本 |
 | `respond_to_permission` | 传 `id`、`round_id`、原生 `request_id`、`decision`，显式响应当前审批；可带原生 `answers` |
 
 `spawn_agent`/`send_input` 的接受结果不等于任务完成。省略 `request_id` 时，同一次原生调用有稳定请求 ID；重新发起另一次调用会生成新 ID。遇到模糊接受响应，先 `list_agents` 查已接受记录，再用原 `request_id` 和相同参数重试，避免重复派生。审批工具的 `request_id` 则是原生审批 ID，两者用途不同。
+
+带文件的任务先调用 `upload_artifact`，再将结果的 `artifact.id` 放到 `spawn_agent` 或 `send_input(mode=next)` 的 `inputs: [{artifactId, name?}]`，输出声明用 `outputs: [{name, relativePath}]`。每轮独立声明，`steer` 不接受附件。`read_agent` 的 `artifacts.manifest` 给出成功项的 `artifactId`，用 `download_artifact` 保存；`input_files` 展示输入与下载副本留存。文件重试和补收返回受理后仍须读取或等待，响应不明先用 `list_agents` 查已接受的文件操作及其 `request_id`，再查看 `read_agent.artifacts.pending`；保留原 ID 和参数重试。
+
+MCP 上传源和下载目标均限定宿主实际工作目录，包括符号链接解析后的路径；新下载目录也检查已有祖先。目录外文件可由操作者显式使用 CLI 处理。上传响应不明时用原 `request_id` 查询；预先指定 ID 可在宿主取消或失联后定位。文件工具只返回元数据和保存路径，不把二进制放进模型上下文。服务以 60 秒无进展及取消信号中止传输，不另设总时限；宿主自己的 MCP 调用超时仍有效，持续传输超过宿主时限时使用 CLI。
 
 概览提供 `status`、需处理原因、轮次和有界报告。`needs_attention` 可能是原生审批或工作区收尾错误，应根据 `attention` 和 `git` 区分；`unknown` 表示现有证据不能确认某个步骤，不应盲目重跑。`completed` 表示本轮执行及关闭已确认，worktree 还要求成果封存成功，不表示成果已合并或验收。缺少结构化报告时仍保留原生文本。
 
@@ -470,6 +479,8 @@ bun run test:worktree-tasks
 `test:task-mcp` 由两个真实原生宿主分别完成派生、等待、结果读取，验证子 CLI 拒绝递归委派和超过 60 秒的 MCP 等待；`RUNWEFT_SMOKE_HOST=codex|claude` 可只验证一个宿主。
 
 `test:collaboration` 覆盖 local 与同机 Hub 下两宿主 × 两 runtime 的八个组合，包括共享编辑、纯报告续接、其他 MCP 保留、Runweft 工具过滤、进程退出及实际 MCP 连接中断。`RUNWEFT_SMOKE_CASE=hub-claude-codex` 可选择一个组合；指定组合后加 `RUNWEFT_SMOKE_CONTROLS=1` 验证原生 MCP steer/不支持分支与定向中断。证据保存在 `.dev-smoke/collaboration-*`。这些测试会调用模型，只修改专用原生配置；同机 Hub 结果不代替真实跨机远端验收。
+
+`test:artifact-mcp` 使用同样的两宿主 × 两 runtime × local/同机 Hub 八组，实际通过 MCP 上传、带输入派生、读取输出、重试/补收并下载，第二轮续接同一原生会话。Hub 的两个交叉 runtime 组合使用独立 worktree，其余使用 shared；可用 `RUNWEFT_SMOKE_CASE` 选择单组。证据在 `.dev-smoke/artifact-mcp-*`，测试配置与数据独立保存，结束后关闭自建服务。
 
 
 ### 文件清理与用量

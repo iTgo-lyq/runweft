@@ -16,6 +16,12 @@ import { taskOutputs } from '../src/tasks/commands';
 import { taskFixture, until } from './tasks-fixture';
 import { workspaces } from './workspaces-fixture';
 import { fixture } from './helpers';
+import { Client } from '@modelcontextprotocol/sdk/client/index.js';
+import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
+import { atomicWrite, dataPaths, loadConfig } from '../src/config';
+import { initAgent } from '../src/agents/definitions';
+import { createMcpServer } from '../src/mcp/server';
+import { recordClaudeCall } from '../src/mcp/claude-hook';
 
 const cleanup: Array<() => void | Promise<void>> = [];
 afterEach(async () => { for (const fn of cleanup.splice(0).reverse()) await fn(); });
@@ -153,6 +159,45 @@ test('retry uploads only the frozen failed candidate and wait consumes completed
     const updated = await h.post('wait', { ids: [first.agent_id], timeoutMs: 0, afterRevision: { [first.agent_id]: wait.agents[0].revision } });
     expect(updated.agents[0].round_id).toBe(first.round_id); expect(updated.agents[0].revision).toBe(revised.artifacts_revision);
     expect(h.callsFiles.capture).toBe(1); expect(h.calls.spawn).toBe(1); expect(h.calls.send).toBe(2);
+});
+
+test('both MCP hosts retry fixed candidates and collect new versions with native call idempotency and no model replay', async () => {
+    for (const host of ['codex', 'claude'] as const) {
+        const h = await harness(); h.sources.set('one', 'ORIGINAL'); h.faultsFiles.failName = 'one';
+        const config = loadConfig(h.home, { GIT_CEILING_DIRECTORIES: h.home }); config.config.server.port = Number(new URL(h.url).port);
+        atomicWrite(join(dataPaths(config).hapiClient, 'settings.json'), JSON.stringify({ machineId: 'own' }));
+        atomicWrite(join(dataPaths(config).hapiServer, 'settings.json'), JSON.stringify({ cliApiToken: 'test-alpha' }));
+        initAgent(config, h.cwd, 'files', { runtime: h.runtime.id });
+        const server = createMcpServer({ client: host, cwd: h.cwd, config: () => config }), client = new Client({ name: 'file-recovery', version: '1' });
+        const [left, right] = InMemoryTransport.createLinkedPair(); await server.connect(left); await client.connect(right);
+        cleanup.push(async () => { await client.close(); await server.close(); });
+        const call = async (name: string, args: Record<string, unknown>, callId = randomUUID(), parent = 'file-parent') => {
+            if (host === 'claude') recordClaudeCall(config, { hook_event_name: 'PreToolUse', tool_name: `mcp__runweft__${name}`, tool_use_id: callId, session_id: parent, cwd: h.cwd });
+            const result = await client.callTool({ name, arguments: args, _meta: host === 'codex' ? { threadId: parent, sessionId: parent, callId } : { 'claudecode/toolUseId': callId } });
+            return result.structuredContent as Record<string, any>;
+        };
+        const first = await call('spawn_agent', { agent_type: 'files', message: 'Files', outputs: [{ name: 'one', relativePath: 'one' }] });
+        const running = await until(() => call('read_agent', { id: first.agent_id }), value => value.inputs?.[0]?.observation?.phase === 'accepted');
+        h.complete(running.session_id);
+        const failed = await until(() => call('read_agent', { id: first.agent_id }), value => value.status === 'completed' && !value.artifacts.pending.length);
+        expect(failed.artifacts.status).toBe('incomplete'); h.sources.set('one', 'CHANGED'); h.faultsFiles.failName = '';
+        const args = { id: first.agent_id, round_id: first.round_id }, callId = randomUUID();
+        expect((await call('retry_artifacts', args, randomUUID(), 'other-parent')).error.code).toBe('task_parent_mismatch');
+        const accepted = await call('retry_artifacts', args, callId);
+        expect(await call('retry_artifacts', args, callId)).toEqual(accepted);
+        expect((await call('list_agents', {})).agents[0].accepted_requests.some((value: any) => value.request_id === accepted.request_id && value.artifact_operation_id === accepted.artifact_operation_id)).toBe(true);
+        const retried = await until(() => call('read_agent', { id: first.agent_id }), value => value.artifacts.manifest.version === 2 && !value.artifacts.pending.length);
+        expect(retried.artifacts.status).toBe('delivered'); expect(retried.completed_revision).toBe(failed.completed_revision);
+        expect(retried.artifacts.manifest.items[0].sha256).toBe(createHash('sha256').update('ORIGINAL').digest('hex'));
+        const files = [{ name: 'one', relativePath: 'one' }], collectId = randomUUID();
+        const collected = await call('collect_artifacts', { ...args, files }, collectId);
+        expect(await call('collect_artifacts', { ...args, files }, collectId)).toEqual(collected);
+        const updated = await until(() => call('read_agent', { id: first.agent_id }), value => value.artifacts.manifest.version === 3 && !value.artifacts.pending.length);
+        expect(updated.artifacts.manifest.items[0].sha256).toBe(createHash('sha256').update('CHANGED').digest('hex'));
+        expect(updated.completed_revision).toBe(failed.completed_revision); expect(updated.native_session_id).toBe(failed.native_session_id);
+        expect(h.calls.spawn).toBe(1); expect(h.calls.send).toBe(1); expect(h.calls.resume).toBe(0);
+        expect((await call('wait', { ids: [first.agent_id], timeout_ms: 0, after_revision: { [first.agent_id]: retried.revision } })).agents[0].revision).toBe(updated.artifacts_revision);
+    }
 });
 
 test('collect records a later capture and resumes on a completed round after coordinator restart without a model', async () => {

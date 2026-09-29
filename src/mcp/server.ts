@@ -9,6 +9,7 @@ import { fetchJson, hapiClient } from '../hapi';
 import { bindWorkspace, type Workspace } from '../workspaces';
 import { resolveHostIdentity, type HostClient, type HostIdentity } from './identity';
 import { taskTools } from './tasks';
+import { artifactTools } from './artifacts';
 
 export type McpCallContext = { identity: HostIdentity; workspace: Workspace; config: ResolvedConfig; signal: AbortSignal };
 export type McpTool = {
@@ -44,7 +45,7 @@ const diagnostic: McpTool = {
     },
 };
 
-export function productTools(): McpTool[] { return [diagnostic, ...taskTools()]; }
+export function productTools(): McpTool[] { return [diagnostic, ...taskTools(), ...artifactTools()]; }
 
 function result(value: Record<string, unknown>, isError = false): CallToolResult {
     return { content: [{ type: 'text', text: JSON.stringify(value) }], structuredContent: value, ...(isError ? { isError: true } : {}) };

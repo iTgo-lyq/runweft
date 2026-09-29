@@ -9,6 +9,7 @@ import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js'
 
 const packageRoot = resolve(process.argv[2] ?? 'dist/packages');
 const workspaceFixtures = JSON.parse(process.env.RUNWEFT_SMOKE_WORKTREE_EVIDENCE ?? '[]');
+const artifactFixture = process.env.RUNWEFT_SMOKE_ARTIFACT_EVIDENCE;
 assert(Array.isArray(workspaceFixtures) && workspaceFixtures.every(file => typeof file === 'string'));
 const index = JSON.parse(readFileSync(join(packageRoot, 'index.json'), 'utf8'));
 const smokeRoot = resolve(process.env.RUNWEFT_SMOKE_ROOT ?? '.dev-smoke');
@@ -71,6 +72,7 @@ try {
     const platformDirectory = dirname(require.resolve(`${platformName}/package.json`));
     const guide = readFileSync(join(prefix, 'lib', 'node_modules', 'runweft', 'README.md'), 'utf8');
     assert(guide.includes('retry-finish')); assert(guide.includes('task workspace remove')); assert(guide.includes('Git common directory'));
+    assert(guide.includes('upload_artifact')); assert(guide.includes('task artifacts release'));
     assert(requests.includes('/runweft'));
     assert(requests.some(path => path.endsWith(`${platformName}-${index.version}.tgz`)));
     for (const file of ['bin/runweft', 'bin/hapi', 'HAPI-LICENSE', 'HAPI-NOTICE', 'SOURCES.txt', 'hapi-source.tar.gz']) assert(existsSync(join(platformDirectory, file)), `Missing packaged ${file}`);
@@ -84,6 +86,7 @@ try {
     const spawnHelp = spawnSync(cli, ['task', 'spawn', '--help'], { env: cleanEnv, cwd: consumer, encoding: 'utf8' });
     assert.equal(spawnHelp.status, 0, spawnHelp.stderr);
     assert(spawnHelp.stdout.includes('--workspace-mode')); assert(spawnHelp.stdout.includes('--base'));
+    assert(spawnHelp.stdout.includes('--input')); assert(spawnHelp.stdout.includes('--output'));
     const mcpHome = join(root, 'mcp-discovery');
     const transport = new StdioClientTransport({ command: cli, args: ['--home', mcpHome, 'mcp', 'serve', '--client', 'codex'],
         cwd: consumer, env: cleanEnv, stderr: 'pipe' });
@@ -91,7 +94,7 @@ try {
     const client = new Client({ name: 'installed-runweft-probe', version: '1' });
     try {
         await client.connect(transport, { timeout: 5000 });
-        assert.deepEqual((await client.listTools()).tools.map(tool => tool.name), ['runweft_status', 'list_agent_definitions', 'spawn_agent', 'list_agents', 'read_agent', 'wait', 'send_input', 'interrupt_agent', 'retry_finish', 'respond_to_permission']);
+        assert.deepEqual((await client.listTools()).tools.map(tool => tool.name), ['runweft_status', 'list_agent_definitions', 'spawn_agent', 'list_agents', 'read_agent', 'wait', 'send_input', 'interrupt_agent', 'retry_finish', 'retry_artifacts', 'collect_artifacts', 'respond_to_permission', 'upload_artifact', 'read_artifact', 'download_artifact']);
         assert(!existsSync(mcpHome), 'MCP discovery created runtime data');
     } finally { await client.close(); }
     evidence.checks.push('installed task commands and side-effect-free MCP catalog without Bun or source checkout on PATH');
@@ -100,6 +103,10 @@ try {
     if (workspaceFixtures.length) {
         await command(process.execPath, [resolve('scripts/smoke-worktree-package.mjs'), cli, ...workspaceFixtures.map(file => resolve(file))], { cwd: process.cwd(), env: cleanEnv });
         evidence.checks.push('installed CLI reads and explicitly removes completed real task worktrees; reports and Git refs remain');
+    }
+    if (artifactFixture) {
+        await command(process.execPath, [resolve('scripts/smoke-artifact-package.mjs'), cli, resolve(artifactFixture)], { cwd: process.cwd(), env: cleanEnv });
+        evidence.checks.push('installed CLI reads and downloads both real artifact rounds after service restart without model replay');
     }
     const unavailable = `${platformDirectory}.unavailable`;
     renameSync(platformDirectory, unavailable);
