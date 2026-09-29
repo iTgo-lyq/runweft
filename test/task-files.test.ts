@@ -51,7 +51,7 @@ async function harness(worktree = false) {
             else if (!faults.hold) {
                 operation!.status = faults.transferFailure ? 'failed' : 'succeeded';
                 if (faults.transferFailure) operation!.error = { code: 'artifact_input_mismatch', message: 'Fixture checksum mismatch' };
-                else operation!.files = operation!.request.files.map(input => ({ ...input, path: `/prepared-files/${body.operationId}/${input.name}` }));
+                else if (operation!.request.action === 'materialize') operation!.files = operation!.request.files.map(input => ({ ...input, path: `/prepared-files/${body.operationId}/${input.name}` }));
             }
         }
         return Response.json({ operation });

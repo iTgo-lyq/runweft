@@ -5,7 +5,7 @@
   "type": "module",
   "packageManager": "bun@1.4.2",
   "hapi": {
-    "revision": "96acb4c1fce3badd7b79077caf6c055b64a8c467",
+    "revision": "8b648f9433d4d7ff0c6d6c8a3c88951bc0f9c38e",
     "version": "0.30.7",
     "protocolVersion": 1
   },
@@ -31,7 +31,8 @@
     "package": "bun scripts/package.ts",
     "test:artifacts": "bun scripts/smoke-artifacts.ts",
     "test:inputs": "bun scripts/smoke-inputs.ts",
-    "test:task-inputs": "bun scripts/smoke-task-inputs.ts"
+    "test:task-inputs": "bun scripts/smoke-task-inputs.ts",
+    "test:outputs": "bun scripts/smoke-outputs.ts"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.25.1",

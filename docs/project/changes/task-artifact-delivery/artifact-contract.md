@@ -32,7 +32,7 @@ SQLite 保存对象和 references，字节保存到 `HAPI_HOME/artifacts/<namesp
 
 限速流验证上传/下载仍持续进展时不会因固定总时限截断，空闲超时默认 60 秒。413 与非 JSON 代理响应返回明确操作提示。
 
-服务与 Runner 分别声明 `artifacts: 1`、`artifactTransfers: 1` 能力。需要附件时先核对；既有无附件会话不要求新增能力。shared 协议导出 schema/types，Runweft 直接消费，不自行再造另一套 wire 格式。
+服务与 Runner 分别声明 `artifacts: 1`、`artifactTransfers: 1` 能力；输出另声明 `artifactOutputs: 1`，旧输入 Runner 不被误判为支持输出。需要附件时先核对；既有无附件会话不要求新增能力。shared 协议导出 schema/types，Runweft 直接消费，不自行再造另一套 wire 格式。
 
 ## 3. 机器操作
 
@@ -42,9 +42,9 @@ SQLite 保存对象和 references，字节保存到 `HAPI_HOME/artifacts/<namesp
 - `capture`：operationId、cwd、files[{name,relativePath}]。解析相对 cwd 路径，拒绝目录/逃逸/非 regular file，逐项流式捕获到独立 spool；返回大小/hash/capturedAt 或明确错误。绝不根据 prompt 扫描其他文件。
 - `deliver`：operationId、captureOperationId、指定候选、每项固定 upload requestId/reference。只上传已捕获字节，不重新读取 cwd；完成后返回 Hub 对象 ID 与发布事实。
 - `inspect`：查询原 operation；无需活跃 agent/session。
-- `release`：显式释放已无业务引用且无进行中操作的本机 inputs/spool，结果不等于删除中心对象。
+- `release`：显式释放已无业务引用且无进行中操作的本机 inputs/spool，结果不等于删除中心对象；capture 可指定 names 只释放已被中心清单确认的成功候选，未交付项保持。
 
-受理先持久记录请求指纹，后台执行，RPC 快速返回；同 ID 不同参数拒绝。receipt 状态 accepted/running/succeeded/failed/unknown，保存逐项结果。文件 copy/upload 没有模型/Git 副作用，可在核对同一已捕获内容后重试；未明确终态先 inspect。重启不将半个 capture 当完整候选，也不重新抓源路径充当同一次成功捕获。
+受理先持久记录请求指纹，后台执行，RPC 快速返回；同 ID 不同参数拒绝。receipt 状态 accepted/running/succeeded/failed/unknown，保存逐项结果。文件 copy/upload 没有模型/Git 副作用，可在核对同一已捕获内容后重试；未明确终态先 inspect。重启将未完成 capture 确认为部分失败，保留每项已持久捕获的结果；未捕获项显式补收，不重新抓源路径充当同一次成功捕获。
 
 materialize/capture/deliver/release 不是一般脚本执行或可配置 workflow；复用 Runner 生命周期、PathPolicy、固定 Hub URL/token 和已有连接。API 不接受 shell 命令、任意环境或外部下载地址。
 

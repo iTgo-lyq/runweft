@@ -49,3 +49,14 @@
 - 原生验证：配套 Linux x64 编译 CLI 的 `bun scripts/smoke-task-inputs.ts` 通过 Codex/Claude × shared/worktree × 两轮，共 8 轮。模型实际读回每轮随机输入与项目指令标记；各组轮次之间重启服务，第二轮仍复用同一 native session。核对输入 hash、真实目录、引用防删除、主仓库 HEAD/状态不变、受控 MCP 禁用 metadata 与每轮停止。证据 `.dev-smoke/task-inputs-YvyIt7/evidence.json`，success=true、cleanupErrors=[]，8 个记录 PID 均已退出。沿专用配置副本继承本环境权限，不将 Codex 的既有 yolo 配置称为严格沙箱验证。
 - 构建：`bun run build` 通过；HAPI 源码与 revision 保持 `96acb4c1fce3badd7b79077caf6c055b64a8c467`，无需重复其已通过的检查。四平台安装、Hub/MCP 附件组合仍在 T6；本任务不开放尚未实现的输出参数。
 - Commit：`task-artifact-delivery T3: attach frozen inputs to CLI task rounds`
+
+
+## T4 HAPI 固定输出候选与机器交付
+
+- 结果：HAPI 捕获/交付和机器组合已完成。原 T4 按职责细分为机器交付 T4 与业务清单 T4b，范围不变；版本清单、retry/collect、CLI 输出参数与真实模型组合在 T4b 接通，本任务不提前开放。
+- HAPI：现有机器文件接口增加 capture/deliver，分别保存捕获候选和固定上传身份；逐项错误不覆盖其他成功项，停止重启不重新采集旧 cwd。capture 的 names 释放只清选定 spool，正在传输时拒绝释放；候选与工作区生命周期分开。Runner 另声明 artifactOutputs:1，旧输入 Runner 明确拒绝输出。流式复制检查 regular file、目录范围和读取期间变化，上传沿现有认证/原子 pin 预约与发布校验。输入临时文件改用独立随机名，避免和合法的 .part 或 240 字节名冲突。
+- 检查：HAPI 跨包 typecheck 通过；Hub 全量 1407 pass / 3 skip，Web 3249 pass、Shared 323 pass、Relay 118 pass；CLI 全量 2996 pass / 11 skip，唯一失败仍是既有 skills 非 Git 用例读取 /tmp 上级工程指令。单独设置 Git ceiling 后该用例仍失败，未改无关生产代码或删除 /tmp/.git。最终附件组 11 pass、CLI typecheck 通过，涵盖 HTTP 发布丢响应、大小拒绝、重启固定候选、逐项清理、路径和输入回归；root typecheck 通过。日志 `.dev-smoke/artifact-t4-*.log`。
+- HAPI Commit：`Capture and deliver persistent output candidates without native reexecution`（`8b648f9433d4d7ff0c6d6c8a3c88951bc0f9c38e`）；root pin 已更新。
+- 真实验证：`bun run build:hapi`、`bun run build` 与 `bun run test:outputs` 通过。独立 Hub/Runner 专用数据根，无模型：捕获小文件、72 MiB 文件和缺失项，真实服务限额使大文件部分失败，小文件仍发布并受 pin 保护；单独释放小文件 spool，变更原路径后旧 capture 不重新采集；显式新 capture 收集迟到文件。删除工作区、重启 Hub/Runner 并提高服务限额后，同上传身份恢复小文件、交付大候选。停止 Runner 后仍从 Hub 下载两项并核对 SHA-256，成功 spool 已释放，无原生 session。证据 `.dev-smoke/outputs-machine-neErem/evidence.json`，success=true、cleanupErrors=[]。
+- 兼容验证：root 输入任务回归 6 pass / 128 assertions、脚本 typecheck 通过；配套构建为 Linux x64，四平台候选安装仍在 T6。
+- Commit：`task-artifact-delivery T4: capture and deliver fixed output candidates`
