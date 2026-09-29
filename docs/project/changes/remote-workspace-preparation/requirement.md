@@ -1,6 +1,6 @@
 # 远端任务启动前的工作区准备
 
-> 状态：草稿
+> 状态：已确认
 > 规模：大型
 > 更新：2026-09-29
 > 确认依据：远端任务必须继承 Git 主工作区；各 subagent 独立 worktree，后续轮次复用；启动前完成 Git、目录、输入和上下文，依赖由 agent 按需安装。2026-09-29 用户确认通过 bundle 传输已提交基线，支持未 push 或没有 remote 的仓库。
@@ -9,7 +9,7 @@
 
 远端 subagent 在确定的主仓库基线上开始工作，不负责通过首轮 prompt 自行初始化任务根仓库。本 Change 的验收边界是“环境已准备，并且只有有效环境才能启动”，不包含开发结果回收。
 
-通过 bundle 传输已提交基线、支持未 push 或没有 remote 的仓库已确认；具体来源优化与持久化实现见 [Design](design.md)。
+通过 bundle 传输已提交基线、支持未 push 或没有 remote 的仓库已确认；具体传输、保留和失败处理见 [Technical](technical.md)；[Design](design.md)保留前期讨论。
 
 ## Change 依赖
 
@@ -46,7 +46,7 @@
 
 Git 基线、目录、输入附件和上下文准备并校验完成后，才允许启动 agent；任一必需项失败则没有 agent 进程。启动时还需防止使用已经失效或被改动的环境。项目依赖由 agent 启动后安装。
 
-## 验收标准草案
+## 验收标准
 
 - [ ] 非 Git、无 commit、ref 歧义或未指定基线的请求被拒绝，没有远端 agent 进程。
 - [ ] 主分支移动后实际远端 HEAD 仍等于冻结 SHA；未提交内容明确排除。
@@ -56,6 +56,16 @@ Git 基线、目录、输入附件和上下文准备并校验完成后，才允�
 - [ ] LFS、子模块、浅克隆或对象格式所需能力不具备时明确拒绝，不静默提供残缺目录。
 - [ ] 准备回执丢失可查询原操作，未知 spawn 不导致重复 agent。
 
+## 准备操作的产品边界
+
+提供不启动模型的 Git 准备与诊断入口，复用现有 Agent/runtime 选择、请求身份、文件通道和数据根；用户无需手工 clone、上传 bundle 或填写远端绝对路径。正常远端委派将在下游 Change 自动复用基线服务，再继续已有工作区、输入和上下文流程；不要求先执行诊断命令，也不接管诊断环境。相同 namespace、源仓库和 commit 复用恢复快照，LFS 实体按内容复用。
+
+固定基线包括主仓库 Git 历史、该 commit 所引用的递归子模块提交，以及该基线工作树需要的 LFS 实体。源端没有必要对象时明确拒绝并提示先在源仓库取得它们；不自动改动源工作树、refs、初始化子模块或修改用户 Git 配置。未提交子模块修改同样排除。
+
+准备记录和 worktree 默认保留，支持查询与显式释放。释放不得删活跃/未知执行、未封存修改或被其他环境/成果引用的唯一恢复对象。
+
+2026-09-29 用户持续授权主 agent 落实细节、逐任务提交与本地自动验收；本 Change 的一次 iclaude Plan 评审完成后执行。
+
 ## 已确认的传输策略
 
 2026-09-29 用户确认上述 bundle 与仓库支持范围。基线对象需保留以支持后续验证与取回；首传成本、来源复用与配额在正式方案中落实。
@@ -63,3 +73,7 @@ Git 基线、目录、输入附件和上下文准备并校验完成后，才允�
 ## 协作资源
 
 - [远端 HAPI 与 Multica 调查](research.md)（2026-09-28）：Multica 的按需 checkout 由程序执行，但初始化时机不沿用；HAPI 现有 worktree 启动不固定主机选择的 commit。
+
+- [Git bundle](https://git-scm.com/docs/git-bundle)、[Git submodule](https://git-scm.com/docs/git-submodule)、[Git LFS 文件枚举](https://github.com/git-lfs/git-lfs/blob/main/docs/man/git-lfs-ls-files.adoc)（读取 2026-09-29）：完整 bundle、Git 原生子模块初始化与固定 commit 的 LFS 枚举；本地原语实验与当前 HAPI 差距见 [Research](research.md#2026-09-29-实现前复核)。
+
+- [Git 环境变量](https://git-scm.com/docs/git)（读取 2026-09-29）：协议白名单与 replacement refs 控制用于固定对象导出；不改变原生 agent 执行权限。

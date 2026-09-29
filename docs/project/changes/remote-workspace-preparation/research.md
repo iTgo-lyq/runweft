@@ -46,3 +46,48 @@ Multica 的 daemon 在执行机器上领取任务、准备目录、启动 agent 
 
 
 启动关联及上传证据见[执行基础调查](../../archive/2026-09-29-hapi-subagent-foundation/research.md#远端设计补充证据)；代码传输实验见[结果回收调查](../remote-result-delivery/research.md)。Multica 表格中的结果相关证据供相应 Change 引用，不扩大本 Change 实现范围。
+
+
+## 2026-09-29 实现前复核
+
+本次检查根仓库 `76212cb`、配套 HAPI `c4c432ab0b376d254bf21571f4aaf51cbe3251f4`。上述 9 月 28 日上游调查是历史依据，不能代表当前配套实现。
+
+| 已有实现 | 本 Change 的复用点与缺口 |
+| --- | --- |
+| HAPI `cli/src/runner/workspaces/manager.ts` | resolve 固定 commit/commonDir/相对 cwd；prepare、finalize、remove、launch 已有持久回执、仓库锁与进程归属。source 当前要求本机 machineId/commonDir，不能直接接受另一机器的路径。远端应导入本机缓存，再产生本机 source；保留上层 origin 身份，不削弱原检查。 |
+| HAPI `cli/src/runner/workspaces/git.ts` | 已有 Git 子进程超时、终止核对、stderr 限制与环境清理。bundle 写入文件，不经过 16 MiB stdout 缓冲。沿用执行工具，不新增通用执行器。 |
+| HAPI `cli/src/runner/artifacts/` | capture 固定候选、deliver、materialize、inspect、release 已可传任意文件，无需会话。单次最多 100 项，较多 Git/LFS 文件可按确定批次复用现有操作。中心已有 namespace、hash/长度、配额与 recovery pin。 |
+| Runweft `src/tasks/coordinator.ts` | 当前明确拒绝跨机任务；TaskWorkspaces/TaskFiles 已在原生启动前完成准备，context 在中心固定后传原生入口。本 Change 保持正式远端 spawn 的拒绝，输出可由 C10 消费的准备记录。 |
+| 数据布局 | 中心业务 `state.sqlite`、HAPI 中心 artifacts、每连接 Runner HAPI_HOME 已集中；新增 Git 导出与仓库缓存归 HAPI_HOME/workspaces，不放随机系统临时目录。 |
+
+### Git 原语实测
+
+在 `.dev-smoke/remote-preparation-research/` 中使用专用仓库和局部 Git/LFS 配置，未改用户全局配置。环境 Git 2.39.5、Git LFS 3.3.0。
+
+成功证据：`.dev-smoke/remote-preparation-research/git-9c3qehqo/evidence.json`，`success=true`。验证完整 bundle → 空 bare cache 导入/fsck → 两个共享对象库的独立 worktree；源 dirty/untracked 不进入目标。子模块 commit 独立打包，目标以命令级本地 cache URL 初始化，再按 oid/size 放入 LFS 实体并执行原生 checkout，文件逐字节一致。sha256 仓库使用自身对象格式导入成功。
+
+补充证据 `.dev-smoke/remote-preparation-research/fixed-lfs-v_seb41s/evidence.json` 验证：源端 LFS 文件已提交为新内容后，`git lfs ls-files --json <旧 commit>` 仍返回旧 oid/size，允许按固定基线导出，不必 checkout 或读取当前工作文件。
+
+递归补充证据 `.dev-smoke/remote-preparation-research/nested-g9ndzbiv/evidence.json`：两层子模块分别以完整 bundle 导入 cache，将三个源路径移走后，仅用命令级本地 cache URL、逐层 `submodule update --init --checkout` 完成初始化；含空格模块路径通过，HEAD 与 gitlink 一致、工作树干净。
+
+浅克隆两提交 fixture 的 bundle 在空仓库 `verify` 返回 0，但 `fetch` 返回 1。因此 `bundle verify` 单独不足以证明完整闭包；源端拒绝 shallow，并在独立空对象库实际导入和校验选定 commit。partial clone/alternates 同样以独立导入结果判断，不能依赖源端隐藏的对象来源。
+
+初次实验把 bare HEAD 指到 `refs/hapi/...`，Git worktree 拒绝“HEAD not found below refs/heads”；改为受控 `refs/heads/cache-base` 后成功。该分支只提供正常 bare HEAD，业务基线仍是单独不可变 ref；后续导入不移动它。另一轮失败是实验 mkdir 未允许已存在 LFS 目录，修正 fixture 后通过，不是产品实现验证。
+
+**证据边界：** 上述仅验证 Git/LFS 原语，尚未接通 HAPI RPC、中心附件、程序化准备或原生模型，不代表远端应用已交付。当前主仓库中的 HAPI submodule 也说明：仅从 `.gitmodules` URL 拉取不足以覆盖尚未 push 的子模块提交。
+
+### 方案推导
+
+- 使用主仓库及基线引用的各子模块 bundle，LFS 按内容对象单独传输；避免依赖执行机能访问源机绝对路径、Git remote 或临时凭据。
+- 源端从固定 commit 的树枚举资产，不能从后来移动的 HEAD 或脏工作树推断清单。源端缺少子模块提交或 LFS 实体时提示先取得对象，不自动 fetch/checkout 用户仓库。
+- 保留来源身份与执行缓存身份两份不同含义的记录。缓存按来源 repositoryId 复用，同一来源的并行任务共享 cache，各 environment 独立 worktree；不是每会话 clone。
+- Hub 只需原有文件服务持久保存经源端验证的基线对象和 pin，本 Change 不要求无 Runner 的 Hub 安装 Git。目标 import 再独立验证；C10 的成果验证方式在其 Technical 中落实。
+
+
+### iclaude 建议的独立验证
+
+评审提出用自有 scratch bare 的 alternates 导出，消除源 ref 写入及其释放依赖。主 agent 在 `.dev-smoke/remote-preparation-research/scratch-17kszxiw/evidence.json` 独立实测：完整源导出成功，源目录移走后 bundle 仍可导入空库/fsck；shallow 因缺父对象失败，partial 因缺 blob 失败；三种情况源 refs 均未改变。采用此路径，去掉源端额外一次全量验证导入，保留目标独立导入放行。
+
+另一个实验 `.dev-smoke/remote-preparation-research/no-fetch-faraexk6/evidence.json` 证实原 promisor 仓库直接 bundle 会尝试懒取缺失对象；空 `GIT_ALLOW_PROTOCOL` 将其阻止。按 [Git 官方环境变量说明](https://git-scm.com/docs/git)，源读取/导出命令使用空协议白名单，目标导入只在处理自有已校验文件时允许 file。这是 Git 对象准备的副作用控制，不是新的 agent 权限沙箱。
+
+评审的缓存来源标识建议采用显式 source.snapshot；其仅检查 LFS checkout 标志的性能建议与现有 Git clean 检查组合使用，准备时仍完整校验实体。相同快照与 LFS 复用、中间副本及时释放、C10 不接管诊断环境均纳入最终 Technical；上方“方案推导”只作为推导依据，最终契约以 Technical 为准。
