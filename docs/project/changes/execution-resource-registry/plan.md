@@ -39,7 +39,7 @@
 
 ### T3 统一资源 CLI 与使用说明
 
-- 状态：待开始
+- 状态：已完成
 - 交付：机器/runtime 分别 register/list/show/rename/unregister，runtime discover/check；本机默认、显式目标、默认/--all 列表、可操作诊断及集中数据说明。
 - 依赖：T2
 - 验收：空环境有明确下一步；当前连接本机可登记，发现不隐式注册，JSON 与人类输出表达同一事实；任意项目 cwd 共用全局注册，不生成项目级资源文件。

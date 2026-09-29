@@ -40,3 +40,10 @@
 - 真实 API 组合：最终配套编译程序、专用中心和独立 Hub 客户端/Runner、空原生配置，仅查询版本。实际发现 Codex 0.156.1 与 Claude Code 2.1.283；登记两种 runtime、重复登记、重命名、分开取消/恢复、namespace 隔离和中心重启后解析均通过；中心 local 配置可解析 Hub 客户端，客户端没有权威资源库。证据 `.dev-smoke/resources-api-dKomWj/evidence.json`，success=true、cleanupErrors=[]。不改真实用户配置、不运行模型、不冒充跨机器验收。
 - 范围：本任务提供资源 API 和调用层，正式资源 CLI、使用说明及可重复整体验收仍按 T3/T4 推进；HAPI 固定源码未变，不重复 T1 全量检查。
 - Commit：`execution-resource-registry T2: persist scoped resources and resolve execution targets`
+
+## T3 统一资源 CLI 与使用说明
+
+- 结果：统一 CLI 提供 machine/runtime 各自的 register/list/show/rename/unregister，以及 runtime discover/check；支持本机默认、Hub 显式机器、默认列表与 --all。人类与 JSON 输出包含当前连接、namespace、稳定 ID、登记/Runner/工具状态及观察时间；check 不可选时非零退出，discover 不因只安装一种 CLI 而失败。空环境提示 start 和最短登记命令，无隐式启服或安装。
+- 使用说明：说明机器/runtime/agent 的区别、后续按 ID 引用、取消/恢复、不自动迁移 Hub 引用、环境修改后重启 Runner，以及版本未知不等于认证失败。paths 与数据表说明中心 state.sqlite；Hub 客户端明确指出权威库位于中心，项目目录不生成资源配置。
+- 验证：`bun run typecheck`、`bun test ./test`（51 项、616 断言）、`bun run build` 通过；编译版 machine/runtime 帮助完整。新增实际 CLI 子进程对接真实网关/SQLite 的三项组合测试，覆盖空环境、输入错误、两个 cwd 同 ID、全部管理命令、名称保留、分别取消与恢复、JSON/人类一致、check 退出码、历史观察、版本超时及缺少命令。测试共用受控原生响应，不冒充真实模型或完整原生组合；T4 使用配套 Runner 验收正式 CLI。
+- Commit：`execution-resource-registry T3: expose machine and runtime commands with clear resource guidance`

@@ -1,6 +1,6 @@
 # Runweft 基础入口使用说明
 
-当前实现包含配置、HAPI 服务管理及 Codex/Claude Code 的 MCP 安装与身份诊断；宿主适配已通过本地真实验收，agent 定义、任务委派与看板尚未交付。这里不是完整协作版本的完成声明。
+当前实现包含配置、HAPI 服务管理、机器/runtime 登记及 Codex/Claude Code 的 MCP 安装与身份诊断；资源登记正在完成整体组合验收，agent 定义、任务委派与看板尚未交付。这里不是完整协作版本的完成声明。
 
 ## 安装与首次使用
 
@@ -49,6 +49,53 @@ runweft mcp restore <备份ID>
 ```
 
 每次实际修改先备份到 Runweft 数据目录的 `backups/mcp/`，输出备份位置与恢复命令。卸载只删除自己的注册及 hook，不删除其他设置或会话数据。恢复会还原该次操作前的完整文件快照；如果相关配置已有后续修改，会拒绝覆盖，此时可选择卸载自己的条目或根据备份手动处理。恢复操作自身也会备份。
+
+## 机器与 runtime
+
+机器是 HAPI Runner 的身份，runtime 是该机器上的 Codex 或 Claude Code。二者分别登记；后续 agent 定义通过 runtime ID 选择执行目标，不把展示名称当作路由。资源属于当前中心的 namespace，进入另一个项目目录仍使用同一份登记。
+
+```sh
+runweft start
+runweft machine register --name '我的开发机'
+runweft runtime discover
+runweft runtime register codex --name 'Codex 开发环境'
+runweft runtime register claude --name 'Claude 开发环境'
+runweft runtime list
+runweft runtime check <runtime-ID>
+```
+
+按需登记已安装的工具即可，不要求同时安装两种。`discover` 不创建登记，只通过 Runner 查询实际命令及版本，不运行模型；`register` 不启动服务或安装工具。省略机器 ID 时使用当前连接的本机身份，首次没有身份时提示先 `start`。机器在线、工具已发现和模型登录有效是不同事实；输出明确将模型认证与任务执行标为“未检查”。版本读取失败单独报告，只要实际命令与 HAPI 启动检查均通过，仍可登记和选用。
+
+```sh
+runweft machine list
+runweft machine list --all
+runweft machine show
+runweft machine rename <machine-ID> '新名称'
+runweft runtime show <runtime-ID>
+runweft runtime rename <runtime-ID> '新名称'
+runweft --json runtime check <runtime-ID>
+```
+
+机器列表默认显示已登记机器及当前本机，`--all` 包含历史和未登记机器；runtime 列表默认显示已登记项，`--all` 包含已取消项。展示名称可重复，最多 64 个字符；执行引用使用完整 ID。`show` 与 `list` 能正常显示不可选资源；显式 `runtime check` 在目标不可选时退出码为 1，JSON 仍在 stdout 返回相同状态和原因。离线或探测失败时保留原观察时间，不将历史版本当作当前证明。`discover` 即使缺少其中一种 CLI 也返回发现清单；连接或查询失败则报错。
+
+Hub 客户端可以明确指定同 namespace 内的执行机器：
+
+```sh
+runweft machine register <machine-ID>
+runweft runtime discover --machine <machine-ID>
+runweft runtime register codex --machine <machine-ID>
+```
+
+本地模式只选择当前连接的本机资源；需要其他机器时使用对应 Hub 连接。只托管 Hub 的中心不需要本机 Runner，可在 Hub 客户端管理已连接的其他机器。不同 Hub 不按展示名称共享或迁移 ID；无效引用会报错，不能自动换成同名目标。
+
+```sh
+runweft runtime unregister <runtime-ID>
+runweft machine unregister <machine-ID>
+```
+
+取消 runtime 登记禁止新任务选用它，保留原 ID；对同 machineId/flavor 再次 register 会恢复该 ID 和原名称。取消机器登记会列出受影响 runtime，使它们不可用于新任务，但保留它们各自的登记；恢复机器后可重新检查和选用。两种取消都不会停止原生任务、删除会话或修改 agent 定义；已有 agent 引用需恢复登记或显式重新选择。
+
+工具缺失或配置无效时，检查执行机器上的 PATH、原生 home 和命令覆盖。Runner 使用启动时的环境，修改后在那台机器运行 `runweft restart`，再 `runtime check`。资源操作无需工程初始化、Git 仓库或 agent 定义。
 
 ## 配置
 
@@ -134,7 +181,7 @@ Hub 客户端 `stop` 只停止该机器在当前连接上的 Runner，不关闭�
 | --- | --- |
 | `config.yaml` | 可编辑配置；升级保留 |
 | `server/hapi/` | 托管 Hub 的原有数据库、令牌、JWT 密钥及状态；备份保留 |
-| `server/runweft/` | 上层服务数据位置；当前不预建任务表 |
+| `server/runweft/state.sqlite` | 中心的全局机器/runtime 登记、稳定 ID 和最后一次工具观察；不保存模型凭据或原生会话 |
 | `connections/<连接>/hapi/` | 本机 Runner 的连接配置、机器身份和原生日志；各连接分开 |
 | `client.sqlite` | 本机真实工作目录绑定；Claude MCP hook 的逐调用身份用后删除，未消费记录保留 24 小时 |
 | `logs/` | 托管服务日志；当前由部署方按磁盘需要归档或轮转 |
@@ -143,6 +190,8 @@ Hub 客户端 `stop` 只停止该机器在当前连接上的 Runner，不关闭�
 | `server/process.json` | 当前托管服务定位信息；正常停止会移除 |
 
 Codex/Claude Code 的配置和会话历史仍在各自原生目录，工作区源码仍在原处。不要删除整个数据根来修复安装问题。
+
+local 模式的资源库位于本机中心；hub 模式只读写所连中心的资源库，客户端不保留第二份权威登记。`paths` 显示本机可能托管中心的库路径，并在 hub 模式标明资源归属；备份资源登记须在中心停止服务后备份 `server/runweft/`（包括尚存的 SQLite WAL 文件），不能只备份客户端连接目录。
 
 升级时安装同一批次的主包与平台包，再按角色重启相应服务。`status` 区分已安装与正在运行的服务版本；`doctor` 检查固定 HAPI 兼容版本。更换二进制不自动删除旧数据，也不主动迁移用户已有 `~/.hapi`。有活跃模型任务时先收尾再更新执行组件。
 

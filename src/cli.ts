@@ -7,6 +7,7 @@ import { errorDetails } from './errors';
 import { bindWorkspace, listWorkspaces } from './workspaces';
 import { addServiceCommands } from './service-commands';
 import { addMcpCommands } from './mcp/commands';
+import { addResourceCommands } from './resources/commands';
 
 export const VERSION = pkg.version;
 
@@ -50,9 +51,11 @@ export function createProgram() {
     });
 
     program.command('paths').description('列出持久数据、缓存及原生配置的位置').action(() => {
-        const paths = dataPaths(context());
+        const c = context();
+        const paths = dataPaths(c);
         output(paths, [
             `数据根：${paths.home}`, `配置：${paths.config}`, `Hub 数据：${paths.server}`,
+            `本机中心业务库：${paths.state}${c.config.mode === 'hub' ? '（当前为 Hub 客户端，权威资源库位于所连中心）' : ''}`,
             `当前连接 HAPI 数据：${paths.hapiClient}`, `本机工作区绑定：${paths.bindings}`,
             `日志：${paths.logs}`, `配置备份：${paths.backups}`, `可再生缓存：${paths.cache}`, `临时目录：${paths.temporary}`,
             `原生 Codex：${paths.nativeCodex}`, `原生 Claude Code：${paths.nativeClaude}`,
@@ -70,6 +73,7 @@ export function createProgram() {
     });
     addServiceCommands(program, context, output);
     addMcpCommands(program, context, output);
+    addResourceCommands(program, context, output);
     program.addHelpText('after', '\n开始使用：\n  runweft start\n  runweft open\n\n编辑配置：runweft init，然后 runweft config show。\n持久数据默认位于 ~/.runweft；使用 --home 可选择其他位置。');
     return program;
 }

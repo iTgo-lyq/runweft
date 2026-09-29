@@ -69,6 +69,8 @@ HAPI 机器名称直接沿原 PATCH 修改，runtime 名称只改自己的展示
 
 公共 `ResourceClient` 执行 local 本机限制及默认列表过滤；中心 `ResourceService` 不依赖部署模式。JWT 验证沿现有网关提取为共用 handler，只有认证后的资源请求打开服务端数据库，并在请求完成后关闭连接；并发初始化和登记使用 SQLite 事务及唯一约束。
 
+CLI 的 show/list 返回当前可解释状态，不因其中一项不可选而失败；显式 runtime check 在不可选时返回退出码 1，JSON 状态仍在 stdout，与既有 doctor 一致。discover 是发现清单，缺少某一种 CLI 不使整个命令失败；连接、权限或探测请求失败仍非零退出。展示同时包含登记、Runner、实际命令、版本及观察时间，成功探测也明确保留认证/任务执行未检查。
+
 ## 验证与就绪性
 
 HAPI 查询扩展覆盖默认/离线列表、namespace、旧 Runner、实际 override 解析、版本失败与超时；共享契约按仓库要求执行类型与全测试。Runweft 覆盖并发重复登记、取消/恢复稳定 ID、目标不可改绑、namespace/连接分离、离线和 CLI 缺失、版本未知、结构化错误以及从任意 cwd 访问同一全局资源。
