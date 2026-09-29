@@ -5,7 +5,7 @@
   "type": "module",
   "packageManager": "bun@1.4.2",
   "hapi": {
-    "revision": "cb2810dc09b0eeb831f4ed81930a506397992967",
+    "revision": "58a2f6eac3acebafacb6c0827672ff91c77bb6ea",
     "version": "0.30.7",
     "protocolVersion": 1
   },

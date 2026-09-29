@@ -2,7 +2,7 @@
 
 > 来源：[Requirement](requirement.md)
 > 技术方案：[Technical](technical.md)
-> 状态：待执行
+> 状态：执行中
 > 执行模式：逐任务提交
 > 确认方式：按用户授权，当前工作区 iclaude 一次评审，主 agent 独立复核后执行。
 
@@ -22,7 +22,7 @@
 
 ### T1 HAPI 受控执行的 MCP 工具禁用
 
-- 状态：待开始
+- 状态：已完成
 - 交付：逐执行 disabledMcpServers 参数及能力声明，现有 metadata 保存、spawn/resume 转交、Codex/Claude 原生应用，Runweft 执行调用层兼容检查。
 - 依赖：已归档执行契约
 - 验收：真实 HAPI 启动、停止、原生续接均不暴露指定 MCP；Codex 有/无原条目均可启动，另一个 MCP 和默认原生配置保留，无关 root 不受影响；缺少能力/不支持的 runtime 明确拒绝，重复 requestId 的参数冲突可见。

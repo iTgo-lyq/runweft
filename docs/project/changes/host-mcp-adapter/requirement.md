@@ -1,6 +1,6 @@
 # Codex 与 Claude Code 的宿主身份及 MCP 适配
 
-> 状态：已确认
+> 状态：进行中
 > 规模：大型
 > 更新：2026-09-29
 > 确认依据：用户确认只在 HAPI 调度的 Runweft subagent 中移除全部 Runweft MCP 工具；subagent 使用原生内置 subagent 不由 Runweft 管控。主宿主仍仅支持 Codex/Claude Code，在线协作、全局安装及自主实施授权继续有效。

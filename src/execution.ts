@@ -194,6 +194,9 @@ export class ExecutionClient {
         if (health?.capabilities?.spawnReceipts !== 1) {
             throw new RunweftError('execution_capability_missing', '当前 HAPI Hub 不支持可重查的启动请求。', '更新配套 Runweft Hub 后再启动任务。');
         }
+        if (parsed.data.disabledMcpServers?.length && health?.capabilities?.mcpToolFilter !== 1) {
+            throw new RunweftError('execution_capability_missing', '当前 HAPI Hub 不支持逐执行 MCP 工具禁用。', '更新配套 Runweft Hub 后再启动任务。');
+        }
         try {
             const response = await this.hapi.request(`/api/machines/${encodeURIComponent(machineId)}/spawn`, {
                 method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(parsed.data),

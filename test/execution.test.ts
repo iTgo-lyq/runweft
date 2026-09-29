@@ -206,3 +206,12 @@ test('permission responses preserve native request identity and do not override 
     try { await expect(client.respondPermission('session', 'native-request', 'approved', { question: ['answer'] })).rejects.toMatchObject({ status: 409 }); }
     finally { await server.stop(true); }
 });
+
+test('MCP filtering fails before dispatch to a Hub that would drop the new option', async () => {
+    let dispatched = false;
+    const { server, client } = serverFor(() => { dispatched = true; return new Response('', { status: 500 }); });
+    try {
+        await expect(client.start('machine', { ...input(), disabledMcpServers: ['runweft'] })).rejects.toMatchObject({ code: 'execution_capability_missing' });
+        expect(dispatched).toBe(false);
+    } finally { await server.stop(true); }
+});
