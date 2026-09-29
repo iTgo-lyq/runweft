@@ -272,7 +272,9 @@ export async function doctor(c: ResolvedConfig) {
         const directories = statSync(root, { throwIfNoEntry: false }) ? readdirSync(root, { withFileTypes: true }) : [];
         const checkoutCount = directories.filter(entry => entry.isDirectory()
             && statSync(join(root, entry.name, 'checkout'), { throwIfNoEntry: false })?.isDirectory()).length;
-        checks.push({ name: 'task_workspaces', ok: true, detail: { root, checkoutCount, scope: 'current_connection_on_this_machine' } });
+        checks.push({ name: 'task_workspaces', ok: true, detail: { root, checkoutCount, scope: 'current_connection_on_this_machine',
+            repositoryCaches: dataPaths(c).repositoryCaches, repositoryExports: dataPaths(c).repositoryExports, repositoryFetches: dataPaths(c).repositoryFetches,
+            cleanup: 'task result release → task workspace remove → artifact prune/remove；查询任务确认操作结束，不直接删除这些目录。' } });
     } catch (error) { checks.push({ name: 'task_workspaces', ok: false, detail: { root, error: errorDetails(error) } }); }
     try {
         const result = await runHapi(c, ['--version'], true);

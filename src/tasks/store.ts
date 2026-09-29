@@ -1,6 +1,7 @@
 import { isDeepStrictEqual } from 'node:util';
 import type { CodeFetch, CodeManifest, ResultAction } from './result-types';
 import type { ArtifactRetention } from './retention';
+import { assertResultReleaseIdle, type CodeRetention } from './result-retention';
 import { randomUUID } from 'node:crypto';
 import { openState } from '../state';
 import { contentVersion } from '../agents/definitions';
@@ -41,6 +42,8 @@ export class TaskStore {
         return this.db.query(`SELECT DISTINCT t.namespace, t.id FROM delegation_tasks t JOIN delegation_rounds r ON t.id=r.taskId
             WHERE r.phase NOT IN ('finished', 'failed') OR json_extract(t.data, '$.environment.status')='deleting'
             OR json_extract(r.data, '$.artifactRetention.state')='releasing'
+            OR json_extract(r.data, '$.codeRetention.state')='releasing'
+            OR json_extract(t.data, '$.environment.remote.release.state')='pending'
             OR json_extract(r.data, '$.code.retryRequested')=1
             OR json_extract(r.data, '$.code.status') IN ('capturing', 'publishing', 'unknown')
             OR (json_extract(r.data, '$.code.status')='available' AND json_extract(r.data, '$.code.sourceReleased')=0)
@@ -139,6 +142,7 @@ export class TaskStore {
             if (previous) return previous;
             const bundle = this.require(namespace, intent.id, parent), now = Date.now();
             if (bundle.rounds.some(round => round.artifactRetention?.state === 'releasing')) throw new TaskError(409, 'artifact_release_pending', '附件释放尚未完成，请查询任务后再继续委派。');
+            if (bundle.rounds.some(round => round.codeRetention?.state === 'releasing')) throw new TaskError(409, 'result_release_pending', '代码成果释放尚未完成，请查询任务后再继续委派。');
             let round: Round;
             if (bundle.task.environment.mode === 'worktree' && bundle.task.environment.status !== 'retained') throw new TaskError(409, 'workspace_not_retained', '工作区正在删除或已删除，无法继续委派。');
             if (intent.mode === 'next') {
@@ -235,6 +239,19 @@ export class TaskStore {
         return (this.db.query('SELECT data FROM delegation_code_manifests WHERE taskId=? AND (? IS NULL OR roundId=?) ORDER BY rowid')
             .all(taskId, roundId ?? null, roundId ?? null) as { data: string }[]).map(read<CodeManifest>);
     }
+    beginResultRelease(namespace: string, parent: Parent, id: string, plans: { roundId: string; retention: CodeRetention }[], discardPending: boolean) {
+        return this.db.transaction(() => {
+            const bundle = this.require(namespace, id, parent);
+            this.assertCanDelegate(namespace, parent);
+            const selected = bundle.rounds.filter(round => plans.some(plan => plan.roundId === round.id));
+            assertResultReleaseIdle(bundle, selected, discardPending);
+            for (const round of selected) if (!round.codeRetention) {
+                round.codeRetention = plans.find(plan => plan.roundId === round.id)!.retention;
+                round.codeRevision = bundle.task.revision + 1; this.save(bundle.task, round, []);
+            }
+            return this.require(namespace, id, parent);
+        }).immediate();
+    }
     publishCode(task: Task, round: Round, manifest: CodeManifest) {
         this.db.transaction(() => {
             this.db.query('INSERT INTO delegation_code_manifests VALUES (?, ?, ?, ?, ?)')
@@ -281,6 +298,7 @@ export class TaskStore {
             const round = intent.roundId ? rounds.find(item => item.id === intent.roundId) : rounds.at(-1);
             if (!round) throw new TaskError(404, 'round_unknown', '此任务中没有指定轮次。');
             if (task.environment.mode !== 'worktree') throw new TaskError(409, 'result_not_applicable', '共享目录的改动直接位于主工作区，没有独立代码成果。');
+            if (round.codeRetention) throw new TaskError(409, 'result_released', '该轮代码已请求释放，不能重新发布或取回；已导入主仓库的引用仍由主仓库保留。');
             let operationId: string;
             if (intent.action === 'retry') {
                 if (!round.code || !['needs_attention', 'unknown'].includes(round.code.status)) throw new TaskError(409, 'result_retry_unavailable', '该轮没有需要重试的代码交付。');
@@ -305,18 +323,30 @@ export class TaskStore {
         return this.db.transaction(() => {
             const { task, rounds } = this.require(namespace, id, parent), environment = task.environment;
             if (environment.mode !== 'worktree') throw new TaskError(409, 'workspace_shared', '共享目录不由 Runweft 删除。');
-            if (environment.remote) throw new TaskError(409, 'remote_workspace_retention_unavailable', '远端成果与缓存的联合释放尚未接入；工作区保持保留。');
             if (environment.status === 'removed') return task;
             if (environment.status === 'deleting') {
                 if (environment.removal?.discardIgnored !== discardIgnored) throw new TaskError(409, 'workspace_remove_pending', '原删除操作仍在对账，不能变更 ignored 文件处理选项。');
                 return task;
             }
             if (rounds.some(round => !['finished', 'failed'].includes(round.phase) || round.outputFiles?.jobs.some(job => job.kind !== 'retry' && !job.publishedVersion && job.phase !== 'complete'))) throw new TaskError(409, 'workspace_round_pending', '仍有排队、执行或待收尾轮次，不能删除工作区。');
+            if (environment.remote) {
+                if (rounds.some(round => (!round.executionAbsent && round.stop !== 'stopped')
+                    || round.outputFiles?.jobs.some(job => job.phase !== 'complete') || round.artifactRetention?.state === 'releasing'
+                    || (round.inputFiles?.attempted && !round.inputFiles.intermediateReleased)
+                    || round.codeRetention?.state === 'releasing' || round.code?.retryRequested
+                    || (round.git?.status !== 'not_prepared' && (round.git?.status !== 'sealed'
+                        || (!round.codeRetention && (!round.code?.latest || !round.code.sourceReleased || round.code.cleanupError)))))
+                    || this.codeFetches(id).some(fetch => !fetch.released)) {
+                    throw new TaskError(409, 'result_remove_pending', '远端成果、附件或取回操作尚未完成；先完成交付或显式释放未交付代码，再移除工作区。');
+                }
+                environment.remote.release = { state: 'pending' };
+            }
             const last = [...rounds].reverse().find(round => round.git?.status === 'sealed');
             const unprepared = rounds.every(round => round.preparation.mode === 'worktree' && !round.preparation.attempted);
             environment.status = unprepared ? 'removed' : 'deleting';
             environment.removal = { attemptId: randomUUID(), expectedHead: last?.git?.result?.resultHead ?? environment.source.baseCommit,
-                discardIgnored, attempted: false, status: unprepared ? 'succeeded' : 'pending' };
+                discardIgnored, attempted: false, status: unprepared ? 'succeeded' : 'pending',
+                ...(environment.remote ? { releaseResults: rounds.flatMap(round => round.git?.result ? [{ roundId: round.id, resultHead: round.git.result.resultHead }] : []) } : {}) };
             this.saveEnvironment(task); return task;
         }).immediate();
     }

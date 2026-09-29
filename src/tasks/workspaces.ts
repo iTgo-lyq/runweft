@@ -126,7 +126,8 @@ export class TaskWorkspaces {
         const removal = environment.removal, attempted = removal.attempted;
         removal.attempted = true; save();
         const { workspace, operation } = await this.receipt({ action: 'remove', environmentId: environment.environmentId,
-            attemptId: removal.attemptId, expectedHead: removal.expectedHead, discardIgnored: removal.discardIgnored }, attempted);
+            attemptId: removal.attemptId, expectedHead: removal.expectedHead, discardIgnored: removal.discardIgnored,
+            ...(removal.releaseResults ? { releaseResults: removal.releaseResults } : {}) }, attempted);
         removal.status = operation.status === 'accepted' ? 'running' : operation.status;
         removal.error = operation.error ? { ...operation.error,
             hint: `${operation.error.hint ?? ''}\n${operation.status === 'failed'
@@ -135,6 +136,7 @@ export class TaskWorkspaces {
                 : '中心继续查询原删除回执；未知操作不会换新身份重发。'}`.trim() } : undefined;
         if (operation.status === 'succeeded') {
             if (workspace.status !== 'removed') throw new RunweftError('invalid_hapi_response', '删除回执与工作区留存状态不一致。');
+            if (removal.releaseResults?.some(result => workspace.releasedResults?.[result.roundId]?.resultHead !== result.resultHead)) throw new RunweftError('invalid_hapi_response', '机器未确认所选轮次的精确成果引用释放。');
             environment.status = 'removed';
         } else if (operation.status === 'failed') environment.status = 'retained';
         save();

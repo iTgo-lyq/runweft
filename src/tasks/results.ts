@@ -28,19 +28,23 @@ export function pendingCode(): CodeDelivery {
 }
 export function codeView(task: Task, round: Round) {
     const environment = task.environment, code = round.code;
-    const status = environment.mode === 'shared' || round.git?.status === 'not_prepared' ? 'not_applicable'
-        : environment.remote ? code?.status ?? 'pending' : round.git?.status === 'sealed' ? 'available' : 'pending';
+    const status = round.codeRetention?.state ?? (environment.mode === 'shared' || round.git?.status === 'not_prepared' ? 'not_applicable'
+        : environment.remote ? code?.status ?? 'pending' : round.git?.status === 'sealed' ? 'available' : 'pending');
     const local = environment.mode === 'worktree' && !environment.remote;
     const ref = status === 'available' ? local ? round.git?.result?.resultRef : round.resultFetch?.status === 'available' ? round.resultFetch.ref : undefined : undefined;
     const fetching = round.resultFetch && !['available', 'failed'].includes(round.resultFetch.status);
     return { status, round_id: round.id, round: round.ordinal, version: code?.latest?.version,
-        ref, fetch: round.resultFetch,
-        result: round.git?.result, error: code?.error, cleanup_error: code?.cleanupError,
+        ref, fetch: round.resultFetch, retention: round.codeRetention ? {
+            state: round.codeRetention.state, created_at: round.codeRetention.createdAt, completed_at: round.codeRetention.completedAt,
+            discard_pending: round.codeRetention.discardPending, pending_references: round.codeRetention.references.filter(item => !item.done).length,
+            pending_copies: round.codeRetention.copies.filter(item => !item.done).length, error: round.codeRetention.error,
+        } : { state: 'retained' as const },
+        result: round.git?.result, error: round.codeRetention ? round.codeRetention.error : code?.error, cleanup_error: code?.cleanupError,
         storage: status === 'not_applicable' ? null : local ? 'source_repository' : 'center',
         bytes: code?.files ? { uploaded: code.files.filter(file => !file.reused && file.pinned).reduce((n, file) => n + file.size, 0),
             reused: code.files.filter(file => file.reused).reduce((n, file) => n + file.size, 0),
-            retained: [...new Map([...(code.baseline?.files ?? []), ...code.files.filter(file => file.artifactId)].map(file => [file.artifactId, file.size])).values()].reduce((n, size) => n + size, 0) } : undefined,
-        next: status === 'not_applicable' ? null : status === 'available' ? ref
+            retained: round.codeRetention && round.codeRetention.state !== 'releasing' ? 0 : [...new Map([...(code.baseline?.files ?? []), ...code.files.filter(file => file.artifactId)].map(file => [file.artifactId, file.size])).values()].reduce((n, size) => n + size, 0) } : undefined,
+        next: ['not_applicable', 'released', 'discarded'].includes(status) ? null : status === 'available' ? ref
             ? { action: 'review', command: `git diff ${round.git!.result!.startHead} ${ref}` }
             : fetching ? { action: 'read_agent', command: `runweft task result show ${task.id} --round ${round.id}` }
                 : { action: 'fetch_result', command: `runweft task result fetch ${task.id} --round ${round.id}` }
@@ -141,6 +145,7 @@ export class TaskResults {
         delete code.retryRequested; delete code.error; code.status = code.stage === 'capture' ? 'capturing' : 'publishing'; save();
     }
     async advance(task: Task, round: Round, save: () => void) {
+        if (round.codeRetention) return round.codeRetention.state !== 'releasing';
         if (task.environment.mode !== 'worktree' || !task.environment.remote || round.git?.status === 'not_prepared') return true;
         if (round.git?.status !== 'sealed' || !round.git.result) return false;
         round.code ??= pendingCode();
@@ -205,6 +210,11 @@ export class TaskResults {
     }
     async advanceFetch(task: Task, round: Round, fetch: CodeFetch) {
         const save = () => this.store.saveCodeFetch(task, round, fetch);
+        if (round.codeRetention) {
+            if (round.codeRetention.state === 'releasing' || fetch.released) return;
+            if (fetch.status !== 'available') { fetch.status = 'failed'; fetch.error = { code: 'result_released', message: '该轮代码成果已显式释放。' }; }
+            fetch.released = true; delete fetch.cleanupError; save(); return;
+        }
         if (fetch.status === 'failed' || fetch.released) return;
         if (fetch.status === 'available') { await this.cleanupFetch(task, fetch, save); return; }
         try {

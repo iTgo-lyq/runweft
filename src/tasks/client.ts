@@ -44,6 +44,9 @@ export class TaskClient {
     async resultAction(id: string, roundId: string | undefined, requestId: string, action: 'fetch' | 'retry', signal?: AbortSignal): Promise<Awaited<ReturnType<TaskCoordinator['resultAction']>>> {
         return this.request(`result/${action}`, { id, roundId, requestId }, signal);
     }
+    async releaseResults(id: string, options: { roundId?: string; apply?: boolean; discardPending?: boolean } = {}, signal?: AbortSignal): Promise<Awaited<ReturnType<TaskCoordinator['releaseResults']>>> {
+        return this.request('result/release', { id, ...options }, signal);
+    }
     async artifactAction(id: string, roundId: string, requestId: string, action: 'retry' | 'collect', files?: ArtifactOutput[], signal?: AbortSignal): Promise<Awaited<ReturnType<TaskCoordinator['artifactAction']>>> {
         return this.request('artifacts/action', { id, roundId, requestId, action, ...(action === 'collect' ? { files } : {}) }, signal);
     }

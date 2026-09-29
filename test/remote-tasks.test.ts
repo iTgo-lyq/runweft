@@ -8,6 +8,7 @@ import { TaskStore } from '../src/tasks/store';
 import { BaselineStore } from '../src/remote/store';
 import { RemoteBaselines } from '../src/remote/baselines';
 import { TaskWorkspaces } from '../src/tasks/workspaces';
+import { resultReference } from '../src/tasks/result-types';
 
 const cleanups: (() => Promise<void> | void)[] = [];
 afterEach(async () => { for (const cleanup of cleanups.splice(0).reverse()) await cleanup(); });
@@ -63,7 +64,11 @@ for (const flavor of ['codex', 'claude'] as const) test(`${flavor} remote task p
     expect(acceptedFetch.round_id).toBe(next.round_id);
     const fetched = await until(() => h.post('read', { id }), value => value.code.fetch?.status === 'available');
     expect(fetched.code.ref).toContain(next.round_id);
-    await expect(h.post('workspace/remove', { id })).rejects.toMatchObject({ code: 'remote_workspace_retention_unavailable' });
+    await until(() => h.post('result/show', { id }), value => value.fetches.at(-1)?.released);
+    await h.post('workspace/remove', { id });
+    const removed = await until(() => h.post('read', { id }), value => value.environment.remote.release?.state === 'released');
+    expect(removed.environment.status).toBe('removed'); expect(removed.code.status).toBe('available');
+    expect(h.git.requests.find(item => item.body.action === 'remove')?.body.releaseResults).toHaveLength(2);
 });
 
 test('remote shared, missing base and missing result capability reject before accepting or starting a task', async () => {
@@ -93,6 +98,98 @@ test('failed initial import starts no model and retained sealed facts survive a 
     const sealed = await h.post('read', { id, roundId: accepted.round_id }); expect(sealed.git.result_head).toBe(held.git.result_head); expect(sealed.code.status).toBe('available');
     expect(h.git.requests.filter(item => item.body.action === 'finalize' && item.body.roundId === accepted.round_id)).toHaveLength(1);
     h.complete(resumed.session_id); await until(() => h.post('read', { id }), value => value.phase === 'finished');
+});
+
+test('code release previews without writes, unpins only the selected round, and shared task consumers survive removal', async () => {
+    const h = await fixture();
+    const finish = async (accepted: { agent_id: string; round_id: string }) => {
+        const running = await until(() => h.post('read', { id: accepted.agent_id }), value => value.round_id === accepted.round_id && value.inputs[0]?.observation?.phase === 'accepted');
+        h.complete(running.session_id); return until(() => h.post('read', { id: accepted.agent_id }), value => value.round_id === accepted.round_id && value.phase === 'finished');
+    };
+    const a = await h.post('spawn', h.payload()), b = await h.post('spawn', h.payload());
+    await finish(a); await finish(b);
+    const next = await h.post('send', { requestId: randomUUID(), intent: { id: a.agent_id, mode: 'next', message: 'Second round' } }); await finish(next);
+    const before = structuredClone(h.git.refs), preview = await h.post('result/release', { id: a.agent_id, roundId: a.round_id });
+    expect(preview.applied).toBe(false); expect(preview.can_release).toBe(true); expect(h.git.refs).toEqual(before);
+    await expect(h.post('result/release', { id: a.agent_id, parent: { ...h.parent, kind: 'mcp', host: 'codex', nativeSessionId: randomUUID() } })).rejects.toMatchObject({ code: 'result_release_cli_only' });
+    h.git.faults.unpinLost = true;
+    await h.post('result/release', { id: a.agent_id, roundId: a.round_id, apply: true });
+    const released = await until(() => h.post('result/show', { id: a.agent_id, roundId: a.round_id }), value => value.code.status === 'released');
+    expect(released.code.bytes.retained).toBe(0); expect(released.manifests).toHaveLength(1);
+    for (const refs of h.git.refs.values()) {
+        expect(refs.has(resultReference(a.agent_id, a.round_id))).toBe(false);
+        expect(refs.has(resultReference(a.agent_id, next.round_id))).toBe(true);
+        expect(refs.has(resultReference(b.agent_id, b.round_id))).toBe(true);
+    }
+    await expect(h.post('result/fetch', { id: a.agent_id, roundId: a.round_id, requestId: randomUUID() })).rejects.toMatchObject({ code: 'result_released' });
+    const second = await h.post('result/show', { id: a.agent_id, roundId: next.round_id }); expect(second.code.status).toBe('available');
+    await h.post('workspace/remove', { id: a.agent_id });
+    await until(() => h.post('read', { id: a.agent_id }), value => value.environment.remote.release?.state === 'released');
+    expect(h.git.requests.filter(item => item.domain === 'repositories' && item.body.action === 'release' && h.git.repos.get(item.body.operationId)?.request.action === 'import')).toHaveLength(0);
+    expect((await h.post('read', { id: b.agent_id })).environment.status).toBe('retained');
+    h.git.faults.cacheHeld = true; await h.post('workspace/remove', { id: b.agent_id });
+    const held = await until(() => h.post('read', { id: b.agent_id }), value => value.environment.remote.release?.error);
+    expect(held.environment.status).toBe('removed'); expect(held.environment.remote.release.state).toBe('pending');
+    expect([...h.git.refs.values()].some(refs => [...refs].some(ref => ref.startsWith('runweft:baseline:')))).toBe(true);
+    h.git.faults.cacheHeld = false;
+    await until(() => h.post('read', { id: b.agent_id }), value => value.environment.remote.release?.state === 'released');
+    for (const refs of h.git.refs.values()) expect(refs.has(resultReference(b.agent_id, b.round_id))).toBe(true);
+    expect(h.calls.spawn).toBe(2); expect(h.calls.resume).toBe(1);
+});
+
+test('incomplete upload requires explicit discard and releases partial pins and candidates without another export or model', async () => {
+    const h = await fixture('codex', true), accepted = await h.post('spawn', h.payload()), id = accepted.agent_id;
+    const running = await until(() => h.post('read', { id }), value => value.inputs[0]?.observation?.phase === 'accepted');
+    h.git.faults.partialDelivery = true; h.complete(running.session_id);
+    const failed = await until(() => h.post('read', { id }), value => value.phase === 'finished'); expect(failed.code.status).toBe('needs_attention');
+    const preview = await h.post('result/release', { id }); expect(preview.can_release).toBe(false);
+    await expect(h.post('result/release', { id, apply: true })).rejects.toMatchObject({ code: 'result_unpublished' });
+    await h.post('result/release', { id, apply: true, discardPending: true });
+    await until(() => h.post('result/show', { id }), value => value.code.status === 'discarded');
+    const exports = [...h.git.repos.values()].filter(item => item.request.action === 'export-result'); expect(exports).toHaveLength(1);
+    expect(exports[0]!.retention).toBe('released');
+    for (const refs of h.git.refs.values()) expect(refs.has(resultReference(id, accepted.round_id))).toBe(false);
+    expect(h.calls.spawn).toBe(1); expect(h.calls.resume).toBe(0);
+});
+
+test('discard of a definitely failed capture unblocks queued continuation without changing Git facts or allowing unknown operations', async () => {
+    const h = await fixture('codex', true); h.git.faults.resultFail = true;
+    const accepted = await h.post('spawn', h.payload()), id = accepted.agent_id;
+    const running = await until(() => h.post('read', { id }), value => value.inputs[0]?.observation?.phase === 'accepted'); h.complete(running.session_id);
+    const failed = await until(() => h.post('read', { id }), value => value.code.status === 'needs_attention');
+    const next = await h.post('send', { requestId: randomUUID(), intent: { id, mode: 'next', message: 'Continue after explicit discard' } });
+    await expect(h.post('result/release', { id, roundId: accepted.round_id, apply: true })).rejects.toMatchObject({ code: 'result_release_active' });
+    const operation = [...h.git.repos.values()].find(item => item.request.action === 'export-result')!;
+    operation.status = 'unknown';
+    await expect(h.post('result/release', { id, roundId: accepted.round_id, discardPending: true, apply: true })).rejects.toMatchObject({ code: 'result_operation_pending' });
+    operation.status = 'failed';
+    const preview = await h.post('result/release', { id, roundId: accepted.round_id, discardPending: true });
+    expect(preview.can_release).toBe(true); expect(preview.rounds[0].unpublished).toBe(true); expect(h.calls.resume).toBe(0);
+    h.git.faults.resultFail = false;
+    await h.post('result/release', { id, roundId: accepted.round_id, discardPending: true, apply: true });
+    const resumed = await until(() => h.post('read', { id }), value => value.round_id === next.round_id && value.inputs[0]?.observation?.phase === 'accepted');
+    const discarded = await h.post('read', { id, roundId: accepted.round_id });
+    expect(discarded.code.status).toBe('discarded'); expect(discarded.phase).toBe('finished'); expect(discarded.git.result_head).toBe(failed.git.result_head);
+    expect(h.git.requests.filter(item => item.body.action === 'finalize' && item.body.roundId === accepted.round_id)).toHaveLength(1);
+    expect(h.calls.spawn).toBe(1); expect(h.calls.resume).toBe(1);
+    h.complete(resumed.session_id); await until(() => h.post('read', { id }), value => value.phase === 'finished');
+    expect((await h.post('result/show', { id })).code.status).toBe('available');
+});
+
+test('saved partial release resumes after coordinator replacement without native dispatch or repinning', async () => {
+    const h = await fixture(), accepted = await h.post('spawn', h.payload()), id = accepted.agent_id;
+    const running = await until(() => h.post('read', { id }), value => value.inputs[0]?.observation?.phase === 'accepted'); h.complete(running.session_id);
+    await until(() => h.post('read', { id }), value => value.phase === 'finished');
+    const preview = await h.post('result/release', { id }); await h.tasks!.close();
+    const store = new TaskStore(h.statePath), bundle = store.require('alpha', id), round = bundle.rounds[0]!;
+    const { round_id: _, ...plan } = preview.rounds[0]; round.codeRetention = { ...plan, state: 'releasing' };
+    h.git.refs.get(round.codeRetention!.references[0]!.artifactId)!.delete(resultReference(id, round.id));
+    store.save(bundle.task, round, []); store.close();
+    const replacement = new TaskCoordinator(h.statePath, namespace => new HapiClient(h.nativeUrl, `test-${namespace}`), 20);
+    cleanups.push(() => replacement.close()); replacement.start();
+    const released = await until(() => replacement.read('alpha', h.parent, id), value => value.code.status === 'released');
+    expect(released.code.retention).toMatchObject({ state: 'released' }); expect(h.calls.spawn).toBe(1); expect(h.calls.resume).toBe(0);
+    for (const refs of h.git.refs.values()) expect(refs.has(resultReference(id, round.id))).toBe(false);
 });
 
 test('consumer committed before task association is reused after coordinator replacement', async () => {

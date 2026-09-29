@@ -9,6 +9,7 @@ import type { ExecutionTarget, Problem } from '../resources/types';
 import { ArtifactNameSchema } from '../../hapi/shared/src/artifacts';
 import { ArtifactOutputsSchema, type MaterializedInput, type MaterializeRequest } from '../../hapi/shared/src/artifactTransfers';
 import type { ArtifactRetention } from './retention';
+import type { CodeRetention } from './result-retention';
 import type { CodeDelivery, CodeFetch } from './result-types';
 import type { OutputFiles } from './output-types';
 import { RunweftError } from '../errors';
@@ -57,10 +58,10 @@ export type Status = 'running' | 'needs_attention' | 'completed' | 'failed' | 'i
 export type Acceptance = { agent_id: string; round_id: string; request_id: string; revision: number; accepted: true; input_id?: string };
 export type StructuredReport = { summary: string; changes: string; tests: string; remaining: string };
 export type WorkspaceRemoval = { attemptId: string; expectedHead: string; discardIgnored: boolean; attempted: boolean;
-    status: 'pending' | 'running' | 'succeeded' | 'failed' | 'unknown'; error?: Problem };
+    status: 'pending' | 'running' | 'succeeded' | 'failed' | 'unknown'; error?: Problem; releaseResults?: { roundId: string; resultHead: string }[] };
 export type TaskEnvironment = { mode: 'shared'; machineId: string; cwd: string }
     | { mode: 'worktree'; machineId: string; environmentId: string; source: WorkspaceSource; cwd: string;
-        remote?: { origin: WorkspaceSource; snapshotId?: string; consumerId?: string };
+        remote?: { origin: WorkspaceSource; snapshotId?: string; consumerId?: string; release?: { state: 'pending' | 'released'; error?: Problem } };
         checkout?: string; branch?: string; status: 'retained' | 'deleting' | 'removed'; removal?: WorkspaceRemoval };
 export type Task = { version: 2; id: string; namespace: string; parent: Parent; agent: AgentSnapshot; target: ExecutionTarget;
     environment: TaskEnvironment; createdAt: number; revision: number; updatedAt: number };
@@ -80,7 +81,7 @@ export type InputFiles = { reference: string; files: FrozenInput[]; operationId:
 export type ArtifactIntent = { namespace: string; requestId: string; reference: string; requests: ArtifactInput[]; files?: FrozenInput[] };
 export type Round = { id: string; taskId: string; ordinal: number; requestId: string; message: string;
     phase: 'queued' | 'preparing' | 'starting' | 'resuming' | 'running' | 'stopping' | 'finishing' | 'finished' | 'failed';
-    preparation: Preparation; git?: GitDelivery; inputFiles?: InputFiles; outputFiles?: OutputFiles; artifactRetention?: ArtifactRetention; artifactsRevision?: number; code?: CodeDelivery; codeRevision?: number; resultFetch?: Pick<CodeFetch, 'id' | 'requestId' | 'status' | 'error' | 'cleanupError'> & { ref?: string; head?: string };
+    preparation: Preparation; git?: GitDelivery; inputFiles?: InputFiles; outputFiles?: OutputFiles; artifactRetention?: ArtifactRetention; artifactsRevision?: number; code?: CodeDelivery; codeRetention?: CodeRetention; codeRevision?: number; resultFetch?: Pick<CodeFetch, 'id' | 'requestId' | 'status' | 'error' | 'cleanupError'> & { ref?: string; head?: string };
     spawnRequestId: string; spawnAttempted: boolean; sessionId?: string; nativeSessionId?: string;
     cursor?: HistoryCursor; report: string; structuredMissing: boolean;
     stop: 'not_started' | 'stopping' | 'stopped'; finish: 'pending' | 'complete';

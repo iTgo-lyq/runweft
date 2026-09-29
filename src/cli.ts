@@ -62,13 +62,14 @@ export function createProgram() {
             `本机中心业务库：${paths.state}${c.config.mode === 'hub' ? '（当前为 Hub 客户端，权威资源库位于所连中心）' : ''}`,
             `当前连接 HAPI 数据：${paths.hapiClient}`, `本机工作区/Agent 绑定与身份数据：${paths.bindings}`, `全局 Agent 定义：${paths.agents}`,
             `当前连接的本机任务工作区：${paths.taskWorkspaces}`,
-            `当前连接的仓库缓存：${paths.repositoryCaches}`, `基线导出候选与回执：${paths.repositoryExports}`, `基线导入回执：${paths.repositoryImports}`,
+            `当前连接的仓库缓存：${paths.repositoryCaches}`, `基线/成果导出候选与回执：${paths.repositoryExports}`, `基线导入回执：${paths.repositoryImports}`, `成果取回回执与中间副本：${paths.repositoryFetches}`,
             `本机托管 Hub 的文件：${paths.artifacts}${c.config.mode === 'hub' ? '（当前文件权威在所连 Hub）' : ''}`,
             `当前连接的文件准备/候选：${paths.artifactTransfers}`,
             `日志：${paths.logs}`, `配置备份：${paths.backups}`, `可再生缓存：${paths.cache}`, `临时目录：${paths.temporary}`,
             `原生 Codex：${paths.nativeCodex}`, `原生 Claude Code：${paths.nativeClaude}`,
             '备份：停止托管服务后备份配置、agents、server、connections 和 client.sqlite；原生目录按各工具规则备份。',
             '本机仓库派生的 worktree 还依赖源 Git 目录；远端准备的 worktree 依赖上述仓库缓存。备份时保留对应对象和原路径。',
+            '代码清理：task result release 释放选定轮次的中心引用；task workspace remove 清理执行端环境与基线消费者；artifact prune/remove 才清理无引用字节。',
         ].join('\n'));
     });
     const workspace = program.command('workspace').description('绑定本机目录、诊断远端 Git 准备');

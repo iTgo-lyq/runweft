@@ -9,6 +9,7 @@ import { ParentSchema, type Parent } from './types';
 export const ResultShowSchema = z.strictObject({ parent: ParentSchema, id: z.uuid(), roundId: z.uuid().optional() });
 export const ResultFetchSchema = ResultShowSchema.extend({ requestId: z.uuid() });
 export const ResultRetrySchema = ResultShowSchema.extend({ roundId: z.uuid(), requestId: z.uuid() });
+export const ResultReleaseSchema = ResultShowSchema.extend({ apply: z.boolean().default(false), discardPending: z.boolean().default(false) });
 export type ResultAction = z.infer<typeof ResultFetchSchema> & { action: 'fetch' | 'retry' };
 export type RecoveryFile = RepositoryFile & { artifactId: string };
 export type RecoverySnapshot = { snapshot: RepositorySnapshot; files: RecoveryFile[] };

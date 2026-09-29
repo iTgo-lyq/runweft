@@ -61,3 +61,13 @@
 - 实际回归：C9 `.dev-smoke/workspace-preparation-z1PqFB/evidence.json` success、cleanupErrors=[]。最终 T3 回归 `.dev-smoke/task-result-delivery-9xFdGR/evidence.json` 同样成功，中心重启、执行端目录离线、两轮清单复用、CLI/MCP handler 取回与显式合入均通过，零 native sessions。正式远端启用后，插入无模型 fixture 改为停服期间操作；首次回归发现 Hub ready 早于 Runner RPC 注册，脚本补上查询既有回执的就绪检查，未重发未知写操作。
 - 边界：真实原生和故障测试均为同机不同 Runner 身份/数据根，不作为物理跨机验收。两宿主 MCP 完整矩阵、四平台候选及 npm 实装仍在 T6；成果释放与目标缓存联合清理在 T5。
 - Commit：`remote-result-delivery T4: automate remote worktree delegation and recovery`
+
+## T5 成果与目标缓存的显式释放
+
+- 结果：CLI result release 默认预览，apply 保存逐轮 recovery pin/机器副本释放进度；未交付代码需 discard-pending，活跃和未知操作拒绝。已停止且封存的捕获失败可明确放弃，随后正常完成附件收尾并放行排队轮次。清单与 Git facts 不改，释放只影响本轮引用；fetch/retry 不重新激活 tombstone。read/wait 只展示有界留存摘要，清理仍仅由操作者 CLI 发起。
+- 环境与缓存：远端 remove 冻结精确 round/head 名单；HAPI 在原停止/归属/干净校验后持久删除意图，CAS 释放所选 refs，重启继续部分进度；默认仍保留 refs。cache 依据 releasedResults 认可已释放的改动，其他消费者、外部 worktree 和重新出现的 ref 继续保护缓存。Runweft 在环境移除后单独推进 task consumer/input baseline 释放，错误可见且保留恢复引用；已发布代码拥有独立 pin，不依赖目标缓存。paths/doctor/使用说明补齐 exports/imports/fetches、备份与清理顺序，不新增数据根或表。
+- 源码验证：root 全量 157 pass / 0 fail、3478 断言；随后补充不完整上传释放与缓存占用恢复，最终结果/远端/本地工作区聚焦 32 pass / 0 fail、936 断言，有界留存查询修改后 17 pass / 0 fail、677 断言。覆盖预览零写入、逐轮/多任务/LFS pin、丢 unpin 回执、SQLite 部分释放重启、capture 失败显式放弃及队列续接、未知操作拒绝、不重新导出/执行。root types 和最终编译通过。
+- HAPI 验证：真实 Git workspace/cache 聚焦 29 pass，含精确 ref/SHA、默认保留、CAS 删除后丢完成记录恢复、多 import 持有、重新出现 ref 拒绝。全量 CLI 3027 pass / 11 skip / 1 fail；仍是已有 /tmp/.git 引发 skills 非 Git 假设失败，未改该目录或无关测试。Hub 1414 pass / 3 skip，Web 3249 pass，Shared 323 pass，Relay 118 pass；全包 types 通过。HAPI 通用改动独立提交，root 同步 pin 后构建 linux-x64 配套。
+- 实际清理：`bun run test:result-retention .dev-smoke/remote-tasks-native-DGZxg9` 复用 T4 已完成两种 runtime 各两轮的专用现场；`.dev-smoke/result-retention-qMZipR/evidence.json` success、cleanupErrors=[]。公开编译 CLI 预览/释放一轮，其他轮次和旧/新 LFS pin 保留；第一任务移除后共享 cache 存在，第二任务移除后真实 checkout/cache 均消失。目标 Runner 停止后再次取回两份最终代码成功，主库 refs/index/config 字节保持，最后解除剩余中心恢复引用；原生 session 集合不变，没有新增模型调用。该脚本会清理传入的专用测试环境，不用于用户数据。
+- 实际回归：新的 HAPI pin 下 C9 `.dev-smoke/workspace-preparation-xCj3QZ/evidence.json` success、cleanupErrors=[]，覆盖 103 个文件、共享和跨快照消费者、重启、离线、dirty/ignored 保护及最终 cache 删除。验证均为同机多进程；T6 继续真实 MCP 委派矩阵与四平台候选安装。
+- Commit：HAPI `remote-result-delivery T5: release exact sealed refs and retire owned caches`；Runweft `remote-result-delivery T5: release retained code and remote environments explicitly`

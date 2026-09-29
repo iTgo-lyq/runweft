@@ -182,6 +182,7 @@ export function dataPaths(resolved: ResolvedConfig) {
         state: join(server, 'runweft', 'state.sqlite'),
         hapiClient, taskWorkspaces: join(hapiClient, 'workspaces', 'environments'),
         repositoryCaches: join(hapiClient, 'workspaces', 'repositories'), repositoryExports: join(hapiClient, 'workspaces', 'exports'), repositoryImports: join(hapiClient, 'workspaces', 'imports'),
+        repositoryFetches: join(hapiClient, 'workspaces', 'fetches'),
         artifacts: join(server, 'hapi', 'artifacts'), artifactTransfers: join(hapiClient, 'artifact-transfers'),
         bindings: join(home, 'client.sqlite'), process: join(server, 'process.json'),
         logs: join(home, 'logs'), backups: join(home, 'backups'), cache: join(home, 'cache'), temporary: join(home, 'tmp'),

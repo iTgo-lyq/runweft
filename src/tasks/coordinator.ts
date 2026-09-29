@@ -1,7 +1,8 @@
 import { BaselineStore } from '../remote/store';
 import { RemoteBaselines, uncertainPreparation } from '../remote/baselines';
 import { TaskResults, codeView } from './results';
-import { ResultShowSchema, ResultFetchSchema, ResultRetrySchema } from './result-types';
+import { ResultShowSchema, ResultFetchSchema, ResultRetrySchema, ResultReleaseSchema } from './result-types';
+import { assertResultReleaseIdle, TaskResultRetention } from './result-retention';
 import { setTimeout as delay } from 'node:timers/promises';
 import { ExecutionClient } from '../execution';
 import { errorDetails } from '../errors';
@@ -159,6 +160,26 @@ export class TaskCoordinator {
         this.kick(namespace, parsed.id);
         return { ...accepted, ...this.result(namespace, { parent: parsed.parent, id: parsed.id, roundId: accepted.round_id }) };
     }
+    async releaseResults(namespace: string, value: unknown) {
+        const { parent, id, roundId, apply, discardPending } = parseTask(ResultReleaseSchema, value);
+        if (parent.kind !== 'cli') throw new TaskError(403, 'result_release_cli_only', '代码成果释放通过操作者 CLI 显式执行。');
+        const result = await this.serial(id, async () => {
+            this.store.assertCanDelegate(namespace, parent);
+            const bundle = this.store.require(namespace, id, parent);
+            if (roundId && !bundle.rounds.some(round => round.id === roundId)) throw new TaskError(404, 'round_unknown', '此任务中没有指定轮次。');
+            const selected = bundle.rounds.filter(round => roundId ? round.id === roundId : ['finished', 'failed', 'finishing'].includes(round.phase));
+            assertResultReleaseIdle(bundle, selected, discardPending);
+            const retention = new TaskResultRetention(this.client(namespace)), plans = [];
+            for (const round of selected) plans.push({ roundId: round.id, retention: await retention.plan(bundle.task, round, this.store.codeFetches(id, round.id), discardPending) });
+            const blocked = plans.some(plan => plan.retention.unpublished && !plan.retention.discardPending);
+            if (apply && blocked) throw new TaskError(409, 'result_unpublished', '该轮代码尚未完整交付。', '先 retry；明确放弃时加 --discard-pending --apply。');
+            const saved = apply ? this.store.beginResultRelease(namespace, parent, id, plans, discardPending) : bundle;
+            return { agent_id: id, applied: apply, revision: saved.task.revision, can_release: !blocked,
+                rounds: plans.map(plan => ({ round_id: plan.roundId, ...plan.retention, state: saved.rounds.find(round => round.id === plan.roundId)!.codeRetention?.state ?? 'retained' })) };
+        });
+        if (apply) this.kick(namespace, id);
+        return result;
+    }
     async retryFinish(namespace: string, value: unknown) {
         const { parent, id, roundId } = parseTask(InterruptSchema, value);
         const result = await this.serial(id, () => {
@@ -299,6 +320,9 @@ export class TaskCoordinator {
         const files = new TaskFiles(this.client(namespace));
         const outputs = new TaskOutputs(this.client(namespace), this.store);
         const results = new TaskResults(this.client(namespace), this.store, this.baselines.store);
+        for (const item of rounds) if (item.codeRetention?.state === 'releasing') {
+            await new TaskResultRetention(this.client(namespace)).advance(task, item, () => this.store.save(task, item, []));
+        }
         for (const previous of rounds.filter(item => ['finished', 'failed'].includes(item.phase))) {
             const savePrevious = () => this.store.save(task, previous, []);
             if (previous.code) await results.advance(task, previous, savePrevious);
@@ -320,6 +344,16 @@ export class TaskCoordinator {
             }
             return;
         }
+        if (task.environment.mode === 'worktree' && task.environment.status === 'removed' && task.environment.remote?.release?.state === 'pending') {
+            const remote = task.environment.remote;
+            try {
+                const consumerId = remote.consumerId ?? this.baselines.store.consumerForOwner(namespace, 'task', id)?.id;
+                if (consumerId) { remote.consumerId = consumerId; await this.baselines.releaseConsumer(consumerId); }
+                remote.release = { state: 'released' };
+            } catch (error) { remote.release = { state: 'pending', error: errorDetails(error) }; }
+            this.store.saveEnvironment(task); return;
+        }
+        if (rounds.some(item => item.codeRetention?.state === 'releasing')) return;
         const round = rounds.find(round => !['finished', 'failed'].includes(round.phase));
         if (!round) return;
         if (round.phase === 'queued' && rounds.some(item => item.outputFiles?.jobs.some(job => job.kind === 'collect' && !job.publishedVersion && job.phase !== 'complete'))) return;

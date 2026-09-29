@@ -23,7 +23,9 @@ export async function remoteFixture(cleanups: (() => Promise<void> | void)[], as
             usedBytes: [...objects.values()].filter(item => item.namespace === namespace).reduce((sum, object) => sum + object.size, 0),
             usage: { reservedBytes: 0, availableBytes: 0, deletingBytes: 0, referencedBytes: 0, objectCount: objects.size, referencedCount: refs.size } });
         if (parts[2] === 'artifacts') {
+            if (parts[3] === 'requests') { const artifact = [...objects.values()].find(item => item.requestId === parts[4] && item.namespace === namespace); return artifact ? Response.json({ artifact }) : error('artifact_not_found', 404); }
             const object = objects.get(parts[3]); if (!object || object.namespace !== namespace) return error('artifact_not_found', 404);
+            if (parts[4] === 'references' && request.method === 'GET') return Response.json({ references: [...(refs.get(object.id) ?? [])].map(reference => ({ reference, purpose: 'recovery', createdAt: 1 })) });
             if (parts[4] === 'references') { const key = decodeURIComponent(parts[5]); if (request.method === 'PUT') { if (object.state !== 'available') return error('artifact_not_available'); (refs.get(object.id) ?? refs.set(object.id, new Set()).get(object.id)!).add(key); }
                 else { refs.get(object.id)?.delete(key); if (faults.unpinLost) { faults.unpinLost = false; return error('unpin_response_lost', 502); } } return Response.json({ ok: true }); }
             return Response.json({ artifact: object });
@@ -120,7 +122,10 @@ export async function remoteFixture(cleanups: (() => Promise<void> | void)[], as
                     : body.action === 'remove' && faults.ignored && !body.discardIgnored ? { code: 'workspace_ignored_files', message: 'ignored files retained' } : undefined;
                 operation = { id: key, request: body, status: problem ? 'failed' : 'succeeded', error: problem, createdAt: Date.now(), updatedAt: Date.now() };
                 workspace.operations[key] = operation;
-                if (!problem && body.action === 'remove') workspace.status = 'removed';
+                if (!problem && body.action === 'remove') {
+                    workspace.status = 'removed'; workspace.releasedResults ??= {};
+                    for (const result of body.releaseResults ?? []) workspace.releasedResults[result.roundId] = { resultHead: result.resultHead, releasedAt: Date.now() };
+                }
                 if (!problem && body.action === 'finalize') workspace.results[body.roundId] = { environmentId: body.environmentId, roundId: body.roundId,
                     baseCommit: workspace.source.baseCommit, startHead: workspace.source.baseCommit, resultHead: workspace.source.baseCommit,
                     resultRef: `refs/rounds/${body.roundId}`, partial: false, fileCount: 0, paths: [], sealedAt: Date.now() };

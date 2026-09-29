@@ -1,6 +1,6 @@
 # 代码成果与取回契约
 
-> 来源：[Technical](technical.md)；状态：T1–T4 已实现机器导出/取回、中心清单、CLI/MCP 及正式远端委派；显式释放由 T5 接入。
+> 来源：[Technical](technical.md)；状态：T1–T5 已实现机器导出/取回、中心清单、CLI/MCP、正式远端委派及显式释放；完整原生 MCP 矩阵与候选安装在 T6 验收。
 
 ## 身份与不变事实
 
@@ -57,6 +57,16 @@ read/wait 的 `code` 包含 status、round_id、result、ref、fetch、bytes 和
 
 environment.remote 保存 origin、snapshotId 和 consumerId。基线消费者按任务身份幂等查找，插入后崩溃不会重复创建；任务与诊断共享基线服务，停服先等待任务推进，再关闭基线依赖。准备完成才进入原有工作区、输入和模型启动流程。
 
-首次收尾按 Git 封存、代码发布、附件发布、轮次完成顺序推进。捕获失败保留 finishing，retry_result 可修复；已经 sealed 的 Git facts 不因代码错误降为 unknown。下一轮沿原 worktree 和原生 session 续接。T5 完成前远端 workspace remove 明确拒绝，保留现场和成果。
+首次收尾按 Git 封存、代码发布、附件发布、轮次完成顺序推进。捕获失败保留 finishing，retry_result 可修复；已经 sealed 的 Git facts 不因代码错误降为 unknown。下一轮沿原 worktree 和原生 session 续接。
 
 无模型成果回归只使用真实 HAPI prepare/finalize facts；插入 fixture 时停止服务，避免 queued 行启动模型。正式委派另由公开 CLI 驱动 Codex/Claude Code 各两轮，验证工具过滤、进程停止、收尾修复及执行端离线后的取回合入；证据见 Execution。
+
+## T5 留存记录与清理入口
+
+`POST /api/runweft/tasks/result/release` 仅接受操作者 CLI parent，字段为 id、可选 roundId、apply 和 discardPending；默认只读预览。省略 roundId 选择已结束或收尾中的轮次，正在执行的任务仍拒绝释放。round.codeRetention 持久记录 releasing/released/discarded、逐项恢复引用/机器副本和错误；清单保持不变。已受理的释放沿原记录继续，不重新 pin 或发布；新 fetch/retry 拒绝，已取回主库引用不变。read/wait 的 code.retention 只返回状态和待处理数量，完整清理预览只经 CLI/API 返回。
+
+捕获确定失败时，只有显式 discard-pending、停止证明、sealed facts 和相关操作均确定停止才可结束代码收尾。后续附件流程仍正常完成，再放行排队下一轮。未完成取回的副本也须核对原操作；没有机器写入的 waiting 取回会随 tombstone 明确失败。
+
+远端 workspace remove 冻结各 sealed 轮次的 roundId/resultHead，HAPI 默认不删成果 refs，只有明确名单才删除。持久操作记录 resultRefReleases，环境记录 releasedResults；重启按既有删除意图核对精确 ref，恢复部分进度。cache release 认可这些事实，但重新出现的已释放 ref 视为外部占用并保留。基线 ref 随最终自有 cache 回收，不删除主仓库引用。
+
+环境移除后，environment.remote.release 单独记录 pending/released 与错误，沿共享基线服务解除 task consumer。失败保留消费者与恢复引用；其他消费者继续保护 input/import，已发布轮次用各自 recovery pin 独立保留。候选与取回副本留在既有 HAPI workspaces 目录，paths/doctor 显示相应路径；不新增表或临时数据根。

@@ -18,6 +18,7 @@ function taskText(task: Pick<Summary, 'agent_id' | 'round_id' | 'status' | 'atte
         + (task.git === 'not_applicable' ? '' : `\nGit：${task.git.status}${task.git.checkout ? ` · ${task.git.checkout}` : ''}`
             + `\n工作区：${task.git.retained}`
             + (task.git.removal?.error ? `\n清理需处理：${task.git.removal.error.message}${task.git.removal.error.hint ? `\n${task.git.removal.error.hint}` : ''}` : '')
+            + (task.git.remote?.release ? `\n目标缓存与输入基线：${task.git.remote.release.state}${task.git.remote.release.error ? ` · ${task.git.remote.release.error.message}` : ''}` : '')
             + (task.git.result_ref && !task.git.remote ? `\n成果引用：${task.git.result_ref}\n查看修改：git diff ${task.git.start_head} ${task.git.result_head}\n在主仓库目标分支审查并选择 merge 或 cherry-pick。` : ''))
         + (task.code && task.git !== 'not_applicable' && task.git.remote ? `\n代码成果：${task.code.status}${task.code.next ? `\n下一步：${task.code.next.command}` : ''}` : '')
         + (task.artifacts && task.artifacts.status !== 'none' ? `\n成果文件：${task.artifacts.status}${task.artifacts.manifest ? ` · 版本 ${task.artifacts.manifest.version}` : ''}\n查看清单：runweft task artifacts show ${task.agent_id} --round ${task.round_id}` : '')
@@ -57,12 +58,13 @@ export function announceRequest(program: Command, requested?: string) {
 export function addTaskCommands(program: Command, context: () => ResolvedConfig, output: (value: unknown, human: string) => void) {
     const client = () => new TaskClient(context(), process.cwd());
     const task = program.command('task').description('派生、续接与控制本机共享或本机/远端独立任务');
-    task.command('workspace').description('管理保留的独立工作区').command('remove <id>').description('显式删除已结束任务的工作区；保留报告和 Git 成果引用')
+    task.command('workspace').description('管理保留的独立工作区').command('remove <id>').description('显式删除已结束任务的工作区；远端需已交付或明确放弃代码')
         .option('--discard-ignored', '明确丢弃 ignored 依赖和文件；默认存在时拒绝删除')
         .action(async (id, options) => {
             const result = await client().removeWorkspace(id, !!options.discardIgnored);
-            output(result, result.environment.mode === 'worktree' && result.environment.status === 'removed' ? '工作区已移除；报告和 Git 成果引用保留。'
-                : `已请求删除工作区：${id}\n完成前不接受新轮次；报告和成果引用保留。\n查询结果：runweft task show ${id}`);
+            output(result, `${result.environment.mode === 'worktree' && result.environment.status === 'removed' ? '工作区已移除。' : `已请求删除工作区：${id}；完成前不接受新轮次。`}`
+                + '\n报告、中心成果及已取回的主仓库引用保留；远端自有 Git 引用随环境释放，本机成果引用保留。'
+                + `\n查询工作区及缓存释放：runweft task show ${id}`);
         });
     const result = task.command('result').description('查看、取回或重试独立工作区代码成果');
     const resultText = (value: Awaited<ReturnType<TaskClient['result']>>) => {
@@ -88,6 +90,16 @@ export function addTaskCommands(program: Command, context: () => ResolvedConfig,
             output(value, resultText(value));
         });
     }
+    result.command('release <id>').description('预览代码成果留存；--apply 才释放，不删除工作区或主仓库成果')
+        .option('--round <id>', '只释放指定轮次；省略时选择已停止或收尾中的轮次')
+        .option('--apply', '保存并执行释放意图').option('--discard-pending', '明确放弃已停止但未完整交付的代码')
+        .action(async (id, options) => {
+            const value = await client().releaseResults(id, { roundId: options.round, apply: !!options.apply, discardPending: !!options.discardPending });
+            output(value, `${value.applied ? '释放已受理' : '代码留存预览，尚未释放'}\n`
+                + value.rounds.map(round => `${round.round_id} · ${round.state} · 本轮恢复引用 ${round.references.filter(item => !item.done).length} 个，副本操作 ${round.copies.filter(item => !item.done).length} 个`
+                    + (round.unpublished ? round.discardPending ? '（明确放弃未交付代码）' : '（先 retry，或明确 --discard-pending）' : '')).join('\n')
+                + (value.applied ? `\n查询：runweft task result show ${id}${options.round ? ` --round ${options.round}` : ''}` : '\n确认后以相同参数加 --apply。释放后不再承诺取回；其他轮次引用保留，文件字节仍按 artifact prune/remove 清理。'));
+        });
     const artifacts = task.command('artifacts').description('查看成果版本、重传候选或显式补收文件');
     artifacts.command('show <id>').requiredOption('--round <id>', '指定业务轮次').option('--version <n>', '只查看某个不可变版本')
         .action(async (id, options) => {
