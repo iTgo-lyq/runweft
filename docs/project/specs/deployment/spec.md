@@ -44,7 +44,7 @@ HAPI Hub 只监听本机私有端口，省略端口配置时自动选择。Runwe
 | `connections/local/hapi/` 或 `connections/<主机名>-<URL hash>/hapi/` | 当前机器 Runner 的连接身份、配置与原生日志 |
 | `connections/<连接>/hapi/workspaces/environments/<环境ID>/` | 独立任务或诊断 checkout、树外输入与准备/成果/操作回执；持久数据，不是缓存 |
 | `connections/<连接>/hapi/workspaces/repositories/` | 来源共享 Git/子模块/LFS 缓存；保护成果与活跃消费者，不按空闲时间删除 |
-| `connections/<连接>/hapi/workspaces/exports/`、`imports/` | 仓库操作和清单回执；成功交付的中间副本释放，未交付候选保留 |
+| `connections/<连接>/hapi/workspaces/exports/`、`imports/`、`fetches/` | 基线/成果导出、导入及取回操作和清单回执；成功交付的中间副本释放，未交付候选保留 |
 | `connections/<连接>/hapi/artifact-transfers/` | 机器输入下载副本、持久操作回执及未交付的输出候选 |
 | `client.sqlite` | 本机工作区与 Agent 个人 runtime 绑定及 Claude MCP hook 的短期调用身份 |
 | `logs/` | 服务日志，由部署方管理保留和轮转 |
@@ -54,11 +54,11 @@ HAPI Hub 只监听本机私有端口，省略端口配置时自动选择。Runwe
 
 Hub 客户端不保存权威资源库；paths 明确指出登记位于中心，备份资源须停止中心后保留其业务库与尚存 WAL 文件。全局范围见[资源范围](../resources/scope/spec.md)。
 
-paths.taskWorkspaces 指向当前连接的本机环境根。doctor 的 task_workspaces 检查只读统计实际 checkout 目录（含失败准备现场），即使中心离线仍可取得本机数量；读取失败明确报告错误，不推断零目录或成功任务数，不统计其他连接/机器。具体状态通过 task list/show 查询。
+paths.taskWorkspaces 指向当前连接的本机环境根。doctor 的 task_workspaces 检查只读统计实际 checkout 目录（含失败准备现场），即使中心离线仍可取得本机数量；读取失败明确报告错误，不推断零目录或成功任务数，不统计其他连接/机器。同时显示仓库 caches/exports/fetches 路径和 result release → workspace remove → artifact prune/remove 清理顺序；具体状态通过 task list/show 查询。
 
-任务协调器复用 serve，CLI/MCP 无需再安装独立 daemon。业务表及请求恢复见[委派生命周期](../delegation/lifecycle/spec.md)；当前 schema v5 在保留既有资源、任务和文件清单的基础上，增加基线快照、目标导入、消费者、LFS 索引与诊断准备表。遇到更高版本明确拒绝，不自动删除数据或降级。
+任务协调器复用 serve，CLI/MCP 无需再安装独立 daemon。业务表及请求恢复见[委派生命周期](../delegation/lifecycle/spec.md)；当前 schema v6 在保留既有资源、任务、文件、基线/导入/消费者/诊断记录的基础上增加代码清单与取回表；交付/释放进度归原 round，不改 consumer.importId 或重写旧行。遇到更高版本明确拒绝，不自动删除数据或降级。
 
-远端准备继续使用同一服务和数据根；paths 展示 exports/imports/repositories，具体归属与释放见[远端工作区](../remote-workspace/spec.md)。中心 recovery pin 保护的文件与业务清单需一起备份，目标 cache 和环境分别保留，不能把 exports/imports 全目录当作可随意丢弃的临时文件。
+远端准备继续使用同一服务和数据根；paths 展示 exports/imports/repositories/fetches，具体归属与释放见[远端工作区](../remote-workspace/spec.md)。中心 recovery pin 保护的文件与业务清单需一起备份，目标 cache 和环境分别保留，不能把 exports/imports 全目录当作可随意丢弃的临时文件。
 
 server.artifacts 配置本机托管服务的大小、配额和期限，Hub 客户端以中心 limits 为准。paths/doctor 展示文件根、用量和恢复/清理提示，见[留存](../artifacts/retention/spec.md)。二进制接口流式转发，Hub body ceiling 随 maxFile 提高；反向代理须同时允许对应体积、关闭请求/响应缓冲且不另加总传输时限。备份/恢复覆盖中心数据库、字节、业务清单以及机器上未交付候选，不能只回退数据库或删除 spool。
 

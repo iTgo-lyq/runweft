@@ -38,7 +38,7 @@
 | [本地工作区执行（已完成）](archive/2026-09-29-local-workspace-execution/requirement.md) | 独立本地协作及公共 Git 准备/封存/保留能力 | HAPI 执行契约、委派生命周期 |
 | [任务附件交付](archive/2026-09-29-task-artifact-delivery/requirement.md) | 独立文件交付及既有任务的输入/输出接入 | 统一 CLI、委派生命周期 |
 | [远端工作区准备](archive/2026-09-30-remote-workspace-preparation/requirement.md) | 跨机基线与输入落地，复用公共工作区启动校验 | HAPI 执行契约、本地工作区、任务附件 |
-| [远端代码回收](changes/remote-result-delivery/requirement.md) | 真实远端协作至主仓库取得成果的完整链路 | 远端准备、本地工作区、委派生命周期、任务附件 |
+| [远端代码回收（已完成）](archive/2026-09-30-remote-result-delivery/requirement.md) | 真实远端协作至主仓库取得成果的完整链路 | 远端准备、本地工作区、委派生命周期、任务附件 |
 | [Subagent 看板](changes/subagent-dashboard/requirement.md) | 基于统一查询的全局概览，详情复用 HAPI | 委派生命周期、统一 CLI |
 | [集成与发布](changes/integrated-release/requirement.md) | 全部能力组成同一可安装版本及完整实测证据 | 以上十一个领域 Change |
 
@@ -116,7 +116,7 @@ sequenceDiagram
 | `delegationId`、`roundId` | 委派生命周期 | 关联已验证主工作区的父子上下文与每次明确任务输入；不由 prompt 任意路径代替工作区绑定 |
 | `repositoryId`、`environmentId`、`preparationId`、固定 Git 成果 | 本地工作区执行 | 公共 Git 生命周期；远端准备消费，不重新定义身份或收尾 |
 | `artifactId`、不可变对象与引用 | 任务附件交付 | 可授权读取的输入/输出及版本 |
-| `resultId` 与轮次报告关联 | 委派生命周期 | 结果归属和交付摘要；Git 成果字段由远端代码回收补充 |
+| 任务/轮次的代码与附件清单 | 委派生命周期、代码回收与附件交付 | 沿 taskId/roundId 查询，不另要求 resultId；原生执行、封存、发布、取回和留存分别表达 |
 | `requestId` | 各操作提供方 | 在主体与操作范围内去重；相同键不同内容拒绝，不能据此宣称跨服务原子事务 |
 
 Runweft 只补必要协作与交付关联，原生会话/执行事实优先读取 HAPI，不复制成另一套会话库。CLI 和 MCP 复用同一上层流程，已有重试与消息去重沿 HAPI 实现。
@@ -139,10 +139,10 @@ Runweft 只补必要协作与交付关联，原生会话/执行事实优先读�
 
 | 技术缺口 | 完整交付前需落实的结论 |
 | --- | --- |
-| 协作逻辑的部署与存储 | serve 内中心协调已运行，schema v5 保存资源、任务/轮次、请求、文件清单及基线/导入/消费者/诊断记录；HAPI 保存中心字节和机器传输。重复接受、文件恢复及重启查询已验证 |
+| 协作逻辑的部署与存储 | serve 内中心协调已运行，schema v6 保存资源、任务/轮次、请求、文件清单、基线/导入/消费者/诊断及代码清单/取回记录；HAPI 保存中心字节和机器传输。重复接受、文件恢复及重启查询已验证 |
 | HAPI 原生执行契约 | 两种内置 runtime 的输入关联、原生结果、请求重查、定向中断、审批、停止与续接已通过真实验收；共享进程兄弟会话可继续执行，已证实缺口在 HAPI 原路径最小增补 |
 | 宿主身份与结果交互 | 身份、安装、工具禁用及真实派生/等待/续接/控制已通过两宿主 × 两 runtime、local/同机 Hub 验收；支持工具响应，不声明后台唤醒 |
-| 工作区与交付一致性 | 本机 shared/worktree、LFS/子模块、启动前输入、停止后 Git/文件收尾、续接及留存清理已验收；远端固定基线、独立环境、原生准备门禁和显式释放已验收；Git bundle 成果回收继续由后续 Change 落实 |
+| 工作区与交付一致性 | 本机 shared/worktree、LFS/子模块、启动前输入、停止后 Git/文件收尾、续接及留存清理已验收；远端固定基线、独立环境、原生准备门禁和显式释放已验收；Git bundle/LFS/递归未变模块成果交付、主仓库取回及显式留存释放已验收 |
 | 发行与运行维护 | 基础包组织、版本固定、启停诊断与四平台安装已验收；完整业务版本的数据升级、组合验收和公开发行由集成 Change 落实 |
 | 真实验收条件 | 专用本地/远端机器、两种原生 CLI 的可用认证及 macOS 环境；只记录资源与授权状态，不读取或搬运凭据来替代配置 |
 
@@ -155,11 +155,11 @@ Runweft 只补必要协作与交付关联，原生会话/执行事实优先读�
 
 正式方案从[阶段 1](delivery-structure.md#阶段与可验收结果)的双模式安装与数据承载、全局资源注册、HAPI 执行和宿主接入开始。先固定跨 Change 的职责及必要契约，当前阶段落实其直接前置，不要求一次写完所有下游内部细节。后续能力仍在完整版本承诺内，按阶段逐项实现和验收；各领域不能把自己的核心功能留给最后的集成 Change。
 
-统一 CLI、HAPI 执行契约、宿主 MCP 适配、资源注册、Agent 定义、本地共享委派、本地独立工作区、任务附件和远端工作区准备均完成正式 Technical/Plan、各一次 iclaude 评审、实现与验收，并同步 Specs 归档。基础安装通过四平台运行验证；当前能力完成四平台候选包构建，新增原生组合与安装证据来自 Linux x64，同机双 Runner 不替代真实跨机器验收。远端代码回收、看板及完整发行仍待完成，正式远端业务任务尚未开放。
+统一 CLI、HAPI 执行契约、宿主 MCP 适配、资源注册、Agent 定义、本地共享委派、本地独立工作区、任务附件、远端工作区准备和远端代码回收均完成正式 Technical/Plan、各一次 iclaude 评审、实现与验收，并同步 Specs 归档。基础安装通过四平台运行验证；当前能力完成四平台候选包构建，新增原生组合与安装证据来自 Linux x64，同机双 Runner 不替代真实跨机器验收。正式远端 worktree 委派与结果回收已开放；全局看板及完整发行仍待完成。
 
 ## 调查与验证状态
 
-- HAPI/Multica 的源码与文档证据按主题保留在[执行基础调查](archive/2026-09-29-hapi-subagent-foundation/research.md)、[远端准备调查](archive/2026-09-30-remote-workspace-preparation/research.md)和[代码传输实验](changes/remote-result-delivery/research.md)。
+- HAPI/Multica 的源码与文档证据按主题保留在[执行基础调查](archive/2026-09-29-hapi-subagent-foundation/research.md)、[远端准备调查](archive/2026-09-30-remote-workspace-preparation/research.md)和[代码传输实验](archive/2026-09-30-remote-result-delivery/research.md)。
 - 已验证临时 Git 仓库的 bundle 传出、worktree 修改和结果取回；另已在 macOS/Linux arm64/x64 的专用环境通过候选 npm 包验证 Runweft/HAPI 服务、认证、Runner、协议代理与配置/工作区绑定，见[部署执行记录](archive/2026-09-29-unified-cli-and-deployment/execution.md)与[调查](archive/2026-09-29-unified-cli-and-deployment/research.md)。未运行真实远端 HAPI/agent 链路。
 - 正式验收须覆盖两类主客户端与两种内置 runtime 的本地/远端组合，以及 macOS 正式安装；分别由所属 Change 记录实际证据，不能相互代替。
 - 历史宿主调查使用 Claude Code `2.1.269`；正式宿主 MCP 验收使用 Codex `0.156.1`、iclaude/Claude Code `2.1.283`，覆盖专用 local/hub 连接、真实安装调用、clear/resume 和子工具禁用，见[宿主执行记录](archive/2026-09-29-host-mcp-adapter/execution.md)。评审进程与执行验收分开记录。

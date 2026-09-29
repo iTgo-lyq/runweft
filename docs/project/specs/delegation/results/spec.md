@@ -10,7 +10,7 @@ artifacts 提供 none/pending/delivered/incomplete、不可变清单、待处理
 
 独立模式展示 preparation、实际 cwd 和环境 retained/deleting/removed。Git 交付区分 pending/not_prepared/sealing/sealed/needs_attention/unknown，成功返回 base/start/result SHA、成果 ref、可选 checkpoint、partial、变更数量/有界路径。finishing 仍为 running，收尾错误返回 workspace attention 且保留原生 completed/failed/unknown 与报告，不伪造模型失败或重放任务。
 
-未启动且已明确失败/取消的执行显示 not_started；准备失败的 Git 为 not_prepared，不伪造模型终态或已固定的成果。执行取消的部分结果仅在停止确认后封存。删除错误单独保存在环境 removal 中，不覆盖原生结论；清理后报告与 Git 引用继续可查。
+未启动且已明确失败/取消的执行显示 not_started；准备失败的 Git 为 not_prepared，不伪造模型终态或已固定的成果。执行取消的部分结果仅在停止确认后封存。删除错误单独保存在环境 removal 中，不覆盖原生结论；清理后报告继续可查；目标成果引用按显式清理规则保留或释放，主库已取回引用不受影响。
 
 ## 报告
 
@@ -20,6 +20,8 @@ artifacts 提供 none/pending/delivered/incomplete、不可变清单、待处理
 
 wait 在任一指定任务完成或需处理时返回，并内联有界报告。超时返回 timed_out=true 和当前概览，任务继续运行；等待取消不归档执行。
 
-不带游标时，以调用开始时已接受的最新 round 为目标，旧轮次完成不会提前满足新轮次。带每任务 after_revision 时按序返回其后的完成/文件通知，每个 round 保留 completed_revision，文件交付与留存另有 artifacts_revision；按二者最大值升序消费，后轮开始不抹掉前轮完成通知。历史通知的 revision 指向该通知版本，current_revision 表示任务最新版本。
+不带游标时，以调用开始时已接受的最新 round 为目标，旧轮次完成不会提前满足新轮次。带每任务 after_revision 时按序返回其后的完成/文件通知，每个 round 保留 completed_revision，文件交付与留存另有 artifacts_revision，代码发布、取回及留存有 code_revision；按三者最大值升序消费，后轮开始不抹掉前轮完成通知。历史通知的 revision 指向该通知版本，current_revision 表示任务最新版本。
 
 等待后轮时，前轮的审批或未知状态仍通过 blocking_round_id 返回。游标只抑制已交付通知，不删除报告或审批；需要详情时按固定轮次读取。
+
+远端 code 独立返回 pending/capturing/publishing/available/needs_attention/unknown 及留存状态、固定成果、取回摘要和下一步。完成不等于代码已取回/合入；代码捕获失败可阻止后轮，固定候选后的确定上传失败只影响交付。show/read 默认最新接受轮次，详细清单与历史取回使用 task result show；见[代码交付](../../remote-results/delivery/spec.md)。

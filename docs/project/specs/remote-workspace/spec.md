@@ -1,6 +1,6 @@
 # 远端工作区诊断准备
 
-Runweft 使用既有 Agent/runtime 绑定，把主 Git 仓库的明确已提交基线传到另一 Runner，并用 HAPI 公共能力建立独立 worktree。诊断不启动模型、不接受任务消息或附件、不提供代码成果取回，也不开放正式远端 task/MCP 委派。
+Runweft 使用既有 Agent/runtime 绑定，把主 Git 仓库的明确已提交基线传到另一 Runner，并用 HAPI 公共能力建立独立 worktree。诊断不启动模型、不接受任务消息或附件、不提供代码成果取回，正式远端 task/MCP 委派使用同一基线服务自动准备，并经[代码交付](../remote-results/delivery/spec.md)回收；不需要先运行诊断命令。
 
 | 命令 | 行为 |
 | --- | --- |

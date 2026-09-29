@@ -12,7 +12,7 @@ repositoryId 由 machineId、真实 Git common directory 和对象格式确定�
 | prepare | environmentId、preparationId、roundId、固定 source、expectedHead 与可选本地 inputs；持久准备并返回 cwd/startHead/输入证据 |
 | inspect | environmentId 查询环境、准备、成果和操作回执；对中断操作核对现场，不创建 checkout |
 | finalize | environmentId、preparationId、roundId、attemptId、sessionId、partial 与可选 unchangedHead；核实停止后封存成果 |
-| remove | environmentId、attemptId、expectedHead、discardIgnored；仅删除符合公共检查的自有环境 |
+| remove | environmentId、attemptId、expectedHead、discardIgnored、可选 releaseResults[{roundId,resultHead}]；仅删除符合公共检查的自有环境与明确选定成果 refs |
 
 prepare/finalize/remove 快速持久受理，副作用异步执行，通过 inspect 读取 accepted/running/succeeded/failed/unknown。同一操作身份和参数返回原回执，参数冲突拒绝；已有 unknown/pending 操作阻止新操作。Git 元数据动作在进程内按 commonDir 串行，最终仍依赖 Git 原生锁。
 
@@ -38,6 +38,6 @@ Git 需 2.31+，对象格式接受 sha1/sha256。有子模块时初始化对应 
 
 基线引用为 `refs/hapi/workspaces/<id>/base`，成果引用为 `refs/hapi/workspaces/<id>/rounds/<roundId>`，使用 compare-and-set 防止覆盖不同成果。实际清理检查最新 resultHead，没有成果时检查 base；所有保留引用必须仍指向记录的对象。
 
-清理拒绝未封存/脏改动，ignored 默认拒绝，明确 discardIgnored 后才允许移除；子模块和已初始化目录同样检查。成功只删除自有 checkout、树外输入与指向预期成果的任务分支，base/round refs 和回执继续保留。部分删除或丢响应按原操作对账，不清空成果记录。业务层的轮次、权限和留存规则见[独立收尾](../../local-workspace/finish/spec.md)。
+清理拒绝未封存/脏改动，ignored 默认拒绝，明确 discardIgnored 后才允许移除；子模块和已初始化目录同样检查。成功只删除自有 checkout、树外输入与指向预期成果的任务分支，默认 base/round refs 和回执继续保留。明确 releaseResults 时，核对该环境 sealed facts 与精确 ref/SHA，持久保存删除意图后 CAS 释放所选 refs；resultRefReleases/releasedResults 记录部分进度和结果，inspect 继续已有意图，不覆盖变化后的 ref。部分删除或丢响应按原操作对账，不清空成果记录。业务层的轮次、权限和留存规则见[独立收尾](../../local-workspace/finish/spec.md)。
 
-导入 cache 的最终释放另检查全部 imports、环境、保留引用和 Git worktree；只有已移除且无变化环境的 refs 可回收，未知/新成果仍保护 cache，见[基线留存](../../remote-workspace/isolation/spec.md)。普通源仓库的 refs 不由该缓存操作清理。
+导入 cache 的最终释放另检查全部 imports、环境、保留引用和 Git worktree；已移除且无变化环境的 refs 可回收，已明确释放的改动成果依 releasedResults 放行；其他未知/新成果仍保护 cache，见[基线留存](../../remote-workspace/isolation/spec.md)。普通源仓库的 refs 不由该缓存操作清理。

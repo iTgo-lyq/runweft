@@ -1,13 +1,13 @@
 # 委派入口
 
-CLI 与 MCP 使用同一 TaskClient、认证和中心协调能力。支持 Codex/Claude Code 主宿主，执行 flavor 由 Agent 定义所选 runtime 决定，两者可以不同。工作区支持[本机 shared/worktree](../../local-workspace/mode/spec.md)。
+CLI 与 MCP 使用同一 TaskClient、认证和中心协调能力。支持 Codex/Claude Code 主宿主，执行 flavor 由 Agent 定义所选 runtime 决定，两者可以不同。工作区支持[本机 shared/worktree 与远端 worktree](../../local-workspace/mode/spec.md)；远端必须显式指定已提交 base，自动准备后启动。
 
 ## MCP 工具
 
 | 工具 | 契约 |
 | --- | --- |
 | `list_agent_definitions` | 当前工作区的有效定义、来源和在线目标资格，不启动执行 |
-| `spawn_agent` | `agent_type`、`message`、可选 UUID `request_id`、`workspace_mode`（默认 shared）；worktree 可指定 `base_ref`（默认 HEAD）；持久接受后立即返回 agent_id、round_id、request_id、revision、accepted |
+| `spawn_agent` | `agent_type`、`message`、可选 UUID `request_id`、`workspace_mode`（默认 shared）；本机 worktree 可指定 `base_ref`（默认 HEAD），远端 worktree 必须指定；持久接受后立即返回 agent_id、round_id、request_id、revision、accepted |
 | `list_agents` | 当前原生父会话的任务概览和最近 20 条接受记录 |
 | `read_agent` | `id`、可选 `round_id`、`offset`、`limit`；读取轮次事实、报告和待审批请求 |
 | `wait` | `ids` 为 1–8 个任务；`timeout_ms` 为 0–540000，默认 30000；可传各任务的 `after_revision`，语义见[结果](../results/spec.md) |
@@ -16,6 +16,8 @@ CLI 与 MCP 使用同一 TaskClient、认证和中心协调能力。支持 Codex
 | `retry_finish` | `id`、`round_id`；修复工作区错误后显式重试 Git 封存，不重发原生任务 |
 | `retry_artifacts` | `id`、`round_id`、可选 request_id；重传已捕获的失败文件候选 |
 | `collect_artifacts` | `id`、`round_id`、files、可选 request_id；静止任务补收文件并生成新清单版本 |
+| `fetch_result` | `id`、可选 `round_id`、request_id；固定轮次并向原发起仓库取回代码 |
+| `retry_result` | `id`、`round_id`、可选 request_id；修复捕获或重传代码，不重跑模型 |
 | `respond_to_permission` | `id`、`round_id`、原生 `request_id`、`decision=approved/denied/abort`、可选原生 answers |
 
 保留 runweft_status。一次工具取消、超时或 stdio 关闭仅取消该次请求/等待，已接受任务由中心继续处理；返回工具结果是主上下文取得报告的路径，不承诺后台唤醒或新宿主自动接回已关闭的原父身份。
@@ -31,3 +33,5 @@ spawn/next 可传 inputs[{artifactId,name?}] 和 outputs[{name,relativePath}]，
 CLI 使用当前连接的本机 Runner 身份作为操作者来源，不伪装原生父会话；没有本机身份时提示先 start。MCP 只能操作自己的父会话任务，CLI 操作者可操作同 namespace 的既有任务。完整示例见[使用说明](../../../../usage.md#本机任务)。
 
 spawn/send 支持可重复 --input/--output；`task artifacts show/retry/collect/release` 提供历史版本、传输恢复、补收及显式留存释放。清理仍是 CLI 操作者入口，不新增 MCP 删除工具。
+
+`task result show/fetch/retry/release` 提供逐轮代码清单、取回、补交及显式留存释放；release 默认预览，apply 才执行，未交付候选还需 discard-pending。MCP 只提供查询/取回/重传。具体语义见[代码成果](../../remote-results/snapshot/spec.md)。

@@ -8,4 +8,4 @@ finalize/remove 身份持久保存；未知沿原回执对账，明确失败修�
 
 同 import 还有 consumer 时不释放导入；同 snapshot 还有 consumer 时不解除中心 pin，另一快照共享的 LFS 引用不受影响。最后释放依次清理目标下载/import、剩余源候选和每个文件的 pin。解除 pin 不直接删除中心字节，仍沿[文件留存](../../artifacts/retention/spec.md)规则。已完全释放的快照再次使用建立新代次，旧准备继续返回 released。
 
-HAPI cache 回收要求所属环境均已移除、无未决操作、所有成果仍等于初始基线。其他 imports、外部 worktree、未知 ref 或未回收代码保留缓存并显示原因。只有已移除且无变化环境的 base/round refs 可随最终 cache 一起回收。实际删除先原子移到本 import 的自有目录，恢复只续删该目录，不删除原路径后来新建的 cache。回执和历史记录继续保留。
+HAPI cache 回收要求所属环境均已移除、无未决操作、所有成果仍等于初始基线或已按精确 round/head 显式释放。其他 imports、外部 worktree、未知 ref 或未回收代码保留缓存并显示原因。已移除且无变化环境的 base/round refs 可随最终 cache 一起回收；已释放 ref 若重新出现，视为外部占用并拒绝缓存回收。业务成果的中心 pin 独立保护恢复，不随 task consumer 解除，见[代码留存](../../remote-results/retention/spec.md)。实际删除先原子移到本 import 的自有目录，恢复只续删该目录，不删除原路径后来新建的 cache。回执和历史记录继续保留。
