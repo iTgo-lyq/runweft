@@ -55,3 +55,6 @@ HAPI 的 agent 字段仍是 flavor；注册一个新的逻辑 runtime 不会使�
 2026-09-29 已按 iclaude 线索独立重读 [runCodex](../../../../hapi/cli/src/codex/runCodex.ts)、[shared runtime](../../../../hapi/cli/src/codex/shared/runtime.ts)、[shared launch](../../../../hapi/cli/src/codex/shared/launch.ts)：当前正式入口使用 resolveCodexCommand，codexRemoteLauncher 只有历史定义和测试调用。旧 availability preflight 检查 HAPI_CODEX_APP_SERVER_BIN 与实际启动命令并不总相同。保留既有 preflight 行为，详情与版本查询真实 launcher 的命令；Runweft 将两者共同用于资格判断，不能仅见旧 available=true 就称实际 CLI 已发现。专用回归需要覆盖有效旧 override 但真实 PATH Codex 缺失的情形。
 
 Hub 服务端用 local 配置配合 serve --public；服务端资源解析只能按 namespace 和实际目标检查，客户端 local 的本机限制不进入中心公共解析逻辑。loopback 地址也可能被同机多个 Runner 使用，不单独充当机器身份。
+
+
+机器离线观察沿现有 HAPI 语义：[machineCache](../../../../hapi/hub/src/sync/machineCache.ts)在最后一次活跃观察超过 45 秒后转为 inactive，[SyncEngine](../../../../hapi/hub/src/sync/syncEngine.ts)每 5 秒执行过期检查。中心重启会先加载持久 active/activeAt，再由该检查收敛；服务 ready 不等于所有机器状态刚被重新验证。验收应等待原有状态收敛；资源资格还须当前工具查询成功，不能只依据缓存的 active=true。

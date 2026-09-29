@@ -2,7 +2,7 @@
 
 > 来源：[Requirement](requirement.md)
 > 技术方案：[Technical](technical.md)
-> 状态：待执行
+> 状态：执行中
 > 执行模式：逐任务提交
 > 确认方式：按用户授权，当前工作区 iclaude 一次评审，主 agent 独立复核后执行。
 
@@ -23,7 +23,7 @@
 
 ### T1 暴露 HAPI 现有机器库存与原生工具详情
 
-- 状态：待开始
+- 状态：已完成
 - 交付：可包含离线机器的已有 API、原 availability 链路的可选详情及能力声明；更新契约文档并固定 HAPI revision。
 - 依赖：已归档执行基础
 - 验收：namespace 正确，默认在线列表和轻量查询不变；实际 launcher 命令对应版本，并区分旧 preflight 与真实命令；失败和超时可辨认，旧 Runner 明确拒绝，不启动模型。
