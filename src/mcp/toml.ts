@@ -14,6 +14,10 @@ function inline(value: unknown): string {
     throw new RunweftError('codex_config_invalid', '生成的 Codex MCP 定义无法写入 TOML。');
 }
 
+export function codexMcpDefinition(value: Record<string, unknown>): string {
+    return '[mcp_servers.runweft]\n' + Object.entries(value).map(([key, value]) => `${key} = ${inline(value)}`).join('\n') + '\n';
+}
+
 /** Replace one semantic server while retaining every unrelated source slice and comment. */
 export function replaceCodexMcp(source: string, generated: string, install: boolean): string {
     const ast = parseTOML(source, { tomlVersion: '1.0.0' });

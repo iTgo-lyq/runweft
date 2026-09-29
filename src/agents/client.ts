@@ -46,17 +46,19 @@ export class AgentClient {
     constructor(private readonly config: ResolvedConfig, private readonly cwd: string, private readonly hapi: HapiClient = hapiClient(config)) {
         this.resources = new ResourceClient(config, hapi);
     }
-    private authenticate(): Promise<AgentConnection> {
-        return this.identity ??= this.hapi.authenticate().then(identity => {
+    private authenticate(signal?: AbortSignal): Promise<AgentConnection> {
+        signal?.throwIfAborted();
+        return this.identity ??= this.hapi.authenticate(signal).then(identity => {
             if (typeof identity.namespace !== 'string' || !identity.namespace) throw new RunweftError('invalid_hapi_response', 'HAPI 未返回有效 namespace。');
             return { name: connectionName(this.config.config), namespace: identity.namespace };
-        });
+        }).catch(error => { this.identity = undefined; throw error; });
     }
-    async resolve(id: string, scope?: AgentScope): Promise<ResolvedAgent> {
+    async resolve(id: string, scope?: AgentScope, signal?: AbortSignal): Promise<ResolvedAgent> {
+        signal?.throwIfAborted();
         const agent = readAgent(this.config, this.cwd, id, scope);
-        const connection = await this.authenticate();
+        const connection = await this.authenticate(signal);
         const selected = selection(agent, agentBindings(this.config, agent.source.key), connection.namespace);
-        const target = await this.resources.resolveExecutionTarget(selected.runtimeId);
+        const target = await this.resources.resolveExecutionTarget(selected.runtimeId, signal);
         return snapshot(agent, connection, selected, target);
     }
     async bind(id: string, runtimeId: string, scope?: AgentScope) {
@@ -76,11 +78,12 @@ export class AgentClient {
         const removed = removeAgentBinding(this.config, agent.source.key, connection.namespace);
         return { agent, connection, removed, declaredRuntime: agent.definition.runtime };
     }
-    async list() {
+    async list(signal?: AbortSignal) {
+        signal?.throwIfAborted();
         const catalog = listAgents(this.config, this.cwd);
-        const connection = await this.authenticate();
+        const connection = await this.authenticate(signal);
         const bindings = agentBindings(this.config);
-        const { runtimes } = await this.resources.runtimes(true);
+        const { runtimes } = await this.resources.runtimes(true, signal);
         const byId = new Map(runtimes.map(runtime => [runtime.id, runtime]));
         const agents: AgentAvailability[] = catalog.agents.map(agent => {
             let selected: AgentSelection | null = null, runtime: RuntimeView | null = null;

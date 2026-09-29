@@ -27,3 +27,13 @@
 - 修正依据：首次 `.dev-smoke/task-controls-Twbjtz` 复制了原生无审批配置，模型正确拒绝发起 require_escalated；测试改为仅在专用 Codex 副本启用 on-request/workspace-write，产品不覆盖用户默认。第二次 `.dev-smoke/task-controls-teHsIX` 暴露 Claude 回填旧历史导致 epoch 改变，已依据 HAPI 源码修复按 localId 重新核对并恢复正常游标；没有修改 HAPI 或重发原任务。两次失败进程均已退出、cleanupErrors=[]，不计为通过。
 - 验证：最终 `bun test ./test` 80 项、1326 次断言通过，含串行门禁、改身份的 resume、未知续接、精确缺失重建、目录/机器不匹配、迟到控制、追加去重、审批约束、等待游标、已知事实保留和回填分页；`bun run typecheck`、`bun run build`、Change 校验、git diff --check 通过。真实远端、MCP 两宿主组合仍分别属于后续 Change/T3–T4。
 - Commit：`delegation-lifecycle T2: resume rounds and expose targeted native controls`
+
+## T3 CLI 与原生 MCP 协作入口
+
+- 结果：MCP 保留 runweft_status，新增定义发现、派生、列表、读取、等待、下一轮/本轮追加、定向中断和原生审批响应八个工具，复用 TaskClient/AgentClient 与现有中心。原生调用身份生成稳定 request UUID，接受重试先查中心；工具描述说明模糊响应先查接受记录，不根据相似文本重新派生。父会话范围、角色拒绝、报告分页和 revision 游标沿中心契约。
+- 结果：取消信号传递到定义解析、认证、资源检查和业务请求；等待取消/断线不取消已接受任务。Codex 受管 MCP 显式安装更新 tool_timeout_sec=600，wait 最长 540 秒、工具期限 570 秒；旧注册由 mcp check 提示更新，不自动改写原生配置。未新增运行进程、配置文件、客户端任务库或 HAPI 改造。
+- 验证：`bun test ./test` 85 项、1509 次断言通过，含真实 MCP SDK 协议下两宿主身份、原接受重查、父隔离、受控子拒绝、报告分页、权限/定向取消、连接断开后中心继续完成及取消认证；旧 Codex 注册升级、语义保留和重复安装通过。`bun run typecheck`、`bun run build`、Change 校验、git diff --check 通过，HAPI 工作区无变更。
+- 真实验证：`bun run test:task-mcp` 的 Codex 用例在 `.dev-smoke/task-mcp-42affB/evidence.json` 通过实际 spawn→wait→read、同父身份、子 CLI spawn/send 拒绝、原生 completed、HAPI archived/inactive 及 host PID 退出；带游标的 MCP wait 实际等待 65005ms 后返回 timed_out=true。该次整体 success=false：Claude 已执行拒绝检查，但随后 Read 测试结果文件触发了测试脚本未纳入范围的审批，测试主动停止；cleanupErrors=[]，不计为 Claude 通过。
+- 修正与验证：仅扩大专用测试审批范围到其明确的结果文件读取，不修改产品默认权限。`RUNWEFT_SMOKE_HOST=claude bun run test:task-mcp` 在 `.dev-smoke/task-mcp-hYz93f/evidence.json` success=true、cleanupErrors=[]，通过相同真实委派、子 CLI 拒绝、结果/进程事实；实际 MCP wait 等待 65144ms 后返回 timed_out=true。脚本保留按宿主选择，已通过且代码未变的 Codex 用例不重复运行。
+- 后续：当前证据是本机 Codex→Codex、Claude→Claude；完整交叉组合、共享编辑与其他控制集成仍由 T4 验收，候选包和完整使用说明由 T5 更新。工具禁用保留既有前置验收边界：其他 MCP 与原生 subagent 不受 Runweft 限制。
+- Commit：`delegation-lifecycle T3: expose task collaboration through native MCP hosts`

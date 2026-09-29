@@ -8,6 +8,7 @@ import { RunweftError, errorDetails } from '../errors';
 import { fetchJson, hapiClient } from '../hapi';
 import { bindWorkspace, type Workspace } from '../workspaces';
 import { resolveHostIdentity, type HostClient, type HostIdentity } from './identity';
+import { taskTools } from './tasks';
 
 export type McpCallContext = { identity: HostIdentity; workspace: Workspace; config: ResolvedConfig; signal: AbortSignal };
 export type McpTool = {
@@ -43,8 +44,7 @@ const diagnostic: McpTool = {
     },
 };
 
-/** This is the production list; subsequent Changes register their business handlers here. */
-export function productTools(): McpTool[] { return [diagnostic]; }
+export function productTools(): McpTool[] { return [diagnostic, ...taskTools()]; }
 
 function result(value: Record<string, unknown>, isError = false): CallToolResult {
     return { content: [{ type: 'text', text: JSON.stringify(value) }], structuredContent: value, ...(isError ? { isError: true } : {}) };

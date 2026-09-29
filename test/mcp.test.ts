@@ -19,6 +19,7 @@ function setup() {
     return { root, cwd, c: loadConfig(join(root, 'home'), {}) };
 }
 const meta = (threadId: string) => ({ threadId, sessionId: 'root', callId: `call-${threadId}` });
+const toolNames = ['runweft_status', 'list_agent_definitions', 'spawn_agent', 'list_agents', 'read_agent', 'wait', 'send_input', 'interrupt_agent', 'respond_to_permission'];
 const hook = (call: string, session: string, cwd: string) => ({ hook_event_name: 'PreToolUse', tool_name: 'mcp__runweft__runweft_status',
     tool_use_id: call, session_id: session, cwd, tool_input: { secret: 'do-not-store' }, transcript_path: '/private/history.jsonl' });
 
@@ -80,7 +81,7 @@ async function linked(tools?: McpTool[]) {
 test('discovery is static and side-effect-free; tool responses carry identity and connection failure', async () => {
     const x = await linked();
     try {
-        expect((await x.client.listTools()).tools.map(t => t.name)).toEqual(['runweft_status']);
+        expect((await x.client.listTools()).tools.map(t => t.name)).toEqual(toolNames);
         expect(x.configReads()).toBe(0); expect(existsSync(x.c.home)).toBe(false);
         const missing = await x.client.callTool({ name: 'runweft_status', arguments: {} });
         expect(missing).toMatchObject({ isError: true, structuredContent: { error: { code: 'host_identity_missing' } } });
@@ -129,7 +130,7 @@ test('stdio CLI uses protocol-only stdout and closes on EOF without touching the
     const client = new Client({ name: 'stdio-test', version: '1' });
     await client.connect(transport);
     const pid = transport.pid!;
-    expect((await client.listTools()).tools.map(t => t.name)).toEqual(['runweft_status']);
+    expect((await client.listTools()).tools.map(t => t.name)).toEqual(toolNames);
     await client.close();
     expect(existsSync(c.home)).toBe(false);
     expect(stderr).toBe('');

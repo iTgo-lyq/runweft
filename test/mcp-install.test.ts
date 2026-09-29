@@ -30,6 +30,7 @@ test.skipIf(!Bun.which('codex'))('native Codex editing and Claude merging are id
     expect(statSync(first.backupPath!).mode & 0o777).toBe(0o600);
     const native = Bun.TOML.parse(readFileSync(codex, 'utf8')) as any;
     expect(native.model).toBe('unmodified'); expect(native.mcp_servers.keep.command).toBe('unchanged');
+    expect(native.mcp_servers.runweft.tool_timeout_sec).toBe(600);
     expect(readFileSync(codex, 'utf8')).toContain('# inline model comment');
     expect(readFileSync(codex, 'utf8')).toContain('# keep server comment');
     expect(json(claude).unrelated).toEqual({ value: 1 });
@@ -46,6 +47,19 @@ test.skipIf(!Bun.which('codex'))('native Codex editing and Claude merging are id
     expect(json(claude).mcpServers).toEqual({ keep: { command: 'unchanged' } });
     expect(json(settings).hooks.PreToolUse).toEqual(beforeHooks);
     expect(configureMcp(c, false, 'all').changed).toBe(false);
+});
+
+test.skipIf(!Bun.which('codex'))('old managed Codex entries require an explicit upgrade for long waits', async () => {
+    const { c } = setup();
+    configureMcp(c, true, 'codex');
+    const [path] = clientFiles(c, 'codex');
+    const old = readFileSync(path, 'utf8').replace('tool_timeout_sec = 600\n', '');
+    atomicWrite(path, old);
+    expect((await checkMcp(c, 'codex')).checks[0]).toMatchObject({ ok: false, error: { code: 'mcp_timeout_outdated' } });
+    expect(readFileSync(path, 'utf8')).toBe(old);
+    expect(configureMcp(c, true, 'codex').changed).toBe(true);
+    expect((Bun.TOML.parse(readFileSync(path, 'utf8')) as any).mcp_servers.runweft.tool_timeout_sec).toBe(600);
+    expect(configureMcp(c, true, 'codex').changed).toBe(false);
 });
 
 test('Claude config override, managed update and foreign entry conflicts do not overwrite other data', () => {

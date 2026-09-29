@@ -41,8 +41,8 @@ export class ResourceClient {
         return { ...runtime, machine: runtime.machine ? this.machinePolicy(runtime.machine) : null,
             eligibility: problem ? eligibility(problem) : runtime.eligibility };
     }
-    private async request<T>(path: string, method = 'GET', value?: unknown): Promise<Scoped<T>> {
-        return this.hapi.request(`${base}${path}`, { method, ...(value === undefined ? {} : {
+    private async request<T>(path: string, method = 'GET', value?: unknown, signal?: AbortSignal): Promise<Scoped<T>> {
+        return this.hapi.request(`${base}${path}`, { method, signal, ...(value === undefined ? {} : {
             headers: { 'content-type': 'application/json' }, body: JSON.stringify(value),
         }) });
     }
@@ -67,8 +67,8 @@ export class ResourceClient {
     async discover(machineId?: string) {
         return this.request<Discovery>(`/machines/${encodeURIComponent(this.selectMachine(machineId))}/discover`);
     }
-    async runtimes(all = false) {
-        const result = await this.request<{ runtimes: RuntimeView[] }>(`/runtimes?all=${all}`);
+    async runtimes(all = false, signal?: AbortSignal) {
+        const result = await this.request<{ runtimes: RuntimeView[] }>(`/runtimes?all=${all}`, 'GET', undefined, signal);
         return { ...result, runtimes: result.runtimes.map(runtime => this.runtimePolicy(runtime)) };
     }
     async runtime(id: string, check = false) {
@@ -86,8 +86,8 @@ export class ResourceClient {
         this.selectMachine((await this.runtime(id)).runtime.machineId);
         return this.request<{ runtime: RuntimeRegistration; existingExecutions: 'unchanged' }>(`/runtimes/${encodeURIComponent(id)}`, 'DELETE');
     }
-    async resolveExecutionTarget(id: string): Promise<ExecutionTarget> {
-        const { target } = await this.request<{ target: ExecutionTarget }>(`/runtimes/${encodeURIComponent(id)}/resolve`);
+    async resolveExecutionTarget(id: string, signal?: AbortSignal): Promise<ExecutionTarget> {
+        const { target } = await this.request<{ target: ExecutionTarget }>(`/runtimes/${encodeURIComponent(id)}/resolve`, 'GET', undefined, signal);
         this.selectMachine(target.machineId);
         return Object.freeze(target);
     }

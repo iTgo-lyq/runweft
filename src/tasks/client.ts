@@ -24,7 +24,7 @@ export class TaskClient {
         const intent = parseTask(SpawnIntentSchema, { agentType, message, workspaceMode });
         const previous = await this.request('lookup', { requestId, intent }, signal);
         if (previous.accepted) return previous.accepted;
-        const resolved = await new AgentClient(this.config, this.parent.cwd, this.hapi).resolve(agentType);
+        const resolved = await new AgentClient(this.config, this.parent.cwd, this.hapi).resolve(agentType, undefined, signal);
         if (resolved.target.machineId !== this.parent.machineId) throw new RunweftError('shared_target_required', '共享目录任务只能使用发起机的 runtime。');
         const agent = { id: resolved.id, definition: resolved.definition, source: resolved.source, definitionVersion: resolved.definitionVersion,
             resolvedVersion: resolved.resolvedVersion, runtimeId: resolved.target.runtimeId, machineId: resolved.target.machineId,

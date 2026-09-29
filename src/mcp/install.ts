@@ -11,7 +11,7 @@ import { atomicWrite, dataPaths, type ResolvedConfig } from '../config';
 import { RunweftError, errorDetails } from '../errors';
 import { selfCommand, status } from '../services';
 import { hostClientSchema, type HostClient } from './identity';
-import { replaceCodexMcp } from './toml';
+import { codexMcpDefinition, replaceCodexMcp } from './toml';
 
 type JsonObject = Record<string, any>;
 export type ConfigChange = { path: string; before: string | null; after: string | null };
@@ -21,6 +21,7 @@ const backupSchema = z.object({
 });
 const marker = { RUNWEFT_MCP_MANAGED: '1' };
 const matcher = 'mcp__runweft__.*';
+const codexToolTimeout = 600;
 const read = (path: string) => existsSync(path) ? readFileSync(path, 'utf8') : null;
 const target = (path: string) => existsSync(path) ? realpathSync(path) : resolve(path);
 
@@ -60,7 +61,8 @@ function object(value: unknown, path: string): JsonObject {
 
 function entry(c: ResolvedConfig, client: HostClient, launch: string[]) {
     const [command, ...prefix] = launch;
-    return { command, args: [...prefix, '--home', c.home, 'mcp', 'serve', '--client', client], env: marker };
+    return { command, args: [...prefix, '--home', c.home, 'mcp', 'serve', '--client', client], env: marker,
+        ...(client === 'codex' ? { tool_timeout_sec: codexToolTimeout } : {}) };
 }
 function managed(value: any): boolean { return value?.env?.RUNWEFT_MCP_MANAGED === '1'; }
 function ownedHook(value: any): boolean {
@@ -96,11 +98,12 @@ function codexChange(c: ResolvedConfig, install: boolean, launch: string[]): Con
             const next = entry(c, 'codex', launch);
             invoke(['add', '--env', 'RUNWEFT_MCP_MANAGED=1', 'runweft', '--', next.command, ...next.args]);
         }
-        const generated = read(join(staging, 'config.toml'))!;
+        const native = parse(read(join(staging, 'config.toml')), path, true);
+        const generated = install ? codexMcpDefinition({ ...native.mcp_servers.runweft, tool_timeout_sec: codexToolTimeout }) : '';
         const after = replaceCodexMcp(before ?? '', generated, install);
         const next = parse(after, path, true);
         if (!isDeepStrictEqual(withoutServer(config), withoutServer(next))
-            || !isDeepStrictEqual(next.mcp_servers?.runweft, parse(generated, path, true).mcp_servers?.runweft)) {
+            || !isDeepStrictEqual(next.mcp_servers?.runweft, install ? entry(c, 'codex', launch) : undefined)) {
             throw new RunweftError('codex_config_unexpected_change', 'Codex 编辑器修改了 Runweft 以外的配置，已放弃写入。', `原配置保留在 ${path}。`);
         }
         return [{ path, before, after }];
@@ -202,6 +205,9 @@ export async function checkMcp(c: ResolvedConfig, selection?: string) {
             const current = object(client === 'codex' ? config.mcp_servers : config.mcpServers, files[0]).runweft;
             if (!managed(current)) throw new RunweftError('mcp_not_installed', '未找到 Runweft 管理的 MCP 配置。', `运行 runweft mcp install --client ${client}。`);
             if (current.enabled === false) throw new RunweftError('mcp_disabled', 'Runweft MCP 已在原生配置中禁用。', `运行 runweft mcp install --client ${client} 重新启用。`);
+            if (client === 'codex' && !(typeof current.tool_timeout_sec === 'number' && current.tool_timeout_sec >= codexToolTimeout)) {
+                throw new RunweftError('mcp_timeout_outdated', 'Codex MCP 超时不足以等待子任务结果。', '运行 runweft mcp install --client codex 更新到 600 秒；检查命令不会自动修改配置。');
+            }
             if (typeof current.command !== 'string' || !Array.isArray(current.args) || current.args.some((v: unknown) => typeof v !== 'string')) throw new RunweftError('mcp_command_invalid', 'Runweft MCP 启动命令无效。', '重新运行 runweft mcp install。');
             const index = current.args.indexOf('--home');
             if (index < 0 || current.args[index + 1] !== c.home) {

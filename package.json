@@ -20,6 +20,7 @@
     "test:agents": "bun scripts/smoke-agents.ts",
     "test:tasks": "bun scripts/smoke-tasks.ts",
     "test:task-controls": "bun scripts/smoke-task-controls.ts",
+    "test:task-mcp": "bun scripts/smoke-task-mcp.ts",
     "test:install": "node scripts/smoke-install.mjs",
     "build": "bun scripts/build.ts",
     "build:hapi": "bun scripts/build-hapi.ts",
