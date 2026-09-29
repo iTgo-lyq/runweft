@@ -1,15 +1,15 @@
 # 本地共享目录的完整委派协作
 
-> 状态：草稿
+> 状态：已确认
 > 规模：大型
 > 更新：2026-09-29
-> 确认依据：只允许一层委派；任务结束关闭子执行进程，后续优先续接 session，缺失时构造历史；不要求主宿主关闭后恢复；HAPI 能力优先复用。
+> 确认依据：只允许一层委派；任务结束关闭子执行进程，后续优先续接 session，缺失时构造历史；不要求主宿主关闭后恢复；HAPI 能力优先复用。细节按用户逐 Change 自主推进授权收敛，Plan 经一次 iclaude 评审后执行。
 
 ## Review 导读
 
 主 agent 能派生子任务、继续工作、查看和等待结果、追加任务及中断指定执行。Runweft 保存必要父子关联，原生状态与历史沿 HAPI 读取；不要求主宿主关闭后恢复。
 
-本 Change 定义本地与远端共用的协作语义，并交付 CLI/MCP 在本地共享 cwd 中的完整用户流程。[宿主适配](../../archive/2026-09-29-host-mcp-adapter/requirement.md)只提供身份与传递机制，[Agent 定义](../../archive/2026-09-29-agent-definition/requirement.md)提供解析结果；独立工作区与远端通过后续 Change 接入。具体流程见 [Design](design.md)。
+本 Change 定义本地与远端共用的协作语义，并交付 CLI/MCP 在本地共享 cwd 中的完整用户流程。[宿主适配](../../archive/2026-09-29-host-mcp-adapter/requirement.md)只提供身份与传递机制，[Agent 定义](../../archive/2026-09-29-agent-definition/requirement.md)提供解析结果；独立工作区与远端通过后续 Change 接入。前期讨论见 [Design](design.md)，正式接口与推进规则见 [Technical](technical.md)。
 
 ## Change 依赖
 
@@ -35,21 +35,21 @@
 
 #### `delegation/interface`：CLI 与 MCP 共用协作能力
 
-提供 agent 发现、派生、查看/等待、协作消息、续接、中断与报告读取。派生返回稳定任务身份及接受状态；等待返回状态和新结果，超时不当作任务失败。工具名及参数尽量对齐原生 Codex 行为，在正式方案中固定；不沿用旧内部七工具协议作为约束。
+提供 agent 发现、派生、查看/等待、协作消息、续接、中断与报告读取。派生返回稳定任务身份及接受状态；等待返回状态和新结果，超时不当作任务失败。概览提供可直接决策的顶层状态、需关注原因和完成报告，保留详细事实供查看。工具名及参数尽量对齐原生 Codex 行为，在正式方案中固定；不沿用旧内部七工具协议作为约束。
 
 #### `local-workspace/shared`：主工作区原地协作
 
-在主 agent 绑定的同一 cwd 启动本地子执行，允许非 Git 目录。共享改动和并发写入由主 agent 调度；Runweft 不自动 stash、reset、提交或隔离文件，不因任务结束清理用户工作目录。配置加载与执行复用 HAPI，结果由主 agent 接纳。
+所选 runtime 必须位于发起机，在主 agent 绑定的同一 cwd 启动本地子执行，允许非 Git 目录。共享改动和并发写入由主 agent 调度；Runweft 不自动 stash、reset、提交或隔离文件，不因任务结束清理用户工作目录。配置加载与执行复用 HAPI，结果由主 agent 接纳。
 
 #### `delegation/lifecycle`：持久父子协作
 
-维护主工作区、父任务、delegation、轮次与 HAPI 身份的关联。主 agent 可发起、查询、等待、续接和中断；会话恢复导致执行身份改变时保留关联历史。父连接断开不隐式取消子任务。
+维护主工作区、父任务、delegation、轮次与 HAPI 身份的关联。MCP 使用原生父会话身份，CLI 是明确标记来源的当前 namespace 操作者入口，不接受任意 session 参数冒充原生父身份。两种入口共用角色约束与业务能力。主 agent 可发起、查询、等待、续接和中断；会话恢复导致执行身份改变时保留关联历史。父连接断开不隐式取消子任务。
 
 #### `delegation/rounds`：输入归属和串行续接
 
-同一 delegation 默认串行处理轮次，新任务与运行中 steer 分开表达。运行中追加只在对应 HAPI/runtime 已验证支持时开放；未知输入接受状态不能盲目重发。只允许一层 Runweft 委派，HAPI 受控 subagent 禁用全部 Runweft MCP 工具，CLI 委派入口也拒绝其再派生；原生内置 subagent 的使用和递归保持原样。
+同一 delegation 默认串行处理轮次，新任务与运行中 steer 分开表达。本轮追加当前仅 Codex 沿已验证 HAPI 队列/steer 入口开放，反馈实际原生交付；原生 turn 已结束时可作为同一业务 round 的后续输入，不冒充同 turn 注入。Claude 只允许明确下一轮排队，steer 报不支持；未知输入接受状态不能盲目重发；主 agent 可显式取消本轮并关闭固定执行，确认停止后才完成业务取消，保留原生未知事实。只允许一层 Runweft 委派，HAPI 受控 subagent 禁用全部 Runweft MCP 工具，CLI 委派入口也拒绝其再派生；原生内置 subagent 的使用和递归保持原样。
 
-每轮结束即通过 HAPI 关闭本子执行进程，保留工作区和 session 依据。主 agent 继续委派时优先恢复原 session；明确缺失时使用已有任务、消息、结果及工作区事实构造上下文，开始新 session 并保留关联。读取失败或网络不明不等于 session 不存在。
+已接受任务由中心负责观察和收尾，不依赖宿主工具连接存活。每轮结束即通过 HAPI 关闭本子执行进程，保留工作区和 session 依据。主 agent 继续委派时优先恢复原 session；明确缺失时使用已有任务、消息、结果及工作区事实构造上下文，开始新 session 并保留关联。读取失败或网络不明不等于 session 不存在。
 
 #### `delegation/results`：执行、交付与验收分离
 
@@ -61,7 +61,7 @@
 
 程序提供准确的环境事实、输入映射和操作边界，prompt 描述目标、测试与成果要求。模板不代替原生终态或上传回执。缺少格式化报告时保留原生结果及缺失标记。
 
-## 验收标准草案
+## 验收标准
 
 - [ ] Agent 定义的非空 model 与 reasoningEffort 在 Codex / Claude 两种 flavor 下通过真实启动验证；定义 Change 的参数映射检查不代替实际模型支持证据。
 
