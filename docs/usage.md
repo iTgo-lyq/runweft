@@ -1,6 +1,6 @@
 # Runweft 基础入口使用说明
 
-当前实现包含配置、HAPI 服务管理、机器/runtime 登记、Agent 定义，以及 Codex/Claude Code 经 MCP 或 CLI 进行本机共享目录、独立 worktree 协作。已支持 CLI/MCP 文件上传、任务输入、成果交付、补交及留存清理；源码配套构建新增远端 Git 诊断准备。正式远端任务和看板仍按后续任务推进；当前候选包不是完整项目的最终发布。
+当前实现包含配置、HAPI 服务管理、机器/runtime 登记、Agent 定义，以及 Codex/Claude Code 经 MCP 或 CLI 进行本机共享目录、独立 worktree 协作。已支持 CLI/MCP 文件上传、任务输入、成果交付、补交、留存清理及远端 Git 诊断准备。正式远端任务和看板仍按后续任务推进；当前候选包不是完整项目的最终发布。
 
 ## 安装与首次使用
 
@@ -250,7 +250,7 @@ release 先返回受理状态，用 inspect 确认最终 `released`。源/目标
 
 移除本环境后才解除其消费者引用；最后一个消费者释放才解除该快照的恢复 pin，其他快照共享的 LFS 引用保留。缓存仍被其他导入、外部 worktree 或未知 Git ref 使用时会说明保留原因，不能仅凭目录空闲删除。中心文件字节沿原有 artifact remove/prune 规则清理，历史准备与操作回执继续可查。已完全释放快照再用于新准备时创建新代次，旧请求仍返回已释放记录。不要手工删除缓存目录或修改恢复引用。
 
-此入口已通过配套源码构建验证；四平台安装候选会在本 Change 整体验收时更新，旧候选包可能尚无这些命令。
+此入口随配套 CLI 与 HAPI 一起交付；更新候选安装后，用 `workspace prepare --help` 和 `workspace release --help` 核对命令。
 
 ### 主 agent 的 MCP 流程
 
@@ -486,6 +486,10 @@ bun run test:install
 `test:resources` 需要已安装 Codex 和 Claude Code（优先 iclaude，可设置 `RUNWEFT_SMOKE_CLAUDE`），仅执行版本查询，不需要模型登录。它使用专用空原生配置和配套编译程序验证本地与 Hub 资源命令、MCP 安装/握手、稳定 ID、离线、恢复和环境故障；离线等待沿 HAPI 的 45 秒活跃超时。脚本保存证据并关闭自建服务，故障环境只作用于测试 Runner；macOS 若发现原生 Codex.app 回退路径，会如实记录，命令缺失仍通过专用 Claude 覆盖验证。
 
 `test:workspace-preparation` 验证配套编译 CLI 的远端诊断准备与释放：专用 Hub 无 Runner，同机两个 Runner 传输 103 个 Git/LFS 文件，检查请求接受后重启、同提交与 LFS 复用、源端离线后的查询、脏文件/ignored 保护、目标离线恢复、实际缓存删除及跨快照 pin 留存，并验证 local 模式同机目标拒绝。需要 Git/LFS 和已安装 Codex，仅查询 runtime 版本，不调用模型；证据在 `.dev-smoke/workspace-preparation-*`。底层导出与导入可分别运行 `test:repository-export`、`test:repository-import`。这些实验不代替真实跨物理机器验收。
+
+`RUNWEFT_SMOKE_REMOTE_PREPARATION=1 bun run test:install` 在 npm 候选实际安装后，使用安装的 CLI/HAPI 再执行上述完整诊断验证。Bun 只运行验收脚本；安装产品本身无需 Bun，基础服务检查另用不含 Bun 的 PATH 验证。
+
+`test:remote-native` 会实际调用已登录的 Codex 和 Claude Code（优先 iclaude），需要真实 agent 验收授权。它复制配置与认证到专用目录，在导入的独立 worktree 中各运行两轮只读任务：读取工程指令、skill、每轮新附件、子模块和二进制 LFS，核对续接原生会话、Runweft MCP 禁用、其他 MCP 保留，并验证失效准备拒绝启动、进程退出和源/执行 Runner 离线后的中心下载。可追加 `dist/runweft dist/hapi codex` 或 `claude` 只运行一种 runtime；证据在 `.dev-smoke/remote-native-*`，原全局配置保持不变。这是同机双 Runner 验证，仍不代表真实跨机验收。
 
 `test:agents` 同样只需要已安装的原生工具，不需要模型登录。它用配套编译 CLI 和专用 Hub/Runner 验证定义创建、worktree 绑定、local/Hub 连接、真实 token namespace 后缀、目标失效与恢复；保存证据并停止自建服务，不启动模型会话。
 

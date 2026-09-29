@@ -52,7 +52,7 @@
 
 ### T5 实际原生准备探针与候选安装
 
-- 状态：待开始
+- 状态：已完成
 - 依赖：T4。
 - 交付：完整准备能力的配套构建与使用说明，仅测试中的只读 probe 通过现有 ExecutionClient/附件通道在准备后启动 Codex/Claude，各两轮复用工作树；不增加业务 probe 命令或上下文生命周期；完成整体验收、Specs 与归档另提交。
 - 验收：两种 runtime 实读准备 cwd/工程指令/输入/二进制 LFS，Runweft MCP 禁用保持、原生内置工具不变；第二轮沿已有 finalize → prepare → resume，新增输入并复用原 session。失效 cwd/HEAD/inputs/模块/LFS 拒绝原生启动。源分支移走、来源/执行 Runner 停止后中心基线仍可下载校验。只把运行 probe 当本 Change 验收，不开放结果未交付的业务远端入口。

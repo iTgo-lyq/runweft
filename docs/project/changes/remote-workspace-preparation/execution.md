@@ -86,3 +86,14 @@
 - 使用说明与 HAPI API 契约已更新；本机配套构建完成，四平台候选更新及 Codex/Claude 原生两轮组合探针继续由 T5 完成。
 - 最后复核：新准备跳过已释放 import 的有效性探测，保留旧成功/释放事实；聚焦增加该历史状态断言后 **11 pass / 214 assertions**，类型检查和重建通过（`c9-t4-root-{types,focused}-commit.log`、`c9-t4-build-commit.log`）。release help、Change 结构、7 份修改文档本地链接和两仓库 diff 检查通过。
 - Commit：`remote-workspace-preparation T4: release diagnostic workspaces and baseline references`。
+
+## T5 实际原生准备探针与候选安装
+
+- 新增 `test:remote-native`：使用专用原生配置副本、独立 Hub/source Runner/target Runner 和当前正式配套二进制。两种 runtime 的诊断共用一个 snapshot/import，各有独立 worktree；源分支移动、源目录隐藏并停止源 Runner 后才启动模型。没有新增业务远端入口、原生 adapter 或 TaskCoordinator 逻辑。
+- 原生结果：`.dev-smoke/remote-native-Wmv8vP/evidence.json` **success=true / cleanupErrors=[]**，Codex 和 Claude 各两轮，准确读取 cwd/固定 HEAD、工程指令、skill、新附件、子模块内容和二进制 LFS SHA-256。第二轮复用相同原生 session/工作树并复述仅第一轮输入的记忆标记；每轮正常停止并封存无变化成果，活跃时移除和封存后沿旧准备续接均被拒绝。
+- 工具与门禁：两种 runtime 各验证错误 cwd、目录缺失、HEAD 漂移、附件篡改、gitlink 漂移、LFS pointer-only 共六类拒绝，均 childStarted=false 且无新增 session。实际工具目录无 Runweft MCP，保留并调用 keep_probe；Claude 原生 Task 保留。原全局配置摘要不变。全部执行结束及源/目标 Runner 停止后，中心 Git/LFS 文件仍能下载并验证摘要。
+- 安装：`bun run package --all` 通过（`.dev-smoke/c9-t5-package.log`），四平台配套 HAPI/CLI 与主包共五个 private 候选，固定 HAPI revision 仍为 `0d7618c3fe7d20ac10be2954e57a00d59431bba9`。`RUNWEFT_SMOKE_REMOTE_PREPARATION=1 bun run test:install` 通过（`c9-t5-install.log`）；真实 npm registry/prefix 安装、无 Bun/源码 PATH 的服务和 MCP、缺平台诊断及卸载保留数据证据为 `.dev-smoke/install-Tvtrf4/evidence.json`。
+- 安装后完整诊断：`.dev-smoke/workspace-preparation-08CBs0/evidence.json` **success=true / cleanupErrors=[]**，使用 npm 安装的 CLI/HAPI 完成 103 Git/LFS 文件、重启原请求、同 SHA/LFS 复用、源端离线查询、dirty/ignored 保护、目标离线 pin 保护、显式释放和实际缓存删除。Bun 仅运行验收脚本，不是产品运行依赖。
+- 检查：新增脚本的 `bun run typecheck` 通过（`c9-t5-types-final.log`），Change 结构与 diff 检查通过。T5 未改运行源码，沿用 T4 根全量 140 pass、最终聚焦 11 pass/214 assertions 和 HAPI 跨包检查；T4 已记录的 skills 环境失败及并行计时失败没有改写为全绿。使用说明补齐原生验收与安装后诊断选项。
+- 边界：本轮实际运行和 npm 安装为 Linux x64、同物理机器双 Runner；四平台编译不代表其余平台或跨机器实测。正式远端代码任务仍等 C10 完成结果回收后开放，候选未公开发布。
+- Commit：`remote-workspace-preparation T5: verify native preparation and installed candidates`。

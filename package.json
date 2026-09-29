@@ -39,7 +39,8 @@
     "test:artifact-mcp": "bun scripts/smoke-artifact-mcp.ts",
     "test:repository-export": "bun scripts/smoke-repository-export.ts",
     "test:repository-import": "bun scripts/smoke-repository-import.ts",
-    "test:workspace-preparation": "bun scripts/smoke-workspace-preparation.ts"
+    "test:workspace-preparation": "bun scripts/smoke-workspace-preparation.ts",
+    "test:remote-native": "bun scripts/smoke-remote-native.ts"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.25.1",
