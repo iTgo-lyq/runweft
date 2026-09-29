@@ -22,7 +22,7 @@
 | 远端代码回收 | [Requirement](project/changes/remote-result-delivery/requirement.md) | [Design](project/changes/remote-result-delivery/design.md)、[Research](project/changes/remote-result-delivery/research.md) |
 | 宿主身份与 MCP 适配（已归档） | [Requirement](project/archive/2026-09-29-host-mcp-adapter/requirement.md) | [Technical](project/archive/2026-09-29-host-mcp-adapter/technical.md)、[Plan](project/archive/2026-09-29-host-mcp-adapter/plan.md)、[Research](project/archive/2026-09-29-host-mcp-adapter/research.md) |
 | 本地独立工作区与公共 Git 能力 | [Requirement](project/changes/local-workspace-execution/requirement.md) | [Design](project/changes/local-workspace-execution/design.md) |
-| 全局机器与 Runtime 注册 | [Requirement](project/changes/execution-resource-registry/requirement.md) | [Research](project/changes/execution-resource-registry/research.md) |
+| 全局机器与 Runtime 注册 | [Requirement](project/changes/execution-resource-registry/requirement.md) | [Technical](project/changes/execution-resource-registry/technical.md)、[Plan](project/changes/execution-resource-registry/plan.md)、[Research](project/changes/execution-resource-registry/research.md) |
 | Agent 定义 | [Requirement](project/changes/agent-definition/requirement.md) | 轻量定义；暂不集中管理 skill/MCP |
 | Subagent 看板 | [Requirement](project/changes/subagent-dashboard/requirement.md) | 简单全局状态；详情优先复用 HAPI |
 | 完整版本集成与发布 | [Requirement](project/changes/integrated-release/requirement.md) | 组合验收、正式安装及完整交付证据 |
