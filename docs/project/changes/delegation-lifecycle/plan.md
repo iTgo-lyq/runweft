@@ -45,7 +45,7 @@
 
 ### T4 两宿主两 runtime 配套验收
 
-- 状态：待开始
+- 状态：已完成
 - 交付：可重复运行的原生协作 smoke，使用编译 Runweft/HAPI 验证完整用户流程和本轮结束自动关闭。
 - 依赖：T3
 - 验收：Codex/Claude 宿主分别调度 Codex/Claude runtime；非 Git 共享编辑与纯报告、追加/中断、后续 session 历史、连接中断、CLI 子端递归拒绝有真实证据。当前模式为同机 local 与 Hub 协议组合，不冒充实际跨机执行。

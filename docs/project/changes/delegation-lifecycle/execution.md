@@ -37,3 +37,12 @@
 - 修正与验证：仅扩大专用测试审批范围到其明确的结果文件读取，不修改产品默认权限。`RUNWEFT_SMOKE_HOST=claude bun run test:task-mcp` 在 `.dev-smoke/task-mcp-hYz93f/evidence.json` success=true、cleanupErrors=[]，通过相同真实委派、子 CLI 拒绝、结果/进程事实；实际 MCP wait 等待 65144ms 后返回 timed_out=true。脚本保留按宿主选择，已通过且代码未变的 Codex 用例不重复运行。
 - 后续：当前证据是本机 Codex→Codex、Claude→Claude；完整交叉组合、共享编辑与其他控制集成仍由 T4 验收，候选包和完整使用说明由 T5 更新。工具禁用保留既有前置验收边界：其他 MCP 与原生 subagent 不受 Runweft 限制。
 - Commit：`delegation-lifecycle T3: expose task collaboration through native MCP hosts`
+
+## T4 两宿主两 runtime 配套验收
+
+- 结果：新增 `test:collaboration`，使用编译 CLI/HAPI、专用原生配置和实际模型，在 local 与同机 Hub 各运行 Codex/Claude 宿主 × Codex/Claude runtime 的四种组合。每项由真实父会话经 MCP 派生并处理审批，子执行调用保留的其他 MCP、修改共享文件，随后父会话经 send_input 续接原生 session，子执行仅凭历史返回未写入文件的记忆标记；父会话实际读取两轮完成报告。
+- 真实验证：`.dev-smoke/collaboration-859Dxz/evidence.json` success=true、八项均通过、cleanupErrors=[]。检查文件精确内容、纯报告轮次不改 mtime、目录未新增 Git/业务文件、原生 completed、session archived/inactive 和各轮 host PID 退出。专用 MCP 注册显式传入 Git 搜索上界，使实际 Git/Agent 解析确认为非仓库；未修改用户配置。每轮原生工具目录验证无 Runweft 工具，其他 MCP 实际可调用，Claude 原生 Agent/Task 保留。
+- 真实断线：Hub 的 Codex→Claude、Claude→Codex 各在第三轮持久接受后由测试代理关闭真实 MCP stdio 连接，父会话不重发任务；中心最终仍获得原生完成并关闭进程，只有一个 delegation、三个单输入轮次。Claude 子执行断线后的固定 sleep 审批由测试操作者经 CLI 显式响应；没有自动提升默认权限或要求恢复主会话。
+- 真实控制：`RUNWEFT_SMOKE_CASE=local-codex-codex RUNWEFT_SMOKE_CONTROLS=1 bun run test:collaboration` 在 `.dev-smoke/collaboration-lt1Y4J/evidence.json` success=true、cleanupErrors=[]，实际 MCP steer 返回 steered，同一业务轮次两个输入完成；后续 MCP 中断命中读到的同一原生 executionId，终态 interrupted 并退出进程。`RUNWEFT_SMOKE_CASE=hub-claude-claude RUNWEFT_SMOKE_CONTROLS=1 bun run test:collaboration` 在 `.dev-smoke/collaboration-5B8eS8/evidence.json` success=true、cleanupErrors=[]，Claude steer 明确返回 steer_unsupported，随后定向中断/退出通过。
+- 验证边界：本任务无产品代码或 HAPI 修改；类型检查、测试代理语法检查、Change 校验与 git diff --check 通过。T3 的两 runtime 子 CLI 再委派拒绝、T2 的真实模型参数/权限拒绝及缺失恢复协议测试继续有效，不重复同范围模型调用；真实跨机器远端仍不在本 Change 内。
+- Commit：`delegation-lifecycle T4: verify native collaboration across hosts and connection modes`
