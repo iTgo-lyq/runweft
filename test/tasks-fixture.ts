@@ -31,6 +31,11 @@ export async function taskFixture(cleanups: (() => Promise<void> | void)[], flav
             expect(body.disabledMcpServers).toEqual(['runweft']); expect(body.permissionMode).toBeUndefined(); expect(body.yolo).toBeUndefined();
             if (faults.spawn === 'unseen') return new Response('', { status: 502 });
             const id = crypto.randomUUID();
+            if (faults.spawn === 'rejected') {
+                const receipt: SpawnReceipt = { requestId: body.requestId, machineId: parts[3], sessionId: id, createdAt: Date.now(),
+                    response: { type: 'error', code: 'workspace_not_prepared', message: 'Prepared execution rejected before launch', childStarted: false } };
+                receipts.set(body.requestId, receipt); return Response.json(receipt);
+            }
             const session = { id, active: true, metadata: { machineId: parts[3], path: faults.mismatch ? '/wrong/path' : body.directory, flavor: body.agent,
                 ...(body.agent === 'codex' ? { codexSessionId: `native-${id}` } : { claudeSessionId: `native-${id}` }), capabilities: { execution: 1 }, preparedWorkspace: body.preparedWorkspace, lifecycleState: 'running' }, agentState: { requests: {} } } as Session;
             sessions.set(id, { session, namespace, messages: [], inputs: [], queued: new Set(), done: new Set(), indeterminate: new Set() });

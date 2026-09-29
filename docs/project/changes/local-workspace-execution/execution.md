@@ -36,3 +36,16 @@
 - 证据范围：Codex 两轮检查在 `.dev-smoke/worktree-tasks-WkTpPF/evidence.json` 的 codex case 已通过；该次脚本随后因 Claude 只读 Git 审批范围遗漏退出，不把整次运行算作成功。Claude 单独补测通过；另一失败 fixture `.dev-smoke/worktree-tasks-Aun6qs` 同属测试审批范围问题，两次均正常停止专用服务。脚本补齐只读检查，其他请求保留待审状态而不提前杀掉任务；最终运行的两项只读 Git 请求由主 agent 用 CLI 批准。汇总 `.dev-smoke/workspace-t2-evidence.json`，测试/构建日志 `workspace-t2-{final-tests,state-final,types-final,build-final}.log`，均在 `.dev-smoke/`。
 - 交付边界：本任务完成 CLI 的独立任务基本闭环；取消/启动失败后的跨轮处理、重启对账和显式删除由 T3 完成，MCP base/retry_finish 与完整矩阵由 T4 完成，候选包和完整 Change 验收仍属 T5。没有修改 HAPI pin，也没有声称跨机器验证。
 - Commit：`local-workspace-execution T2: add CLI worktree tasks and sealed round results`。
+
+## T3 跨轮次复用、失败处理与显式清理
+
+- 结果：准备期间取消等待原 Git 回执后封存，不为收尾启动模型；明确启动拒绝同样先封存该准备，再允许下一轮。HAPI 从自身 launch 记录核对未启动/明确拒绝，已有或未知执行仍要求 session 身份和停止证明。中心将未启动与未观测区分，失败准备不虚构模型结论。执行取消的部分成果只在停止确认后封存，续接核对本轮准备关联。
+- 结果：`task workspace remove <id>` 事务性检查全部轮次并标记 deleting，与 next 互斥。删除身份/选项持久化，重复命令和中心重启查询原操作；已确认失败才允许显式新尝试。默认保留 ignored 内容，错误提供 `--discard-ignored` 的确切命令。成功删除保留报告、原生历史和成果引用，后续 send 拒绝重建；共享目录及 MCP 清理入口拒绝。
+- 验证：中心工作区专项 14 项通过，覆盖准备取消、启动拒绝、停止未知、删除/send 并发、丢封存/删除响应、重启不重放、失败准备按 base 删除和 ignored 明确处理；最终与 shared/轮次回归合计 31 项、698 断言通过。`bun run typecheck`、配套 HAPI/CLI 构建及最终 `bun test ./test` 99 项、1758 断言通过。日志 `.dev-smoke/workspace-t3-{center-final,root-tests-final,root-types-final,build-hapi,build-cli-final}.log`。
+- HAPI 验证：真实 Git 专项 16 项通过，新增未启动/明确拒绝准备封存与拒绝省略已有执行身份；已有 agent 提交、补 checkpoint、无改动、异常对账/清理用例继续通过。跨包 typecheck 通过；Hub 1393、Web 3249、Shared 323、Relay 118 项通过，88 个 fixture 与模式目录重生成无差异。完整 CLI 2984 通过、11 跳过、1 失败，仍为 T1 记录的未改动 skills 非 Git 用例受既存 `/tmp/.git` 干扰，不标记整套通过。
+- 真实编译验证：`bun scripts/smoke-worktree-lifecycle.ts` 继续 T2 的专用 Codex/Claude 任务，服务重启后第三轮均使用原 native session 并记得此前标记；ignored 依赖文件仍可读取，目录无代码修改时 resultHead 不变、无空 checkpoint，执行 PID 退出。主目录 HEAD/index/脏状态在只读轮次保持原样；同仓库另建任务的慢准备期间，测试操作者推进主分支并取消任务，新任务仍使用接受时基线，没有发送模型输入，两个目录独立。
+- 真实清理验证：两 runtime 的保留环境均因 ignored 依赖拒绝删除；服务重启后拒绝记录仍在，显式 discard 后 checkout 消失，既有三轮成果 ref 均可从主仓库读取，报告保持原样，新 send 拒绝。取消任务也可显式清理且保留 ref。证据 `.dev-smoke/worktree-lifecycle-8MY0gf/evidence.json` success=true、cleanupErrors 为空，使用本任务固定的 HAPI revision。
+- 无成果现场验证：专用 post-checkout hook 明确失败，编译 CLI 显示 execution_not_started、native not_started、Git not_prepared，无 session/结果 ref，但自有 checkout 留存；显式删除按 base 检查并移除目录，base ref 仍可读。最终证据 `.dev-smoke/workspace-unused-xnFFPR/evidence.json` 通过，原始实验 `.dev-smoke/workspace-t3-unused.ts`；未启动模型，已恢复 fixture Git 设置和停止服务。
+- 偏差：T3 补充了 T1 缺失的“已准备但未启动”封存路径，否则取消会永久挡住环境复用；已同步 Technical/工作区契约，沿既有自主细化授权实施，不重复 Plan 评审。无新增 runtime adapter、清理服务或全局配置。
+- 交付边界：本地 CLI 的多轮与显式清理闭环已完成；MCP base/retry_finish、两宿主完整矩阵和候选包交付继续由 T4/T5 承担，尚未归档整个 Change。
+- Commit：`local-workspace-execution T3: seal prepared rounds with no execution`（HAPI）；`local-workspace-execution T3: retain and safely remove task workspaces`（Runweft）。

@@ -6,7 +6,7 @@ import { ResourceStore } from '../resources/store';
 import { ResourceService } from '../resources/service';
 import type { ExecutionTarget } from '../resources/types';
 import { TaskStore } from './store';
-import { AcceptSchema, LookupSchema, SendSchema, InterruptSchema, PermissionSchema, nativeTerminal, parseTask, TaskError, type Input, type Parent, type Round, type Task } from './types';
+import { AcceptSchema, LookupSchema, SendSchema, InterruptSchema, PermissionSchema, RemoveWorkspaceSchema, nativeTerminal, parseTask, TaskError, type Input, type Parent, type Round, type Task } from './types';
 import { detail, overview } from './views';
 import { historyContext, parseReport } from './reports';
 import { TaskWorkspaces, preparedReference } from './workspaces';
@@ -101,6 +101,13 @@ export class TaskCoordinator {
         });
         this.kick(namespace, id); return result;
     }
+    async removeWorkspace(namespace: string, value: unknown) {
+        const { parent, id, discardIgnored } = parseTask(RemoveWorkspaceSchema, value);
+        if (parent.kind !== 'cli') throw new TaskError(403, 'workspace_remove_cli_only', '工作区清理通过操作者 CLI 显式执行。');
+        const task = await this.serial(id, () => this.store.beginRemoval(namespace, parent, id, discardIgnored));
+        this.kick(namespace, id);
+        return { agent_id: id, environment: task.environment };
+    }
     async send(namespace: string, value: unknown) {
         const { parent, requestId, intent } = parseTask(SendSchema, value);
         if (this.closing) throw new TaskError(503, 'service_stopping', '服务正在停止；请查询已接受记录。');
@@ -120,7 +127,7 @@ export class TaskCoordinator {
             if (round.phase === 'finishing') return { status: 'execution_already_stopped', agent_id: id, round_id: roundId };
             round.cancellation ??= { requestedAt: Date.now() };
             if (round.phase === 'queued') {
-                round.cancellation.confirmed = true; round.phase = 'finished'; round.finish = 'complete'; round.completedAt = Date.now();
+                this.finishUnstarted(task, round);
             }
             this.store.save(task, round, inputs.filter(input => input.roundId === round.id));
             return { status: 'requested', agent_id: id, round_id: roundId };
@@ -175,12 +182,20 @@ export class TaskCoordinator {
     }
     private async advance(namespace: string, id: string) {
         const { task, rounds, inputs: allInputs } = this.store.require(namespace, id);
+        const workspaces = new TaskWorkspaces(this.client(namespace), task.target.machineId);
+        if (task.environment.mode === 'worktree' && task.environment.status === 'deleting') {
+            try { await workspaces.remove(task, () => this.store.saveEnvironment(task)); }
+            catch (error) {
+                task.environment.removal!.status = 'unknown'; task.environment.removal!.error = errorDetails(error);
+                this.store.saveEnvironment(task);
+            }
+            return;
+        }
         const round = rounds.find(round => !['finished', 'failed'].includes(round.phase));
         if (!round) return;
         const inputs = allInputs.filter(input => input.roundId === round.id);
         const execution = new ExecutionClient(this.client(namespace));
         const save = () => this.store.save(task, round, inputs);
-        const workspaces = new TaskWorkspaces(this.client(namespace), task.target.machineId);
         try {
             if (round.phase === 'queued') {
                 const target = await this.resourceService(namespace).resolveExecutionTarget(task.target.runtimeId);
@@ -197,12 +212,20 @@ export class TaskCoordinator {
                 if (!await workspaces.prepare(task, round, save)) return;
             }
             if ((round.phase === 'queued' || round.phase === 'preparing') && round.preparation.status === 'ready') {
-                const previous = [...rounds].reverse().find(item => item.ordinal < round.ordinal && item.sessionId && item.stop === 'stopped' && !item.startupFailure);
-                if (previous) round.resume = { previousSessionId: previous.sessionId!, previousNativeSessionId: previous.nativeSessionId,
-                    candidateSessionId: previous.sessionId!, attempted: false, outcome: 'pending' };
-                round.phase = previous ? 'resuming' : 'starting'; round.attention = null; save();
+                if (round.cancellation) this.finishUnstarted(task, round);
+                else {
+                    const previous = [...rounds].reverse().find(item => item.ordinal < round.ordinal && item.sessionId && item.stop === 'stopped' && !item.startupFailure);
+                    if (previous) round.resume = { previousSessionId: previous.sessionId!, previousNativeSessionId: previous.nativeSessionId,
+                        candidateSessionId: previous.sessionId!, attempted: false, outcome: 'pending' };
+                    round.phase = previous ? 'resuming' : 'starting'; round.attention = null;
+                }
+                save();
             }
             if (this.closing) return;
+            if (round.cancellation && ((round.phase === 'resuming' && !round.resume?.attempted)
+                || (round.phase === 'starting' && !round.sessionId && !round.spawnAttempted))) {
+                this.finishUnstarted(task, round); save();
+            }
             if (round.phase === 'resuming') {
                 const resume = round.resume!;
                 if (!resume.attempted) {
@@ -244,10 +267,12 @@ export class TaskCoordinator {
                     if (receipt.response?.type === 'error') {
                         round.startupFailure = { code: receipt.response.code ?? 'spawn_failed', message: receipt.response.message };
                         if (receipt.response.childStarted === false) {
-                            round.phase = 'failed'; round.completedAt = Date.now(); round.attention = { ...round.startupFailure, stage: 'starting' }; save(); return;
+                            const finishing = this.finishUnstarted(task, round); save();
+                            if (!finishing) return;
+                        } else {
+                            // A child may exist even if readiness failed. Close the exact reserved execution.
+                            round.phase = 'stopping'; save();
                         }
-                        // A child may exist even if readiness failed. Close the exact reserved execution.
-                        round.phase = 'stopping'; save();
                     }
                     save(); // Store the receipt's interpretation together with its reserved session.
                 }
@@ -255,7 +280,10 @@ export class TaskCoordinator {
                     const session = await execution.waitUntilReady(round.sessionId!);
                     round.nativeSessionId = (task.target.flavor === 'codex' ? session.metadata?.codexSessionId : session.metadata?.claudeSessionId) ?? round.nativeSessionId;
                     round.hostPid = session.metadata?.hostPid; save(); // Persist role before any task input.
-                    if (session.metadata?.machineId !== task.target.machineId || session.metadata.path !== task.environment.cwd || session.metadata.flavor !== task.target.flavor) {
+                    const prepared = preparedReference(task, round);
+                    if (session.metadata?.machineId !== task.target.machineId || session.metadata.path !== task.environment.cwd || session.metadata.flavor !== task.target.flavor
+                        || (prepared && (session.metadata.preparedWorkspace?.environmentId !== prepared.environmentId
+                            || session.metadata.preparedWorkspace.preparationId !== prepared.preparationId))) {
                         round.startupFailure = { code: 'execution_target_mismatch', message: 'HAPI 返回的执行目录、机器或 runtime 与绑定目标不一致。' };
                         round.phase = 'stopping'; save();
                     } else if (round.cancellation) {
@@ -367,10 +395,21 @@ export class TaskCoordinator {
             // Preparation and explicit pre-dispatch rejection are business failures, never invented native failures.
             if (round.phase === 'queued' || (round.phase === 'starting' && !round.sessionId && !['connection_failed', 'invalid_hapi_response', 'request_failed'].includes(problem.code))
                 || (round.phase === 'resuming' && ['no_machine_online', 'resume_unavailable', 'access_denied', 'authentication_failed', 'workspace_not_prepared'].includes(problem.code))) {
-                round.phase = 'failed'; round.completedAt = Date.now();
+                round.startupFailure = problem; this.finishUnstarted(task, round);
             }
             save();
         }
+    }
+    private finishUnstarted(task: Task, round: Round) {
+        round.executionAbsent = true;
+        if (round.cancellation) round.cancellation.confirmed = true;
+        if (task.environment.mode === 'worktree' && round.preparation.status === 'ready') round.phase = 'finishing';
+        else {
+            round.phase = round.startupFailure ? 'failed' : 'finished'; round.finish = 'complete'; round.completedAt = Date.now();
+            if (round.git) round.git.status = 'not_prepared';
+        }
+        round.attention = round.startupFailure ? { ...round.startupFailure, stage: 'starting' } : null;
+        return round.phase === 'finishing';
     }
     private observe(input: Input, observed: Awaited<ReturnType<ExecutionClient['query']>>) {
         input.observedAt = Date.now();

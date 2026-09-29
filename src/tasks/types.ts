@@ -34,21 +34,24 @@ export const AcceptSchema = z.strictObject({ parent: ParentSchema, requestId: z.
 export const LookupSchema = z.strictObject({ parent: ParentSchema, requestId: z.uuid(), intent: SpawnIntentSchema });
 export const SendSchema = z.strictObject({ parent: ParentSchema, requestId: z.uuid(), intent: SendIntentSchema });
 export const InterruptSchema = z.strictObject({ parent: ParentSchema, id: z.uuid(), roundId: z.uuid() });
+export const RemoveWorkspaceSchema = z.strictObject({ parent: ParentSchema, id: z.uuid(), discardIgnored: z.boolean().default(false) });
 export const PermissionSchema = InterruptSchema.extend({ requestId: z.string().min(1), decision: z.enum(['approved', 'denied', 'abort']),
     answers: z.union([z.record(z.string(), z.array(z.string())), z.record(z.string(), z.object({ answers: z.array(z.string()) }))]).optional() });
 export type Attention = Problem & { stage: string; scope?: 'workspace'; permissionIds?: string[] };
 export type Status = 'running' | 'needs_attention' | 'completed' | 'failed' | 'interrupted' | 'unknown';
 export type Acceptance = { agent_id: string; round_id: string; request_id: string; revision: number; accepted: true; input_id?: string };
 export type StructuredReport = { summary: string; changes: string; tests: string; remaining: string };
+export type WorkspaceRemoval = { attemptId: string; expectedHead: string; discardIgnored: boolean; attempted: boolean;
+    status: 'pending' | 'running' | 'succeeded' | 'failed' | 'unknown'; error?: Problem };
 export type TaskEnvironment = { mode: 'shared'; machineId: string; cwd: string }
     | { mode: 'worktree'; machineId: string; environmentId: string; source: WorkspaceSource; cwd: string;
-        checkout?: string; branch?: string; status: 'retained' | 'deleting' | 'removed' };
+        checkout?: string; branch?: string; status: 'retained' | 'deleting' | 'removed'; removal?: WorkspaceRemoval };
 export type Task = { version: 2; id: string; namespace: string; parent: Parent; agent: AgentSnapshot; target: ExecutionTarget;
     environment: TaskEnvironment; createdAt: number; revision: number; updatedAt: number };
 export type Preparation = { mode: 'shared'; status: 'pending' | 'ready'; checkedAt?: number }
     | { mode: 'worktree'; preparationId: string; status: 'pending' | 'accepted' | 'ready' | 'failed' | 'unknown';
         attempted: boolean; expectedHead?: string; startHead?: string; checkedAt?: number };
-export type GitDelivery = { status: 'pending' | 'sealing' | 'sealed' | 'needs_attention' | 'unknown';
+export type GitDelivery = { status: 'pending' | 'not_prepared' | 'sealing' | 'sealed' | 'needs_attention' | 'unknown';
     attemptId?: string; attempted: boolean; partial?: boolean; result?: WorkspaceResult; error?: Problem };
 export function pendingPreparation(environment: TaskEnvironment): Preparation {
     return environment.mode === 'shared' ? { mode: 'shared', status: 'pending' }
@@ -62,7 +65,7 @@ export type Round = { id: string; taskId: string; ordinal: number; requestId: st
     stop: 'not_started' | 'stopping' | 'stopped'; finish: 'pending' | 'complete';
     attention: Attention | null; createdAt: number; completedAt?: number; completedRevision?: number;
     observedAt?: number; permissions: NonNullable<SessionResponse['session']['agentState']>['requests'];
-    startupFailure?: Problem; hostPid?: number; permissionBaseline?: string[]; structuredReport?: StructuredReport;
+    startupFailure?: Problem; executionAbsent?: true; hostPid?: number; permissionBaseline?: string[]; structuredReport?: StructuredReport;
     resume?: { previousSessionId: string; previousNativeSessionId?: string; attempted: boolean; candidateSessionId: string; outcome: 'pending' | 'resumed' | 'missing' | 'unknown' };
     reconstruction?: { reason: 'native_session_missing'; sourceRoundIds: string[]; context: string };
     cancellation?: { requestedAt: number; controlAttempted?: boolean; confirmed?: boolean; error?: Problem } };

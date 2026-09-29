@@ -39,6 +39,8 @@ HAPI 的工作区变更与关联执行启动按环境串行；finalize/remove �
 
 每轮确认受控执行停止后检查自身 worktree、commonDir、分支、HEAD 与基线/开始 HEAD 的祖先关系；拒绝 merge/rebase 等未完成操作、冲突、锁或未知归属。执行失败/显式取消但已确认停止可固定部分成果，保留原生失败/unknown 字段。
 
+准备完成后未启动就取消或被明确拒绝的轮次也需封存。此时 finalize 可省略 sessionId，Runner 从准备与启动记录核对没有执行关联，或所有关联都已标记 childStarted=false；否则拒绝省略。不能用该入口跳过已启动/未知执行的停止证明。封存后原准备失效，下一轮可复用原目录。
+
 子模块必须处于基线指针对应的干净状态；相对 startHead 的 gitlink 变化及嵌套脏状态明确报错，不自动提交嵌套仓库。检查同时覆盖 HEAD 和候选 index 的 160000 条目，防止 git add 把新克隆的嵌套 repo 当作普通文件加入成果。LFS 成果必须保留实体对象；仅有指针不能报告完整可用。
 
 保留 agent 已有提交，再对本 worktree 遗留文本、二进制、删除与非 ignored 新文件执行 add/commit；无改动不产生空提交。使用仅本次命令生效的作者/提交者 `HAPI Checkpoint <checkpoint@hapi.local>`，不冒充配置中的用户；不关闭 hooks、签名或 clean/smudge filter。不把初始化输入/元数据混入 Git。hook 或签名失败保留 index/目录，attention 提供失败原因。

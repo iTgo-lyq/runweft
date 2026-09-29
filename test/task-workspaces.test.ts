@@ -1,5 +1,7 @@
 import { afterEach, expect, test } from 'bun:test';
 import { Database } from 'bun:sqlite';
+import { TaskCoordinator } from '../src/tasks/coordinator';
+import { HapiClient } from '../src/hapi';
 import type { ManagedWorkspace, WorkspaceMutation, WorkspaceRequest } from '../hapi/shared/src/workspaces';
 import { taskFixture, until } from './tasks-fixture';
 
@@ -9,7 +11,8 @@ afterEach(async () => { for (const cleanup of cleanups.splice(0).reverse()) awai
 // Protocol fixture for the real coordinator/HTTP/SQLite tests; actual Git is verified in HAPI and compiled smoke.
 function workspaces() {
     const records = new Map<string, ManagedWorkspace>(), calls: WorkspaceRequest[] = [];
-    const control = { holdPrepare: false, holdFinish: false, failPrepare: false, failFinish: false, dropPrepare: false, rejectResolve: false,
+    const control = { holdPrepare: false, holdFinish: false, holdRemove: false, failPrepare: false, failFinish: false, failRemove: false,
+        dropPrepare: false, dropFinish: false, dropRemove: false, rejectResolve: false,
         base: 'a'.repeat(40), onFinalize: () => {} };
     function update(workspace: ManagedWorkspace) {
         for (const operation of Object.values(workspace.operations)) {
@@ -29,6 +32,13 @@ function workspaces() {
                     baseCommit: workspace.source.baseCommit, startHead: workspace.preparations[request.preparationId]!.startHead,
                     resultHead: (Object.keys(workspace.results).length ? 'c' : 'b').repeat(40), resultRef: `refs/hapi/workspaces/${request.environmentId}/rounds/${request.roundId}`,
                     partial: request.partial, fileCount: 1, paths: ['file.txt'], sealedAt: Date.now() };
+            } else if (request.action === 'remove') {
+                if (control.holdRemove) continue;
+                operation.status = control.failRemove && !request.discardIgnored ? 'failed' : 'succeeded';
+                if (operation.status === 'failed') {
+                    operation.error = { code: 'workspace_ignored_files', message: 'Checkout contains ignored paths', hint: 'Explicitly discard ignored files' };
+                    workspace.status = 'retained';
+                } else workspace.status = 'removed';
             }
         }
     }
@@ -50,8 +60,11 @@ function workspaces() {
         if (!workspace.operations[key]) {
             if (request.action === 'finalize') control.onFinalize();
             workspace.operations[key] = { id: key, request: request as WorkspaceMutation, status: 'accepted', createdAt: Date.now(), updatedAt: Date.now() };
+            if (request.action === 'remove') workspace.status = 'deleting';
         } else expect(workspace.operations[key]!.request).toEqual(request);
         if (request.action === 'prepare' && control.dropPrepare) { control.dropPrepare = false; return new Response('', { status: 502 }); }
+        if (request.action === 'finalize' && control.dropFinish) { control.dropFinish = false; return new Response('', { status: 502 }); }
+        if (request.action === 'remove' && control.dropRemove) { control.dropRemove = false; return new Response('', { status: 502 }); }
         return Response.json({ workspace, operation: workspace.operations[key] });
     } };
 }
@@ -105,7 +118,7 @@ test('preparation failure does not launch a native process', async () => {
     const accepted = await h.post('spawn', { ...h.payload(), intent: { ...h.intent, workspaceMode: 'worktree' } });
     const failed = await until(() => h.post('read', { id: accepted.agent_id }), value => value.status === 'failed');
     expect(failed.attention.scope).toBe('workspace'); expect(failed.preparation.status).toBe('failed');
-    expect(failed.native_status[0].phase).toBe('not_observed'); expect(h.calls.spawn).toBe(0); expect(h.calls.send).toBe(0);
+    expect(failed.native_status[0].phase).toBe('not_started'); expect(h.calls.spawn).toBe(0); expect(h.calls.send).toBe(0);
 });
 
 test('wait and later rounds stay blocked until Git seals; finishing cannot be cancelled', async () => {
@@ -148,4 +161,131 @@ test('explicit retry-finish retains native success and report without resending 
     expect(h.calls.spawn).toBe(1); expect(h.calls.send).toBe(1); expect(h.calls.resume).toBe(0);
     const attempts = git.calls.filter(call => call.action === 'finalize').map(call => call.action === 'finalize' && call.attemptId);
     expect(new Set(attempts).size).toBe(2);
+});
+
+test('cancelling during preparation seals without launching and leaves the environment reusable', async () => {
+    const git = workspaces(); git.control.holdPrepare = true;
+    const h = await taskFixture(cleanups, 'codex', git.handler);
+    const accepted = await h.post('spawn', { ...h.payload(), intent: { ...h.intent, workspaceMode: 'worktree' } }), id = accepted.agent_id;
+    await until(() => h.post('read', { id }), value => value.preparation.status === 'accepted');
+    await h.post('interrupt', { id, roundId: accepted.round_id });
+    git.control.holdPrepare = false;
+    const cancelled = await until(() => h.post('read', { id }), value => value.status === 'interrupted');
+    expect(cancelled.execution_not_started).toBe(true); expect(cancelled.session_id).toBeUndefined();
+    expect(cancelled.native_status[0].phase).toBe('not_started'); expect(cancelled.report.incomplete).toBe(false);
+    expect(cancelled.git.status).toBe('sealed'); expect(cancelled.git.partial).toBe(true);
+    expect(h.calls.spawn).toBe(0); expect(h.calls.resume).toBe(0); expect(h.calls.send).toBe(0);
+    expect(git.calls.find(call => call.action === 'finalize')).not.toHaveProperty('sessionId');
+    const next = await h.post('send', { requestId: crypto.randomUUID(), intent: { id, message: 'Actually run', mode: 'next' } });
+    const running = await until(() => h.post('read', { id }), value => value.round_id === next.round_id && value.inputs[0]?.observation?.phase === 'accepted');
+    expect(running.cwd).toBe(cancelled.cwd); expect(running.preparation.startHead).toBe(cancelled.git.result_head);
+    expect(h.calls.spawn).toBe(1); expect(h.calls.resume).toBe(0);
+});
+
+test('definite launch rejection seals its prepared round before another round can start', async () => {
+    const git = workspaces(), h = await taskFixture(cleanups, 'codex', git.handler); h.faults.spawn = 'rejected';
+    const accepted = await h.post('spawn', { ...h.payload(), intent: { ...h.intent, workspaceMode: 'worktree' } }), id = accepted.agent_id;
+    const failed = await until(() => h.post('read', { id }), value => value.status === 'failed');
+    expect(failed.execution_not_started).toBe(true); expect(failed.git.status).toBe('sealed'); expect(failed.git.partial).toBe(true);
+    expect(failed.native_status[0].phase).toBe('not_started'); expect(h.calls.send).toBe(0);
+    expect(git.calls.find(call => call.action === 'finalize')).not.toHaveProperty('sessionId');
+    h.faults.spawn = 'none';
+    await h.post('send', { requestId: crypto.randomUUID(), intent: { id, message: 'Continue after repair', mode: 'next' } });
+    const next = await until(() => h.post('read', { id }), value => value.inputs[0]?.observation?.phase === 'accepted');
+    expect(next.cwd).toBe(failed.cwd); expect(h.calls.spawn).toBe(2); expect(h.calls.resume).toBe(0);
+});
+
+test('interrupted execution seals partial output only after confirmed stop', async () => {
+    const git = workspaces(), h = await taskFixture(cleanups, 'claude', git.handler); h.faults.stop = true;
+    const accepted = await h.post('spawn', { ...h.payload(), intent: { ...h.intent, workspaceMode: 'worktree' } }), id = accepted.agent_id;
+    await until(() => h.post('read', { id }), value => value.inputs[0]?.observation?.phase === 'accepted');
+    await h.post('interrupt', { id, roundId: accepted.round_id });
+    await until(() => h.post('read', { id }), value => value.attention?.code === 'task_stop_unknown');
+    expect(git.calls.some(call => call.action === 'finalize')).toBe(false);
+    h.faults.stop = false;
+    const done = await until(() => h.post('read', { id }), value => value.status === 'interrupted');
+    expect(done.git.status).toBe('sealed'); expect(done.git.partial).toBe(true); expect(done.stop).toBe('stopped');
+    expect(h.calls.send).toBe(1);
+});
+
+test('deletion excludes send, deduplicates pending removal, and preserves reports and result refs', async () => {
+    const git = workspaces(), h = await taskFixture(cleanups, 'codex', git.handler); git.control.holdRemove = true; git.control.dropRemove = true;
+    const accepted = await h.post('spawn', { ...h.payload(), intent: { ...h.intent, workspaceMode: 'worktree' } }), id = accepted.agent_id;
+    const running = await until(() => h.post('read', { id }), value => value.inputs[0]?.observation?.phase === 'accepted');
+    await expect(h.post('workspace/remove', { id })).rejects.toMatchObject({ code: 'workspace_round_pending' });
+    h.complete(running.session_id, 'KEEP_REPORT');
+    const done = await until(() => h.post('read', { id }), value => value.status === 'completed');
+    const acceptedRemove = await h.post('workspace/remove', { id });
+    await until(() => h.post('read', { id }), value => value.git.removal?.status === 'running');
+    const repeated = await h.post('workspace/remove', { id });
+    expect(repeated.environment.removal.attemptId).toBe(acceptedRemove.environment.removal.attemptId);
+    await expect(h.post('send', { requestId: crypto.randomUUID(), intent: { id, mode: 'next', message: 'Race' } })).rejects.toMatchObject({ code: 'workspace_not_retained' });
+    await expect(h.post('workspace/remove', { id, discardIgnored: true })).rejects.toMatchObject({ code: 'workspace_remove_pending' });
+    git.control.holdRemove = false;
+    const removed = await until(() => h.post('read', { id }), value => value.git.retained === 'removed');
+    expect(removed.status).toBe('completed'); expect(removed.report.text).toBe('KEEP_REPORT'); expect(removed.git.result_ref).toBe(done.git.result_ref);
+    expect((await h.post('list', { all: true })).agents[0].git.retained).toBe('removed');
+    expect(git.calls.filter(call => call.action === 'remove')).toHaveLength(1);
+    await expect(h.post('send', { requestId: crypto.randomUUID(), intent: { id, mode: 'next', message: 'After removal' } })).rejects.toMatchObject({ code: 'workspace_not_retained' });
+    expect((await h.post('workspace/remove', { id })).environment.status).toBe('removed');
+});
+
+test('accepted next-round and deletion are mutually exclusive in the task transaction', async () => {
+    const git = workspaces(), h = await taskFixture(cleanups, 'codex', git.handler);
+    const accepted = await h.post('spawn', { ...h.payload(), intent: { ...h.intent, workspaceMode: 'worktree' } }), id = accepted.agent_id;
+    const running = await until(() => h.post('read', { id }), value => value.inputs[0]?.observation?.phase === 'accepted');
+    h.complete(running.session_id); await until(() => h.post('read', { id }), value => value.status === 'completed');
+    git.control.holdPrepare = true;
+    const results = await Promise.allSettled([
+        h.post('send', { requestId: crypto.randomUUID(), intent: { id, message: 'Next', mode: 'next' } }), h.post('workspace/remove', { id }),
+    ]);
+    expect(results.filter(result => result.status === 'fulfilled')).toHaveLength(1);
+    const failure = results.find(result => result.status === 'rejected') as PromiseRejectedResult;
+    expect(['workspace_not_retained', 'workspace_round_pending']).toContain(failure.reason.code);
+});
+
+test('ignored removal failure retains the workspace and needs explicit discard before a new attempt', async () => {
+    const git = workspaces(), h = await taskFixture(cleanups, 'claude', git.handler); git.control.failRemove = true; git.control.failPrepare = true;
+    const accepted = await h.post('spawn', { ...h.payload(), intent: { ...h.intent, workspaceMode: 'worktree' } }), id = accepted.agent_id;
+    await until(() => h.post('read', { id }), value => value.status === 'failed');
+    const first = await h.post('workspace/remove', { id });
+    const failed = await until(() => h.post('read', { id }), value => value.git.removal?.status === 'failed');
+    expect(failed.git.retained).toBe('retained'); expect(failed.git.removal.error.code).toBe('workspace_ignored_files');
+    expect(failed.git.removal.error.hint).toContain(`task workspace remove ${id} --discard-ignored`);
+    const next = await h.post('workspace/remove', { id, discardIgnored: true });
+    expect(next.environment.removal.attemptId).not.toBe(first.environment.removal.attemptId);
+    await until(() => h.post('read', { id }), value => value.git.retained === 'removed');
+    expect(git.calls.filter(call => call.action === 'remove').every(call => call.action === 'remove' && call.expectedHead === 'a'.repeat(40))).toBe(true);
+    expect(h.calls.spawn).toBe(0);
+});
+
+test('restart reconciles lost seal and delete responses without new operations or model replay', async () => {
+    const git = workspaces(), h = await taskFixture(cleanups, 'codex', git.handler); git.control.holdFinish = true; git.control.dropFinish = true;
+    const accepted = await h.post('spawn', { ...h.payload(), intent: { ...h.intent, workspaceMode: 'worktree' } }), id = accepted.agent_id;
+    const running = await until(() => h.post('read', { id }), value => value.inputs[0]?.observation?.phase === 'accepted');
+    h.complete(running.session_id);
+    await until(() => h.post('read', { id }), value => value.phase === 'finishing' && ['sealing', 'unknown'].includes(value.git.status));
+    await h.tasks!.close();
+    const replacement = new TaskCoordinator(h.statePath, namespace => new HapiClient(h.nativeUrl, `test-${namespace}`), 20);
+    cleanups.push(() => replacement.close()); replacement.start(); git.control.holdFinish = false;
+    await until(() => replacement.read('alpha', h.parent, id), value => value.status === 'completed');
+    expect(git.calls.filter(call => call.action === 'finalize')).toHaveLength(1);
+    git.control.holdRemove = true; git.control.dropRemove = true;
+    await replacement.removeWorkspace('alpha', { parent: h.parent, id });
+    await until(() => git.calls.filter(call => call.action === 'remove').length, count => count === 1);
+    await replacement.close();
+    const last = new TaskCoordinator(h.statePath, namespace => new HapiClient(h.nativeUrl, `test-${namespace}`), 20);
+    cleanups.push(() => last.close()); last.start(); git.control.holdRemove = false;
+    await until(() => last.read('alpha', h.parent, id), value => value.git !== 'not_applicable' && value.git.retained === 'removed');
+    expect(git.calls.filter(call => call.action === 'remove')).toHaveLength(1);
+    expect(h.calls.spawn).toBe(1); expect(h.calls.send).toBe(1);
+});
+
+test('shared paths and MCP cleanup are rejected without issuing Git operations', async () => {
+    const git = workspaces(), h = await taskFixture(cleanups, 'codex', git.handler);
+    const accepted = await h.post('spawn', h.payload());
+    await expect(h.post('workspace/remove', { id: accepted.agent_id })).rejects.toMatchObject({ code: 'workspace_shared' });
+    await expect(h.post('workspace/remove', { id: accepted.agent_id, parent: { kind: 'mcp', machineId: 'own', cwd: h.cwd, host: 'codex', nativeSessionId: 'parent' } }))
+        .rejects.toMatchObject({ code: 'workspace_remove_cli_only' });
+    expect(git.calls).toHaveLength(0);
 });

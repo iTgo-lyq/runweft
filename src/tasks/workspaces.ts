@@ -56,22 +56,28 @@ export class TaskWorkspaces {
         const { workspace, operation } = await this.receipt({ action: 'prepare', environmentId: environment.environmentId,
             preparationId: preparation.preparationId, roundId: round.id, source: environment.source,
             expectedHead: preparation.expectedHead, inputs: [] }, attempted);
+        environment.checkout = workspace.checkout; environment.branch = workspace.branch;
         if (operation.status === 'succeeded') {
             const ready = workspace.preparations[preparation.preparationId];
             if (!ready || ready.roundId !== round.id || ready.startHead !== preparation.expectedHead) throw new RunweftError('invalid_hapi_response', 'HAPI 的准备结果与本轮固定基线不一致。');
             preparation.status = 'ready'; preparation.startHead = ready.startHead; preparation.checkedAt = ready.readyAt;
-            environment.cwd = ready.cwd; environment.checkout = workspace.checkout; environment.branch = workspace.branch;
+            environment.cwd = ready.cwd;
             round.attention = null; save(); return true;
         }
         preparation.status = operation.status === 'failed' ? 'failed' : operation.status === 'unknown' ? 'unknown' : 'accepted';
         round.attention = operation.error ? { ...operation.error, scope: 'workspace', stage: 'preparing',
             hint: `${operation.error.hint ?? ''}\n保留目录：${workspace.checkout}；原生任务尚未启动。`.trim() } : null;
-        if (operation.status === 'failed') { round.phase = 'failed'; round.completedAt = Date.now(); }
+        if (operation.status === 'failed') {
+            round.executionAbsent = true; round.phase = round.cancellation ? 'finished' : 'failed'; round.finish = 'complete'; round.completedAt = Date.now();
+            if (round.git) round.git.status = 'not_prepared';
+            if (round.cancellation) round.cancellation.confirmed = true;
+        }
         save(); return false;
     }
     async finish(task: Task, round: Round, inputs: Input[], save: Save) {
         const environment = task.environment, preparation = round.preparation, delivery = round.git;
-        if (environment.mode !== 'worktree' || preparation.mode !== 'worktree' || !delivery || !round.sessionId || round.stop !== 'stopped') {
+        if (environment.mode !== 'worktree' || preparation.mode !== 'worktree' || !delivery
+            || (!round.executionAbsent && (!round.sessionId || round.stop !== 'stopped'))) {
             throw new TaskError(409, 'workspace_finish_unavailable', '只有已准备且确认停止的独立任务才能封存。');
         }
         if (delivery.status === 'needs_attention') return false;
@@ -81,7 +87,7 @@ export class TaskWorkspaces {
         delivery.attempted = true; if (delivery.status === 'pending') delivery.status = 'sealing'; save();
         const { workspace, operation } = await this.receipt({ action: 'finalize', environmentId: environment.environmentId,
             preparationId: preparation.preparationId, roundId: round.id, attemptId: delivery.attemptId,
-            sessionId: round.sessionId, partial: delivery.partial }, attempted);
+            ...(round.executionAbsent ? {} : { sessionId: round.sessionId }), partial: delivery.partial }, attempted);
         if (operation.status === 'succeeded') {
             const result = workspace.results[round.id];
             if (!result || result.environmentId !== environment.environmentId || result.startHead !== preparation.startHead) throw new RunweftError('invalid_hapi_response', 'HAPI 的 Git 成果与本轮不匹配。');
@@ -95,9 +101,28 @@ export class TaskWorkspaces {
         save(); return false;
     }
     retry(round: Round) {
-        if (round.phase !== 'finishing' || round.stop !== 'stopped' || !round.git) throw new TaskError(409, 'workspace_finish_unavailable', '指定轮次不在待收尾状态。');
+        if (round.phase !== 'finishing' || (!round.executionAbsent && round.stop !== 'stopped') || !round.git) throw new TaskError(409, 'workspace_finish_unavailable', '指定轮次不在待收尾状态。');
         if (round.git.status !== 'needs_attention') throw new TaskError(409, 'workspace_finish_pending', '当前 Git 操作尚未确认失败，中心会继续查询原回执。', '确认原操作及其进程状态后再重试；不会重复 commit 或 hook。');
         round.git = { status: 'pending', attempted: false, attemptId: randomUUID(), partial: round.git.partial };
         round.attention = null;
+    }
+    async remove(task: Task, save: Save) {
+        const environment = task.environment;
+        if (environment.mode !== 'worktree' || environment.status !== 'deleting' || !environment.removal) throw new TaskError(409, 'workspace_remove_unavailable', '没有已接受的工作区删除请求。');
+        const removal = environment.removal, attempted = removal.attempted;
+        removal.attempted = true; save();
+        const { workspace, operation } = await this.receipt({ action: 'remove', environmentId: environment.environmentId,
+            attemptId: removal.attemptId, expectedHead: removal.expectedHead, discardIgnored: removal.discardIgnored }, attempted);
+        removal.status = operation.status === 'accepted' ? 'running' : operation.status;
+        removal.error = operation.error ? { ...operation.error,
+            hint: `${operation.error.hint ?? ''}\n${operation.status === 'failed'
+                ? operation.error.code === 'workspace_ignored_files' ? `确认可丢弃这些 ignored 文件后运行 runweft task workspace remove ${task.id} --discard-ignored。`
+                    : `保留目录：${workspace.checkout}；修复后再次运行 runweft task workspace remove ${task.id}。`
+                : '中心继续查询原删除回执；未知操作不会换新身份重发。'}`.trim() } : undefined;
+        if (operation.status === 'succeeded') {
+            if (workspace.status !== 'removed') throw new RunweftError('invalid_hapi_response', '删除回执与工作区留存状态不一致。');
+            environment.status = 'removed';
+        } else if (operation.status === 'failed') environment.status = 'retained';
+        save();
     }
 }

@@ -8,7 +8,8 @@ function gitDelivery(bundle: TaskBundle, round: Round) {
         source_cwd: environment.source.sourcePath, checkout: environment.checkout, branch: environment.branch,
         base_commit: environment.source.baseCommit, start_head: round.preparation.mode === 'worktree' ? round.preparation.startHead : undefined,
         result_head: result?.resultHead, result_ref: result?.resultRef, checkpoint: result?.checkpoint,
-        partial: result?.partial, file_count: result?.fileCount, paths: result?.paths, error: round.git?.error };
+        partial: result?.partial, file_count: result?.fileCount, paths: result?.paths, error: round.git?.error,
+        removal: environment.removal ? { status: environment.removal.status, discard_ignored: environment.removal.discardIgnored, error: environment.removal.error } : undefined };
 }
 export function overview(bundle: TaskBundle, round: Round = bundle.rounds.at(-1)!) {
     const inputs = bundle.inputs.filter(input => input.roundId === round.id);
@@ -25,12 +26,12 @@ export function overview(bundle: TaskBundle, round: Round = bundle.rounds.at(-1)
         revision: bundle.task.revision, completed_revision: round.completedRevision, status, attention, blocking_round_id: blocking?.id,
         report: { text: round.report.slice(0, 4000), total: round.report.length, next_offset: round.report.length > 4000 ? 4000 : null, structuredMissing: round.structuredMissing,
             structured: round.structuredReport ? Object.fromEntries(Object.entries(round.structuredReport).map(([key, value]) => [key, value.slice(0, 1000)])) : undefined,
-            incomplete: !!round.cancellation?.confirmed && !inputs.every(input => nativeTerminal(input.observation)) },
+            incomplete: !round.executionAbsent && !!round.cancellation?.confirmed && !inputs.every(input => nativeTerminal(input.observation)) },
         cwd: bundle.task.environment.cwd, workspace_mode: bundle.task.environment.mode, git: gitDelivery(bundle, round), runtime_id: bundle.task.target.runtimeId, machine_id: bundle.task.target.machineId,
         native_status: inputs.map(input => ({ local_id: input.id, delivery: input.delivery,
-            phase: round.cancellation?.confirmed && !nativeTerminal(input.observation) ? 'unknown' : input.observation?.phase ?? 'not_observed',
+            phase: round.executionAbsent ? 'not_started' : round.cancellation?.confirmed && !nativeTerminal(input.observation) ? 'unknown' : input.observation?.phase ?? 'not_observed',
             last_observed_phase: input.observation?.phase, reliable_terminal: nativeTerminal(input.observation) })),
-        stop: round.stop, finish: round.finish, updated_at: bundle.task.updatedAt };
+        execution_not_started: round.executionAbsent, stop: round.stop, finish: round.finish, updated_at: bundle.task.updatedAt };
 }
 export function detail(bundle: TaskBundle, options: { roundId?: string; offset?: number; limit?: number } = {}) {
     const round = options.roundId ? bundle.rounds.find(round => round.id === options.roundId) : bundle.rounds.at(-1);

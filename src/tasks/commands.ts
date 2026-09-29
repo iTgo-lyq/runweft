@@ -12,6 +12,8 @@ function taskText(task: Pick<Summary, 'agent_id' | 'round_id' | 'status' | 'atte
     return `${task.agent_id} · ${task.status}\n轮次：${task.round_id}`
         + (task.attention ? `\n需处理：${task.attention.message}${task.attention.hint ? `\n${task.attention.hint}` : ''}` : '')
         + (task.git === 'not_applicable' ? '' : `\nGit：${task.git.status}${task.git.checkout ? ` · ${task.git.checkout}` : ''}`
+            + `\n工作区：${task.git.retained}`
+            + (task.git.removal?.error ? `\n清理需处理：${task.git.removal.error.message}${task.git.removal.error.hint ? `\n${task.git.removal.error.hint}` : ''}` : '')
             + (task.git.result_ref ? `\n成果引用：${task.git.result_ref}\n查看修改：git diff ${task.git.start_head} ${task.git.result_head}\n在主仓库目标分支审查并选择 merge 或 cherry-pick。` : ''))
         + (task.report.text ? `\n${task.report.text}` : '')
         + (task.report.next_offset !== null ? `\n后续内容：runweft task show ${task.agent_id} --round ${task.round_id} --offset ${task.report.next_offset}` : '');
@@ -29,6 +31,13 @@ export function announceRequest(program: Command, requested?: string) {
 export function addTaskCommands(program: Command, context: () => ResolvedConfig, output: (value: unknown, human: string) => void) {
     const client = () => new TaskClient(context(), process.cwd());
     const task = program.command('task').description('派生、续接与控制本机 shared/worktree 任务');
+    task.command('workspace').description('管理保留的独立工作区').command('remove <id>').description('显式删除已结束任务的工作区；保留报告和 Git 成果引用')
+        .option('--discard-ignored', '明确丢弃 ignored 依赖和文件；默认存在时拒绝删除')
+        .action(async (id, options) => {
+            const result = await client().removeWorkspace(id, !!options.discardIgnored);
+            output(result, result.environment.mode === 'worktree' && result.environment.status === 'removed' ? '工作区已移除；报告和 Git 成果引用保留。'
+                : `已请求删除工作区：${id}\n完成前不接受新轮次；报告和成果引用保留。\n查询结果：runweft task show ${id}`);
+        });
     task.command('spawn <agent>').description('接受新任务后立即返回；执行由服务继续推进')
         .option('--message <text>', '任务描述').option('--message-file <path>', '从文件读取任务；- 读取 stdin')
         .option('--request-id <uuid>', '相同请求重试时复用 ID').option('--workspace-mode <shared|worktree>', '共享当前目录或准备独立 Git worktree', 'shared')

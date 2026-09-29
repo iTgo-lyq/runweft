@@ -32,6 +32,7 @@ export async function handleTaskRequest(request: IncomingMessage, response: Serv
     else if (path === '/api/runweft/tasks/send') result = await coordinator.send(namespace, value);
     else if (path === '/api/runweft/tasks/interrupt') result = await coordinator.interrupt(namespace, value);
     else if (path === '/api/runweft/tasks/retry-finish') result = await coordinator.retryFinish(namespace, value);
+    else if (path === '/api/runweft/tasks/workspace/remove') result = await coordinator.removeWorkspace(namespace, value);
     else if (path === '/api/runweft/tasks/permission') result = await coordinator.permission(namespace, value);
     else if (path === '/api/runweft/tasks/list') {
         const input = parseTask(ListSchema, value); result = coordinator.list(namespace, input.parent, input.all);

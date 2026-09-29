@@ -43,6 +43,9 @@ export class TaskClient {
     async retryFinish(id: string, roundId: string, signal?: AbortSignal): Promise<Awaited<ReturnType<TaskCoordinator['retryFinish']>>> {
         return this.request('retry-finish', { id, roundId }, signal);
     }
+    async removeWorkspace(id: string, discardIgnored = false, signal?: AbortSignal): Promise<Awaited<ReturnType<TaskCoordinator['removeWorkspace']>>> {
+        return this.request('workspace/remove', { id, discardIgnored }, signal);
+    }
     async permission(id: string, roundId: string, requestId: string, decision: 'approved' | 'denied' | 'abort', answers?: Record<string, string[]> | Record<string, { answers: string[] }>, signal?: AbortSignal) {
         return this.request('permission', { id, roundId, requestId, decision, answers }, signal);
     }

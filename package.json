@@ -5,7 +5,7 @@
   "type": "module",
   "packageManager": "bun@1.4.2",
   "hapi": {
-    "revision": "a904c2a5bb9fce76d754d947540114a8d32d815d",
+    "revision": "5341b084c8650b739cd2afcda761023255326150",
     "version": "0.30.7",
     "protocolVersion": 1
   },
@@ -24,6 +24,7 @@
     "test:collaboration": "bun scripts/smoke-collaboration.ts",
     "test:workspaces": "bun scripts/smoke-workspaces.ts",
     "test:worktree-tasks": "bun scripts/smoke-worktree-tasks.ts",
+    "test:worktree-lifecycle": "bun scripts/smoke-worktree-lifecycle.ts",
     "test:install": "node scripts/smoke-install.mjs",
     "build": "bun scripts/build.ts",
     "build:hapi": "bun scripts/build-hapi.ts",

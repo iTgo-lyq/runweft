@@ -32,7 +32,7 @@ export class TaskStore {
     }
     pending(): { namespace: string; id: string }[] {
         return this.db.query(`SELECT DISTINCT t.namespace, t.id FROM delegation_tasks t JOIN delegation_rounds r ON t.id=r.taskId
-            WHERE r.phase NOT IN ('finished', 'failed')`).all() as { namespace: string; id: string }[];
+            WHERE r.phase NOT IN ('finished', 'failed') OR json_extract(t.data, '$.environment.status')='deleting'`).all() as { namespace: string; id: string }[];
     }
     lookup(namespace: string, parent: Parent, requestId: string, intent: SpawnIntent | SendIntent): Acceptance | null {
         const row = this.db.query('SELECT fingerprint, accepted FROM delegation_requests WHERE namespace=? AND requestId=?').get(namespace, requestId) as { fingerprint: string; accepted: string } | null;
@@ -106,6 +106,34 @@ export class TaskStore {
             const accepted: Acceptance = { agent_id: intent.id, round_id: round.id, request_id: requestId, input_id: input.id, revision, accepted: true };
             this.db.query('INSERT INTO delegation_requests VALUES (?, ?, ?, ?, ?, ?, ?)').run(namespace, requestId, semantic(parent, intent), intent.id, round.id, JSON.stringify(accepted), now);
             return accepted;
+        }).immediate();
+    }
+    beginRemoval(namespace: string, parent: Parent, id: string, discardIgnored: boolean): Task {
+        return this.db.transaction(() => {
+            const { task, rounds } = this.require(namespace, id, parent), environment = task.environment;
+            if (environment.mode !== 'worktree') throw new TaskError(409, 'workspace_shared', '共享目录不由 Runweft 删除。');
+            if (environment.status === 'removed') return task;
+            if (environment.status === 'deleting') {
+                if (environment.removal?.discardIgnored !== discardIgnored) throw new TaskError(409, 'workspace_remove_pending', '原删除操作仍在对账，不能变更 ignored 文件处理选项。');
+                return task;
+            }
+            if (rounds.some(round => !['finished', 'failed'].includes(round.phase))) throw new TaskError(409, 'workspace_round_pending', '仍有排队、执行或待收尾轮次，不能删除工作区。');
+            const last = [...rounds].reverse().find(round => round.git?.status === 'sealed');
+            const unprepared = rounds.every(round => round.preparation.mode === 'worktree' && !round.preparation.attempted);
+            environment.status = unprepared ? 'removed' : 'deleting';
+            environment.removal = { attemptId: randomUUID(), expectedHead: last?.git?.result?.resultHead ?? environment.source.baseCommit,
+                discardIgnored, attempted: false, status: unprepared ? 'succeeded' : 'pending' };
+            this.saveEnvironment(task); return task;
+        }).immediate();
+    }
+    saveEnvironment(task: Task) {
+        this.db.transaction(() => {
+            const old = this.require(task.namespace, task.id).task;
+            if (JSON.stringify(old.environment) === JSON.stringify(task.environment)) return;
+            const revision = old.revision + 1, updatedAt = Date.now();
+            this.db.query('UPDATE delegation_tasks SET data=?, revision=?, updatedAt=? WHERE id=?')
+                .run(JSON.stringify({ ...old, environment: task.environment, revision, updatedAt }), revision, updatedAt, task.id);
+            task.revision = revision; task.updatedAt = updatedAt;
         }).immediate();
     }
     /** A single coordinator serializes writes for a task. Acceptance uses its own SQLite transaction. */
