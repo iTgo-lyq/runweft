@@ -8,7 +8,7 @@ import type { AgentSnapshot, Parent, SpawnIntent } from '../src/tasks/types';
 import type { Flavor } from '../src/resources/types';
 
 type Native = { session: Session; messages: DecryptedMessage[]; inputs: string[]; namespace: string; queued: Set<string>; done: Set<string>; indeterminate: Set<string> };
-export async function taskFixture(cleanups: (() => Promise<void> | void)[], flavor: Flavor = 'codex') {
+export async function taskFixture(cleanups: (() => Promise<void> | void)[], flavor: Flavor = 'codex', workspaceApi?: (request: Request, namespace: string) => Promise<Response>) {
     const sessions = new Map<string, Native>(), receipts = new Map<string, SpawnReceipt>();
     const calls = { spawn: 0, send: 0, stop: 0, resume: 0, steer: 0, interrupt: 0, permission: 0 };
     const faults = { spawn: 'none', send: 'none', stop: false, mismatch: false, resume: 'same', queueNext: false, steer: 'steered', interrupt: 'requested', historyAfterStop: false };
@@ -24,14 +24,15 @@ export async function taskFixture(cleanups: (() => Promise<void> | void)[], flav
     }
     const h = await resourceFixture(cleanups, { capabilities: { spawnReceipts: 1, mcpToolFilter: 1 }, async fetch(request, namespace) {
         const url = new URL(request.url), parts = url.pathname.split('/');
+        if (parts[2] === 'machines' && parts[4] === 'workspaces' && workspaceApi) return workspaceApi(request, namespace);
         if (parts[2] === 'machines' && parts[4] === 'spawn' && request.method === 'POST') {
             calls.spawn++;
-            const body = await request.json() as { requestId: string; directory: string; agent: string; disabledMcpServers: string[]; permissionMode?: string; yolo?: boolean };
+            const body = await request.json() as { requestId: string; directory: string; agent: string; disabledMcpServers: string[]; permissionMode?: string; yolo?: boolean; preparedWorkspace?: { environmentId: string; preparationId: string } };
             expect(body.disabledMcpServers).toEqual(['runweft']); expect(body.permissionMode).toBeUndefined(); expect(body.yolo).toBeUndefined();
             if (faults.spawn === 'unseen') return new Response('', { status: 502 });
             const id = crypto.randomUUID();
             const session = { id, active: true, metadata: { machineId: parts[3], path: faults.mismatch ? '/wrong/path' : body.directory, flavor: body.agent,
-                ...(body.agent === 'codex' ? { codexSessionId: `native-${id}` } : { claudeSessionId: `native-${id}` }), capabilities: { execution: 1 }, lifecycleState: 'running' }, agentState: { requests: {} } } as Session;
+                ...(body.agent === 'codex' ? { codexSessionId: `native-${id}` } : { claudeSessionId: `native-${id}` }), capabilities: { execution: 1 }, preparedWorkspace: body.preparedWorkspace, lifecycleState: 'running' }, agentState: { requests: {} } } as Session;
             sessions.set(id, { session, namespace, messages: [], inputs: [], queued: new Set(), done: new Set(), indeterminate: new Set() });
             const receipt: SpawnReceipt = { requestId: body.requestId, machineId: parts[3], sessionId: id, createdAt: Date.now(), response: { type: 'success', sessionId: id } };
             receipts.set(body.requestId, receipt);
@@ -47,6 +48,8 @@ export async function taskFixture(cleanups: (() => Promise<void> | void)[], flav
         if (parts.length === 4) return Response.json({ session: native.session });
         if (parts[4] === 'resume') {
             calls.resume++;
+            const body = await request.json() as { preparedWorkspace?: { environmentId: string; preparationId: string } };
+            if (body.preparedWorkspace) native.session.metadata!.preparedWorkspace = body.preparedWorkspace;
             if (faults.resume === 'missing') return Response.json({ code: 'native_session_missing', error: 'No native history' }, { status: 409 });
             if (faults.resume === 'offline') return Response.json({ code: 'no_machine_online' }, { status: 503 });
             if (faults.resume === 'unseen') return new Response('', { status: 502 });

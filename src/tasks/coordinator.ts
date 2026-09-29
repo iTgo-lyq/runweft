@@ -9,6 +9,7 @@ import { TaskStore } from './store';
 import { AcceptSchema, LookupSchema, SendSchema, InterruptSchema, PermissionSchema, nativeTerminal, parseTask, TaskError, type Input, type Parent, type Round, type Task } from './types';
 import { detail, overview } from './views';
 import { historyContext, parseReport } from './reports';
+import { TaskWorkspaces, preparedReference } from './workspaces';
 
 export class TaskCoordinator {
     readonly store: TaskStore;
@@ -77,13 +78,28 @@ export class TaskCoordinator {
         if (agent.machineId !== target.machineId || agent.flavor !== target.flavor || (agent.definition.flavor && agent.definition.flavor !== target.flavor)) {
             throw new TaskError(409, 'agent_target_changed', 'Agent 快照与当前 runtime 不一致。', '重新运行 agent check 后创建新任务。');
         }
-        this.requireShared(target, parent);
-        const accepted = this.store.accept(namespace, parent, requestId, intent, agent, target);
+        this.requireLocal(target, parent, intent.workspaceMode);
+        const source = intent.workspaceMode === 'worktree' ? await new TaskWorkspaces(this.client(namespace), target.machineId).resolve(parent.cwd, intent.baseRef) : undefined;
+        if (this.closing) throw new TaskError(503, 'service_stopping', '服务正在停止；请用同一 request ID 查询接受结果。');
+        const accepted = this.store.accept(namespace, parent, requestId, intent, agent, target, source);
         this.kick(namespace, accepted.agent_id);
         return accepted;
     }
-    private requireShared(target: ExecutionTarget, parent: Parent) {
-        if (target.machineId !== parent.machineId) throw new TaskError(409, 'shared_target_required', '共享目录任务只能在发起机执行，Hub 模式也需要同机 runtime。', '绑定本机 runtime；独立工作区与远端模式将在后续能力就绪后开放。');
+    private requireLocal(target: ExecutionTarget, parent: Parent, mode: Task['environment']['mode']) {
+        if (target.machineId !== parent.machineId) throw new TaskError(409, mode === 'shared' ? 'shared_target_required' : 'remote_workspace_unavailable',
+            '当前任务需要发起机上的 runtime，Hub 模式也支持同机执行。', '绑定本机 runtime；跨机工作区准备与结果回收尚未交付。');
+    }
+    async retryFinish(namespace: string, value: unknown) {
+        const { parent, id, roundId } = parseTask(InterruptSchema, value);
+        const result = await this.serial(id, () => {
+            const { task, rounds, inputs } = this.store.require(namespace, id, parent);
+            const round = rounds.find(round => round.id === roundId);
+            if (!round) throw new TaskError(404, 'round_unknown', '此任务中没有指定轮次。');
+            new TaskWorkspaces(this.client(namespace), task.target.machineId).retry(round);
+            this.store.save(task, round, inputs.filter(input => input.roundId === round.id));
+            return { agent_id: id, round_id: roundId, status: 'retry_requested' as const };
+        });
+        this.kick(namespace, id); return result;
     }
     async send(namespace: string, value: unknown) {
         const { parent, requestId, intent } = parseTask(SendSchema, value);
@@ -101,6 +117,7 @@ export class TaskCoordinator {
             const round = rounds.find(round => round.id === roundId);
             if (!round) throw new TaskError(404, 'round_unknown', '此任务中没有指定轮次。');
             if (['finished', 'failed'].includes(round.phase)) return { status: 'already_finished', agent_id: id, round_id: roundId };
+            if (round.phase === 'finishing') return { status: 'execution_already_stopped', agent_id: id, round_id: roundId };
             round.cancellation ??= { requestedAt: Date.now() };
             if (round.phase === 'queued') {
                 round.cancellation.confirmed = true; round.phase = 'finished'; round.finish = 'complete'; round.completedAt = Date.now();
@@ -163,12 +180,23 @@ export class TaskCoordinator {
         const inputs = allInputs.filter(input => input.roundId === round.id);
         const execution = new ExecutionClient(this.client(namespace));
         const save = () => this.store.save(task, round, inputs);
+        const workspaces = new TaskWorkspaces(this.client(namespace), task.target.machineId);
         try {
             if (round.phase === 'queued') {
                 const target = await this.resourceService(namespace).resolveExecutionTarget(task.target.runtimeId);
-                this.requireShared(target, task.parent);
+                this.requireLocal(target, task.parent, task.environment.mode);
                 if (target.machineId !== task.target.machineId || target.flavor !== task.target.flavor) throw new TaskError(409, 'task_target_changed', '已接受任务的固定 runtime 目标不一致。');
-                round.preparation = { mode: 'shared', status: 'ready', checkedAt: Date.now() };
+                if (task.environment.mode === 'worktree' && round.preparation.mode === 'worktree') {
+                    const prior = [...rounds].reverse().find(item => item.ordinal < round.ordinal && item.git?.status === 'sealed');
+                    round.preparation.expectedHead = prior?.git?.result?.resultHead ?? task.environment.source.baseCommit;
+                    round.phase = 'preparing';
+                } else round.preparation = { mode: 'shared', status: 'ready', checkedAt: Date.now() };
+                round.attention = null; save();
+            }
+            if (round.phase === 'preparing') {
+                if (!await workspaces.prepare(task, round, save)) return;
+            }
+            if ((round.phase === 'queued' || round.phase === 'preparing') && round.preparation.status === 'ready') {
                 const previous = [...rounds].reverse().find(item => item.ordinal < round.ordinal && item.sessionId && item.stop === 'stopped' && !item.startupFailure);
                 if (previous) round.resume = { previousSessionId: previous.sessionId!, previousNativeSessionId: previous.nativeSessionId,
                     candidateSessionId: previous.sessionId!, attempted: false, outcome: 'pending' };
@@ -179,7 +207,7 @@ export class TaskCoordinator {
                 const resume = round.resume!;
                 if (!resume.attempted) {
                     resume.attempted = true; save();
-                    const result = await execution.resume(resume.previousSessionId);
+                    const result = await execution.resume(resume.previousSessionId, preparedReference(task, round));
                     resume.outcome = result.outcome;
                     if (result.outcome === 'missing') {
                         round.reconstruction = historyContext({ task, rounds, inputs: allInputs }, round);
@@ -205,7 +233,7 @@ export class TaskCoordinator {
                     const receipt = attempted ? await execution.lookupStart(task.target.machineId, round.spawnRequestId)
                         : await execution.start(task.target.machineId, {
                             requestId: round.spawnRequestId, directory: task.environment.cwd, agent: task.target.flavor,
-                            disabledMcpServers: ['runweft'], startingMode: 'remote',
+                            disabledMcpServers: ['runweft'], startingMode: 'remote', preparedWorkspace: preparedReference(task, round),
                             ...(definition.model ? { model: definition.model } : {}),
                             ...(definition.reasoningEffort ? task.target.flavor === 'codex' ? { modelReasoningEffort: definition.reasoningEffort } : { effort: definition.reasoningEffort } : {}),
                         }).then(result => result.outcome === 'recorded' ? result.receipt : null);
@@ -310,7 +338,9 @@ export class TaskCoordinator {
                 if (stopped.outcome !== 'stopped') {
                     round.attention = { ...stopped.error, code: 'task_stop_unknown', stage: 'stopping', hint: '报告已保留；确认停止前不会启动下一轮。' }; save(); return;
                 }
-                round.stop = 'stopped'; round.finish = 'complete'; round.phase = 'finished'; round.completedAt = Date.now();
+                round.stop = 'stopped';
+                if (task.environment.mode === 'worktree') round.phase = 'finishing';
+                else { round.finish = 'complete'; round.phase = 'finished'; round.completedAt = Date.now(); }
                 if (round.cancellation) {
                     round.cancellation.confirmed = true;
                     try {
@@ -324,12 +354,19 @@ export class TaskCoordinator {
                 }
                 round.attention = round.startupFailure ? { ...round.startupFailure, stage: 'starting' } : null; round.permissions = {}; save();
             }
+            if (round.phase === 'finishing' && !this.closing && await workspaces.finish(task, round, inputs, save)) {
+                round.finish = 'complete'; round.phase = 'finished'; round.completedAt = Date.now();
+                round.attention = round.startupFailure ? { ...round.startupFailure, stage: 'starting' } : null; save();
+            }
         } catch (error) {
             const problem = errorDetails(error);
-            round.attention = { ...problem, stage: round.phase };
+            const workspacePhase = round.phase === 'preparing' || round.phase === 'finishing';
+            round.attention = { ...problem, stage: round.phase, ...(workspacePhase ? { scope: 'workspace' as const } : {}) };
+            if (round.phase === 'preparing' && round.preparation.mode === 'worktree') round.preparation.status = 'unknown';
+            if (round.phase === 'finishing' && round.git) round.git.status = 'unknown';
             // Preparation and explicit pre-dispatch rejection are business failures, never invented native failures.
             if (round.phase === 'queued' || (round.phase === 'starting' && !round.sessionId && !['connection_failed', 'invalid_hapi_response', 'request_failed'].includes(problem.code))
-                || (round.phase === 'resuming' && ['no_machine_online', 'resume_unavailable', 'access_denied', 'authentication_failed'].includes(problem.code))) {
+                || (round.phase === 'resuming' && ['no_machine_online', 'resume_unavailable', 'access_denied', 'authentication_failed', 'workspace_not_prepared'].includes(problem.code))) {
                 round.phase = 'failed'; round.completedAt = Date.now();
             }
             save();
@@ -347,7 +384,11 @@ export class TaskCoordinator {
     }
     private prompt(task: Task, round: Round, input: Input) {
         return [`你是 Runweft 委派的 ${task.agent.definition.name ?? task.agent.id}。`, task.agent.definition.description, task.agent.definition.instructions,
-            `工作目录：${task.environment.cwd}\n模式：本机共享目录；共享写入由主 agent 调度。任务 ${task.id}，轮次 ${round.id}。`,
+            `工作目录：${task.environment.cwd}\n任务 ${task.id}，轮次 ${round.id}。`,
+            task.environment.mode === 'shared' ? '模式：本机共享目录；共享写入由主 agent 调度。'
+                : `模式：独立 Git worktree；来源 ${task.environment.source.sourcePath}，固定基线 ${task.environment.source.baseCommit}，本轮起点 ${round.preparation.mode === 'worktree' ? round.preparation.startHead : ''}。\n`
+                    + `${task.environment.source.dirty ? '主工作区有未提交改动，未带入本工作区。' : ''}工程指令/skills 来自该基线；未提交或 ignored 内容不会自动复制。\n`
+                    + '在此目录完成任务，按需安装依赖；可以自行提交完成的修改。进程停止后 HAPI 会为遗留修改创建 checkpoint 并保留 worktree。不要修改主目录；合入与冲突由主 agent 处理。',
             '请完成以下任务并报告结果。不要通过 Runweft 再次委派；原生内置工具按原有规则使用。', round.reconstruction?.context ?? '', input.text,
             '最后给出完成内容、测试结果和未解决事项；可用 fenced runweft-report JSON，字段 summary、changes、tests、remaining。'].filter(Boolean).join('\n\n');
     }

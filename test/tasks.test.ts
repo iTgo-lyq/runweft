@@ -72,7 +72,7 @@ test('MCP parents, namespaces and shared targets are constrained without treatin
     expect((await h.post('list')).agents[0].agent_id).toBe(accepted.agent_id);
     const remote = await h.register('remote');
     await expect(h.post('spawn', { ...h.payload(), agent: { ...h.agent, runtimeId: remote.id, machineId: 'remote' } })).rejects.toMatchObject({ code: 'shared_target_required' });
-    await expect(h.post('spawn', { ...h.payload(), intent: { ...h.intent, workspaceMode: 'worktree' } })).rejects.toMatchObject({ code: 'capability_unavailable' });
+    await expect(h.post('spawn', { ...h.payload(), intent: { ...h.intent, workspaceMode: 'remote' } })).rejects.toMatchObject({ code: 'capability_unavailable' });
     const foreign = await h.post('spawn', { ...h.payload(), parent: { ...h.parent, hapiSessionId: 'unrelated-other-hub-session' } });
     expect(foreign.accepted).toBe(true);
 });

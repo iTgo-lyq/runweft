@@ -30,7 +30,7 @@ CLI/MCP 可从主仓库准确 commit 派生本地独立任务，准备完成后�
 
 ### T2 编译 CLI 独立协作与基本续接
 
-- 状态：待开始
+- 状态：已完成
 - 交付：CLI worktree/base 参数、持久固定基线/Task 环境、preparing/finishing 与成果查询；API/prompt/CLI 模式文案一致，显式 retry-finish 修复收尾而不重跑任务，shared 兼容不变。
 - 依赖：T1。
 - 验收：真实 Codex/Claude CLI 任务在准备目录写入并自动形成 checkpoint，第二轮在原 cwd 续接并固定成果；主目录/index/HEAD 保持原样，wait 封存后才返回完成及结果 ref。两 runtime 实际核对 AGENTS.md/CLAUDE.md、项目 MCP 和路径信任行为，缺失/待批准如实展示，不修改用户配置。准备失败无模型进程；收尾错误作为 workspace attention，不改写原生结论，finishing 的中断不伪造取消。

@@ -23,6 +23,7 @@
     "test:task-mcp": "bun scripts/smoke-task-mcp.ts",
     "test:collaboration": "bun scripts/smoke-collaboration.ts",
     "test:workspaces": "bun scripts/smoke-workspaces.ts",
+    "test:worktree-tasks": "bun scripts/smoke-worktree-tasks.ts",
     "test:install": "node scripts/smoke-install.mjs",
     "build": "bun scripts/build.ts",
     "build:hapi": "bun scripts/build-hapi.ts",

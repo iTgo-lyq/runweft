@@ -114,13 +114,14 @@ export async function fetchJson(url: string, options: RequestInit = {}): Promise
         throw new RunweftError('connection_failed', '无法连接服务。', '检查目标地址，或运行 runweft status / runweft doctor。');
     }
     if (!response.ok) {
-        const body = await response.json().catch(() => null) as { code?: unknown; error?: unknown; message?: unknown } | null;
+        const body = await response.json().catch(() => null) as { code?: unknown; error?: unknown; message?: unknown; hint?: unknown } | null;
         const nested = body?.error && typeof body.error === 'object' ? body.error as { code?: unknown; message?: unknown; hint?: unknown } : null;
         const code = typeof nested?.code === 'string' ? nested.code : typeof body?.code === 'string' ? body.code
             : response.status === 401 || response.status === 403 ? 'authentication_failed' : 'request_failed';
         const detail = typeof nested?.message === 'string' ? nested.message
             : typeof body?.error === 'string' ? body.error : typeof body?.message === 'string' ? body.message : undefined;
-        throw new HapiRequestError(response.status, code, detail ?? `服务请求失败（HTTP ${response.status}）。`, typeof nested?.hint === 'string' ? nested.hint : undefined);
+        throw new HapiRequestError(response.status, code, detail ?? `服务请求失败（HTTP ${response.status}）。`,
+            typeof nested?.hint === 'string' ? nested.hint : typeof body?.hint === 'string' ? body.hint : undefined);
     }
     try { return await response.json(); }
     catch { throw new RunweftError('invalid_hapi_response', 'HAPI 返回了无法解析的响应。'); }

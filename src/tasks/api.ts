@@ -26,11 +26,12 @@ export async function handleTaskRequest(request: IncomingMessage, response: Serv
     const value = await body(request);
     let result: unknown;
     if (path === '/api/runweft/tasks/spawn') {
-        if (value?.intent?.workspaceMode && value.intent.workspaceMode !== 'shared') throw new TaskError(409, 'capability_unavailable', '当前只支持本机 shared 工作区模式。');
+        if (value?.intent?.workspaceMode && !['shared', 'worktree'].includes(value.intent.workspaceMode)) throw new TaskError(409, 'capability_unavailable', '当前支持 shared 和本机 worktree 模式；远端模式尚未交付。');
         result = await coordinator.accept(namespace, value);
     } else if (path === '/api/runweft/tasks/lookup') result = { accepted: coordinator.lookup(namespace, value) };
     else if (path === '/api/runweft/tasks/send') result = await coordinator.send(namespace, value);
     else if (path === '/api/runweft/tasks/interrupt') result = await coordinator.interrupt(namespace, value);
+    else if (path === '/api/runweft/tasks/retry-finish') result = await coordinator.retryFinish(namespace, value);
     else if (path === '/api/runweft/tasks/permission') result = await coordinator.permission(namespace, value);
     else if (path === '/api/runweft/tasks/list') {
         const input = parseTask(ListSchema, value); result = coordinator.list(namespace, input.parent, input.all);

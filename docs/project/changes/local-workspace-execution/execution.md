@@ -24,3 +24,15 @@
 - 偏差：remove 使用独立 attemptId，支持 ignored 拒绝或部分删除修复后的显式重试；Git submodule update 实际提供 --reference，没有 --reference-if-able，因此仅在本机引用目录有效时传入 --reference。原生 bootstrap 接管预分配会话和客户端 metadata 更新也须保留 Hub 管理的准备引用，已加回归。
 - 交付边界：本任务完成 HAPI 机器能力和 Runweft 调用参数；CLI/MCP 的 worktree 模式、中心准备/收尾状态和发布包完整交付继续由 T2–T5 承担。初轮用源码 Runweft 编排服务，最终复核使用编译 Runweft 与 HAPI；尚未做本 Change 的安装包整体验收或远端验证。
 - Commit：`local-workspace-execution T1: add managed Git workspaces and prepared execution gates`（HAPI）；`local-workspace-execution T1: pin verified workspace lifecycle and execution calls`（Runweft）。
+
+## T2 编译 CLI 独立协作与基本续接
+
+- 结果：CLI `task spawn --workspace-mode worktree --base <ref>` 在接受时固定 Git commit，中心持久化环境与每轮准备引用，准备完成才启动；续轮使用前轮成果 HEAD、原 cwd 和原生 session。原有 shared 默认行为保留，无版本字段的旧任务仍可读取/续接。Task JSON 增加版本标记，环境变更与轮次按当前 revision 一起保存。
+- 结果：新增 preparing/finishing、成果 SHA/ref/checkpoint 与路径查询；独立任务先停止原生执行，再由 HAPI 封存，wait 和后续轮次等待封存成功。Git 错误作为 workspace attention 保留原生结论及报告；`task retry-finish <id> --round <id>` 只重试收尾，finishing 的 interrupt 不伪造取消。HAPI 直接错误响应的修复 hint 也传到 CLI。
+- 验证：`bun run typecheck`、`bun run build` 通过；`bun test ./test` 共 91 项、1618 断言通过。最终工作区专项 6 项通过，覆盖旧 shared 记录、无效基线诊断、慢准备/丢受理响应、准备失败不启动、收尾阻塞 wait/续轮及显式重试。这里使用真实中心 SQLite/HTTP 与 HAPI 协议 fixture，实际 Git 证据见 T1 和下述编译 smoke。
+- 真实编译验证：Codex 原生会话 `01a0eca5-4283-7f21-9417-d2371966f553`，Claude 原生会话 `1cf62b85-d525-4040-ab92-bb428ea2e199`，均由编译 CLI 派生、实际写入 fixture，自动 checkpoint 后第二轮追加内容；同 cwd、原生 session ID 与记忆标记证明 native resume，没有重建历史。成果 ref 可从主仓库读取；两轮结束后对应执行 PID 均退出，主目录脏文件、HEAD、index 保持原样。同 request ID 重试返回原接受结果。
+- 原生配置：版本化 AGENTS.md/CLAUDE.md 与工程 skill 的独立标记均出现在报告中，两个 runtime 均实际调用项目 project_probe MCP。验收复制既有原生配置/登录到专用 home，仅移除专用副本中的无关 MCP；未修改用户配置，也未添加路径信任或项目 MCP 允许项。Codex 使用已有父路径 trusted 配置，Claude headless 原生加载项目 MCP；本结果不宣称新路径可以绕过用户的信任策略。权限保持原生默认，通过现有 CLI 响应专用 fixture 的写入和只读 Git 请求。
+- 真实收尾故障：Claude 首轮配置专用失败 pre-commit hook；模型成功后保持 stopped/finishing，report 与原生 completed 事实保留。修复 hook 并用编译 CLI retry-finish 后封存成功，输入记录和报告与失败时一致，未重发任务；后续轮次正常续接。证据 `.dev-smoke/worktree-tasks-7jLhwP/evidence.json` success=true、cleanupErrors 为空。
+- 证据范围：Codex 两轮检查在 `.dev-smoke/worktree-tasks-WkTpPF/evidence.json` 的 codex case 已通过；该次脚本随后因 Claude 只读 Git 审批范围遗漏退出，不把整次运行算作成功。Claude 单独补测通过；另一失败 fixture `.dev-smoke/worktree-tasks-Aun6qs` 同属测试审批范围问题，两次均正常停止专用服务。脚本补齐只读检查，其他请求保留待审状态而不提前杀掉任务；最终运行的两项只读 Git 请求由主 agent 用 CLI 批准。汇总 `.dev-smoke/workspace-t2-evidence.json`，测试/构建日志 `workspace-t2-{final-tests,state-final,types-final,build-final}.log`，均在 `.dev-smoke/`。
+- 交付边界：本任务完成 CLI 的独立任务基本闭环；取消/启动失败后的跨轮处理、重启对账和显式删除由 T3 完成，MCP base/retry_finish 与完整矩阵由 T4 完成，候选包和完整 Change 验收仍属 T5。没有修改 HAPI pin，也没有声称跨机器验证。
+- Commit：`local-workspace-execution T2: add CLI worktree tasks and sealed round results`。

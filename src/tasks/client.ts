@@ -19,13 +19,13 @@ export class TaskClient {
         return this.hapi.request(`/api/runweft/tasks/${path}`, { method: 'POST', headers: { 'content-type': 'application/json' },
             body: JSON.stringify({ parent: this.parent, ...value }), signal });
     }
-    async spawn(agentType: string, message: string, requestId: string, workspaceMode = 'shared', signal?: AbortSignal): Promise<Acceptance> {
-        if (workspaceMode !== 'shared') throw new RunweftError('capability_unavailable', '当前只支持本机 shared 工作区模式。');
-        const intent = parseTask(SpawnIntentSchema, { agentType, message, workspaceMode });
+    async spawn(agentType: string, message: string, requestId: string, workspaceMode = 'shared', signal?: AbortSignal, baseRef?: string): Promise<Acceptance> {
+        if (!['shared', 'worktree'].includes(workspaceMode)) throw new RunweftError('capability_unavailable', '当前支持 shared 和本机 worktree 模式；远端模式尚未交付。');
+        const intent = parseTask(SpawnIntentSchema, { agentType, message, workspaceMode, ...(baseRef === undefined ? {} : { baseRef }) });
         const previous = await this.request('lookup', { requestId, intent }, signal);
         if (previous.accepted) return previous.accepted;
         const resolved = await new AgentClient(this.config, this.parent.cwd, this.hapi).resolve(agentType, undefined, signal);
-        if (resolved.target.machineId !== this.parent.machineId) throw new RunweftError('shared_target_required', '共享目录任务只能使用发起机的 runtime。');
+        if (resolved.target.machineId !== this.parent.machineId) throw new RunweftError(workspaceMode === 'shared' ? 'shared_target_required' : 'remote_workspace_unavailable', '当前任务只能使用发起机的 runtime；跨机准备与结果回收尚未交付。');
         const agent = { id: resolved.id, definition: resolved.definition, source: resolved.source, definitionVersion: resolved.definitionVersion,
             resolvedVersion: resolved.resolvedVersion, runtimeId: resolved.target.runtimeId, machineId: resolved.target.machineId,
             flavor: resolved.target.flavor, namespace: resolved.connection.namespace };
@@ -39,6 +39,9 @@ export class TaskClient {
     }
     async interrupt(id: string, roundId: string, signal?: AbortSignal): Promise<Awaited<ReturnType<TaskCoordinator['interrupt']>>> {
         return this.request('interrupt', { id, roundId }, signal);
+    }
+    async retryFinish(id: string, roundId: string, signal?: AbortSignal): Promise<Awaited<ReturnType<TaskCoordinator['retryFinish']>>> {
+        return this.request('retry-finish', { id, roundId }, signal);
     }
     async permission(id: string, roundId: string, requestId: string, decision: 'approved' | 'denied' | 'abort', answers?: Record<string, string[]> | Record<string, { answers: string[] }>, signal?: AbortSignal) {
         return this.request('permission', { id, roundId, requestId, decision, answers }, signal);

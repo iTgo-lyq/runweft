@@ -1,8 +1,9 @@
 import { randomUUID } from 'node:crypto';
 import { openState } from '../state';
 import { contentVersion } from '../agents/definitions';
+import type { WorkspaceSource } from '../../hapi/shared/src/workspaces';
 import type { ExecutionTarget } from '../resources/types';
-import { parentKey, TaskError, type Acceptance, type AgentSnapshot, type Input, type Parent, type Round, type SendIntent, type SpawnIntent, type Task, type TaskBundle } from './types';
+import { parentKey, pendingPreparation, TaskError, type Acceptance, type AgentSnapshot, type Input, type Parent, type Round, type SendIntent, type SpawnIntent, type Task, type TaskBundle } from './types';
 
 type TaskRow = { data: string; revision: number; updatedAt: number };
 const read = <T>(row: { data: string }): T => JSON.parse(row.data);
@@ -15,7 +16,7 @@ export class TaskStore {
     require(namespace: string, id: string, parent?: Parent): TaskBundle {
         const row = this.db.query('SELECT data, revision, updatedAt FROM delegation_tasks WHERE namespace=? AND id=?').get(namespace, id) as TaskRow | null;
         if (!row) throw new TaskError(404, 'task_unknown', '当前连接中找不到此任务。', '运行 runweft task list --all 检查任务 ID。');
-        const task: Task = { ...read<Task>(row), revision: row.revision, updatedAt: row.updatedAt };
+        const task: Task = { version: 2, ...read<Omit<Task, 'version'>>(row), revision: row.revision, updatedAt: row.updatedAt };
         if (parent?.kind === 'mcp' && parentKey(parent) !== parentKey(task.parent)) throw new TaskError(403, 'task_parent_mismatch', '此任务不属于当前主会话。');
         const rounds = (this.db.query('SELECT data, completedRevision FROM delegation_rounds WHERE taskId=? ORDER BY ordinal').all(id) as { data: string; completedRevision: number | null }[])
             .map(row => ({ ...read<Round>(row), completedRevision: row.completedRevision ?? undefined }));
@@ -52,16 +53,20 @@ export class TaskStore {
                 parent.kind === 'mcp' ? parent.host : '', parent.kind === 'mcp' ? parent.nativeSessionId : '');
         if (match) throw new TaskError(403, 'subagent_delegation_denied', 'Runweft 子任务不能再次发起 Runweft 委派。', '向主 agent 返回结果；原生内置 subagent 仍按原生规则使用。');
     }
-    accept(namespace: string, parent: Parent, requestId: string, intent: SpawnIntent, agent: AgentSnapshot, target: ExecutionTarget): Acceptance {
+    accept(namespace: string, parent: Parent, requestId: string, intent: SpawnIntent, agent: AgentSnapshot, target: ExecutionTarget, source?: WorkspaceSource): Acceptance {
         return this.db.transaction(() => {
             this.assertCanDelegate(namespace, parent);
             const previous = this.lookup(namespace, parent, requestId, intent);
             if (previous) return previous;
             const now = Date.now(), id = randomUUID(), roundId = randomUUID();
-            const task: Task = { id, namespace, parent, agent, target, environment: { mode: 'shared', machineId: parent.machineId, cwd: parent.cwd },
+            if (intent.workspaceMode === 'worktree' && !source) throw new TaskError(409, 'workspace_source_missing', '独立任务缺少已解析的 Git 基线。');
+            const task: Task = { version: 2, id, namespace, parent, agent, target,
+                environment: intent.workspaceMode === 'shared' ? { mode: 'shared', machineId: parent.machineId, cwd: parent.cwd }
+                    : { mode: 'worktree', machineId: parent.machineId, environmentId: id, source: source!, cwd: source!.sourcePath, status: 'retained' },
                 createdAt: now, updatedAt: now, revision: 1 };
             const round: Round = { id: roundId, taskId: id, ordinal: 1, requestId, message: intent.message, phase: 'queued',
-                preparation: { mode: 'shared', status: 'pending' }, spawnRequestId: randomUUID(), spawnAttempted: false,
+                preparation: pendingPreparation(task.environment), ...(task.environment.mode === 'worktree' ? { git: { status: 'pending' as const, attempted: false } } : {}),
+                spawnRequestId: randomUUID(), spawnAttempted: false,
                 report: '', structuredMissing: true, stop: 'not_started', finish: 'pending', attention: null, createdAt: now, permissions: {} };
             const input: Input = { id: randomUUID(), roundId, kind: 'initial', text: intent.message, delivery: 'pending', output: [] };
             const accepted: Acceptance = { agent_id: id, round_id: roundId, request_id: requestId, revision: 1, accepted: true };
@@ -79,9 +84,12 @@ export class TaskStore {
             if (previous) return previous;
             const bundle = this.require(namespace, intent.id, parent), now = Date.now();
             let round: Round;
+            if (bundle.task.environment.mode === 'worktree' && bundle.task.environment.status !== 'retained') throw new TaskError(409, 'workspace_not_retained', '工作区正在删除或已删除，无法继续委派。');
             if (intent.mode === 'next') {
                 round = { id: randomUUID(), taskId: intent.id, ordinal: bundle.rounds.at(-1)!.ordinal + 1, requestId, message: intent.message,
-                    phase: 'queued', preparation: { mode: 'shared', status: 'pending' }, spawnRequestId: randomUUID(), spawnAttempted: false,
+                    phase: 'queued', preparation: pendingPreparation(bundle.task.environment),
+                    ...(bundle.task.environment.mode === 'worktree' ? { git: { status: 'pending' as const, attempted: false } } : {}),
+                    spawnRequestId: randomUUID(), spawnAttempted: false,
                     report: '', structuredMissing: true, stop: 'not_started', finish: 'pending', attention: null, createdAt: now, permissions: {} };
                 this.db.query('INSERT INTO delegation_rounds VALUES (?, ?, ?, ?, ?, NULL)').run(round.id, intent.id, round.ordinal, round.phase, JSON.stringify(round));
             } else {
@@ -106,7 +114,7 @@ export class TaskStore {
             const old = this.require(task.namespace, task.id);
             const previous = old.rounds.find(item => item.id === round.id)!;
             const compare = (value: Round | Input) => JSON.stringify({ ...value, observedAt: undefined, completedRevision: undefined });
-            const changed = compare(previous) !== compare(round) || inputs.some(input => {
+            const changed = JSON.stringify(old.task.environment) !== JSON.stringify(task.environment) || compare(previous) !== compare(round) || inputs.some(input => {
                 const before = old.inputs.find(item => item.id === input.id);
                 return !before || compare(before) !== compare(input);
             });
@@ -116,7 +124,14 @@ export class TaskStore {
                 .run(round.phase, JSON.stringify(round), round.completedRevision ?? null, round.id, task.id);
             for (const input of inputs) this.db.query(`INSERT INTO delegation_inputs VALUES (?, ?, ?) ON CONFLICT(id) DO UPDATE SET data=excluded.data`)
                 .run(input.id, round.id, JSON.stringify(input));
-            if (changed) this.db.query('UPDATE delegation_tasks SET revision=?, updatedAt=? WHERE id=?').run(revision, Date.now(), task.id);
+            const updatedAt = changed ? Date.now() : old.task.updatedAt;
+            const data = { ...old.task, version: 2, environment: task.environment, revision, updatedAt };
+            if (changed) {
+                const updated = this.db.query('UPDATE delegation_tasks SET data=?, revision=?, updatedAt=? WHERE id=? AND revision=?')
+                    .run(JSON.stringify(data), revision, updatedAt, task.id, old.task.revision);
+                if (updated.changes !== 1) throw new TaskError(409, 'task_revision_changed', '任务状态已变化，请重新查询。');
+            }
+            task.revision = revision; task.updatedAt = updatedAt;
             if (round.sessionId) this.db.query('INSERT OR IGNORE INTO delegation_sessions VALUES (?, ?, ?, ?, ?, ?)')
                 .run(task.namespace, round.sessionId, round.nativeSessionId ?? '', task.target.flavor, task.id, round.id);
         }).immediate();

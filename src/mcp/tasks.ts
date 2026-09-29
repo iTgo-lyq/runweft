@@ -29,7 +29,7 @@ export function taskTools(): McpTool[] {
     return [
         tool('list_agent_definitions', '查看当前工作区有效的 Agent 定义及各自 runtime 可选状态。不会启动任务；派生用返回的定义 id 作为 agent_type。', z.strictObject({}), true,
             async (_, c) => new AgentClient(c.config, c.identity.cwd).list(c.signal)),
-        tool('spawn_agent', `在当前工作目录派生 Agent，立即返回 agent_id、round_id、request_id 和 revision。当前只支持本机 shared，主 agent 协调共享文件写入。${recovery}`,
+        tool('spawn_agent', `在当前工作目录派生 Agent，立即返回 agent_id、round_id、request_id 和 revision。支持本机 shared 或 worktree；shared 写入由主 agent 协调，worktree 从已提交 HEAD 准备独立目录并封存成果。${recovery}`,
             z.strictObject({ agent_type: z.string().min(1), message, request_id: id.optional(), workspace_mode: z.string().default('shared') }), false,
             async (args, c) => client(c).spawn(args.agent_type, args.message, args.request_id ?? taskRequestId(c.identity, 'spawn'), args.workspace_mode, c.signal)),
         tool('list_agents', '列出当前原生父会话的子任务、状态、报告和最近接受的 request_id/round_id。用于恢复不明确的接受响应；不列出其他父会话的任务。', z.strictObject({}), true,

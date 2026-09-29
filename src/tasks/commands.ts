@@ -8,9 +8,11 @@ import { TaskClient } from './client';
 import type { overview } from './views';
 
 type Summary = ReturnType<typeof overview>;
-function taskText(task: Pick<Summary, 'agent_id' | 'round_id' | 'status' | 'attention' | 'report'>) {
+function taskText(task: Pick<Summary, 'agent_id' | 'round_id' | 'status' | 'attention' | 'report' | 'git'>) {
     return `${task.agent_id} · ${task.status}\n轮次：${task.round_id}`
         + (task.attention ? `\n需处理：${task.attention.message}${task.attention.hint ? `\n${task.attention.hint}` : ''}` : '')
+        + (task.git === 'not_applicable' ? '' : `\nGit：${task.git.status}${task.git.checkout ? ` · ${task.git.checkout}` : ''}`
+            + (task.git.result_ref ? `\n成果引用：${task.git.result_ref}\n查看修改：git diff ${task.git.start_head} ${task.git.result_head}\n在主仓库目标分支审查并选择 merge 或 cherry-pick。` : ''))
         + (task.report.text ? `\n${task.report.text}` : '')
         + (task.report.next_offset !== null ? `\n后续内容：runweft task show ${task.agent_id} --round ${task.round_id} --offset ${task.report.next_offset}` : '');
 }
@@ -26,13 +28,14 @@ export function announceRequest(program: Command, requested?: string) {
 }
 export function addTaskCommands(program: Command, context: () => ResolvedConfig, output: (value: unknown, human: string) => void) {
     const client = () => new TaskClient(context(), process.cwd());
-    const task = program.command('task').description('派生、续接与控制本机共享目录任务');
+    const task = program.command('task').description('派生、续接与控制本机 shared/worktree 任务');
     task.command('spawn <agent>').description('接受新任务后立即返回；执行由服务继续推进')
         .option('--message <text>', '任务描述').option('--message-file <path>', '从文件读取任务；- 读取 stdin')
-        .option('--request-id <uuid>', '相同请求重试时复用 ID').option('--workspace-mode <mode>', '当前仅 shared', 'shared')
+        .option('--request-id <uuid>', '相同请求重试时复用 ID').option('--workspace-mode <shared|worktree>', '共享当前目录或准备独立 Git worktree', 'shared')
+        .option('--base <ref>', 'worktree 的已提交 Git 基线，默认 HEAD；不包含主目录未提交内容')
         .action(async (agent, options) => {
             const message = taskMessage(options), id = announceRequest(program, options.requestId);
-            const result = await client().spawn(agent, message, id, options.workspaceMode);
+            const result = await client().spawn(agent, message, id, options.workspaceMode, undefined, options.base);
             output(result, `任务已接受：${result.agent_id}\n轮次：${result.round_id}\n原生执行尚待确认。\n等待：runweft task wait ${result.agent_id}`);
         });
     task.command('list').description('列出当前发起目录的任务').option('--all', '查看当前 namespace 全部任务').action(async options => {
@@ -49,7 +52,12 @@ export function addTaskCommands(program: Command, context: () => ResolvedConfig,
     task.command('interrupt <id>').description('取消指定轮次；已结束的轮次不影响后续执行').requiredOption('--round <id>', '固定业务轮次')
         .action(async (id, options) => {
             const result = await client().interrupt(id, options.round);
-            output(result, result.status === 'already_finished' ? '指定轮次已结束；未中断其他轮次。' : `已请求取消轮次：${result.round_id}\n确认关闭前仍可查看状态：runweft task show ${id} --round ${result.round_id}`);
+            output(result, result.status === 'already_finished' ? '指定轮次已结束；未中断其他轮次。' : result.status === 'execution_already_stopped' ? '原生执行已停止，正在进行 Git 收尾；未更改取消状态。' : `已请求取消轮次：${result.round_id}\n确认关闭前仍可查看状态：runweft task show ${id} --round ${result.round_id}`);
+        });
+    task.command('retry-finish <id>').description('修复后重试指定轮次的 Git 收尾；不会重发原生任务').requiredOption('--round <id>', '固定业务轮次')
+        .action(async (id, options) => {
+            const result = await client().retryFinish(id, options.round);
+            output(result, `已请求重新封存：${result.round_id}\n查看：runweft task show ${id} --round ${result.round_id}`);
         });
     task.command('permission <id>').description('响应指定活跃轮次的原生权限请求；不改变默认权限模式')
         .requiredOption('--round <id>', '固定业务轮次').requiredOption('--request <native-id>', '原生权限请求 ID')
