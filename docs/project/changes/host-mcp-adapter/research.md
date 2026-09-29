@@ -13,11 +13,11 @@
 
 [MCP 文档](https://code.claude.com/docs/en/mcp)说明 stdio 可得项目根且支持工具列表更新。MCP 传输会话不等于 Claude 对话 ID；多个原生子 agent 是否共享一条工具连接、能否得到不同工具列表仍需协议验证。仅通过 hook 拦截子调用，不等于已经做到按角色返回列表。
 
-本机只运行版本查询：Claude Code `2.1.269`。未启动真实 agent，未验证 `/clear`、原生子 agent 或 MCP 动态列表。
+初次调查只查询 Claude Code `2.1.269` 版本；后续真实实验见下文，不以该初次记录作为当前验证范围。
 
 ## Codex
 
-旧工程 `apps/runweft/src/gateway.ts` 从调用 `_meta["x-codex-turn-metadata"]` 读取 session_id/thread_id，并与顶层 threadId/callId 校验。旧 `codex-task-result-loop/execution.md` 记录曾在 Codex `0.154.0` 实测该结构；这是历史版本证据，本机 `0.156.1` 只查询了版本。
+旧工程 `apps/runweft/src/gateway.ts` 从调用 `_meta["x-codex-turn-metadata"]` 读取 session_id/thread_id，并与顶层 threadId/callId 校验。旧 `codex-task-result-loop/execution.md` 记录曾在 Codex `0.154.0` 实测该结构；这是历史版本证据。本机 `0.156.1` 的后续协议实验见下文。
 
 [当前 App Server 文档](https://learn.chatgpt.com/docs/app-server)提供 thread/read、thread/resume 和 thread/fork，并说明 thread/session 身份。普通 fork 也可能沿用根 sessionId；不能照搬旧 `threadId !== sessionId` 就拒绝的规则，把所有 fork 一概当作 subagent。应结合原生来源及 Runweft/HAPI 的创建关联判定。
 
@@ -71,11 +71,11 @@
 - [Claude 环境变量](https://code.claude.com/docs/en/env-vars)：stdio 保留初始 session ID；`/clear` 与交互续接需以 hook 最新身份为准，不能按启动环境永久绑定。
 - Codex 本地源码研究样本 `/home/tiger/workspace/codex-multiruntime` revision `f8843555e`，`codex-rs/codex-mcp/src/rmcp_client.rs` 的 initialize/list 与本机协议证据一致。研究样本不是本项目执行依赖，也不声称与已安装程序构建完全相同；运行结论以真实二进制实验为准。
 
-### 当前产品决策缺口
+### 工具可见性边界的确认
 
 用户既定要求是子会话隐藏派生工具并在调用时再次拒绝；整体评审曾明确不能用调用拒绝假称可见性已完成。现有两宿主的公开路径没有满足所有原生子会话首次工具发现分流的证据，且本次实验给出了具体限制。
 
-已在会话请求确认以下收敛，**尚未确认，不据此降低验收标准**：Runweft/HAPI 受控子会话在启动前绑定角色并隐藏派生工具；宿主原生子会话可能继承名称，但按真实调用身份严格拒绝递归。两种宿主采用同一边界，后发问题替代最初仅针对 Claude 的问题。Requirement 保持草稿，不提前制定或评审最终 Plan。
+用户后续明确选择更简单的边界：HAPI 调度的 Runweft subagent 移除全部 Runweft MCP 工具；subagent 自己调用原生内置 subagent 不管控。该决定取代此前所有原生子会话动态工具列表分流与子端 MCP 汇报的要求，原阻塞已解除。以上实验保留为历史依据，不再作为需补齐的能力。
 
 ## 受控启动入口核对
 
@@ -107,4 +107,19 @@
 
 源码定位进一步明确了后续增补范围：机器 REST SpawnSessionRequestSchema、Runner SpawnSessionOptions/buildCliArgs 和 Hub resumeSession 都没有传入附加 MCP 配置；Codex root.config 已经在 thread start/resume/fork 处注入 HAPI 自身 MCP，Claude runClaude 已把 mcpServers 交给既有 loop/SDK。不能只给首次启动加进程级环境，否则共享 Codex root 会混用，停止后由 Hub 重启也可能丢角色。
 
-候选管理契约应在已有 HAPI 会话元数据中保留非秘密的启动上下文，spawn 与 resume 沿原有管理路径转交，在各 root/Claude session 的原生配置位置应用；工具条目只覆盖显式附加的同名入口，其他用户配置继承。上下文不携带模型凭据、不重新实现原生身份或执行状态。字段与最终方案等工具可见性边界确认后统一纳入本 Change Technical/Plan，当前未修改 HAPI 源码。
+候选管理契约应在已有 HAPI 会话元数据中保留非秘密的启动上下文，spawn 与 resume 沿原有管理路径转交，在各 root/Claude session 的原生配置位置应用；工具条目只覆盖显式附加的同名入口，其他用户配置继承。上下文不携带模型凭据、不重新实现原生身份或执行状态。最新确认将管理需求收敛为逐执行禁用 Runweft MCP，具体方案纳入本 Change Technical/Plan；当前未修改 HAPI 源码。
+
+## 指定 MCP 工具禁用的启动与续接验证
+
+按最新边界，在专用环境验证 Codex `0.156.1`、iclaude/Claude Code `2.1.283`：
+
+| 场景 | 原生入口与实际结果 | 本机证据 |
+| --- | --- | --- |
+| Codex 同一 app-server 的两个 root | 各线程分别设置 `mcp_servers.runweft_probe.enabled`；parent 正常发现探测工具，child 不启动该 server。另一个 keep_probe 在两线程均正常发现 | `.dev-smoke/host-probe/disabled-server-94nOob/evidence.json` |
+| Codex 停止进程后恢复同一线程 | 先完成真实原生 turn，再关闭 app-server，重新启动并通过 thread/resume 重施禁用配置；原 thread ID 不变，keep_probe 正常发现，runweft_probe 未启动 | `.dev-smoke/host-probe/disabled-resume-rcH0xm/evidence.json` |
+| Claude 首次启动 | 原生 `--disallowedTools mcp__runweft_probe__*`；system/init.tools 无该 server 工具，仍有 keep_probe 和内置 Task（Agent）工具；实际成功调用 keep_probe | `.dev-smoke/host-probe/0dd4a623/claude/evidence.json` |
+| Claude 退出后显式 resume | 重施相同过滤参数，恢复原 session ID；原生工具列表继续无 runweft_probe，其他 MCP 调用成功，内置 Agent 仍在 | `.dev-smoke/host-probe/59c05f9c/evidence.json` |
+
+Claude 仍会连接被过滤工具的 MCP server；验证的是模型不可见、不可调用这些工具，不宣称 server 进程未启动。上述实验没有限制内置 agent 工具；也没有测试或管控原生子 agent 的后续行为。
+
+四次验证均退出 0，工具进程均已退出；两次 Codex 探测仍有上节记录的 Bun tsconfig-override 内部诊断。没有修改用户全局配置。原生入口的可行性已确认，HAPI spawn/resume 的持久参数传递尚未实现，不能把原型证据描述成完整产品验收。

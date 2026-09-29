@@ -41,7 +41,7 @@ Codex/Claude Code 继续使用执行机器上该 runtime 用户的原生全局�
 
 远端继承的是远端执行账户已有配置，不等于自动搬运发起机器的全局 skill、MCP、凭据。工程内随 Git 到达的配置自然可用；未进入基线或 ignored 文件的可用性需要按实际原生发现规则说明。
 
-只附加 Runweft 协作入口、任务身份与必要指令，沿 HAPI 现有注入方式；不覆盖工程 AGENTS.md/CLAUDE.md 或把原生全局配置清空。Runweft 子角色过滤仅约束自己的协作工具，不删除用户其他 MCP 配置。
+只附加任务身份与必要指令，并在 HAPI 调度的 Runweft subagent 中禁用 Runweft MCP 工具；沿 HAPI 现有配置入口，不覆盖工程 AGENTS.md/CLAUDE.md 或清空原生全局配置。其他 MCP 与原生内置 subagent 保持原样，子端不另装 Runweft 汇报工具。
 
 ## 验收标准草案
 
