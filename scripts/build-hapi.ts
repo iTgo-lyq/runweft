@@ -18,6 +18,21 @@ export function verifyHapiSource() {
     if (manifest.version !== pkg.hapi.version) throw new Error('Pinned HAPI version does not match its manifest.');
 }
 
+export function readHapiBuild(targets: readonly Platform[]) {
+    verifyHapiSource();
+    let build: { revision: string; binaries: Record<string, { path: string; sha256: string }> };
+    try { build = JSON.parse(readFileSync('dist/hapi-build.json', 'utf8')); }
+    catch { throw new Error('Missing HAPI build manifest. Run bun run build:hapi first.'); }
+    if (build.revision !== pkg.hapi.revision) throw new Error('Cached HAPI revision differs from the current pin. Run bun run build:hapi.');
+    for (const platform of targets) {
+        const binary = build.binaries[platform.id];
+        if (!binary || createHash('sha256').update(readFileSync(binary.path)).digest('hex') !== binary.sha256) {
+            throw new Error(`Missing or modified HAPI build for ${platform.id}. Run bun run build:hapi.`);
+        }
+    }
+    return build.binaries;
+}
+
 export async function buildHapi(targets: readonly Platform[]) {
     verifyHapiSource();
     const root = resolve('hapi');

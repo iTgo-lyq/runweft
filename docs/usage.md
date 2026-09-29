@@ -1,6 +1,6 @@
 # Runweft 基础入口使用说明
 
-当前实现包含配置、HAPI 服务管理及 Codex/Claude Code 的 MCP 安装与身份诊断；宿主适配整体验收仍在推进，agent 定义、任务委派与看板尚未交付。这里不是完整协作版本的完成声明。
+当前实现包含配置、HAPI 服务管理及 Codex/Claude Code 的 MCP 安装与身份诊断；宿主适配已通过本地真实验收，agent 定义、任务委派与看板尚未交付。这里不是完整协作版本的完成声明。
 
 ## 安装与首次使用
 
@@ -39,6 +39,8 @@ runweft mcp check
 `mcp check` 分开报告配置、stdio 握手与服务连接，不执行模型，不把握手当作原生会话已经调用成功。服务未连接时继续用 `runweft status`、`runweft doctor` 检查。不同数据目录使用全局 `--home`：例如 `runweft --home /srv/runweft mcp install`；检查及恢复时也使用相同目录。
 
 安装只维护名为 `runweft` 的 MCP 及 Claude 身份 hook，其他 MCP、原生配置、注释和模型凭据保留。Codex 使用 `CODEX_HOME/config.toml`（默认 `~/.codex/config.toml`）；Claude 默认使用 `~/.claude.json` 和 `~/.claude/settings.json`，设置 `CLAUDE_CONFIG_DIR` 时改用该目录下的 `.claude.json` 和 `settings.json`。重复安装会更新自己的入口，命令路径变化后重新运行安装即可。已存在非 Runweft 管理的同名条目时会明确报冲突。
+
+HAPI 的受控执行入口支持按会话禁用 Runweft MCP，停止后续接保留该设置；其他 MCP 和原生 Agent/Task 等能力继续由原生客户端管理。当前结果通道是 MCP 工具响应，尚不声明宿主退出后的恢复或后台唤醒。
 
 ```sh
 runweft mcp uninstall --client claude
@@ -164,6 +166,15 @@ bun run package --all
 bun run test:install
 ```
 
-构建使用固定版本 Bun 1.4.2。`package --all` 生成四个平台的 npm 包和可移交的 `dist/packages/index.json`；`package --platform darwin-arm64` 可只构建一个平台。`--reuse-hapi` 仅在已有匹配源码和 hash 的构建记录时跳过 HAPI 重建。
+构建使用固定版本 Bun 1.4.2。`build` 会核对 HAPI 源码 revision、工作区状态及已构建文件的校验和；修改固定版本后须先重新运行 `build:hapi`，不能混用旧二进制。`package --all` 生成四个平台的 npm 包和可移交的 `dist/packages/index.json`；`package --platform darwin-arm64` 可只构建一个平台。`--reuse-hapi` 使用相同核对规则跳过 HAPI 重建。
 
 安装验收启动一次性 registry，并使用 `.dev-smoke/` 下的专用 npm 配置、缓存、安装前缀和数据目录；不改用户的全局 Runweft、HAPI 或模型配置。平台包附有 HAPI 许可、NOTICE、工具许可和对应源码归档。候选包保持 private，不会由构建或 CI 自动发布到 npm。
+
+已有 Codex/Claude Code 模型登录的开发环境可显式运行原生验收：
+
+```sh
+bun run test:mcp
+bun run test:execution
+```
+
+`test:mcp` 复制原生配置及认证到 `.dev-smoke/` 专用目录，用编译产物验证 local/hub 两种连接下的真实全局安装、身份和 HAPI 子执行启动/续接的工具禁用，并记录证据和进程清理结果。默认 Claude 命令优先使用 `iclaude`，可通过 `RUNWEFT_SMOKE_CLAUDE` 指定。`test:execution` 使用当前原生模型配置和专用服务/工作目录，验证执行事实、审批、中断、续接与结果不确定时的查询。二者会实际调用模型，不属于常规单元测试。

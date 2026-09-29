@@ -2,20 +2,11 @@ import { chmodSync, copyFileSync, cpSync, mkdirSync, readFileSync, writeFileSync
 import { resolve, join, relative } from 'node:path';
 import { createHash } from 'node:crypto';
 import pkg from '../package.json';
-import { buildHapi, verifyHapiSource, command } from './build-hapi';
+import { buildHapi, readHapiBuild, command } from './build-hapi';
 import { platforms, selectedPlatforms } from './platforms';
 
 const selected = selectedPlatforms();
-const binaries = process.argv.includes('--reuse-hapi') ? (() => {
-    verifyHapiSource();
-    const build = JSON.parse(readFileSync('dist/hapi-build.json', 'utf8'));
-    if (build.revision !== pkg.hapi.revision) throw new Error('Cached HAPI build revision is different.');
-    for (const platform of selected) {
-        const binary = build.binaries[platform.id];
-        if (!binary || createHash('sha256').update(readFileSync(binary.path)).digest('hex') !== binary.sha256) throw new Error(`Missing or modified HAPI build: ${platform.id}`);
-    }
-    return build.binaries as Record<string, { path: string; sha256: string }>;
-})() : await buildHapi(selected);
+const binaries = process.argv.includes('--reuse-hapi') ? readHapiBuild(selected) : await buildHapi(selected);
 const output = resolve('dist/packages');
 const tarballs = join(output, 'tarballs');
 mkdirSync(tarballs, { recursive: true });

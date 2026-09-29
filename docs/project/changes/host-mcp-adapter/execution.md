@@ -44,3 +44,29 @@
 - 验证：`bun run typecheck`、`bun test ./test`（38 项、226 断言）、`bun run build` 通过。专用配置覆盖幂等更新、默认 Claude HOME 路径、CLAUDE_CONFIG_DIR、冲突、双文件失败回退、并发编辑保护、显式恢复及卸载。原生 Codex 编辑器用例仅在提供 codex 的环境运行，本机确实执行并通过；无 codex 的常规 CI 显式跳过该项，AST 和 Claude 用例仍运行。
 - 真实安装：编译版可执行文件及 home 均置于含空格路径，执行正式 CLI 全局安装后，Codex 与 iclaude/Claude Code 分别在两个 cwd 实际调用诊断，身份、工作区和 home 均正确。幂等安装、卸载、恢复及恢复后握手通过；最终构建再次通过默认检测的无修改安装及握手。证据 `.dev-smoke/host-mcp-t3/installed-rnozxq/evidence.json`，无残留测试进程。本任务未启动服务，因此不以配置握手替代 T4 的配套连接验收。
 - Commit：`host-mcp-adapter T3: install and maintain global MCP configuration`
+
+
+## T4 配套构建与宿主整体验收
+
+- 结果：新增显式 `bun run test:mcp`，以原生配置和认证的专用副本执行正式全局安装，通过配套 Runweft/HAPI 二进制验证两宿主和两 runtime；不改真实用户配置。测试探针只保存身份、工具目录、调用及清理事实，不记录完整 prompt、源码或凭据。`build` 与 `package --reuse-hapi` 共用固定源码和二进制校验，旧 revision 在改写产物前被拒绝。
+- 配套产物：HAPI `58a2f6eac3acebafacb6c0827672ff91c77bb6ea`，Bun 1.4.2、Linux x64。`bun run build:hapi`、`bun run build`、`bun run package --reuse-hapi` 成功；Runweft SHA-256 `f69b2740a0de5b1c8384d965cf7bdf23135a949fc73d69ff9914fe764c0c09c0`，HAPI `41fcc51559828565013fe867d02d0147596b88babe5a58d56d00e5bbb5dfb3a5`。旧构建记录拒绝且既有二进制不变的证据为 `.dev-smoke/host-mcp-t4-build-guard.json`。
+- 原生组合：Codex 0.156.1、Claude Code 2.1.283，local/hub 各完成两宿主真实诊断调用，身份、cwd、数据根和已认证连接正确；两种子执行各完成启动、实际调用保留的 MCP、原生输出回收、关闭、续接相同 native ID、再次调用与关闭。原生工具目录均不含 Runweft；Claude 仍有 Task，其他配置继承沿 T1/T3 证据。编译版 MCP 取消认证等待后，实际 HTTP 请求中止，没有重放或执行控制请求。证据 `.dev-smoke/mcp-ggKE1t/evidence.json`，2026-09-29 12:28–12:30（Asia/Shanghai），success=true、cleanupErrors=[]。
+- 原有执行回归：`bun run test:execution` 经专用模型配置副本通过两 runtime 的并发启动去重、丢响应查询、项目说明/skill 继承、定向中断、批准/拒绝、同 native session 历史续接及进程关闭；Codex 共享 root 的兄弟会话仍可执行。证据 `.dev-smoke/execution-9h5sXh/evidence.json`，success=true、cleanupErrors=[]。
+- 服务与安装：`bun run test:service` 通过编译网关、认证、SSE/WebSocket、重启、独立 Hub 客户端及信号清理，证据 `.dev-smoke/service-4UoYwI/evidence.json`。`bun run test:install` 从临时 registry 安装新候选包，使用不含 Bun/源码目录的 PATH 完成服务回归、缺失平台包诊断及卸载保留数据，证据 `.dev-smoke/install-T0iH0O/evidence.json`。均 success=true。
+- 常规检查：`bun run typecheck`、`bun test ./test`（38 项、226 断言）通过。T4 没有修改 HAPI 源码，复用 T1 对同一 revision 的完整 HAPI 检查，不重复全量测试。
+- 验证脚本修正：第一次读取 Codex 工具目录时误选已关闭的旧 runtime 记录，改为按当前 hostPid 和 active 选择，修复连接错误处理。第二次 Claude 已调用探针并返回中文“筛选完成”，固定英文结束词断言失败；改为核对实际探针调用、原生 completed 事实及非空输出，工具禁用仍由原生目录断言。两次失败环境均确认清理，最终上述整套重跑通过；没有通过重发状态未知的任务消除错误。
+- 范围：本机覆盖两种部署连接，不冒充跨机器验证；macOS 完整组合留给集成发布 Change。当前产品 MCP 只有诊断，业务委派和子 CLI 再派生拒绝由委派 Change 实现。
+- Commit：`host-mcp-adapter T4: verify paired MCP installation and tool filtering`
+
+## 需求验收映射
+
+| 验收项 | 实现与证据 |
+| --- | --- |
+| 全局安装、重复/更新、卸载、失败恢复 | T3 安装测试及含空格路径的真实编译安装；T4 正式安装后的 local/hub 调用 |
+| 保留其他 MCP、模型配置和凭据，不串 cwd | T1 原生继承；T3 AST/原生配置编辑验证和两个项目；T4 实际其他 MCP 调用及认证 |
+| 两宿主可信身份与结构化结果 | T2 原生元数据/精确 hook 关联；T4 正式入口真实返回 |
+| 受控子执行移除 Runweft MCP，HAPI 回收结果 | T1/T4 原生工具目录、实际执行事实与原生输出 |
+| 同 cwd 并发、Claude clear/resume 与旧启动身份 | T2 同 app-server 并发、真实交互式 clear、延迟审批及显式 resume |
+| 取消、超时、断开，不重放或擅自中断 | T2 协议及真实 stdio EOF；T4 编译进程中止实际认证 HTTP 请求；不声明后台唤醒 |
+| 启动及续接保持禁用，其他能力保留 | T1 共享 root、无原条目与两种 runtime；T4 两种连接下的四组真实续接 |
+| 在线协作边界，不改用户全局配置完成验收 | 专用原生 home 和数据根；不包含已关闭主宿主恢复 |
