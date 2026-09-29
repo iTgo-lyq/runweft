@@ -121,3 +121,11 @@ HTTP 故障探针最初只调用 Bun Node HTTP ServerResponse.destroy，实际�
 文件发布可能部分成功。`deliver` 回执中的 available 项经摘要/大小和 request ID 匹配后记录 recovery pin，再按名称释放这些 export/capture 副本；未发布候选继续保留。测试证明部分失败不会等待全批成功才释放已交付字节，也不会删除剩余候选。
 
 配套 CLI 实验 `.dev-smoke/workspace-preparation-M6ji4H/evidence.json` 在接受准备后立即重启 Hub，完成 103 个真实 Git/LFS 文件的分批传输，并验证相同 request 返回同一记录、同提交不重复上传、新提交只传新 bundle、源目录隐藏/Runner 停止后的持久查询。另有 local 部署同机目标拒绝；全程没有原生模型会话。首次脚本因把格式化 CLI JSON 当单行 JSON 解析而失败，修正为解析完整 stdout 后通过，不能把脚本解析错误视为产品失败或成功证据。
+
+## 2026-09-30 T4 留存检查与删除恢复
+
+普通 finalize 会 checkpoint 脏文件，因此诊断释放不能直接调用默认行为。HAPI 增加 `unchangedHead` 前置条件：指定 SHA 与 clean 均满足才允许原有 seal，仍沿公共 stop/session 检查。真实 Git 聚焦测试证明脏文件与新增提交均保留；已封存新结果即使移除 checkout，其 result ref 仍阻止 import release。无变化的已移除环境 refs 则可以随最后一份自有 cache 清理。
+
+共享 cache 的路径可被后续 import 重新使用，不能把一个中断的递归删除盲目续作在原路径。实现先在仓库锁内核对全部消费者/refs/worktree，再原子移动到当前 import 的自有清理目录。测试模拟移动完成但回执尚未保存时重启，随后在原路径导入并准备新环境；重放旧 release 只删除旧目录，新环境仍能 validatePrepared。
+
+原始编译实验 `.dev-smoke/workspace-preparation-qyyAAk/evidence.json` 在真实 Hub/双 Runner 下通过脏文件不 checkpoint、ignored 明确放弃、释放重启、目标离线期间 pin 保留、跨快照 LFS 引用保留及最后缓存从磁盘删除。中心对象仍 available，未通过 release 顺带删字节；原生 session 始终为 0。停止门禁本轮通过 HAPI 聚焦测试的执行关联与停止回调覆盖，真实原生进程组合仍归 T5。

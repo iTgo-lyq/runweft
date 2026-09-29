@@ -237,7 +237,18 @@ runweft workspace preparations --all
 
 命令输出准备 ID、请求 ID、固定 SHA、阶段、预计上传/复用字节与错误。响应丢失时用原参数和 `--request-id <原请求ID>` 查询同一次准备；未知状态先 inspect，不盲目新建。明确失败后按提示修复，用新请求和原固定 SHA 再准备，旧记录保留。同 namespace、源仓库及 SHA 复用基线和目标缓存，不重复打包或上传；另一提交使用新的完整 bundle，相同 LFS 实体只增加引用。目标导入失败与中心基线可用性分别展示。
 
-准备完成时可看到独立 worktree 的目录和分支，不启动模型。诊断不接收任务消息或附件，也不会在以后被业务任务接管。当前尚未开放正式远端委派；输入与上下文仍属于任务生命周期。准备记录、中心恢复对象和目标缓存默认保留，显式释放在当前 Change 的下一阶段实现，不应手工删目录或恢复引用。
+准备完成时可看到独立 worktree 的目录和分支，不启动模型。诊断不接收任务消息或附件，也不会在以后被业务任务接管。当前尚未开放正式远端委派；输入与上下文仍属于任务生命周期。准备记录、中心恢复对象和目标缓存默认保留；不再需要该诊断环境时显式释放：
+
+```sh
+runweft workspace release <准备ID>
+runweft workspace inspect <准备ID>
+# 只有明确可丢弃 ignored 依赖和文件时：
+runweft workspace release <准备ID> --discard-ignored
+```
+
+release 先返回受理状态，用 inspect 确认最终 `released`。源/目标操作或执行停止状态未知时保留恢复对象并继续查询原操作；明确失败会显示原因，修复后再次 release。新增提交、脏代码和尚未回收的成果不会自动 checkpoint 后删除。命令不作用于正式任务的工作区；后者使用 `task workspace remove`。
+
+移除本环境后才解除其消费者引用；最后一个消费者释放才解除该快照的恢复 pin，其他快照共享的 LFS 引用保留。缓存仍被其他导入、外部 worktree 或未知 Git ref 使用时会说明保留原因，不能仅凭目录空闲删除。中心文件字节沿原有 artifact remove/prune 规则清理，历史准备与操作回执继续可查。已完全释放快照再用于新准备时创建新代次，旧请求仍返回已释放记录。不要手工删除缓存目录或修改恢复引用。
 
 此入口已通过配套源码构建验证；四平台安装候选会在本 Change 整体验收时更新，旧候选包可能尚无这些命令。
 
@@ -474,7 +485,7 @@ bun run test:install
 
 `test:resources` 需要已安装 Codex 和 Claude Code（优先 iclaude，可设置 `RUNWEFT_SMOKE_CLAUDE`），仅执行版本查询，不需要模型登录。它使用专用空原生配置和配套编译程序验证本地与 Hub 资源命令、MCP 安装/握手、稳定 ID、离线、恢复和环境故障；离线等待沿 HAPI 的 45 秒活跃超时。脚本保存证据并关闭自建服务，故障环境只作用于测试 Runner；macOS 若发现原生 Codex.app 回退路径，会如实记录，命令缺失仍通过专用 Claude 覆盖验证。
 
-`test:workspace-preparation` 验证配套编译 CLI 的远端诊断准备：专用 Hub 无 Runner，同机两个 Runner 传输 103 个 Git/LFS 文件，检查请求接受后重启、同提交与 LFS 复用、源端离线后的查询，以及 local 模式同机目标拒绝。需要 Git/LFS 和已安装 Codex，仅查询 runtime 版本，不调用模型；证据在 `.dev-smoke/workspace-preparation-*`。底层导出与导入可分别运行 `test:repository-export`、`test:repository-import`。这些实验不代替真实跨物理机器验收。
+`test:workspace-preparation` 验证配套编译 CLI 的远端诊断准备与释放：专用 Hub 无 Runner，同机两个 Runner 传输 103 个 Git/LFS 文件，检查请求接受后重启、同提交与 LFS 复用、源端离线后的查询、脏文件/ignored 保护、目标离线恢复、实际缓存删除及跨快照 pin 留存，并验证 local 模式同机目标拒绝。需要 Git/LFS 和已安装 Codex，仅查询 runtime 版本，不调用模型；证据在 `.dev-smoke/workspace-preparation-*`。底层导出与导入可分别运行 `test:repository-export`、`test:repository-import`。这些实验不代替真实跨物理机器验收。
 
 `test:agents` 同样只需要已安装的原生工具，不需要模型登录。它用配套编译 CLI 和专用 Hub/Runner 验证定义创建、worktree 绑定、local/Hub 连接、真实 token namespace 后缀、目标失效与恢复；保存证据并停止自建服务，不启动模型会话。
 

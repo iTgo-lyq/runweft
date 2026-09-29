@@ -55,6 +55,10 @@ HAPI 提供 repository export/import/inspect/release 机器操作，复用 names
 
 `workspace release` 查询并调用 HAPI 的公共 finalize/remove，不在 Runweft 再做进程停止证明。只允许无活动/未知执行且无未封存修改的环境；未执行的干净初始准备可做一次无改动封存，再 remove(expectedHead)。有变化的代码且尚无 C10 已持久交付证据时保留并报错，不能通过自动 checkpoint 然后删缓存丢掉改动。
 
+HAPI finalize 的可选 `unchangedHead` 在任何 checkpoint 前要求 HEAD 精确匹配且工作树干净，诊断传入初始 SHA；省略时维持原有封存行为。公共 remove 保留的 base/round refs 由缓存回收核对：只允许删除已 removed 环境且全部成果仍等于初始 SHA 的引用；任何新增成果、未知 ref、外部 worktree 或未完成操作都保留缓存。import release 解除该导入的持有，其他导入仍存在时保留共享缓存并返回占用信息。
+
+接收新 consumer 和最终释放共用 snapshot 串行边界，避免解除引用时并发接入新消费者。释放清理先完成目标 import，再清理源候选和中心 pin；失败保持 consumer 关联，详情分别显示环境已移除与剩余释放错误。已完全释放的 snapshot 在新准备中创建新代次，原请求不复活。HAPI 删除缓存先原子移入该 import 的自有目录，再递归删除；中断恢复不重删可被后续 import 复用的共享路径。
+
 环境移除后解除 diagnostic consumer；中心确认最后消费者消失才释放该 snapshot pin。源端无需清理用户仓库 ref。目标缓存删除由 HAPI 检查：没有保留环境、其他导入引用、未知操作或未回收成果；公共 remove 留下的成果引用不能被忽略。不能证明就保留并显示占用/原因，不凭空闲时间删除。离线机器清理单列 pending，不阻止中心继续提供其他消费者需要的快照。
 
 ## 失败与重试

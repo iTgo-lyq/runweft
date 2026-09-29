@@ -28,4 +28,5 @@ export class PreparationClient {
     }
     async list(all = false): Promise<PreparationView[]> { return (await this.request('list', { all })).preparations; }
     async inspect(id: string): Promise<PreparationView> { return (await this.request('inspect', { id })).preparation; }
+    async release(id: string, discardIgnored = false): Promise<PreparationView> { return (await this.request('release', { id, discardIgnored })).preparation; }
 }

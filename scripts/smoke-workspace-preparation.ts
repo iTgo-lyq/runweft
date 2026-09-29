@@ -2,12 +2,13 @@ import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { spawn, spawnSync, type ChildProcess } from 'node:child_process';
 import { closeSync, existsSync, mkdirSync, mkdtempSync, openSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { Database } from 'bun:sqlite';
 import { HapiClient } from '../src/hapi';
 import { freePort } from '../src/services';
 import { PreparationClient } from '../src/remote/client';
 import { loadConfig } from '../src/config';
+import { ArtifactClient } from '../src/artifacts/client';
 
 // Full diagnostic CLI, real center and two same-host Runners; no model execution.
 const binary = resolve(process.argv[2] ?? 'dist/runweft'), hapiBinary = resolve(process.argv[3] ?? 'dist/hapi');
@@ -40,7 +41,7 @@ async function startHub() {
 try {
     mkdirSync(project); git('init', '-q'); git('config', 'user.name', 'Preparation Smoke'); git('config', 'user.email', 'smoke@example.invalid'); git('config', 'commit.gpgsign', 'false');
     git('lfs', 'install', '--local'); writeFileSync(join(project, '.gitattributes'), '*.bin filter=lfs diff=lfs merge=lfs -text\n'); mkdirSync(join(project, 'app'));
-    writeFileSync(join(project, 'app/note'), 'fixed baseline');
+    writeFileSync(join(project, 'app/note'), 'fixed baseline'); writeFileSync(join(project, '.gitignore'), 'deps/\n');
     for (let index = 0; index < 102; index++) writeFileSync(join(project, `asset-${index}.bin`), Buffer.from(`baseline:${index}\0`.repeat(100)));
     git('add', '.'); git('commit', '-qm', 'baseline'); const original = git('rev-parse', 'HEAD'); writeFileSync(join(project, 'dirty'), 'excluded');
     const port = await freePort(); url = `http://127.0.0.1:${port}`;
@@ -92,6 +93,38 @@ try {
     assert.equal(inspector.phase, 'ready'); assert.equal(cli(center, ['workspace', 'preparations', '--all'], { cwd: root }).preparations.length, 3);
     assert.equal((await hapi.request('/api/sessions')).sessions.length, 0);
     note('state v5, cache/import receipts and pins survive Hub restart with source paths hidden and source Runner stopped; Hub operator without local Runner can inspect all diagnostics');
+    const records = <T>(table: string): T[] => {
+        const database = new Database(join(center, 'server/runweft/state.sqlite'), { readonly: true });
+        try { return (database.query(`SELECT data FROM ${table}`).all() as { data: string }[]).map(row => JSON.parse(row.data)); } finally { database.close(); }
+    };
+    const snapshots = records<any>('repository_snapshots'), oldSnapshot = snapshots.find(item => item.id === ready.snapshot.id);
+    const imported = records<any>('repository_imports').find(item => item.id === ready.target.importId), cache = dirname(imported.source.commonDir);
+    const lfs = oldSnapshot.files.find((file: any) => file.kind === 'lfs'), artifacts = new ArtifactClient(hapi);
+    const release = (id: string, discard = false) => cli(center, ['workspace', 'release', id, ...(discard ? ['--discard-ignored'] : [])], { cwd: root }).preparation;
+    const released = (id: string) => until(() => client.inspect(id), item => { if (item.release?.status === 'failed') throw new Error(JSON.stringify(item.error)); return item.phase === 'released'; });
+    writeFileSync(join(ready.workspace.cwd, 'note'), 'unrecovered diagnostic code'); release(ready.id);
+    const dirty = await until(() => client.inspect(ready.id), item => item.release?.status === 'failed');
+    assert.equal(dirty.error!.code, 'workspace_unrecovered_changes'); assert.equal(readFileSync(join(ready.workspace.cwd, 'note'), 'utf8'), 'unrecovered diagnostic code');
+    const actualHead = spawnSync('git', ['-C', ready.workspace.checkout, 'rev-parse', 'HEAD'], { env, encoding: 'utf8' }); assert.equal(actualHead.status, 0); assert.equal(actualHead.stdout.trim(), original);
+    writeFileSync(join(ready.workspace.cwd, 'note'), 'fixed baseline'); mkdirSync(join(ready.workspace.checkout, 'deps')); writeFileSync(join(ready.workspace.checkout, 'deps/cache'), 'ignored');
+    release(ready.id); assert.equal((await until(() => client.inspect(ready.id), item => item.release?.status === 'failed')).error!.code, 'workspace_ignored_files');
+    release(ready.id, true); cli(center, ['stop'], { cwd: root }); await startHub();
+    const firstReleased = await released(ready.id); assert.equal(firstReleased.consumerActive, false); assert.equal(firstReleased.snapshot.retention, 'retained');
+    assert(!existsSync(ready.workspace.checkout)); assert(existsSync(secondReady.workspace!.checkout)); assert(existsSync(cache));
+    assert.equal((await artifacts.refs(lfs.artifactId)).references.length, 2);
+    note('actual release preserves dirty code without creating a checkpoint, requires explicit ignored-file discard, survives Hub restart and preserves the other consumer/worktree and both LFS recovery pins');
+    cli(targetHome, ['stop'], { cwd: root }); release(second.id);
+    const offline = await until(() => client.inspect(second.id), item => item.release?.status === 'unknown');
+    assert.equal(offline.snapshot.retention, 'retained'); assert.equal((await artifacts.refs(lfs.artifactId)).references.length, 2);
+    cli(targetHome, ['start'], { cwd: root }); const secondReleased = await released(second.id);
+    assert.equal(secondReleased.snapshot.retention, 'released'); assert(secondReleased.target.cache?.retained); assert(existsSync(cache));
+    assert.equal((await artifacts.refs(lfs.artifactId)).references.length, 1); assert(existsSync(thirdReady.workspace!.checkout));
+    release(third.id); const thirdReleased = await released(third.id);
+    assert.equal(thirdReleased.snapshot.retention, 'released'); assert.equal(thirdReleased.target.cache?.retained, false);
+    assert(!existsSync(cache)); assert(!existsSync(thirdReady.workspace!.checkout)); assert.equal((await artifacts.refs(lfs.artifactId)).references.length, 0);
+    assert.equal((await artifacts.show(lfs.artifactId)).state, 'available'); assert.equal(release(third.id).phase, 'released');
+    assert.equal((await hapi.request('/api/sessions')).sessions.length, 0);
+    note('offline target preserves recovery pins; after reconnecting, release keeps another snapshot\'s LFS references and cache, then the last release removes the owned cache and unpins without deleting center object bytes or historical receipts');
     const local = join(root, 'local'); cli(local, ['init'], { cwd: root }); homes.push(local);
     cli(local, ['config', 'set', 'server.port', String(await freePort())], { cwd: root }); cli(local, ['config', 'set', 'hapi.executable', hapiBinary], { cwd: root }); cli(local, ['start'], { cwd: root });
     cli(local, ['machine', 'register'], { cwd: root }); const localRuntime = cli(local, ['runtime', 'register', 'codex'], { cwd: root }).runtime;

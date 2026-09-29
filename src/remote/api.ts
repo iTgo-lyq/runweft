@@ -23,6 +23,9 @@ export async function handlePreparationRequest(request: IncomingMessage, respons
     } else if (path === '/api/runweft/workspaces/inspect') {
         const input = parsePreparation(z.strictObject({ parent: ParentSchema, id: z.uuid() }), value);
         result = { preparation: service.inspect(namespace, input.parent, input.id) };
+    } else if (path === '/api/runweft/workspaces/release') {
+        const input = parsePreparation(z.strictObject({ parent: ParentSchema, id: z.uuid(), discardIgnored: z.boolean().default(false) }), value);
+        result = { preparation: await service.release(namespace, input.parent, input.id, input.discardIgnored) };
     } else throw new PreparationError(404, 'not_found', '没有此工作区准备接口。');
     if (!response.destroyed) jsonResponse(response, 200, { namespace, ...result });
 }

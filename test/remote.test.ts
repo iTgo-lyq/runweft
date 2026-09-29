@@ -126,3 +126,59 @@ test('partial publication releases only delivered candidates and keeps unpublish
     expect(h.repos.get(snapshot.exportId)!.releasedFiles.sort()).toEqual([...batch.releasedNames].sort());
     expect(h.workspaces.size).toBe(0); expect(h.objects.size).toBe(2);
 });
+
+test('release keeps other consumers and cross-snapshot LFS pins, and a later preparation uses a new generation', async () => {
+    const h = await remoteFixture(cleanups), request = h.payload();
+    const first = await ready(h, (await h.post('prepare', request)).preparation.id);
+    const second = await ready(h, (await h.post('prepare', h.payload())).preparation.id);
+    h.setCommit('b'.repeat(40)); const third = await ready(h, (await h.post('prepare', h.payload())).preparation.id);
+    const release = async (id: string) => { await h.post('release', { parent: h.parent, id }); return until(() => h.inspect(id), item => item.phase === 'released'); };
+    const one = await release(first.id); expect(one.snapshot.retention).toBe('retained'); expect(one.target.retention).toBe('retained'); expect(one.consumerActive).toBe(false);
+    expect([...h.refs.values()].filter(refs => refs.size === 2)).toHaveLength(2);
+    const two = await release(second.id); expect(two.snapshot.retention).toBe('released'); expect(two.target.retention).toBe('released');
+    expect(h.service.store.consumers(first.snapshot.id)).toHaveLength(0);
+    expect([...h.refs.values()].filter(refs => refs.size === 1)).toHaveLength(3); expect((await h.inspect(third.id)).phase).toBe('ready');
+    const repeated = await h.post('release', { parent: h.parent, id: second.id }); expect(repeated.preparation.phase).toBe('released');
+    h.setCommit('a'.repeat(40)); const next = await ready(h, (await h.post('prepare', h.payload())).preparation.id);
+    expect(next.snapshot.generation).toBe(2); expect(next.target.importId).not.toBe(first.target.importId);
+    expect((await h.inspect(second.id)).target).toMatchObject({ phase: 'available', retention: 'released' });
+    expect((await h.post('lookup', { parent: h.parent, requestId: request.requestId, intent: request.intent })).preparation.phase).toBe('released');
+});
+
+test('release exposes dirty, ignored and cache retention errors; explicit retry preserves the original recovery objects', async () => {
+    const h = await remoteFixture(cleanups), first = await ready(h, (await h.post('prepare', h.payload())).preparation.id);
+    const attempt = async (discardIgnored = false) => { await h.post('release', { parent: h.parent, id: first.id, discardIgnored }); return until(() => h.inspect(first.id), item => item.release?.status === 'failed' || item.phase === 'released'); };
+    h.faults.dirty = true; expect((await attempt()).error?.code).toBe('workspace_unrecovered_changes');
+    expect(h.requests.filter(item => item.body.action === 'remove')).toHaveLength(0);
+    h.faults.dirty = false; h.faults.ignored = true; expect((await attempt()).error?.code).toBe('workspace_ignored_files');
+    h.faults.cacheHeld = true; const held = await attempt(true); expect(held.error?.code).toBe('repository_unknown_ref'); expect(held.release?.environmentRemoved).toBe(true);
+    expect(held.consumerActive).toBe(true); expect([...h.refs.values()].every(refs => refs.size === 1)).toBe(true);
+    h.faults.cacheHeld = false; const done = await attempt(true); expect(done.phase).toBe('released'); expect([...h.refs.values()].every(refs => refs.size === 0)).toBe(true);
+});
+
+test('offline target and lost release/unpin replies resume after restart without duplicate removal or native execution', async () => {
+    const h = await remoteFixture(cleanups), first = await ready(h, (await h.post('prepare', h.payload())).preparation.id);
+    h.faults.targetOffline = true;
+    await h.post('release', { parent: h.parent, id: first.id });
+    const offline = await until(() => h.inspect(first.id), item => item.release?.status === 'unknown');
+    expect(offline.snapshot.retention).toBe('retained'); expect(offline.consumerActive).toBe(true);
+    await h.restartPreparations(); h.faults.targetOffline = false; h.faults.releaseLost = true; h.faults.unpinLost = true;
+    const released = await until(() => h.inspect(first.id), item => item.phase === 'released'); expect(released.release?.environmentRemoved).toBe(true);
+    expect(h.requests.filter(item => item.body.action === 'remove')).toHaveLength(1);
+    expect(h.calls.some(item => item.path.includes('spawn') || item.path.includes('sessions'))).toBe(false);
+    expect([...h.refs.values()].every(refs => refs.size === 0)).toBe(true);
+});
+
+test('failed partial publication can release its owned candidates and pins while pending or foreign preparations remain protected', async () => {
+    const h = await remoteFixture(cleanups); h.faults.partialDelivery = true;
+    const first = (await h.post('prepare', h.payload())).preparation as PreparationView;
+    await until(() => h.inspect(first.id), item => item.phase === 'failed');
+    await h.post('release', { parent: h.parent, id: first.id });
+    const released = await until(() => h.inspect(first.id), item => item.phase === 'released');
+    expect(released.cleanup.sourceReleased).toBe(true); expect([...h.transfers.values()].filter(item => item.request.action === 'capture').every(item => item.retention === 'released')).toBe(true);
+    expect([...h.refs.values()].every(refs => refs.size === 0)).toBe(true);
+    h.faults.partialDelivery = false; h.faults.exportHold = true; h.setCommit('b'.repeat(40));
+    const pending = (await h.post('prepare', h.payload())).preparation as PreparationView;
+    await expect(h.post('release', { parent: h.parent, id: pending.id })).rejects.toMatchObject({ code: 'preparation_pending' });
+    await expect(h.beta.request('/api/runweft/workspaces/release', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ parent: h.parent, id: pending.id }) })).rejects.toMatchObject({ status: 404 });
+});

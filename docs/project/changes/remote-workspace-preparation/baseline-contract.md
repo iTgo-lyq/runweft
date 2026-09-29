@@ -1,6 +1,6 @@
 # 固定 Git 基线契约
 
-> 来源：[Technical](technical.md)；状态：T1–T3 的导出、导入、中心复用及诊断准备已实现并验证；显式留存释放仍按 T4 推进。
+> 来源：[Technical](technical.md)；状态：导出、导入、中心复用、诊断准备和显式释放已实现；原生组合探针与候选安装按 T5 验收。
 
 ## 身份与消费者
 
@@ -53,3 +53,11 @@ snapshot 的 recovery pin 引用全部 Git/LFS 文件，最后一个 consumer �
 中心快照和各目标导入分别有代次与阶段。目标导入明确失败后，新请求只为该目标创建新导入记录，仍可复用已发布快照；旧消费者保持原失败回执。未知操作继续按原 ID 查询，不能通过新消费者绕过。capture/deliver/materialize 的 ≤100 项批次及文件请求 ID 在执行前持久化；部分发布时只释放已确认 available 且取得 recovery pin 的候选，其余保留。
 
 C10 消费公共封存结果并登记 result consumer，负责新增代码/LFS/子模块成果的验证和回收。C9 不能把非初始成果当可丢弃诊断数据。缓存清理必须考虑公共保留 refs 与全部消费者；普通附件 TTL/释放不能解除 baseline recovery pin。
+
+## 显式释放
+
+诊断 release 持久化 finalize/remove 的独立 attemptId，并沿原回执推进；响应不明不生成新 ID。finalize 设置 `unchangedHead=origin.baseCommit`，仍使用 HAPI 原生停止证明；有变化时不 staging/checkpoint。移除成功后才释放该 consumer，失败和未知保留归属及恢复引用。ignored 文件仅接受明确的 discard 选项。
+
+同 import 仍有消费者时保留其目标缓存；同 snapshot 仍有消费者时保留中心 pin。最后消费者释放时先清理目标下载并释放 import，再清理剩余源候选，最后按原 snapshot reference 逐文件 unpin；中途失败可以按已保存进度继续，不影响其他快照引用。快照完整释放后不重新激活旧消费者，新准备建立新代次，原请求继续返回历史记录。
+
+HAPI import release 先检查环境已经 removed、无 pending/unknown 操作、无初始 SHA 之外的结果。其他 imports 存在时只解除本导入的持有并报告缓存保留；最后释放还核对所有 Git worktree/ref 与自有环境记录。只允许丢弃已移除且无变化环境的 base/round refs；未知 ref 或外部 worktree 保留并报原因。实际删除先把已检查 cache 原子移入该 import 的 `data/released-cache`，中断后只续删该目录，不能误删同路径后来重新导入的 cache。操作与准备回执不删除。

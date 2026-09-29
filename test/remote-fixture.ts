@@ -10,7 +10,8 @@ const digest = (text: string) => createHash('sha256').update(text).digest('hex')
 export async function remoteFixture(cleanups: (() => Promise<void> | void)[], assetCount = 2) {
     const repos = new Map<string, RepositoryOperation>(), transfers = new Map<string, ArtifactTransfer>(), objects = new Map<string, Artifact>();
     const refs = new Map<string, Set<string>>(), workspaces = new Map<string, ManagedWorkspace>();
-    const faults = { exportHold: false, deliverLost: false, partialDelivery: false, targetOffline: false, import: false, prepare: false, cleanup: false, maxFileBytes: 1_000_000, quota: 100_000_000 };
+    const faults = { exportHold: false, deliverLost: false, partialDelivery: false, targetOffline: false, import: false, prepare: false, cleanup: false,
+        releaseLost: false, dirty: false, ignored: false, cacheHeld: false, unpinLost: false, maxFileBytes: 1_000_000, quota: 100_000_000 };
     const requests: { domain: string; machine: string; body: any }[] = [];
     let commit = 'a'.repeat(40);
     const source = (cwd: string, ref: string): WorkspaceSource => ({ machineId: 'own', repositoryId: 'source-repository', sourcePath: cwd, repositoryRoot: '/source', commonDir: '/source/.git',
@@ -24,7 +25,7 @@ export async function remoteFixture(cleanups: (() => Promise<void> | void)[], as
         if (parts[2] === 'artifacts') {
             const object = objects.get(parts[3]); if (!object || object.namespace !== namespace) return error('artifact_not_found', 404);
             if (parts[4] === 'references') { const key = decodeURIComponent(parts[5]); if (request.method === 'PUT') { if (object.state !== 'available') return error('artifact_not_available'); (refs.get(object.id) ?? refs.set(object.id, new Set()).get(object.id)!).add(key); }
-                else refs.get(object.id)?.delete(key); return Response.json({ ok: true }); }
+                else { refs.get(object.id)?.delete(key); if (faults.unpinLost) { faults.unpinLost = false; return error('unpin_response_lost', 502); } } return Response.json({ ok: true }); }
             return Response.json({ artifact: object });
         }
         const machine = parts[3], domain = parts[4];
@@ -40,6 +41,9 @@ export async function remoteFixture(cleanups: (() => Promise<void> | void)[], as
             } else if (body.action === 'release') {
                 if (!operation) return error('repository_operation_missing');
                 if (faults.cleanup) return error('cleanup_unavailable', 503);
+                if (operation.request.action === 'import') {
+                    operation.cache = { retained: faults.cacheHeld, directory: '/target/cache.git', ...(faults.cacheHeld ? { reason: { code: 'repository_unknown_ref', message: 'unknown code reference' } } : {}) };
+                }
                 if (!body.names) operation.retention = 'released';
                 operation.releasedFiles.push(...(body.names ?? operation.snapshot!.files.map(file => file.name)));
             } else if (!operation) {
@@ -92,6 +96,23 @@ export async function remoteFixture(cleanups: (() => Promise<void> | void)[], as
         }
         if (body.action === 'resolve') return Response.json({ source: source(body.cwd, body.baseRef) });
         if (body.action === 'inspect') return workspaces.has(body.environmentId) ? Response.json({ workspace: workspaces.get(body.environmentId) }) : error('workspace_not_found');
+        if (body.action === 'finalize' || body.action === 'remove') {
+            const workspace = workspaces.get(body.environmentId); if (!workspace) return error('workspace_not_found');
+            const key = body.action === 'finalize' ? `finalize:${body.roundId}:${body.attemptId}` : `remove:${body.attemptId}`;
+            let operation = workspace.operations[key];
+            if (!operation) {
+                const problem = faults.dirty ? { code: 'workspace_unrecovered_changes', message: 'unrecovered code' }
+                    : body.action === 'remove' && faults.ignored && !body.discardIgnored ? { code: 'workspace_ignored_files', message: 'ignored files retained' } : undefined;
+                operation = { id: key, request: body, status: problem ? 'failed' : 'succeeded', error: problem, createdAt: Date.now(), updatedAt: Date.now() };
+                workspace.operations[key] = operation;
+                if (!problem && body.action === 'remove') workspace.status = 'removed';
+                if (!problem && body.action === 'finalize') workspace.results[body.roundId] = { environmentId: body.environmentId, roundId: body.roundId,
+                    baseCommit: workspace.source.baseCommit, startHead: workspace.source.baseCommit, resultHead: workspace.source.baseCommit,
+                    resultRef: `refs/rounds/${body.roundId}`, partial: false, fileCount: 0, paths: [], sealedAt: Date.now() };
+                if (!problem && body.action === 'remove' && faults.releaseLost) { faults.releaseLost = false; return error('remove_response_lost', 502); }
+            }
+            return Response.json({ workspace, operation });
+        }
         if (body.action !== 'prepare') return error('unexpected_workspace_operation', 500);
         let workspace = workspaces.get(body.environmentId);
         if (!workspace) {

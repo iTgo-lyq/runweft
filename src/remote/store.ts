@@ -39,10 +39,13 @@ export class BaselineStore {
         record.updatedAt = Date.now(); this.db.query('UPDATE repository_imports SET phase=?, data=? WHERE id=?').run(record.phase, JSON.stringify(record), record.id);
     }
     consumer(id: string): BaselineConsumer { return read(this.db.query('SELECT data FROM repository_consumers WHERE id=?').get(id) as { data: string }); }
+    releaseConsumer(consumer: BaselineConsumer) {
+        consumer.active = false; this.db.query('UPDATE repository_consumers SET active=0, data=? WHERE id=?').run(JSON.stringify(consumer), consumer.id);
+    }
     consume(snapshot: BaselineSnapshot, machineId: string, origin: WorkspaceSource, kind: BaselineConsumer['kind'], owner: string): BaselineConsumer {
         const prior = this.latestImport(snapshot.id, machineId);
         let imported: BaselineImport;
-        if (prior && prior.phase !== 'failed') imported = prior;
+        if (prior && prior.phase !== 'failed' && (!prior.retention || prior.retention === 'retained')) imported = prior;
         else {
             imported = { id: randomUUID(), snapshotId: snapshot.id, namespace: snapshot.namespace, machineId, generation: (prior?.generation ?? 0) + 1, phase: 'importing', operationId: randomUUID(), attempted: false, updatedAt: Date.now() };
             this.db.query('INSERT INTO repository_imports VALUES (?, ?, ?, ?, ?, ?)').run(imported.id, snapshot.id, machineId, imported.generation, imported.phase, JSON.stringify(imported));

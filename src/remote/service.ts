@@ -1,5 +1,6 @@
 import { errorDetails, RunweftError } from '../errors';
-import type { HapiClient } from '../hapi';
+import { randomUUID } from 'node:crypto';
+import { HapiRequestError, type HapiClient } from '../hapi';
 import { ResourceService } from '../resources/service';
 import { ResourceStore } from '../resources/store';
 import { TaskStore } from '../tasks/store';
@@ -40,14 +41,16 @@ export class WorkspacePreparations {
     start() { if (!this.timer) { this.timer = setInterval(() => this.scan(), this.pollMs); this.scan(); } }
     private scan() {
         if (this.closing) return;
-        for (const snapshot of this.store.snapshots()) if (snapshot.phase === 'failed' ? snapshot.cleanupError : snapshot.phase !== 'available' || !snapshot.sourceReleased) {
+        for (const snapshot of this.store.snapshots()) if ((!snapshot.retention || snapshot.retention === 'retained') && (snapshot.phase === 'failed' ? snapshot.cleanupError : snapshot.phase !== 'available' || !snapshot.sourceReleased)) {
             this.kick(`snapshot:${snapshot.id}`, () => this.baselines.advanceSnapshot(snapshot.id));
         }
-        for (const imported of this.store.imports()) if (imported.phase !== 'failed' && (imported.phase !== 'available' || imported.batches?.some(batch => !batch.released))) {
+        for (const imported of this.store.imports()) if ((!imported.retention || imported.retention === 'retained') && imported.phase !== 'failed' && (imported.phase !== 'available' || imported.batches?.some(batch => !batch.released))) {
             this.kick(`import:${imported.id}`, () => this.baselines.advanceImport(imported.id));
         }
         for (const preparation of this.store.preparations()) if (['preparing', 'unknown'].includes(preparation.phase)) {
             this.kick(`preparation:${preparation.id}`, () => this.advance(preparation.namespace, preparation.id));
+        } else if (preparation.phase === 'releasing' && preparation.release && ['pending', 'unknown'].includes(preparation.release.status)) {
+            this.kick(`preparation:${preparation.id}`, () => this.advanceRelease(preparation.namespace, preparation.id));
         }
     }
     async close() {
@@ -82,8 +85,7 @@ export class WorkspacePreparations {
             const origin = await new TaskWorkspaces(this.client(namespace), parent.machineId).resolve(parent.cwd, intent.baseRef);
             const existing = this.store.latest(namespace, origin);
             if (existing?.phase === 'available') await this.baselines.checkTarget(existing, target.machineId);
-            const snapshot = await this.baselines.forSource(namespace, origin);
-            const record = this.store.accept(namespace, parent, requestId, intent, agent, origin, snapshot);
+            const record = await this.baselines.forSource(namespace, origin, snapshot => this.store.accept(namespace, parent, requestId, intent, agent, origin, snapshot));
             this.scan(); return this.view(record);
         });
     }
@@ -110,22 +112,75 @@ export class WorkspacePreparations {
     }
     inspect(namespace: string, parent: Parent, id: string) { return this.view(this.store.preparation(namespace, id, parent)); }
     list(namespace: string, parent: Parent, all = false) { return this.store.preparations(namespace, parent, all).map(record => this.view(record)); }
+    async release(namespace: string, parent: Parent, id: string, discardIgnored: boolean) {
+        this.tasks.assertCanDelegate(namespace, parent);
+        return this.serial(`preparation:${id}`, async () => {
+            const record = this.store.preparation(namespace, id, parent);
+            if (record.phase === 'released' || record.release && ['pending', 'unknown'].includes(record.release.status)) return this.view(record);
+            if (!['ready', 'failed', 'releasing'].includes(record.phase)) throw new PreparationError(409, 'preparation_pending', '准备仍在进行或结果未知，先查询原记录再释放。');
+            const consumer = this.store.consumer(record.consumerId), snapshot = this.store.snapshot(consumer.snapshotId), imported = this.store.imported(consumer.importId);
+            if (!['available', 'failed'].includes(snapshot.phase) || (imported.attempted || imported.batches?.some(batch => batch.attempted)) && !['available', 'failed'].includes(imported.phase)) {
+                throw new PreparationError(409, 'preparation_pending', '基线或目标操作尚未确定，不能释放恢复对象。');
+            }
+            record.release = { status: 'pending', discardIgnored, environmentRemoved: record.release?.environmentRemoved ?? false,
+                finalize: { attemptId: randomUUID(), attempted: false }, remove: { attemptId: randomUUID(), attempted: false } };
+            record.phase = 'releasing'; this.store.savePreparation(record); this.scan(); return this.view(record);
+        });
+    }
+    private async advanceRelease(namespace: string, id: string) {
+        const record = this.store.preparation(namespace, id), release = record.release!;
+        const save = () => this.store.savePreparation(record), workspaces = new TaskWorkspaces(this.client(namespace), record.agent.machineId);
+        try {
+            delete release.error; release.status = 'pending'; save();
+            if (!release.environmentRemoved && record.attempted) {
+                let workspace;
+                try { workspace = await workspaces.inspect(record.environmentId); }
+                catch (error) { if (!(error instanceof HapiRequestError && error.code === 'workspace_not_found')) throw error; }
+                if (workspace && workspace.status !== 'removed') {
+                    const check = (operation: { status: string; error?: { code: string; message: string; hint?: string } }) => {
+                        if (['failed', 'unknown'].includes(operation.status)) throw new PreparationError(operation.status === 'unknown' ? 503 : 409,
+                            operation.error?.code ?? 'workspace_release_failed', operation.error?.message ?? '工作区释放尚未确认。', operation.error?.hint);
+                        return operation.status === 'succeeded';
+                    };
+                    if (workspace.preparations[record.preparationId]) {
+                        const attempted = release.finalize.attempted; release.finalize.attempted = true; save();
+                        const result = await workspaces.receipt({ action: 'finalize', environmentId: record.environmentId, preparationId: record.preparationId,
+                            roundId: record.id, attemptId: release.finalize.attemptId, partial: false, unchangedHead: record.origin.baseCommit }, attempted);
+                        if (!check(result.operation)) return;
+                    }
+                    const attempted = release.remove.attempted; release.remove.attempted = true; save();
+                    const result = await workspaces.receipt({ action: 'remove', environmentId: record.environmentId, attemptId: release.remove.attemptId,
+                        expectedHead: record.origin.baseCommit, discardIgnored: release.discardIgnored }, attempted);
+                    if (!check(result.operation)) return;
+                    if (result.workspace.status !== 'removed') throw new RunweftError('invalid_hapi_response', '工作区移除回执未确认删除。');
+                }
+            }
+            release.environmentRemoved = true; save();
+            await this.baselines.releaseConsumer(record.consumerId);
+            release.status = 'complete'; record.phase = 'released'; save();
+        } catch (error) { release.status = uncertainPreparation(error) ? 'unknown' : 'failed'; release.error = errorDetails(error); save(); }
+    }
     private view(record: Preparation) {
         const consumer = this.store.consumer(record.consumerId), snapshot = this.store.snapshot(consumer.snapshotId), imported = this.store.imported(consumer.importId);
-        const problem = record.error ?? snapshot.error ?? imported.error;
+        const problem = record.release?.error ?? (record.release ? undefined : record.error ?? snapshot.error ?? imported.error);
         const phase = ['ready', 'failed', 'released', 'releasing'].includes(record.phase) ? record.phase
             : snapshot.phase !== 'available' ? snapshot.phase : imported.phase !== 'available' ? imported.phase : record.phase;
         const files = snapshot.files ?? [], sum = (items: typeof files) => items.reduce((total, file) => total + file.size, 0);
         return { id: record.id, requestId: record.requestId, phase, createdAt: record.createdAt, updatedAt: Math.max(record.updatedAt, snapshot.updatedAt, imported.updatedAt),
-            stage: record.phase === 'ready' ? 'complete' : snapshot.phase !== 'available' ? snapshot.stage : imported.phase !== 'available' ? (imported.attempted ? 'import' : 'download') : 'worktree',
-            agent: record.agent, origin: record.origin, snapshot: { id: snapshot.id, generation: snapshot.generation, phase: snapshot.phase },
-            target: { machineId: imported.machineId, importId: imported.id, generation: imported.generation, phase: imported.phase },
+            stage: record.phase === 'released' ? 'released' : record.release ? (record.release.environmentRemoved ? 'release_baseline' : 'release_worktree') : record.phase === 'ready' ? 'complete' : snapshot.phase !== 'available' ? snapshot.stage : imported.phase !== 'available' ? (imported.attempted ? 'import' : 'download') : 'worktree',
+            agent: record.agent, origin: record.origin, snapshot: { id: snapshot.id, generation: snapshot.generation, phase: snapshot.phase, retention: snapshot.retention ?? 'retained' },
+            target: { machineId: imported.machineId, importId: imported.id, generation: imported.generation, phase: imported.phase, retention: imported.retention ?? 'retained', cache: imported.cache ?? null },
             transfer: { known: !!snapshot.files, files: files.length, totalBytes: sum(files), uploadBytes: consumer.snapshotReused ? 0 : sum(files.filter(file => !file.reused)), reusedBytes: consumer.snapshotReused ? sum(files) : sum(files.filter(file => file.reused)),
                 publishedBytes: sum(files.filter(file => !!file.artifactId)), snapshotReused: consumer.snapshotReused },
             workspace: record.workspace ?? null, environmentId: record.environmentId, preparationId: record.preparationId,
+            release: record.release ?? null, consumerActive: consumer.active,
             error: problem ?? null, cleanup: { sourceReleased: snapshot.sourceReleased, downloadsReleased: !!imported.batches?.every(batch => batch.released),
                 errors: [snapshot.cleanupError, imported.cleanupError].filter(Boolean) },
-            nativeExecution: 'not_started' as const, next: phase === 'ready' ? '诊断工作区已就绪；尚未启动任务。正式远端委派将在结果回收能力接通后开放。'
+            nativeExecution: 'not_started' as const, next: phase === 'released' ? '诊断环境已释放；历史记录保留，其他消费者的基线不受影响。'
+                : record.release?.status === 'failed' ? record.release.error?.code === 'workspace_ignored_files'
+                    ? `确认可丢弃 ignored 依赖和文件后运行 runweft workspace release ${record.id} --discard-ignored；否则保留环境。`
+                    : `释放未完成，恢复对象仍保留；处理错误后再次运行 runweft workspace release ${record.id}。`
+                : phase === 'ready' ? '诊断工作区已就绪；尚未启动任务。正式远端委派将在结果回收能力接通后开放。'
                 : phase === 'failed' ? `修复错误后用新的 request ID 准备，固定基线为 ${record.origin.baseCommit}；原记录保留。`
                 : `用 runweft workspace inspect ${record.id} 查询；响应丢失时复用原 request ID，不要重新发起。` };
     }

@@ -77,7 +77,7 @@ export class RemoteBaselines {
         catch (error) { if (error instanceof HapiRequestError && error.status === 404) return null; throw error; }
         return object.state === 'available' && object.sha256 === file.sha256 && object.size === file.size ? object : null;
     }
-    async forSource(namespace: string, origin: WorkspaceSource) {
+    async forSource<T>(namespace: string, origin: WorkspaceSource, consume: (snapshot: BaselineSnapshot) => T) {
         return this.serial(this.key(namespace, origin), async () => {
             let record = this.store.latest(namespace, origin);
             if (record?.phase === 'available') {
@@ -86,13 +86,13 @@ export class RemoteBaselines {
                     record.phase = 'failed'; record.error = { code: 'baseline_object_unavailable', message: '中心恢复对象已不可用；新准备将创建新的传输代次。' }; this.store.saveSnapshot(record); break;
                 }
             }
-            if (!record || record.phase === 'failed') record = this.store.createSnapshot(namespace, origin);
-            return record;
+            if (!record || record.phase === 'failed' || record.retention && record.retention !== 'retained') record = this.store.createSnapshot(namespace, origin);
+            return consume(record);
         });
     }
     async checkTarget(snapshot: BaselineSnapshot, machine: string) {
         const previous = this.store.latestImport(snapshot.id, machine);
-        if (!previous || previous.phase !== 'available') return;
+        if (!previous || previous.phase !== 'available' || previous.retention && previous.retention !== 'retained') return;
         await this.serial(`import:${previous.id}`, async () => {
             const record = this.store.imported(previous.id);
             try {
@@ -108,7 +108,7 @@ export class RemoteBaselines {
         const initial = this.store.snapshot(id);
         return this.serial(this.key(initial.namespace, initial.origin), async () => {
             const record = this.store.snapshot(id), save = () => this.store.saveSnapshot(record);
-            if (!this.store.consumers(id).length) return;
+            if (!this.store.consumers(id).length || record.retention && record.retention !== 'retained') return;
             if (record.phase === 'failed') { if (record.cleanupError) await this.cleanupSnapshot(record); return; }
             if (record.phase === 'available') { await this.cleanupSnapshot(record); return; }
             try {
@@ -200,7 +200,7 @@ export class RemoteBaselines {
     async advanceImport(id: string) {
         return this.serial(`import:${id}`, async () => {
             const record = this.store.imported(id), snapshot = this.store.snapshot(record.snapshotId), save = () => this.store.saveImport(record);
-            if (record.phase === 'failed' || snapshot.phase !== 'available') return;
+            if (record.phase === 'failed' || snapshot.phase !== 'available' || record.retention && record.retention !== 'retained') return;
             if (record.phase === 'available') { await this.cleanupImport(record); return; }
             try {
                 record.phase = 'importing'; delete record.error;
@@ -242,7 +242,59 @@ export class RemoteBaselines {
     }
     result(consumerId: string) {
         const consumer = this.store.consumer(consumerId), imported = this.store.imported(consumer.importId);
-        if (!consumer.active || imported.phase !== 'available' || !imported.source) return null;
+        if (!consumer.active || imported.phase !== 'available' || imported.retention && imported.retention !== 'retained' || !imported.source) return null;
         return { snapshotId: consumer.snapshotId, origin: consumer.origin, targetSource: { ...imported.source, relativePath: consumer.origin.relativePath } };
+    }
+    async releaseConsumer(consumerId: string) {
+        const initial = this.store.consumer(consumerId), origin = this.store.snapshot(initial.snapshotId).origin;
+        return this.serial(this.key(initial.namespace, origin), async () => {
+            const consumer = this.store.consumer(consumerId); if (!consumer.active) return;
+            const snapshot = this.store.snapshot(consumer.snapshotId), others = this.store.consumers(snapshot.id).filter(item => item.id !== consumerId);
+            const imported = this.store.imported(consumer.importId);
+            if (!others.some(item => item.importId === imported.id)) await this.serial(`import:${imported.id}`, async () => {
+                const record = this.store.imported(imported.id); record.retention = 'releasing'; this.store.saveImport(record);
+                for (const batch of record.batches ?? []) if (batch.attempted && !batch.released) {
+                    await this.releaseTransfer(record.namespace, record.machineId, batch.operationId);
+                    batch.released = true; this.store.saveImport(record);
+                }
+                if (record.attempted) {
+                    try {
+                        const receipt = await this.repository(record.namespace, record.machineId, { action: 'release', operationId: record.operationId });
+                        if (receipt.retention !== 'released') return invalid('目标尚未确认缓存引用已释放。');
+                        record.cache = receipt.cache; this.store.saveImport(record);
+                        if (receipt.cache?.retained && receipt.cache.reason?.code !== 'repository_other_imports') {
+                            throw new PreparationError(409, receipt.cache.reason?.code ?? 'repository_cache_retained', receipt.cache.reason?.message ?? '目标缓存仍有未确认占用。', receipt.cache.reason?.hint);
+                        }
+                    } catch (error) { if (!(error instanceof HapiRequestError && error.code === 'repository_operation_missing')) throw error; }
+                }
+                record.retention = 'released'; delete record.cleanupError; this.store.saveImport(record);
+            });
+            if (!others.length) {
+                snapshot.retention = 'releasing'; this.store.saveSnapshot(snapshot);
+                for (const batch of snapshot.batches ?? []) if (batch.captureAttempted && !batch.released) {
+                    await this.releaseTransfer(snapshot.namespace, snapshot.origin.machineId, batch.captureId);
+                    batch.released = true; batch.releasedNames = [...batch.names]; this.store.saveSnapshot(snapshot);
+                }
+                if (snapshot.exportAttempted && !snapshot.sourceReleased) {
+                    try {
+                        const receipt = await this.repository(snapshot.namespace, snapshot.origin.machineId, { action: 'release', operationId: snapshot.exportId });
+                        if (receipt.retention !== 'released') return invalid('源端尚未确认候选已释放。');
+                    } catch (error) { if (!(error instanceof HapiRequestError && error.code === 'repository_operation_missing')) throw error; }
+                    snapshot.sourceReleased = true; this.store.saveSnapshot(snapshot);
+                }
+                const artifacts = new ArtifactClient(this.client(snapshot.namespace));
+                for (const file of snapshot.files ?? []) if (file.artifactId && file.pinned) {
+                    await artifacts.unpin(file.artifactId, recoveryReference(snapshot.id)); file.pinned = false; this.store.saveSnapshot(snapshot);
+                }
+                snapshot.retention = 'released'; delete snapshot.cleanupError; this.store.saveSnapshot(snapshot);
+            }
+            this.store.releaseConsumer(consumer);
+        });
+    }
+    private async releaseTransfer(namespace: string, machine: string, operationId: string) {
+        try {
+            const receipt = await this.transfer(namespace, machine, { action: 'release', operationId });
+            if (receipt.retention !== 'released') return invalid('机器尚未确认准备文件副本已释放。');
+        } catch (error) { if (!(error instanceof HapiRequestError && error.code === 'artifact_operation_missing')) throw error; }
     }
 }

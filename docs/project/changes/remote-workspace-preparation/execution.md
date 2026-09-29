@@ -74,3 +74,15 @@
 - 使用说明补齐诊断路径、中心 v5 归属及 exports/imports/repositories 的保留规则；`paths` 显示受控目录。根 README/使用说明修正已完成附件能力的旧进度文字。四平台安装候选仍在 T5 更新，正式远端 task/MCP 仍未开放，显式释放按 T4 继续。
 - 升级实验：用 T2 的原 state 实现建立 v4，写入机器/runtime、任务、轮次及附件清单后执行当前迁移；旧表/索引定义与全部旧行保持不变，只新增五张表，外键检查通过（`.dev-smoke/c9-t3-migration-M8EgFi/evidence.json`）。最终路径文案更新后重建通过（`c9-t3-build-docs.log`），编译 CLI 的 `paths`/prepare help 检查、Change 结构校验及 8 份修改文档本地链接检查通过，diff 无空白错误。
 - Commit：`remote-workspace-preparation T3: orchestrate shared baselines and diagnostic preparation`。
+
+## T4 准备留存与显式释放
+
+- 结果：新增 `workspace release <id>` 与明确的 `--discard-ignored`，同一准备保存 finalize/remove 身份，未知结果沿原操作对账，明确失败后显式重试。工作区移除前不解除 consumer，最后消费者释放才逐对象 unpin；其他环境及跨快照 LFS 引用保留。详情展示环境、基线、导入与缓存留存，以及剩余清理错误。已释放请求保持历史结果，新准备使用新快照代次。
+- HAPI：可选 `unchangedHead` 让 finalize 在任何 staging/checkpoint 前拒绝脏文件或新增提交；默认任务封存不变。import release 核对公共环境/操作/成果，再检查全部 cache refs 和 Git worktree。其他 imports 保留共享缓存；未知 ref、外部 worktree 和未回收结果明确保留。删除先原子移到本 import 的 `data/released-cache`，旧删除恢复不会误删相同路径后来新建的 cache；不增加原生执行/停止实现。
+- HAPI 本地提交 `0d7618c3fe7d20ac10be2954e57a00d59431bba9`，根 pin 同步，版本仍 0.30.7。聚焦 **35 pass**（`.dev-smoke/c9-t4-focused.log`），覆盖双环境/双导入、无变化封存、脏文件不 checkpoint、新结果 refs 保护、停止证明、外部 worktree/未知 ref、删除恢复保护新导入。停止回调探针不是原生模型进程验收；后者归 T5。
+- HAPI 全类型检查通过（`c9-t4-hapi-types.log`），Web **3249 pass**、Shared **323 pass**、Relay **118 pass**。全量 CLI **3014 pass / 11 skip / 2 fail**：既有 `/tmp/.git` 导致的 skills 非 Git 假设失败，以及 Claude seam 的 5 秒超时；seam 单独复核 **3 pass**（`c9-t4-cli-recheck.log`）。Hub **1411 pass / 3 skip / 1 fail**：通知节流用例在并行负载下越过计时窗口，单独复核 **4 pass**（`c9-t4-hub-recheck.log`）。未改无关运行代码或删除 `/tmp/.git`；完整原始日志保留 `c9-t4-hapi-{cli,hub,web,shared,relay}.log`。`gen:fixtures` 无漂移。
+- 根项目：全量 **140 pass / 0 fail / 2821 assertions**（`c9-t4-root-tests.log`）；最终类型检查通过，最后的释放前置条件及 CLI 提示调整后聚焦 **11 pass / 213 assertions**（`c9-t4-root-{types,focused}-final.log`）。HTTP/SQLite 故障测试覆盖多消费者和 LFS pin、dirty/ignored/cache 占用、目标离线、丢 remove/unpin 回执、重启与部分发布失败清理；未修改 TaskCoordinator。
+- 实际配套：原始编译 probe `.dev-smoke/workspace-preparation-qyyAAk/evidence.json` 通过；固定 revision 后 `build:hapi`/`build` 通过（`c9-t4-hapi-build.log`、`c9-t4-build.log`），正式配套 `dist/runweft`/`dist/hapi` 再验 `.dev-smoke/workspace-preparation-fbczK7/evidence.json` **success=true / cleanupErrors=[]**。真实检查 dirty 内容与 HEAD 未变、ignored 明确放弃、释放接受后 Hub 重启、另一 checkout 保留、目标离线 pin 不丢、跨快照 LFS 引用及最后实际磁盘缓存删除；中心对象仍 available，历史记录保留，全程 0 原生 session。仍是同物理机器的双 Runner，不是跨机验收。
+- 使用说明与 HAPI API 契约已更新；本机配套构建完成，四平台候选更新及 Codex/Claude 原生两轮组合探针继续由 T5 完成。
+- 最后复核：新准备跳过已释放 import 的有效性探测，保留旧成功/释放事实；聚焦增加该历史状态断言后 **11 pass / 214 assertions**，类型检查和重建通过（`c9-t4-root-{types,focused}-commit.log`、`c9-t4-build-commit.log`）。release help、Change 结构、7 份修改文档本地链接和两仓库 diff 检查通过。
+- Commit：`remote-workspace-preparation T4: release diagnostic workspaces and baseline references`。

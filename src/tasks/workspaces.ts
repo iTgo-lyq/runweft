@@ -26,6 +26,11 @@ export class TaskWorkspaces {
         if (!parsed.success || parsed.data.machineId !== this.machineId) throw new RunweftError('invalid_hapi_response', 'HAPI 没有返回发起机的有效 Git 基线。');
         return parsed.data;
     }
+    async inspect(environmentId: string) {
+        const result = await this.request({ action: 'inspect', environmentId });
+        if (!('workspace' in result) || result.workspace.environmentId !== environmentId) throw new RunweftError('invalid_hapi_response', 'HAPI 返回的工作区身份不匹配。');
+        return result.workspace;
+    }
     async receipt(request: WorkspaceMutation, attempted: boolean) {
         let result: WorkspaceResponse;
         if (attempted) {

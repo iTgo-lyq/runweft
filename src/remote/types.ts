@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { RepositoryFile, RepositorySnapshot } from '../../hapi/shared/src/repositories';
+import type { RepositoryFile, RepositoryOperation, RepositorySnapshot } from '../../hapi/shared/src/repositories';
 import type { WorkspaceSource } from '../../hapi/shared/src/workspaces';
 import type { MaterializedInput } from '../../hapi/shared/src/artifactTransfers';
 import { AgentIdSchema } from '../agents/definitions';
@@ -18,12 +18,14 @@ export type TransferBatch = { captureId: string; deliveryId: string; names: stri
     captureAttempted: boolean; deliveryAttempted: boolean; deliveryStopped: boolean; released: boolean; releasedNames: string[] };
 export type SnapshotFile = RepositoryFile & { requestId: string; artifactId?: string; reused: boolean; pinned: boolean };
 export type BaselineSnapshot = { id: string; namespace: string; generation: number; origin: WorkspaceSource;
+    retention?: 'retained' | 'releasing' | 'released';
     phase: 'exporting' | 'uploading' | 'available' | 'failed' | 'unknown'; stage: 'export' | 'publish';
     exportId: string; exportAttempted: boolean; directory?: string; manifest?: RepositorySnapshot;
     files?: SnapshotFile[]; batches?: TransferBatch[]; sourceReleased: boolean;
     error?: Problem; cleanupError?: Problem; createdAt: number; updatedAt: number };
 export type ImportBatch = { operationId: string; names: string[]; attempted: boolean; files?: MaterializedInput[]; released: boolean };
 export type BaselineImport = { id: string; snapshotId: string; namespace: string; machineId: string; generation: number;
+    retention?: 'retained' | 'releasing' | 'released'; cache?: RepositoryOperation['cache'];
     phase: 'importing' | 'available' | 'failed' | 'unknown'; batches?: ImportBatch[];
     operationId: string; attempted: boolean; source?: WorkspaceSource; error?: Problem; cleanupError?: Problem; updatedAt: number };
 export type BaselineConsumer = { id: string; namespace: string; snapshotId: string; importId: string;
@@ -32,6 +34,8 @@ export type Preparation = { id: string; namespace: string; requestId: string; pa
     agent: Selection; origin: WorkspaceSource; consumerId: string; environmentId: string; preparationId: string; attempted: boolean;
     phase: 'preparing' | 'ready' | 'failed' | 'unknown' | 'releasing' | 'released';
     workspace?: { cwd: string; checkout: string; branch: string; readyAt: number };
+    release?: { status: 'pending' | 'failed' | 'unknown' | 'complete'; discardIgnored: boolean; environmentRemoved: boolean;
+        finalize: { attemptId: string; attempted: boolean }; remove: { attemptId: string; attempted: boolean }; error?: Problem };
     error?: Problem; createdAt: number; updatedAt: number };
 export class PreparationError extends RunweftError {
     constructor(readonly status: number, code: string, message: string, hint?: string) { super(code, message, hint); }
