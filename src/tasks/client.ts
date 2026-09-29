@@ -1,3 +1,4 @@
+import type { ArtifactOutput } from '../../hapi/shared/src/artifactTransfers';
 import { AgentClient } from '../agents/client';
 import type { ResolvedConfig } from '../config';
 import { RunweftError } from '../errors';
@@ -19,9 +20,9 @@ export class TaskClient {
         return this.hapi.request(`/api/runweft/tasks/${path}`, { method: 'POST', headers: { 'content-type': 'application/json' },
             body: JSON.stringify({ parent: this.parent, ...value }), signal });
     }
-    async spawn(agentType: string, message: string, requestId: string, workspaceMode = 'shared', signal?: AbortSignal, baseRef?: string, inputs?: ArtifactInput[]): Promise<Acceptance> {
+    async spawn(agentType: string, message: string, requestId: string, workspaceMode = 'shared', signal?: AbortSignal, baseRef?: string, inputs?: ArtifactInput[], outputs?: ArtifactOutput[]): Promise<Acceptance> {
         if (!['shared', 'worktree'].includes(workspaceMode)) throw new RunweftError('capability_unavailable', '当前支持 shared 和本机 worktree 模式；远端模式尚未交付。');
-        const intent = parseTask(SpawnIntentSchema, { agentType, message, workspaceMode, ...(inputs?.length ? { inputs } : {}), ...(baseRef === undefined ? {} : { baseRef }) });
+        const intent = parseTask(SpawnIntentSchema, { agentType, message, workspaceMode, ...(inputs?.length ? { inputs } : {}), ...(outputs?.length ? { outputs } : {}), ...(baseRef === undefined ? {} : { baseRef }) });
         const previous = await this.request('lookup', { requestId, intent }, signal);
         if (previous.accepted) return previous.accepted;
         const resolved = await new AgentClient(this.config, this.parent.cwd, this.hapi).resolve(agentType, undefined, signal);
@@ -33,9 +34,15 @@ export class TaskClient {
         return accepted;
     }
     async list(all = false, signal?: AbortSignal): Promise<ReturnType<TaskCoordinator['list']>> { return this.request('list', { all }, signal); }
-    async send(id: string, message: string, requestId: string, options: { mode?: SendIntent['mode']; roundId?: string; inputs?: ArtifactInput[] } = {}, signal?: AbortSignal): Promise<Acceptance> {
-        const { namespace: _, ...accepted } = await this.request('send', { requestId, intent: { id, message, mode: options.mode ?? 'next', roundId: options.roundId, ...(options.inputs?.length ? { inputs: options.inputs } : {}) } }, signal);
+    async send(id: string, message: string, requestId: string, options: { mode?: SendIntent['mode']; roundId?: string; inputs?: ArtifactInput[]; outputs?: ArtifactOutput[] } = {}, signal?: AbortSignal): Promise<Acceptance> {
+        const { namespace: _, ...accepted } = await this.request('send', { requestId, intent: { id, message, mode: options.mode ?? 'next', roundId: options.roundId, ...(options.inputs?.length ? { inputs: options.inputs } : {}), ...(options.outputs?.length ? { outputs: options.outputs } : {}) } }, signal);
         return accepted;
+    }
+    async artifactAction(id: string, roundId: string, requestId: string, action: 'retry' | 'collect', files?: ArtifactOutput[], signal?: AbortSignal): Promise<Awaited<ReturnType<TaskCoordinator['artifactAction']>>> {
+        return this.request('artifacts/action', { id, roundId, requestId, action, ...(action === 'collect' ? { files } : {}) }, signal);
+    }
+    async artifacts(id: string, roundId: string, signal?: AbortSignal): Promise<ReturnType<TaskCoordinator['artifactManifests']>> {
+        return this.request('artifacts/show', { id, roundId }, signal);
     }
     async interrupt(id: string, roundId: string, signal?: AbortSignal): Promise<Awaited<ReturnType<TaskCoordinator['interrupt']>>> {
         return this.request('interrupt', { id, roundId }, signal);

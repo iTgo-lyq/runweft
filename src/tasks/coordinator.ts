@@ -6,11 +6,12 @@ import { ResourceStore } from '../resources/store';
 import { ResourceService } from '../resources/service';
 import type { ExecutionTarget } from '../resources/types';
 import { TaskStore } from './store';
-import { AcceptSchema, LookupSchema, SendSchema, InterruptSchema, PermissionSchema, RemoveWorkspaceSchema, nativeTerminal, parseTask, TaskError, type Input, type Parent, type Round, type Task } from './types';
+import { AcceptSchema, ArtifactActionSchema, LookupSchema, SendSchema, InterruptSchema, PermissionSchema, RemoveWorkspaceSchema, nativeTerminal, parseTask, TaskError, type Input, type Parent, type Round, type Task } from './types';
 import { detail, overview } from './views';
 import { historyContext, parseReport } from './reports';
 import { TaskWorkspaces, preparedReference } from './workspaces';
 import { TaskFiles, preparedFiles } from './files';
+import { TaskOutputs } from './outputs';
 
 export class TaskCoordinator {
     readonly store: TaskStore;
@@ -86,6 +87,7 @@ export class TaskCoordinator {
                 throw new TaskError(409, 'agent_target_changed', 'Agent 快照与当前 runtime 不一致。', '重新运行 agent check 后创建新任务。');
             }
             this.requireLocal(target, parent, intent.workspaceMode);
+            if (intent.outputs?.length) await new TaskOutputs(this.client(namespace), this.store).requireSupported(target.machineId);
             const source = intent.workspaceMode === 'worktree' ? await new TaskWorkspaces(this.client(namespace), target.machineId).resolve(parent.cwd, intent.baseRef) : undefined;
             if (this.closing) throw new TaskError(503, 'service_stopping', '服务正在停止；请用同一 request ID 查询接受结果。');
             const accepted = await new TaskFiles(this.client(namespace)).accept(this.store, namespace, parent, requestId, intent,
@@ -125,7 +127,8 @@ export class TaskCoordinator {
             this.store.assertCanDelegate(namespace, parent);
             const previous = this.store.lookup(namespace, parent, requestId, intent);
             if (previous) return previous;
-            this.store.require(namespace, intent.id, parent);
+            const current = this.store.require(namespace, intent.id, parent);
+            if (intent.outputs?.length) await new TaskOutputs(this.client(namespace), this.store).requireSupported(current.task.target.machineId);
             const accept = () => this.store.append(namespace, parent, requestId, intent);
             // Only steer changes the active execution; new rounds have their own acceptance lock.
             return intent.mode === 'steer' ? this.serial(intent.id, accept)
@@ -150,6 +153,18 @@ export class TaskCoordinator {
             return { status: 'requested', agent_id: id, round_id: roundId };
         });
         this.kick(namespace, id); return result;
+    }
+    async artifactAction(namespace: string, value: unknown) {
+        const input = parseTask(ArtifactActionSchema, value);
+        const result = await this.serial(input.id, () => this.store.artifactAction(namespace, input));
+        this.kick(namespace, input.id); return result;
+    }
+    artifactManifests(namespace: string, parent: Parent, id: string, roundId: string) {
+        const bundle = this.store.require(namespace, id, parent);
+        const round = bundle.rounds.find(round => round.id === roundId);
+        if (!round) throw new TaskError(404, 'round_unknown', '此任务中没有指定轮次。');
+        return { agent_id: id, round_id: roundId, artifacts_revision: round.artifactsRevision,
+            manifests: this.store.manifests(id, roundId), pending: round.outputFiles?.jobs.filter(job => job.phase !== 'complete').map(job => ({ id: job.id, kind: job.kind, phase: job.phase, error: job.error })) ?? [] };
     }
     async permission(namespace: string, value: unknown) {
         const { parent, id, roundId, requestId, decision, answers } = parseTask(PermissionSchema, value);
@@ -186,13 +201,14 @@ export class TaskCoordinator {
             const agents = ids.map(id => {
                 const bundle = this.store.require(namespace, id, parent);
                 const round = after[id] === undefined ? bundle.rounds.find(round => round.id === targets.get(id))!
-                    : bundle.rounds.find(round => (round.completedRevision ?? 0) > after[id]) ?? bundle.rounds.at(-1)!;
+                    : bundle.rounds.filter(round => Math.max(round.completedRevision ?? 0, round.artifactsRevision ?? 0) > after[id])
+                        .sort((a, b) => Math.max(a.completedRevision ?? 0, a.artifactsRevision ?? 0) - Math.max(b.completedRevision ?? 0, b.artifactsRevision ?? 0))[0] ?? bundle.rounds.at(-1)!;
                 const view = overview(bundle, round);
-                return after[id] !== undefined && (round.completedRevision ?? 0) > after[id]
-                    ? { ...view, revision: round.completedRevision!, current_revision: bundle.task.revision } : { ...view, current_revision: bundle.task.revision };
+                return after[id] !== undefined && Math.max(round.completedRevision ?? 0, round.artifactsRevision ?? 0) > after[id]
+                    ? { ...view, revision: Math.max(round.completedRevision ?? 0, round.artifactsRevision ?? 0), current_revision: bundle.task.revision } : { ...view, current_revision: bundle.task.revision };
             });
             const ready = agents.some(agent => agent.status !== 'running' && (after[agent.agent_id] === undefined
-                || (['completed', 'failed', 'interrupted'].includes(agent.status) ? (agent.completed_revision ?? 0) > after[agent.agent_id] : agent.revision > after[agent.agent_id])));
+                || (['completed', 'failed', 'interrupted'].includes(agent.status) ? Math.max(agent.completed_revision ?? 0, agent.artifacts_revision ?? 0) > after[agent.agent_id] : agent.revision > after[agent.agent_id])));
             if (ready || Date.now() >= deadline) return { agents, timed_out: !ready };
             await delay(Math.min(200, Math.max(1, deadline - Date.now())), undefined, { signal });
         }
@@ -201,6 +217,10 @@ export class TaskCoordinator {
         const { task, rounds, inputs: allInputs } = this.store.require(namespace, id);
         const workspaces = new TaskWorkspaces(this.client(namespace), task.target.machineId);
         const files = new TaskFiles(this.client(namespace));
+        const outputs = new TaskOutputs(this.client(namespace), this.store);
+        for (const previous of rounds.filter(item => ['finished', 'failed'].includes(item.phase) && item.outputFiles?.jobs.some(job => job.phase !== 'complete'))) {
+            await outputs.advance(task, previous, () => this.store.save(task, previous, []));
+        }
         if (task.environment.mode === 'worktree' && task.environment.status === 'deleting') {
             try { await workspaces.remove(task, () => this.store.saveEnvironment(task)); }
             catch (error) {
@@ -211,11 +231,13 @@ export class TaskCoordinator {
         }
         const round = rounds.find(round => !['finished', 'failed'].includes(round.phase));
         if (!round) return;
+        if (round.phase === 'queued' && rounds.some(item => item.outputFiles?.jobs.some(job => job.kind === 'collect' && !job.publishedVersion && job.phase !== 'complete'))) return;
         const inputs = allInputs.filter(input => input.roundId === round.id);
         const execution = new ExecutionClient(this.client(namespace));
         const save = () => this.store.save(task, round, inputs);
         try {
             if (round.phase === 'queued') {
+                if (round.outputFiles?.declarations.length) await outputs.requireSupported(task.target.machineId);
                 const target = await this.resourceService(namespace).resolveExecutionTarget(task.target.runtimeId);
                 this.requireLocal(target, task.parent, task.environment.mode);
                 if (target.machineId !== task.target.machineId || target.flavor !== task.target.flavor) throw new TaskError(409, 'task_target_changed', '已接受任务的固定 runtime 目标不一致。');
@@ -388,8 +410,7 @@ export class TaskCoordinator {
                     round.attention = { ...stopped.error, code: 'task_stop_unknown', stage: 'stopping', hint: '报告已保留；确认停止前不会启动下一轮。' }; save(); return;
                 }
                 round.stop = 'stopped';
-                if (task.environment.mode === 'worktree') round.phase = 'finishing';
-                else { round.finish = 'complete'; round.phase = 'finished'; round.completedAt = Date.now(); }
+                round.phase = 'finishing';
                 if (round.cancellation) {
                     round.cancellation.confirmed = true;
                     try {
@@ -403,9 +424,11 @@ export class TaskCoordinator {
                 }
                 round.attention = round.startupFailure ? { ...round.startupFailure, stage: 'starting' } : null; round.permissions = {}; save();
             }
-            if (round.phase === 'finishing' && !this.closing && await workspaces.finish(task, round, inputs, save)) {
+            if (round.phase === 'finishing' && !this.closing) {
+                if (task.environment.mode === 'worktree' && round.git?.status !== 'sealed' && !await workspaces.finish(task, round, inputs, save)) return;
+                if (!await outputs.advance(task, round, save)) return;
                 round.finish = 'complete'; round.phase = 'finished'; round.completedAt = Date.now();
-                round.attention = round.startupFailure ? { ...round.startupFailure, stage: 'starting' } : null; save();
+                if (round.attention?.scope !== 'artifacts') round.attention = round.startupFailure ? { ...round.startupFailure, stage: 'starting' } : null; save();
             }
         } catch (error) {
             const problem = errorDetails(error);
@@ -452,6 +475,7 @@ export class TaskCoordinator {
                     + `${task.environment.source.dirty ? '主工作区有未提交改动，未带入本工作区。' : ''}工程指令/skills 来自该基线；未提交或 ignored 内容不会自动复制。\n`
                     + '在此目录完成任务，按需安装依赖；可以自行提交完成的修改。进程停止后 HAPI 会为遗留修改创建 checkpoint 并保留 worktree。不要修改主目录；合入与冲突由主 agent 处理。',
             round.inputFiles?.paths.length ? `本轮输入文件已准备并校验，按以下实际路径读取；不要覆盖这些输入：\n${JSON.stringify(round.inputFiles.paths.map(file => ({ name: file.name, path: file.path, sha256: file.sha256, size: file.size })))}` : '',
+            round.outputFiles?.declarations.length ? `本轮约定成果文件：${JSON.stringify(round.outputFiles.declarations)}。在工作目录内按 relativePath 写入，结束后由程序收集；worktree 中未忽略的成果文件会随 Git 封存纳入修改。` : '',
             '请完成以下任务并报告结果。不要通过 Runweft 再次委派；原生内置工具按原有规则使用。', round.reconstruction?.context ?? '', input.text,
             '最后给出完成内容、测试结果和未解决事项；可用 fenced runweft-report JSON，字段 summary、changes、tests、remaining。'].filter(Boolean).join('\n\n');
     }

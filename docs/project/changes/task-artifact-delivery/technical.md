@@ -55,7 +55,7 @@ JWT `/api` 与 CLI token `/cli` 各沿现有 namespace 规则，业务任务归�
 
 ## 就绪性与验证
 
-调用/存储/身份/准备/续接入口已从当前源码核对；无必须询问用户的外部契约。T1–T4 已完成流式对象、CLI 任务输入和机器候选交付的真实 HTTP/Runner、原生读取验证，证据见 [Execution](execution.md)；Runweft 版本清单和补交在 T4b 接入，留存仍待后续任务。独立会话关闭、>68 MiB 文件、错误摘要/配额、断线重试、pin/delete 竞争、跨 namespace、路径逃逸、部分清单与旧版本稳定均须按阶段实际验证。
+调用/存储/身份/准备/续接入口已从当前源码核对；无必须询问用户的外部契约。T1–T4 已完成流式对象、CLI 任务输入和机器候选交付的真实 HTTP/Runner、原生读取验证，证据见 [Execution](execution.md)；T4b 已接通 Runweft 版本清单、重传和补收并通过两 runtime 的真实组合，留存仍待后续任务。独立会话关闭、>68 MiB 文件、错误摘要/配额、断线重试、pin/delete 竞争、跨 namespace、路径逃逸、部分清单与旧版本稳定均须按阶段实际验证。
 
 真实 Codex/Claude 在本地和同机 Hub 接入 CLI/MCP，确认输入可读、默认权限继承、输出可下载及子工具仍禁用。T2 先实测两 runtime 读取程序已准备的输入；Claude 如要求额外目录授权，Runner 仅将当前输入目录沿已有 --add-dir / claudeArgs 通道转交，不覆盖 permissionMode、不改 runtime 循环。其他任意目录仍沿原生审批，不扩大为 home。已核对 HAPI 参数过滤器保留 --add-dir，实际效果须用模型探针确认。实际跨机验收不在本 Change 冒称通过。
 

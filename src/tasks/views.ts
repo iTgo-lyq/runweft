@@ -23,10 +23,12 @@ export function overview(bundle: TaskBundle, round: Round = bundle.rounds.at(-1)
     else if (attention) status = attention.scope !== 'workspace' && attention.code.includes('unknown') ? 'unknown' : 'needs_attention';
     return { agent_id: bundle.task.id, agent_type: bundle.task.agent.id, round_id: round.id, round: round.ordinal, request_id: round.requestId,
         active_round_id: bundle.rounds.find(round => !['finished', 'failed'].includes(round.phase))?.id,
-        revision: bundle.task.revision, completed_revision: round.completedRevision, status, attention, blocking_round_id: blocking?.id,
+        revision: bundle.task.revision, completed_revision: round.completedRevision, artifacts_revision: round.artifactsRevision, status, attention, blocking_round_id: blocking?.id,
         report: { text: round.report.slice(0, 4000), total: round.report.length, next_offset: round.report.length > 4000 ? 4000 : null, structuredMissing: round.structuredMissing,
             structured: round.structuredReport ? Object.fromEntries(Object.entries(round.structuredReport).map(([key, value]) => [key, value.slice(0, 1000)])) : undefined,
             incomplete: !round.executionAbsent && !!round.cancellation?.confirmed && !inputs.every(input => nativeTerminal(input.observation)) },
+        artifacts: { status: round.outputFiles?.latest?.status ?? (round.outputFiles ? 'pending' : 'none'),
+            manifest: round.outputFiles?.latest ?? null, pending: round.outputFiles?.jobs.filter(job => job.phase !== 'complete').map(job => ({ id: job.id, kind: job.kind, phase: job.phase, error: job.error })) ?? [] },
         input_files: { status: round.inputFiles?.status ?? 'none', count: round.inputFiles?.files.length ?? 0 },
         cwd: bundle.task.environment.cwd, workspace_mode: bundle.task.environment.mode, git: gitDelivery(bundle, round), runtime_id: bundle.task.target.runtimeId, machine_id: bundle.task.target.machineId,
         native_status: inputs.map(input => ({ local_id: input.id, delivery: input.delivery,
@@ -50,6 +52,6 @@ export function detail(bundle: TaskBundle, options: { roundId?: string; offset?:
             observation: input.observation ? (({ nativeResult, ...fact }) => fact)(input.observation) : undefined })),
         report: { ...overview(bundle, round).report, text: round.report.slice(offset, offset + limit), offset, total: round.report.length,
             next_offset: offset + limit < round.report.length ? offset + limit : null, structuredMissing: round.structuredMissing },
-        delivery: { report: round.report ? 'available' : round.phase === 'finished' ? 'no_final_text' : 'pending', git: gitDelivery(bundle, round), attachments: 'not_applicable', acceptance: 'external' },
-        rounds: bundle.rounds.map(item => ({ id: item.id, ordinal: item.ordinal, phase: item.phase, request_id: item.requestId, completed_revision: item.completedRevision })) };
+        delivery: { report: round.report ? 'available' : round.phase === 'finished' ? 'no_final_text' : 'pending', git: gitDelivery(bundle, round), attachments: overview(bundle, round).artifacts, acceptance: 'external' },
+        rounds: bundle.rounds.map(item => ({ id: item.id, ordinal: item.ordinal, phase: item.phase, request_id: item.requestId, completed_revision: item.completedRevision, artifacts_revision: item.artifactsRevision })) };
 }

@@ -2,7 +2,7 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import { z } from 'zod';
 import { jsonResponse } from '../proxy';
 import { TaskCoordinator } from './coordinator';
-import { ParentSchema, TaskError, parseTask } from './types';
+import { ParentSchema, InterruptSchema, TaskError, parseTask } from './types';
 
 async function body(request: IncomingMessage) {
     const chunks: Buffer[] = []; let size = 0;
@@ -32,6 +32,10 @@ export async function handleTaskRequest(request: IncomingMessage, response: Serv
     else if (path === '/api/runweft/tasks/send') result = await coordinator.send(namespace, value);
     else if (path === '/api/runweft/tasks/interrupt') result = await coordinator.interrupt(namespace, value);
     else if (path === '/api/runweft/tasks/retry-finish') result = await coordinator.retryFinish(namespace, value);
+    else if (path === '/api/runweft/tasks/artifacts/action') result = await coordinator.artifactAction(namespace, value);
+    else if (path === '/api/runweft/tasks/artifacts/show') {
+        const input = parseTask(InterruptSchema, value); result = coordinator.artifactManifests(namespace, input.parent, input.id, input.roundId);
+    }
     else if (path === '/api/runweft/tasks/workspace/remove') result = await coordinator.removeWorkspace(namespace, value);
     else if (path === '/api/runweft/tasks/permission') result = await coordinator.permission(namespace, value);
     else if (path === '/api/runweft/tasks/list') {

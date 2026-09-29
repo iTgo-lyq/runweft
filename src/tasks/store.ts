@@ -3,12 +3,13 @@ import { openState } from '../state';
 import { contentVersion } from '../agents/definitions';
 import type { WorkspaceSource } from '../../hapi/shared/src/workspaces';
 import type { ExecutionTarget } from '../resources/types';
-import { parentKey, pendingPreparation, TaskError, type ArtifactIntent, type InputFiles, type Acceptance, type AgentSnapshot, type Input, type Parent, type Round, type SendIntent, type SpawnIntent, type Task, type TaskBundle } from './types';
+import { pendingOutputs, type OutputItem, type OutputJob, type OutputManifest } from './output-types';
+import { parentKey, pendingPreparation, TaskError, type ArtifactAction, type ArtifactIntent, type InputFiles, type Acceptance, type AgentSnapshot, type Input, type Parent, type Round, type SendIntent, type SpawnIntent, type Task, type TaskBundle } from './types';
 
 type TaskRow = { data: string; revision: number; updatedAt: number };
 const read = <T>(row: { data: string }): T => JSON.parse(row.data);
 const semantic = (parent: Parent, intent: SpawnIntent | SendIntent) => {
-    const normalized = { ...intent }; if (!normalized.inputs?.length) delete normalized.inputs;
+    const normalized = { ...intent }; if (!normalized.inputs?.length) delete normalized.inputs; if (!normalized.outputs?.length) delete normalized.outputs;
     return contentVersion({ parentKey: parentKey(parent), machineId: parent.machineId, cwd: parent.cwd, intent: normalized });
 };
 
@@ -35,7 +36,8 @@ export class TaskStore {
     }
     pending(): { namespace: string; id: string }[] {
         return this.db.query(`SELECT DISTINCT t.namespace, t.id FROM delegation_tasks t JOIN delegation_rounds r ON t.id=r.taskId
-            WHERE r.phase NOT IN ('finished', 'failed') OR json_extract(t.data, '$.environment.status')='deleting'`).all() as { namespace: string; id: string }[];
+            WHERE r.phase NOT IN ('finished', 'failed') OR json_extract(t.data, '$.environment.status')='deleting'
+            OR EXISTS (SELECT 1 FROM json_each(r.data, '$.outputFiles.jobs') WHERE json_extract(value, '$.phase') <> 'complete')`).all() as { namespace: string; id: string }[];
     }
     lookup(namespace: string, parent: Parent, requestId: string, intent: SpawnIntent | SendIntent): Acceptance | null {
         const row = this.db.query('SELECT fingerprint, accepted FROM delegation_requests WHERE namespace=? AND requestId=?').get(namespace, requestId) as { fingerprint: string; accepted: string } | null;
@@ -105,7 +107,7 @@ export class TaskStore {
                     : { mode: 'worktree', machineId: parent.machineId, environmentId: id, source: source!, cwd: source!.sourcePath, status: 'retained' },
                 createdAt: now, updatedAt: now, revision: 1 };
             const round: Round = { id: roundId, taskId: id, ordinal: 1, requestId, message: intent.message, phase: 'queued',
-                preparation: pendingPreparation(task.environment), inputFiles: this.inputFiles(namespace, requestId, intent), ...(task.environment.mode === 'worktree' ? { git: { status: 'pending' as const, attempted: false } } : {}),
+                preparation: pendingPreparation(task.environment), inputFiles: this.inputFiles(namespace, requestId, intent), outputFiles: pendingOutputs(intent.outputs, requestId), ...(task.environment.mode === 'worktree' ? { git: { status: 'pending' as const, attempted: false } } : {}),
                 spawnRequestId: randomUUID(), spawnAttempted: false,
                 report: '', structuredMissing: true, stop: 'not_started', finish: 'pending', attention: null, createdAt: now, permissions: {} };
             const input: Input = { id: randomUUID(), roundId, kind: 'initial', text: intent.message, delivery: 'pending', output: [] };
@@ -128,7 +130,7 @@ export class TaskStore {
             if (bundle.task.environment.mode === 'worktree' && bundle.task.environment.status !== 'retained') throw new TaskError(409, 'workspace_not_retained', '工作区正在删除或已删除，无法继续委派。');
             if (intent.mode === 'next') {
                 round = { id: randomUUID(), taskId: intent.id, ordinal: bundle.rounds.at(-1)!.ordinal + 1, requestId, message: intent.message,
-                    phase: 'queued', preparation: pendingPreparation(bundle.task.environment), inputFiles: this.inputFiles(namespace, requestId, intent),
+                    phase: 'queued', preparation: pendingPreparation(bundle.task.environment), inputFiles: this.inputFiles(namespace, requestId, intent), outputFiles: pendingOutputs(intent.outputs, requestId),
                     ...(bundle.task.environment.mode === 'worktree' ? { git: { status: 'pending' as const, attempted: false } } : {}),
                     spawnRequestId: randomUUID(), spawnAttempted: false,
                     report: '', structuredMissing: true, stop: 'not_started', finish: 'pending', attention: null, createdAt: now, permissions: {} };
@@ -150,6 +152,54 @@ export class TaskStore {
             return accepted;
         }).immediate();
     }
+    artifactAction(namespace: string, value: ArtifactAction) {
+        return this.db.transaction(() => {
+            const { parent, requestId, ...intent } = value;
+            this.assertCanDelegate(namespace, parent);
+            const bundle = this.require(namespace, intent.id, parent);
+            const fingerprint = contentVersion({ parentKey: parentKey(parent), machineId: parent.machineId, cwd: parent.cwd, artifactAction: intent });
+            const previous = this.db.query('SELECT fingerprint, accepted FROM delegation_requests WHERE namespace=? AND requestId=?').get(namespace, requestId) as { fingerprint: string; accepted: string } | null;
+            if (previous) {
+                if (previous.fingerprint !== fingerprint) throw new TaskError(409, 'task_request_conflict', '同一 request ID 已用于其他任务或文件操作。');
+                return JSON.parse(previous.accepted) as Acceptance & { artifact_operation_id: string };
+            }
+            if (this.db.query('SELECT 1 FROM delegation_artifact_intents WHERE namespace=? AND requestId=?').get(namespace, requestId)) throw new TaskError(409, 'task_request_conflict', '同一 request ID 已用于附件接受意图。');
+            const round = bundle.rounds.find(item => item.id === intent.roundId);
+            if (!round) throw new TaskError(404, 'round_unknown', '此任务中没有指定轮次。');
+            if (!['finished', 'failed'].includes(round.phase)) throw new TaskError(409, 'artifact_round_pending', '轮次尚未结束，请先等待执行与收尾。');
+            if (round.outputFiles?.jobs.some(job => job.phase !== 'complete')) throw new TaskError(409, 'artifact_operation_pending', '该轮已有文件操作，先查询其结果。');
+            if (intent.action === 'collect' && (bundle.rounds.some(item => !['finished', 'failed'].includes(item.phase))
+                || bundle.rounds.some(item => item.outputFiles?.jobs.some(job => job.phase !== 'complete')))) throw new TaskError(409, 'artifact_collect_active', '补收需要本任务所有轮次及文件操作静止。');
+            if (intent.action === 'collect' && bundle.task.environment.mode === 'worktree' && bundle.task.environment.status !== 'retained') throw new TaskError(409, 'workspace_not_retained', '工作区已移除或正在删除，不能补收文件。');
+            if (intent.action === 'collect' && bundle.task.environment.mode === 'worktree' && !bundle.rounds.some(item => item.preparation.status === 'ready')) throw new TaskError(409, 'workspace_not_prepared', '工作区尚未准备成功，不能从主目录代收成果。');
+            const base = structuredClone(round.outputFiles?.latest?.items ?? []);
+            if (intent.action === 'retry' && !base.some(item => item.status === 'failed' && item.captureOperationId && item.upload)) {
+                throw new TaskError(409, 'artifact_no_retry_candidate', '没有可重传的失败候选。', '缺失文件请在任务静止后用 task artifacts collect 显式补收。');
+            }
+            const job: OutputJob = { id: randomUUID(), requestId, kind: intent.action, createdAt: Date.now(), phase: 'pending',
+                declarations: intent.action === 'collect' ? intent.files : [], base };
+            round.outputFiles ??= { declarations: [], jobs: [] }; round.outputFiles.jobs.push(job);
+            this.save(bundle.task, round, []);
+            const accepted = { agent_id: intent.id, round_id: round.id, request_id: requestId, artifact_operation_id: job.id, revision: bundle.task.revision, accepted: true as const };
+            this.db.query('INSERT INTO delegation_requests VALUES (?, ?, ?, ?, ?, ?, ?)').run(namespace, requestId, fingerprint, intent.id, round.id, JSON.stringify(accepted), Date.now());
+            return accepted;
+        }).immediate();
+    }
+    manifests(taskId: string, roundId: string): OutputManifest[] {
+        return (this.db.query('SELECT data FROM delegation_artifact_manifests WHERE taskId=? AND roundId=? ORDER BY version').all(taskId, roundId) as { data: string }[]).map(read<OutputManifest>);
+    }
+    publishArtifacts(task: Task, round: Round, job: OutputJob, items: OutputItem[]) {
+        this.db.transaction(() => {
+            const previous = this.db.query('SELECT data FROM delegation_artifact_manifests WHERE jobId=?').get(job.id) as { data: string } | null;
+            if (previous) throw new TaskError(409, 'artifact_manifest_exists', '此交付操作已经发布清单，请重新读取任务。');
+            const manifest: OutputManifest = { version: (round.outputFiles!.latest?.version ?? 0) + 1, jobId: job.id, kind: job.kind, createdAt: Date.now(),
+                status: items.every(item => item.status === 'available') ? 'delivered' : 'incomplete', items: structuredClone(items) };
+            this.db.query('INSERT INTO delegation_artifact_manifests VALUES (?, ?, ?, ?, ?)').run(task.id, round.id, manifest.version, job.id, JSON.stringify(manifest));
+            round.outputFiles!.latest = manifest; job.publishedVersion = manifest.version; job.phase = 'cleanup'; delete job.error;
+            round.artifactsRevision = this.require(task.namespace, task.id).task.revision + 1;
+            this.save(task, round, []);
+        }).immediate();
+    }
     beginRemoval(namespace: string, parent: Parent, id: string, discardIgnored: boolean): Task {
         return this.db.transaction(() => {
             const { task, rounds } = this.require(namespace, id, parent), environment = task.environment;
@@ -159,7 +209,7 @@ export class TaskStore {
                 if (environment.removal?.discardIgnored !== discardIgnored) throw new TaskError(409, 'workspace_remove_pending', '原删除操作仍在对账，不能变更 ignored 文件处理选项。');
                 return task;
             }
-            if (rounds.some(round => !['finished', 'failed'].includes(round.phase))) throw new TaskError(409, 'workspace_round_pending', '仍有排队、执行或待收尾轮次，不能删除工作区。');
+            if (rounds.some(round => !['finished', 'failed'].includes(round.phase) || round.outputFiles?.jobs.some(job => job.kind !== 'retry' && !job.publishedVersion && job.phase !== 'complete'))) throw new TaskError(409, 'workspace_round_pending', '仍有排队、执行或待收尾轮次，不能删除工作区。');
             const last = [...rounds].reverse().find(round => round.git?.status === 'sealed');
             const unprepared = rounds.every(round => round.preparation.mode === 'worktree' && !round.preparation.attempted);
             environment.status = unprepared ? 'removed' : 'deleting';

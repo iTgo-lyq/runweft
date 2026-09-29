@@ -58,7 +58,7 @@ Round 增加输入准备记录和文件交付记录，纯文字任务缺省为�
 
 Runweft 在发布清单前核对每个 available 项的 HAPI 元数据与 pin；任意字符串 artifactId 不能直接登记为已交付。输入和结果 pin 采用稳定请求/轮次身份，恢复基线使用独立 purpose，普通轮次 release 不释放 recovery 用途。
 
-部分失败不篡改 native 执行成功/失败及既有终态 status，也不抹去 Git 结果。read_agent/task show 分开呈现 native/git/artifacts，incomplete 附 attention.scope=artifacts。清单与留存变更保存 artifactsRevision，wait 以 max(completedRevision, artifactsRevision) 为本轮通知版本，旧 completedRevision 不改；对多个轮次仍按原有有序消费。已结束轮次上待处理的 retry/collect/release 也纳入 pending 扫描。
+部分失败不篡改 native 执行成功/失败及既有终态 status，也不抹去 Git 结果。read_agent/task show 分开呈现 native/git/artifacts，incomplete 附 attention.scope=artifacts。清单与留存变更保存 artifactsRevision，wait 以 max(completedRevision, artifactsRevision) 为本轮通知版本，旧 completedRevision 不改；多个轮次按通知版本升序消费，避免旧轮次的较晚补交跨过尚未读取的完成通知。已结束轮次上待处理的 retry/collect/release 也纳入 pending 扫描。
 
 ## 5. 引用释放与一致性
 

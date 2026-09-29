@@ -60,3 +60,12 @@
 - 真实验证：`bun run build:hapi`、`bun run build` 与 `bun run test:outputs` 通过。独立 Hub/Runner 专用数据根，无模型：捕获小文件、72 MiB 文件和缺失项，真实服务限额使大文件部分失败，小文件仍发布并受 pin 保护；单独释放小文件 spool，变更原路径后旧 capture 不重新采集；显式新 capture 收集迟到文件。删除工作区、重启 Hub/Runner 并提高服务限额后，同上传身份恢复小文件、交付大候选。停止 Runner 后仍从 Hub 下载两项并核对 SHA-256，成功 spool 已释放，无原生 session。证据 `.dev-smoke/outputs-machine-neErem/evidence.json`，success=true、cleanupErrors=[]。
 - 兼容验证：root 输入任务回归 6 pass / 128 assertions、脚本 typecheck 通过；配套构建为 Linux x64，四平台候选安装仍在 T6。
 - Commit：`task-artifact-delivery T4: capture and deliver fixed output candidates`
+
+
+## T4b 输出清单、部分交付与文件补交
+
+- 结果：spawn/next 的 --output 声明在原生停止、Git 封存后捕获交付；state schema 4 保存不可变清单版本。task artifacts show/retry/collect 支持按轮次查看、固定候选重传和显式补收，原请求幂等，发布确认后释放成功 spool。文件状态、attention 与原生完成结论分开；artifactsRevision 通知补交，wait 按通知 revision 排序以避免旧轮次补交掩盖新轮次完成。已结束轮次的文件操作参与重启扫描，collect 期间下一轮等待。
+- 验证：root 全量 117 pass / 2220 assertions；随后补齐 collect 阻止排队启动和未准备 worktree 拒绝从主目录补收两项，聚焦输出测试最终 8 pass / 190 assertions，最终 typecheck 与编译通过。覆盖真实中心 SQLite/HTTP、部分发布、响应丢失、重启、固定候选、历史版本和原生调用次数；未改 HAPI，复用 T4 机器层证据。日志 `.dev-smoke/artifact-t4b-*.log`。
+- 真实执行：`bun run test:task-outputs` 使用配套编译 CLI，通过 Codex/Claude × shared/worktree × 两轮，共 8 轮。首轮降低 Hub 文件限额制造部分交付，恢复限额后重传原候选，再补收遗漏文件，清单生成 v1/v2/v3；原生身份、执行 PID 和 completedRevision 没有因文件操作变化。第二轮复用同一 native session、改写同名输出，旧发布内容仍可下载。核对项目指令、输入/输出内容、引用保护、成功 spool 回收、主仓库无修改、子 MCP 禁用及每轮停止。证据 `.dev-smoke/task-outputs-u3MJua/evidence.json`，success=true、cleanupErrors=[]，8 个记录 PID 均已退出。
+- 验证边界：专用配置副本继承原生权限；Claude 的测试文件写入审批按具体命令批准并记在证据中，未改权限模式或用户配置。真实矩阵使用的构建先于最后新增的未准备 worktree 补收门禁，该门禁另有聚焦测试且最终构建已包含；矩阵全部使用成功准备的 worktree，无需重跑模型。Runner 离线下载和 72 MiB 固定候选复用 T4 实测；跨机与四平台安装未在本任务宣称完成。
+- Commit：`task-artifact-delivery T4b: publish task output versions and explicit file recovery`

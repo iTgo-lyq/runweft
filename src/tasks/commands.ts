@@ -3,13 +3,15 @@ import { randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { z } from 'zod';
 import { targetUrl, type ResolvedConfig } from '../config';
+import { ArtifactOutputsSchema, type ArtifactOutput } from '../../hapi/shared/src/artifactTransfers';
+import type { OutputManifest } from './output-types';
 import { RunweftError } from '../errors';
 import { ArtifactInputSchema, parseTask, type ArtifactInput } from './types';
 import { TaskClient } from './client';
 import type { overview } from './views';
 
 type Summary = ReturnType<typeof overview>;
-function taskText(task: Pick<Summary, 'agent_id' | 'round_id' | 'status' | 'attention' | 'report' | 'git'> & { input_files?: { status: string; count?: number; files?: ArtifactInput[] } | null }) {
+function taskText(task: Pick<Summary, 'agent_id' | 'round_id' | 'status' | 'attention' | 'report' | 'git'> & { artifacts?: Summary['artifacts']; input_files?: { status: string; count?: number; files?: ArtifactInput[] } | null }) {
     return `${task.agent_id} · ${task.status}\n轮次：${task.round_id}`
         + (task.input_files && task.input_files.status !== 'none' ? `\n输入文件：${task.input_files.count ?? task.input_files.files?.length ?? 0} · ${task.input_files.status}` : '')
         + (task.attention ? `\n需处理：${task.attention.message}${task.attention.hint ? `\n${task.attention.hint}` : ''}` : '')
@@ -17,6 +19,7 @@ function taskText(task: Pick<Summary, 'agent_id' | 'round_id' | 'status' | 'atte
             + `\n工作区：${task.git.retained}`
             + (task.git.removal?.error ? `\n清理需处理：${task.git.removal.error.message}${task.git.removal.error.hint ? `\n${task.git.removal.error.hint}` : ''}` : '')
             + (task.git.result_ref ? `\n成果引用：${task.git.result_ref}\n查看修改：git diff ${task.git.start_head} ${task.git.result_head}\n在主仓库目标分支审查并选择 merge 或 cherry-pick。` : ''))
+        + (task.artifacts && task.artifacts.status !== 'none' ? `\n成果文件：${task.artifacts.status}${task.artifacts.manifest ? ` · 版本 ${task.artifacts.manifest.version}` : ''}\n查看清单：runweft task artifacts show ${task.agent_id} --round ${task.round_id}` : '')
         + (task.report.text ? `\n${task.report.text}` : '')
         + (task.report.next_offset !== null ? `\n后续内容：runweft task show ${task.agent_id} --round ${task.round_id} --offset ${task.report.next_offset}` : '');
 }
@@ -25,6 +28,18 @@ export function taskInputs(values: string[] = []): ArtifactInput[] {
         const split = value.lastIndexOf('=');
         return parseTask(ArtifactInputSchema, { artifactId: value.slice(split + 1), ...(split < 0 ? {} : { name: value.slice(0, split) }) });
     });
+}
+export function taskOutputs(values: string[] = []): ArtifactOutput[] | undefined {
+    if (!values.length) return;
+    return parseTask(ArtifactOutputsSchema, values.map(value => {
+        const split = value.indexOf('='), relativePath = split < 0 ? value : value.slice(split + 1);
+        return { relativePath, name: split < 0 ? relativePath.split('/').at(-1) : value.slice(0, split) };
+    }));
+}
+function manifestText(manifest: OutputManifest) {
+    return `版本 ${manifest.version} · ${manifest.status} · ${new Date(manifest.createdAt).toISOString()}\n`
+        + manifest.items.map(item => `${item.name} · ${item.status} · ${item.relativePath}`
+            + (item.artifactId ? `\n  下载：runweft artifact download ${item.artifactId} --output <目标路径>` : `\n  ${item.error?.message ?? '尚未交付'}`)).join('\n');
 }
 const addInput = (value: string, values: string[]) => [...values, value];
 export function taskMessage(options: { message?: string; messageFile?: string }) {
@@ -47,14 +62,33 @@ export function addTaskCommands(program: Command, context: () => ResolvedConfig,
             output(result, result.environment.mode === 'worktree' && result.environment.status === 'removed' ? '工作区已移除；报告和 Git 成果引用保留。'
                 : `已请求删除工作区：${id}\n完成前不接受新轮次；报告和成果引用保留。\n查询结果：runweft task show ${id}`);
         });
+    const artifacts = task.command('artifacts').description('查看成果版本、重传候选或显式补收文件');
+    artifacts.command('show <id>').requiredOption('--round <id>', '指定业务轮次').option('--version <n>', '只查看某个不可变版本')
+        .action(async (id, options) => {
+            const result = await client().artifacts(id, options.round);
+            const versions = options.version === undefined ? result.manifests : result.manifests.filter(item => item.version === Number(options.version));
+            if (options.version !== undefined && !versions.length) throw new RunweftError('artifact_version_unknown', '没有指定清单版本。');
+            output({ ...result, manifests: versions }, versions.map(manifestText).join('\n\n') + (result.pending.length ? `\n文件操作：${result.pending.map(job => job.phase).join(', ')}` : '') || '本轮尚无成果清单。');
+        });
+    for (const action of ['retry', 'collect'] as const) {
+        const command = artifacts.command(`${action} <id>`).description(action === 'retry' ? '重传失败候选；不重读工作目录或执行模型' : '任务静止时捕获指定文件，发布新的成果版本')
+            .requiredOption('--round <id>', '指定业务轮次').option('--request-id <uuid>', '重试同一文件操作时复用 ID');
+        if (action === 'collect') command.requiredOption('--path <name=path|path>', '工作区内文件；可重复', addInput, []);
+        command.action(async (id, options) => {
+            const requestId = announceRequest(program, options.requestId);
+            const accepted = await client().artifactAction(id, options.round, requestId, action, taskOutputs(options.path));
+            output(accepted, `文件操作已接受：${accepted.artifact_operation_id}\n查看：runweft task artifacts show ${id} --round ${options.round}\n等待更新：runweft task wait ${id} --after-revision '${JSON.stringify({ [id]: accepted.revision })}' `);
+        });
+    }
     task.command('spawn <agent>').description('接受新任务后立即返回；执行由服务继续推进')
         .option('--message <text>', '任务描述').option('--message-file <path>', '从文件读取任务；- 读取 stdin')
         .option('--request-id <uuid>', '相同请求重试时复用 ID').option('--workspace-mode <shared|worktree>', '共享当前目录或准备独立 Git worktree', 'shared')
         .option('--base <ref>', 'worktree 的已提交 Git 基线，默认 HEAD；不包含主目录未提交内容')
         .option('--input <name=id|id>', '使用已上传文件；可重复，默认采用对象文件名', addInput, [])
+        .option('--output <name=path|path>', '声明工作区内成果文件；可重复，结束后自动交付', addInput, [])
         .action(async (agent, options) => {
             const message = taskMessage(options), id = announceRequest(program, options.requestId);
-            const result = await client().spawn(agent, message, id, options.workspaceMode, undefined, options.base, taskInputs(options.input));
+            const result = await client().spawn(agent, message, id, options.workspaceMode, undefined, options.base, taskInputs(options.input), taskOutputs(options.output));
             output(result, `任务已接受：${result.agent_id}\n轮次：${result.round_id}\n原生执行尚待确认。\n等待：runweft task wait ${result.agent_id}`);
         });
     task.command('list').description('列出当前发起目录的任务').option('--all', '查看当前 namespace 全部任务').action(async options => {
@@ -63,16 +97,17 @@ export function addTaskCommands(program: Command, context: () => ResolvedConfig,
     task.command('send <id>').description('默认排队下一轮；--steer 追加到指定活跃 Codex 轮次')
         .option('--message <text>', '任务描述').option('--message-file <path>', '从文件读取任务；- 读取 stdin')
         .option('--input <name=id|id>', '下一轮的已上传输入文件；可重复，steer 不支持', addInput, [])
+        .option('--output <name=path|path>', '下一轮的成果文件；可重复，steer 不支持', addInput, [])
         .option('--request-id <uuid>', '重试相同追加请求时复用 ID').option('--steer', '运行中追加，需 --round').option('--round <id>', 'steer 的目标轮次')
         .action(async (id, options) => {
             const message = taskMessage(options), request = announceRequest(program, options.requestId);
-            const result = await client().send(id, message, request, { mode: options.steer ? 'steer' : 'next', roundId: options.round, inputs: taskInputs(options.input) });
+            const result = await client().send(id, message, request, { mode: options.steer ? 'steer' : 'next', roundId: options.round, inputs: taskInputs(options.input), outputs: taskOutputs(options.output) });
             output(result, `${options.steer ? '追加已接受，实际原生交付请查询任务' : '下一轮已排队'}：${result.agent_id}\n轮次：${result.round_id}\n输入：${result.input_id}\n查看：runweft task show ${result.agent_id} --round ${result.round_id}`);
         });
     task.command('interrupt <id>').description('取消指定轮次；已结束的轮次不影响后续执行').requiredOption('--round <id>', '固定业务轮次')
         .action(async (id, options) => {
             const result = await client().interrupt(id, options.round);
-            output(result, result.status === 'already_finished' ? '指定轮次已结束；未中断其他轮次。' : result.status === 'execution_already_stopped' ? '原生执行已停止，正在进行 Git 收尾；未更改取消状态。' : `已请求取消轮次：${result.round_id}\n确认关闭前仍可查看状态：runweft task show ${id} --round ${result.round_id}`);
+            output(result, result.status === 'already_finished' ? '指定轮次已结束；未中断其他轮次。' : result.status === 'execution_already_stopped' ? '原生执行已停止，正在完成成果收尾；未更改取消状态。' : `已请求取消轮次：${result.round_id}\n确认关闭前仍可查看状态：runweft task show ${id} --round ${result.round_id}`);
         });
     task.command('retry-finish <id>').description('修复后重试指定轮次的 Git 收尾；不会重发原生任务').requiredOption('--round <id>', '固定业务轮次')
         .action(async (id, options) => {
