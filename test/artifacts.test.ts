@@ -1,0 +1,113 @@
+import { afterEach, describe, expect, test } from 'bun:test';
+import { randomUUID } from 'node:crypto';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { join, resolve } from 'node:path';
+import { Hono } from '../hapi/hub/node_modules/hono';
+import { SignJWT } from 'jose';
+import { ARTIFACT_DEFAULT_LIMITS } from '../hapi/shared/src/artifacts';
+import { Store } from '../hapi/hub/src/store';
+import { ArtifactService } from '../hapi/hub/src/artifacts/service';
+import { createArtifactRoutes } from '../hapi/hub/src/web/routes/artifacts';
+import { createAuthMiddleware, type WebAppEnv } from '../hapi/hub/src/web/middleware/auth';
+import { ArtifactClient } from '../src/artifacts/client';
+import { HapiClient, hapiEnvironment, fetchResponse } from '../src/hapi';
+import { loadConfig } from '../src/config';
+
+const cleanup: Array<() => Promise<void>> = [];
+afterEach(async () => { for (const close of cleanup.splice(0)) await close(); });
+async function fixture() {
+    const base = resolve('.dev-smoke/tests'); await mkdir(base, { recursive: true });
+    const root = await mkdtemp(join(base, 'artifact-client-')), home = join(root, 'home');
+    await mkdir(home);
+    const store = new Store(join(root, 'hapi.db'));
+    const service = new ArtifactService(store.artifacts, join(root, 'artifacts'), { ...ARTIFACT_DEFAULT_LIMITS, maxFileBytes: 1024 * 1024 });
+    const secret = new TextEncoder().encode('artifact-client-test-signing-only');
+    const token = await new SignJWT({ uid: 1, ns: 'default' }).setProtectedHeader({ alg: 'HS256' }).sign(secret);
+    const app = new Hono<WebAppEnv>();
+    app.post('/api/auth', async c => (await c.req.json()).accessToken === 'test-access' ? c.json({ token }) : c.json({ error: 'Invalid token' }, 401));
+    app.use('/api/*', createAuthMiddleware(secret)); app.route('/api', createArtifactRoutes(service));
+    let loseUploadResponse = false, uploads = 0;
+    const server = Bun.serve({ port: 0, hostname: '127.0.0.1', async fetch(request) {
+        const response = await app.fetch(request);
+        if (request.method === 'PUT' && request.url.endsWith('/content')) {
+            uploads++;
+            if (loseUploadResponse) { loseUploadResponse = false; return new Response('proxy response lost', { status: 502 }); }
+        }
+        return response;
+    } });
+    const url = `http://127.0.0.1:${server.port}`;
+    await writeFile(join(home, 'config.yaml'), `mode: hub\nhub:\n  url: ${url}\n  tokenEnv: ARTIFACT_TEST_TOKEN\n`);
+    const env: NodeJS.ProcessEnv = { ...process.env, ARTIFACT_TEST_TOKEN: 'test-access' };
+    for (const key of Object.keys(env)) if (key.startsWith('RUNWEFT_')) delete env[key];
+    async function cli(args: string[], code = 0) {
+        const process = Bun.spawn([Bun.which('bun')!, resolve('src/cli.ts'), '--home', home, '--json', 'artifact', ...args], { env, stdout: 'pipe', stderr: 'pipe' });
+        const [status, stdout, stderr] = await Promise.all([process.exited, new Response(process.stdout).text(), new Response(process.stderr).text()]);
+        expect(status).toBe(code); expect(stdout + stderr).not.toContain('test-access');
+        return { value: stdout.trim() ? JSON.parse(stdout) : null, stderr };
+    }
+    cleanup.push(async () => { await server.stop(true); store.close(); await rm(root, { recursive: true, force: true }); });
+    return { root, home, service, cli, client: new ArtifactClient(new HapiClient(url, 'test-access')),
+        loseResponse: () => { loseUploadResponse = true; }, uploads: () => uploads };
+}
+describe('artifact client and CLI', () => {
+    test('a non-JSON proxy 413 explains body limits instead of reporting a JSON parse failure', async () => {
+        const server = Bun.serve({ port: 0, hostname: '127.0.0.1', fetch: () => new Response('<html>too large</html>', { status: 413 }) });
+        try { await expect(fetchResponse(`http://127.0.0.1:${server.port}/content`)).rejects.toMatchObject({ code: 'request_too_large', status: 413,
+            hint: expect.stringContaining('代理') }); }
+        finally { await server.stop(true); }
+    });
+    test('server configuration controls hosted limits without overriding a connected remote Hub', async () => {
+        const { root, home } = await fixture();
+        await writeFile(join(home, 'config.yaml'), 'server:\n  artifacts:\n    maxFileMiB: 3\n    namespaceQuotaGiB: 2\n');
+        const config = loadConfig(home, { HAPI_ARTIFACT_MAX_FILE_BYTES: 'unrelated-inherited-value' });
+        const hosted = hapiEnvironment(config, { home: join(root, 'hosted'), url: 'http://localhost:3210', port: 3211 });
+        expect(hosted.HAPI_ARTIFACT_MAX_FILE_BYTES).toBe(String(3 * 1024 * 1024));
+        expect(hosted.HAPI_ARTIFACT_NAMESPACE_QUOTA_BYTES).toBe(String(2 * 1024 * 1024 * 1024));
+        const connected = hapiEnvironment(config, { home: join(root, 'client'), url: 'http://localhost:3210' });
+        expect(connected.HAPI_ARTIFACT_MAX_FILE_BYTES).toBeUndefined();
+    });
+    test('publishes, queries and downloads through HTTP; protects existing files and references', async () => {
+        const { root, cli, service } = await fixture();
+        const source = join(root, '需求 brief.txt'), target = join(root, 'download.txt'), requestId = randomUUID();
+        await writeFile(source, '原始材料\0binary');
+        const uploaded = (await cli(['upload', source, '--request-id', requestId])).value;
+        expect(uploaded.state).toBe('available'); expect(uploaded.filename).toBe('需求 brief.txt');
+        expect((await cli(['lookup', requestId])).value.id).toBe(uploaded.id);
+        expect((await cli(['upload', source, '--request-id', requestId])).value.id).toBe(uploaded.id);
+        expect((await cli(['list'])).value.artifacts).toHaveLength(1);
+        expect((await cli(['limits'])).value.usedBytes).toBe(uploaded.size);
+        await cli(['download', uploaded.id, '--output', target]);
+        expect(await readFile(target, 'utf8')).toBe('原始材料\0binary');
+        await writeFile(target, 'keep');
+        expect((await cli(['download', uploaded.id, '--output', target], 1)).stderr).toContain('artifact_destination_exists');
+        expect(await readFile(target, 'utf8')).toBe('keep');
+        await cli(['download', uploaded.id, '--output', target, '--overwrite']);
+        expect(await readFile(target, 'utf8')).toBe('原始材料\0binary');
+        service.store.pin('default', uploaded.id, { reference: 'round:test', purpose: 'input' });
+        expect((await cli(['refs', uploaded.id])).value.references[0].reference).toBe('round:test');
+        expect((await cli(['remove', uploaded.id], 1)).stderr).toContain('artifact_referenced');
+        service.store.unpin('default', uploaded.id, 'round:test');
+        expect((await cli(['remove', uploaded.id])).value.state).toBe('deleted');
+        expect((await cli(['lookup', requestId])).value.state).toBe('deleted');
+    }, 20_000);
+    test('does not replay a published upload when its response fails; same ID recovers the original file', async () => {
+        const { root, client, loseResponse, uploads } = await fixture();
+        const source = join(root, 'report.txt'), requestId = randomUUID(); await writeFile(source, 'captured bytes');
+        loseResponse();
+        await expect(client.upload(source, requestId)).rejects.toMatchObject({ status: 502 });
+        expect(uploads()).toBe(1);
+        const recorded = await client.lookup(requestId); expect(recorded.state).toBe('available');
+        expect((await client.upload(source, requestId)).id).toBe(recorded.id); expect(uploads()).toBe(1);
+        await writeFile(source, 'changed');
+        await expect(client.upload(source, requestId)).rejects.toMatchObject({ code: 'artifact_request_conflict' });
+        expect(uploads()).toBe(1);
+    });
+    test('handles empty files and rejects a directory without reserving an object', async () => {
+        const { root, client } = await fixture();
+        const source = join(root, 'empty'), target = join(root, 'empty-copy'); await writeFile(source, '');
+        const empty = await client.upload(source, randomUUID());
+        await client.download(empty.id, target); expect((await readFile(target)).length).toBe(0);
+        await expect(client.upload(root, randomUUID())).rejects.toMatchObject({ code: 'artifact_not_file' });
+        expect((await client.list()).artifacts).toHaveLength(1);
+    });
+});

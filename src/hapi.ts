@@ -8,7 +8,8 @@ import { atomicWrite, dataPaths, targetUrl, type ResolvedConfig } from './config
 import { RunweftError } from './errors';
 
 export const BUILD = { version: pkg.version, hapi: pkg.hapi };
-export const deploymentKeys = ['HAPI_HOME', 'DB_PATH', 'HAPI_LISTEN_HOST', 'HAPI_LISTEN_PORT', 'HAPI_PUBLIC_URL', 'CORS_ORIGINS', 'HAPI_API_URL', 'CLI_API_TOKEN', 'HAPI_DISABLE_VERSION_HANDOFF'];
+export const deploymentKeys = ['HAPI_HOME', 'DB_PATH', 'HAPI_LISTEN_HOST', 'HAPI_LISTEN_PORT', 'HAPI_PUBLIC_URL', 'CORS_ORIGINS', 'HAPI_API_URL', 'CLI_API_TOKEN', 'HAPI_DISABLE_VERSION_HANDOFF',
+    'HAPI_ARTIFACT_MAX_FILE_BYTES', 'HAPI_ARTIFACT_NAMESPACE_QUOTA_BYTES', 'HAPI_ARTIFACT_UNREFERENCED_DAYS', 'HAPI_ARTIFACT_PENDING_HOURS'];
 
 export function readSettings(home: string): Record<string, unknown> {
     const path = join(home, 'settings.json');
@@ -59,6 +60,11 @@ export function hapiEnvironment(c: ResolvedConfig, options: {
     if (options.port) {
         env.HAPI_LISTEN_HOST = '127.0.0.1';
         env.HAPI_LISTEN_PORT = String(options.port);
+        const limits = c.config.server.artifacts;
+        env.HAPI_ARTIFACT_MAX_FILE_BYTES = String(limits.maxFileMiB * 1024 * 1024);
+        env.HAPI_ARTIFACT_NAMESPACE_QUOTA_BYTES = String(limits.namespaceQuotaGiB * 1024 * 1024 * 1024);
+        env.HAPI_ARTIFACT_UNREFERENCED_DAYS = String(limits.unreferencedDays);
+        env.HAPI_ARTIFACT_PENDING_HOURS = String(limits.pendingHours);
     }
     if (options.publicUrl) {
         env.HAPI_PUBLIC_URL = options.publicUrl;
@@ -106,7 +112,7 @@ export class HapiRequestError extends RunweftError {
     }
 }
 
-export async function fetchJson(url: string, options: RequestInit = {}): Promise<any> {
+export async function fetchResponse(url: string, options: RequestInit = {}): Promise<Response> {
     let response: Response;
     try { response = await fetch(url, { ...options, signal: options.signal ?? AbortSignal.timeout(10_000) }); }
     catch {
@@ -117,12 +123,19 @@ export async function fetchJson(url: string, options: RequestInit = {}): Promise
         const body = await response.json().catch(() => null) as { code?: unknown; error?: unknown; message?: unknown; hint?: unknown } | null;
         const nested = body?.error && typeof body.error === 'object' ? body.error as { code?: unknown; message?: unknown; hint?: unknown } : null;
         const code = typeof nested?.code === 'string' ? nested.code : typeof body?.code === 'string' ? body.code
-            : response.status === 401 || response.status === 403 ? 'authentication_failed' : 'request_failed';
+            : response.status === 401 || response.status === 403 ? 'authentication_failed' : response.status === 413 ? 'request_too_large' : 'request_failed';
         const detail = typeof nested?.message === 'string' ? nested.message
             : typeof body?.error === 'string' ? body.error : typeof body?.message === 'string' ? body.message : undefined;
         throw new HapiRequestError(response.status, code, detail ?? `服务请求失败（HTTP ${response.status}）。`,
-            typeof nested?.hint === 'string' ? nested.hint : typeof body?.hint === 'string' ? body.hint : undefined);
+            typeof nested?.hint === 'string' ? nested.hint : typeof body?.hint === 'string' ? body.hint
+                : response.status === 413 ? '检查 Hub 的 server.artifacts 限制及前置代理的请求体大小配置；文件上传需允许流式转发。'
+                    : body === null ? '服务或代理返回了非 JSON 错误；检查目标地址与代理配置，运行 runweft doctor。' : undefined);
     }
+    return response;
+}
+
+export async function fetchJson(url: string, options: RequestInit = {}): Promise<any> {
+    const response = await fetchResponse(url, options);
     try { return await response.json(); }
     catch { throw new RunweftError('invalid_hapi_response', 'HAPI 返回了无法解析的响应。'); }
 }
@@ -143,9 +156,14 @@ export class HapiClient {
         return { userId: claims.uid, namespace: claims.ns };
     }
     async request(path: string, options: RequestInit = {}) {
+        const response = await this.response(path, options);
+        try { return await response.json(); }
+        catch { throw new RunweftError('invalid_hapi_response', 'HAPI 返回了无法解析的响应。'); }
+    }
+    async response(path: string, options: RequestInit = {}) {
         // Refresh before sending, never replay a business POST after an uncertain response.
         if (!this.jwt || Date.now() >= this.expiresAt - 30_000) await this.authenticate(options.signal ?? undefined);
-        return fetchJson(`${this.url}${path}`, { ...options, headers: { ...Object.fromEntries(new Headers(options.headers)), authorization: `Bearer ${this.jwt}` } });
+        return fetchResponse(`${this.url}${path}`, { ...options, headers: { ...Object.fromEntries(new Headers(options.headers)), authorization: `Bearer ${this.jwt}` } });
     }
 }
 

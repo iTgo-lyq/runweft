@@ -248,6 +248,26 @@ MCP 仅操作当前父会话自己的任务，CLI 是当前 namespace 的操作�
 
 取消等待或宿主连接断开不会取消中心已接受的任务；需要中断时显式调用对应工具或 CLI 命令。主宿主关闭后不承诺新会话自动接回原父身份，已有结果仍可用 CLI 查看。服务停止会暂停中心观察，不能代替任务中断；需要有序关闭时先等待任务收尾或逐轮中断，再停止服务。
 
+## 持久文件
+
+文件命令不需要活跃 agent 或 Runner。本地模式把文件存到本机托管的 HAPI，Hub 模式存到所连中心；执行机关闭不影响已发布文件的下载。
+
+```sh
+runweft artifact limits
+runweft artifact upload './需求 brief.pdf'
+runweft artifact list
+runweft artifact show <文件ID>
+runweft artifact download <文件ID> --output ./downloads/brief.pdf
+runweft artifact refs <文件ID>
+runweft artifact remove <文件ID>
+```
+
+上传先在 stderr 打印请求 ID，完成后返回文件 ID、大小及 SHA-256。响应不明确时用 `artifact lookup <请求ID>` 查询；需要重传时给原文件加 `--request-id <请求ID>`，内容或名称变了则用新请求。已发布字节不会覆盖，删除后的请求 ID 也不能复活文件。`--json` 的 stdout 只有结果，传输进度走 stderr。
+
+下载流式校验后才保存目标，默认不覆盖已有文件；明确替换时加 `--overwrite`。只接受显式普通文件，目录请先自行打包。`--name` 可指定显示文件名，支持中文和空格。列表按 `--offset`、`--limit` 分页（最多 200），也展示删除记录。
+
+默认单文件 512 MiB，每 namespace 的已保存文件与上传预约合计 10 GiB。用 `artifact limits` 查看当前服务的真实用量和限制。有留存引用的对象不能删除，`artifact refs` 会列出引用原因；不要直接删数据目录来腾空间。当前已开放独立文件 CLI，任务输入/成果清单与 MCP 文件工具仍按附件 Change 后续任务接入。
+
 ## 配置
 
 没有配置文件时可以直接使用本地默认值。需要调整时：
@@ -281,6 +301,9 @@ hub:
 | `server.publicUrl` | 对外部署时用户实际访问的 HTTP(S) 根地址，用于公开 URL 与 CORS |
 | `server.hapiPort` | HAPI 私有 loopback 端口；省略则自动选择，不与入口端口相同 |
 | `server.runner` | 中心是否同时托管本机 Runner；只有中心职责的机器可设 `false` |
+| `server.artifacts.maxFileMiB` | 托管服务单文件上限，默认 512 MiB |
+| `server.artifacts.namespaceQuotaGiB` | 每 namespace 已保存与预约字节上限，默认 10 GiB |
+| `server.artifacts.unreferencedDays` / `pendingHours` | 无引用文件/预约的清理策略，默认 7 天/24 小时；当前不自动删除 |
 | `hub.url` | Hub 模式下的 Runweft 中心根地址，不含路径或查询参数 |
 | `hub.tokenEnv` | 保存访问令牌的环境变量名称，不是令牌值 |
 | `hapi.executable` | 开发或兼容 fork 的程序覆盖；正常安装无需填写 |

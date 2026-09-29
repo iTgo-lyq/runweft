@@ -14,6 +14,13 @@ const origin = z.string().refine(value => {
     } catch { return false; }
 }, '使用 HTTP(S) 根地址，不包含路径、凭据或查询参数').transform(value => new URL(value).origin);
 const port = z.number().int().min(1).max(65535);
+const artifactDefaults = { maxFileMiB: 512, namespaceQuotaGiB: 10, unreferencedDays: 7, pendingHours: 24 };
+const artifactSettings = z.strictObject({
+    maxFileMiB: z.number().int().min(1).max(65_536).default(artifactDefaults.maxFileMiB),
+    namespaceQuotaGiB: z.number().int().min(1).max(1_048_576).default(artifactDefaults.namespaceQuotaGiB),
+    unreferencedDays: z.number().int().min(1).max(3650).default(artifactDefaults.unreferencedDays),
+    pendingHours: z.number().int().min(1).max(8760).default(artifactDefaults.pendingHours),
+});
 
 const configFields = z.strictObject({
     schemaVersion: z.literal(1).default(1),
@@ -24,7 +31,8 @@ const configFields = z.strictObject({
         publicUrl: origin.optional(),
         hapiPort: port.optional(),
         runner: z.boolean().default(true),
-    }).default({ host: '127.0.0.1', port: 3210, runner: true }),
+        artifacts: artifactSettings.default(artifactDefaults),
+    }).default({ host: '127.0.0.1', port: 3210, runner: true, artifacts: artifactDefaults }),
     hub: z.strictObject({
         url: origin.optional(),
         tokenEnv: z.string().regex(/^[A-Za-z_][A-Za-z0-9_]*$/, '填写环境变量名称').default('RUNWEFT_HUB_TOKEN'),
@@ -133,7 +141,8 @@ export function initializeConfig(homeOption?: string, options: { mode?: string; 
     const header = '# Runweft 全局配置；配置说明：runweft config show\n'
         + '# local 在本机运行；hub 连接已有 Runweft 服务，需填写 hub.url。\n'
         + '# hub.tokenEnv 是环境变量名称，不要在此填写令牌。\n'
-        + '# server.publicUrl 用于反向代理；hapiPort 留空会自动选择。\n';
+        + '# server.publicUrl 用于反向代理；hapiPort 留空会自动选择。\n'
+        + '# server.artifacts 只设置本机托管服务；远端限制用 artifact limits 查询。\n';
     atomicWrite(file, header + stringify(config));
     return { ...loadConfig(home, env), created: true };
 }
@@ -172,6 +181,7 @@ export function dataPaths(resolved: ResolvedConfig) {
         server, hapiServer: join(server, 'hapi'), runweftServer: join(server, 'runweft'),
         state: join(server, 'runweft', 'state.sqlite'),
         hapiClient, taskWorkspaces: join(hapiClient, 'workspaces', 'environments'),
+        artifacts: join(server, 'hapi', 'artifacts'), artifactTransfers: join(hapiClient, 'artifact-transfers'),
         bindings: join(home, 'client.sqlite'), process: join(server, 'process.json'),
         logs: join(home, 'logs'), backups: join(home, 'backups'), cache: join(home, 'cache'), temporary: join(home, 'tmp'),
         nativeCodex: resolved.env.CODEX_HOME || join(homedir(), '.codex'),

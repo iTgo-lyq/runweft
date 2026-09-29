@@ -3,7 +3,7 @@
 ## Plan 辅助评审与主审结论
 
 - 执行者：当前工作区 `iclaude`，会话 `0029f242-a0be-4615-991f-48052e58ceb4`；2026-09-29 19:36–19:46（Asia/Shanghai）。进程退出 0，结果 subtype=success、isError=false。仅 Read/Glob/Grep，无 MCP、无实现修改；原文 `.dev-smoke/reviews/task-artifact-delivery/review.md`，metadata/events 同目录。不重复评审。
-- 主审结论：可实施，按用户持续授权采纳下表修正后进入逐任务执行。当前只有文档和底层流式原型证据，不能称附件产品已实现。
+- 主审结论：可实施，按用户持续授权采纳下表修正后进入逐任务执行。评审时只有文档和底层流式原型；后续实现与验证按任务记录，完整附件能力尚未交付。
 
 | 意见 | 独立核对与处理 |
 | --- | --- |
@@ -22,4 +22,10 @@
 
 ## T1 无会话的中心文件与 CLI
 
-- 状态：待开始；正式实现和产品验收尚未执行。
+- 结果：HAPI SQLite schema 28 保存 namespace 文件对象、请求指纹与留存引用，独立于会话；流式发布验证长度/SHA-256，fsync/rename 后开放读取，已发布不可覆盖，删除留墓碑。断流和已落盘未确认的发布可按原 request ID 恢复；配额预约、pin 与删除原子判定。JWT/CLI token 共用同一存储服务。Runweft 提供 artifact upload/show/lookup/list/download/refs/remove/limits 和 server.artifacts 配置，数据在托管 HAPI 数据根；下载默认不覆盖，传输可取消且无固定总时长限制。
+- 验证：root `bun test ./test` 104 pass；随后新增非 JSON 413 提示用例，`bun test ./test/artifacts.test.ts` 5 pass、52 assertions；`bun run typecheck` 通过。HAPI 跨包 typecheck 通过，fixturegen 无差异；Hub 1402 pass/3 skip、Web 3249 pass、Shared 323 pass、Relay 118 pass。文件聚焦用例覆盖错误 hash/长度、配额、命名、空文件、断流、恢复、引用竞争与控制接口大小限制。
+- 编译与真实服务：配套 Linux x64 runweft/hapi 构建成功。`bun run test:artifacts` 使用编译 CLI 和专用 local/同机 Hub，分别上传/下载 72 MiB 并独立比对 hash；禁用 Runner 且没有原生会话。真实 HTTP 收到 3 字节后断开，再以原请求恢复同一对象；验证实际 JWT/CLI token、跨 namespace 404、引用保护与删除墓碑、重启后读取。连续传输 13.2 秒通过普通 JSON 10 秒超时边界。证据 `.dev-smoke/artifact-cli-kwDCIB/evidence.json`，success=true、cleanupErrors=[]。四平台候选安装留至 T6，不把此次同机验证称为跨机验收。
+- 已知验证限制：HAPI CLI 全量 2984 pass/11 skip/1 fail；唯一失败为 `skills.test.ts` 的非 Git cwd 用例，现有 `/tmp/.git` 使其继承父工程 skill，与本任务无关且此前已记录。未删除该目录或修改无关测试。各检查完整日志在 `.dev-smoke/artifact-t1-*.log`。
+- HAPI：独立 Commit `Add persistent namespace files with verified streaming and retention references`（`61f42c3a140bccad6a5a3128892ac8bc2f4d5b47`），root pin 已同步。
+- 后续：T2 接通机器输入与原生读取，T3–T6 才接任务/MCP、输出和留存清理；本任务没有提前暴露这些能力。
+- Commit：`task-artifact-delivery T1: ship verified session-free file storage and CLI`

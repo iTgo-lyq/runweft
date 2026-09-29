@@ -10,6 +10,7 @@ import { addMcpCommands } from './mcp/commands';
 import { addResourceCommands } from './resources/commands';
 import { addAgentCommands } from './agents/commands';
 import { addTaskCommands } from './tasks/commands';
+import { addArtifactCommands } from './artifacts/commands';
 
 export const VERSION = pkg.version;
 
@@ -60,6 +61,8 @@ export function createProgram() {
             `本机中心业务库：${paths.state}${c.config.mode === 'hub' ? '（当前为 Hub 客户端，权威资源库位于所连中心）' : ''}`,
             `当前连接 HAPI 数据：${paths.hapiClient}`, `本机工作区/Agent 绑定与身份数据：${paths.bindings}`, `全局 Agent 定义：${paths.agents}`,
             `当前连接的本机任务工作区：${paths.taskWorkspaces}`,
+            `本机托管 Hub 的文件：${paths.artifacts}${c.config.mode === 'hub' ? '（当前文件权威在所连 Hub）' : ''}`,
+            `当前连接的文件准备/候选：${paths.artifactTransfers}`,
             `日志：${paths.logs}`, `配置备份：${paths.backups}`, `可再生缓存：${paths.cache}`, `临时目录：${paths.temporary}`,
             `原生 Codex：${paths.nativeCodex}`, `原生 Claude Code：${paths.nativeClaude}`,
             '备份：停止托管服务后备份配置、agents、server、connections 和 client.sqlite；原生目录按各工具规则备份。',
@@ -80,6 +83,7 @@ export function createProgram() {
     addResourceCommands(program, context, output);
     addAgentCommands(program, context, output);
     addTaskCommands(program, context, output);
+    addArtifactCommands(program, context, output);
     program.addHelpText('after', '\n开始使用：\n  runweft start\n  runweft open\n\n编辑配置：runweft init，然后 runweft config show。\n持久数据默认位于 ~/.runweft；使用 --home 可选择其他位置。');
     return program;
 }

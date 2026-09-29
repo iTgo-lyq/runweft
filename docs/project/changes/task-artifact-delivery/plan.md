@@ -1,7 +1,7 @@
 # 任务附件实施计划
 
 > 来源：[Requirement](requirement.md)、[Technical](technical.md)、[契约](artifact-contract.md)
-> 状态：待执行
+> 状态：执行中
 > 执行模式：逐任务本地提交
 > 评审：当前工作区 iclaude 一次已完成，主 agent 已独立复核采纳；见 [Execution](execution.md)，不重复评审。
 
@@ -21,7 +21,7 @@
 
 ### T1 无会话的中心文件与 CLI
 
-- 状态：待开始
+- 状态：已完成
 - 依赖：已验收统一 CLI/HAPI 契约。
 - 交付：HAPI SQLite 对象/引用、流式 reserve/PUT/GET/inspect/delete、配额和 crash reconciliation；Runweft artifact upload/show/list/download/remove/refs、清晰 request ID 与取消。服务 limits 与 server.artifacts 配置同步到实际 HAPI，统一数据根，能力声明。
 - 验收：无活跃会话完成 local/同机 Hub 上传/下载，>68 MiB 文件穿过编译服务和代理；长度/hash/配额错误不可读，断流后同 ID 重试，已发布不可覆盖；namespace、pin/delete 竞争、中文/空格文件名及目标覆盖行为明确；限速流没有固定总时长截断，413/非 JSON 代理错误提供下一步。

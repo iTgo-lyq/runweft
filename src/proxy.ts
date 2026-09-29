@@ -32,6 +32,9 @@ export async function createGateway(options: {
             else response.destroy();
         });
     });
+    // Uploads may take minutes on a remote link. The file endpoints enforce
+    // idle timeouts; Node's total request timer must not cut a progressing stream.
+    server.requestTimeout = 0;
     server.on('upgrade', (request, socket, head) => proxy.ws(request, socket, head));
     server.on('connection', socket => {
         sockets.add(socket);
