@@ -552,6 +552,8 @@ bun run test:worktree-tasks
 
 `test:collaboration` 覆盖 local 与同机 Hub 下两宿主 × 两 runtime 的八个组合，包括共享编辑、纯报告续接、其他 MCP 保留、Runweft 工具过滤、进程退出及实际 MCP 连接中断。`RUNWEFT_SMOKE_CASE=hub-claude-codex` 可选择一个组合；指定组合后加 `RUNWEFT_SMOKE_CONTROLS=1` 验证原生 MCP steer/不支持分支与定向中断。证据保存在 `.dev-smoke/collaboration-*`。这些测试会调用模型，只修改专用原生配置；同机 Hub 结果不代替真实跨机远端验收。
 
+`RUNWEFT_SMOKE_REMOTE=1 bun run test:collaboration` 验证独立 Hub、发起 Runner 和目标 Runner 下的两宿主 × 两 runtime 四组远端委派；也可用 `RUNWEFT_SMOKE_CASE` 选择一组。每组两轮包含自动基线、附件、Git/LFS、未改变的递归子模块、MCP 取回和 session 续接；执行端停止、源分支删除后再经 CLI 取回并显式合入。证据在 `.dev-smoke/remote-mcp-*`，同机不同 Runner 身份不代表物理跨机。传入 `RUNWEFT_SMOKE_REMOTE_EVIDENCE='[".dev-smoke/remote-mcp-…/evidence.json"]' bun run test:install` 可让候选安装验证复用已完成现场，只重启中心/发起端、查询、下载和取回，不再次运行模型。
+
 `test:artifact-mcp` 使用同样的两宿主 × 两 runtime × local/同机 Hub 八组，实际通过 MCP 上传、带输入派生、读取输出、重试/补收并下载，第二轮续接同一原生会话。Hub 的两个交叉 runtime 组合使用独立 worktree，其余使用 shared；可用 `RUNWEFT_SMOKE_CASE` 选择单组。证据在 `.dev-smoke/artifact-mcp-*`，测试配置与数据独立保存，结束后关闭自建服务。
 
 

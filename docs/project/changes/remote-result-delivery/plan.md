@@ -1,7 +1,7 @@
 # 远端代码回收实施计划
 
 > 来源：[Requirement](requirement.md)、[Technical](technical.md)、[结果契约](result-contract.md)
-> 状态：执行中
+> 状态：已完成
 > 执行模式：主 agent 逐任务本地提交
 > 评审：当前工作区 iclaude 唯一一次评审已完成，主 agent 已复核并简化留存及补齐流程；见 [Execution](execution.md)。用户已持续授权自主落实、执行与本地验收，不重复申请门禁。
 
@@ -51,7 +51,7 @@
 
 ### T6 完整原生协作与候选安装
 
-- 状态：待开始
+- 状态：已完成
 - 依赖：T5。
 - 交付：两宿主 × 两 runtime、各至少两轮的真实 MCP 远端准备→执行→代码/附件回收→取回→续接；CLI 同能力与文档、四平台 private 包和实际本机 npm 候选安装。
 - 验收：专用 Hub 无 Runner、不同 source/target Runner，原仓库无 remote，包含未改变的递归子模块；真实 cwd/工程指令/skills/二进制 LFS、工具过滤和其他 MCP、进程退出、重传仅传文件、源分支删除/执行机离线后主仓库脏状态不变且可实际合入。增加本机 shared/worktree 和 C9 诊断的适当回归；所有操作身份、清单和清理结果留证。

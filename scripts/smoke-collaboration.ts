@@ -12,17 +12,20 @@ import pkg from '../package.json';
 type Flavor = 'codex' | 'claude';
 const executable = resolve(process.argv[2] ?? 'dist/runweft');
 const selected = process.env.RUNWEFT_SMOKE_CASE;
+const remote = process.env.RUNWEFT_SMOKE_REMOTE === '1';
 const controls = process.env.RUNWEFT_SMOKE_CONTROLS === '1';
-const worktree = process.env.RUNWEFT_SMOKE_WORKSPACE === 'worktree';
+const worktree = remote || process.env.RUNWEFT_SMOKE_WORKSPACE === 'worktree';
 const retryFinish = process.env.RUNWEFT_SMOKE_RETRY_FINISH === '1';
 assert(!controls || selected, 'Control acceptance selects one explicit combination');
 assert(!controls || !worktree, 'Shared controls and independent workspace acceptance are separate cases');
 assert(!retryFinish || (selected && worktree), 'Finish repair selects one worktree combination');
-const cases = (['local', 'hub'] as const).flatMap(mode => (['codex', 'claude'] as const).flatMap(host => (['codex', 'claude'] as const).map(flavor => ({ mode, host, flavor, id: `${mode}-${host}-${flavor}` }))));
+assert(!remote || (!controls && !retryFinish), 'Remote matrix uses the existing separate native control/finish-repair evidence');
+const cases = (['local', 'hub'] as const).filter(mode => !remote || mode === 'hub').flatMap(mode => (['codex', 'claude'] as const).flatMap(host => (['codex', 'claude'] as const).map(flavor => ({ mode, host, flavor, id: `${mode}-${host}-${flavor}` }))));
 assert(!selected || cases.some(item => item.id === selected), 'RUNWEFT_SMOKE_CASE must name a mode-host-runtime combination');
 mkdirSync('.dev-smoke', { recursive: true });
-const root = mkdtempSync(resolve(worktree ? '.dev-smoke/worktree-mcp-' : '.dev-smoke/collaboration-'));
+const root = mkdtempSync(resolve(remote ? '.dev-smoke/remote-mcp-' : worktree ? '.dev-smoke/worktree-mcp-' : '.dev-smoke/collaboration-'));
 const local = join(root, 'local'), hub = join(root, 'hub'), codexHome = join(root, 'codex'), claudeHome = join(root, 'claude');
+const targetHome = join(root, 'target-runner');
 const probeLog = join(root, 'probe.jsonl'), claudeLog = join(root, 'claude-init.jsonl');
 const env: NodeJS.ProcessEnv = { ...process.env };
 for (const key of Object.keys(env)) if (key.startsWith('RUNWEFT_')) delete env[key];
@@ -39,6 +42,7 @@ const wrapper = join(root, 'claude-observer');
 writeFileSync(wrapper, `#!/bin/sh\nexec ${quote(process.execPath)} ${quote(resolve('scripts/fixtures/claude-observer.mjs'))} "$@"\n`, { mode: 0o700 });
 Object.assign(env, { CODEX_HOME: codexHome, CLAUDE_CONFIG_DIR: claudeHome, GIT_CEILING_DIRECTORIES: root,
     HAPI_CLAUDE_PATH: wrapper, RUNWEFT_SMOKE_CLAUDE: nativeClaude, RUNWEFT_SMOKE_CLAUDE_LOG: claudeLog });
+if (remote) Object.assign(env, { GIT_CONFIG_GLOBAL: '/dev/null', GIT_CONFIG_NOSYSTEM: '1' });
 function nativeConfig(args: string[]) { assert.equal(spawnSync('codex', ['mcp', ...args], { env, stdio: 'pipe' }).status, 0); }
 const codexPath = join(codexHome, 'config.toml'), claudePath = join(claudeHome, '.claude.json');
 for (const name of Object.keys((Bun.TOML.parse(readFileSync(codexPath, 'utf8')) as any).mcp_servers ?? {})) nativeConfig(['remove', name]);
@@ -47,7 +51,7 @@ nativeConfig(['add', 'keep_probe', '--env', `RUNWEFT_SMOKE_PROBE_LOG=${probeLog}
 const prefs = existsSync(claudePath) ? JSON.parse(readFileSync(claudePath, 'utf8')) : {};
 prefs.mcpServers = { keep_probe: { type: 'stdio', ...probe } }; writeFileSync(claudePath, JSON.stringify(prefs), { mode: 0o600 });
 const evidence: { [key: string]: any; cases: any[]; cleanupErrors: string[] } = {
-    root, executable, hapiRevision: pkg.hapi.revision, selected, controls, worktree, retryFinish, startedAt: new Date().toISOString(), success: false, cases: [], cleanupErrors: [],
+    root, executable, hapiRevision: pkg.hapi.revision, selected, controls, worktree, remote, retryFinish, startedAt: new Date().toISOString(), success: false, cases: [], cleanupErrors: [],
 };
 let token: string | undefined, hapi: HapiClient | undefined;
 const homes: string[] = [], pids = new Set<number>();
@@ -90,6 +94,7 @@ async function runCase(spec: typeof cases[number], home: string) {
     const cwd = join(root, id); mkdirSync(cwd);
     const file = join(cwd, 'result.txt'), marker = `SHARED_${crypto.randomUUID()}`, memory = `MEMORY_${crypto.randomUUID()}`;
     const contextMarker = `CONTEXT_${crypto.randomUUID()}`, skillMarker = `SKILL_${crypto.randomUUID()}`;
+    const inputMarkers = [`INPUT_FIRST_${crypto.randomUUID()}`, `INPUT_NEXT_${crypto.randomUUID()}`];
     const projectProbeLog = join(root, `${id}-project-probe.jsonl`), hookLog = join(root, `${id}-hook.txt`);
     function git(...args: string[]) {
         const result = spawnSync('git', ['-C', cwd, ...args], { env, encoding: 'utf8', timeout: 20_000 });
@@ -107,9 +112,23 @@ async function runCase(spec: typeof cases[number], home: string) {
         mkdirSync(join(cwd, '.codex'));
         writeFileSync(join(cwd, '.codex/config.toml'), `[mcp_servers.project_probe]\ncommand = ${JSON.stringify(probe.command)}\nargs = ${JSON.stringify(probe.args)}\n[mcp_servers.project_probe.env]\nRUNWEFT_SMOKE_PROBE_LOG = ${JSON.stringify(projectProbeLog)}\n`);
         writeFileSync(join(cwd, '.mcp.json'), JSON.stringify({ mcpServers: { project_probe: projectProbe } }));
+        if (remote) {
+            git('lfs', 'install', '--local'); writeFileSync(join(cwd, '.gitattributes'), '*.bin filter=lfs diff=lfs merge=lfs -text\n');
+            writeFileSync(join(cwd, 'asset.bin'), Buffer.from('REMOTE BASELINE\0'.repeat(1024)));
+            const module = join(root, `${id}-module`), leaf = join(root, `${id}-leaf`);
+            const subgit = (directory: string, ...args: string[]) => { const out = spawnSync('git', ['-C', directory, ...args], { env, encoding: 'utf8' }); assert.equal(out.status, 0, out.stderr); };
+            for (const directory of [module, leaf]) {
+                mkdirSync(directory); subgit(directory, 'init', '-q'); subgit(directory, 'config', 'user.name', 'MCP Fixture'); subgit(directory, 'config', 'user.email', 'mcp@example.invalid'); subgit(directory, 'config', 'commit.gpgsign', 'false');
+                writeFileSync(join(directory, 'note'), directory === leaf ? 'nested module baseline' : 'module baseline'); subgit(directory, 'add', '.'); subgit(directory, 'commit', '-qm', 'module');
+            }
+            subgit(module, '-c', 'protocol.file.allow=always', 'submodule', 'add', leaf, 'leaf'); subgit(module, 'commit', '-qam', 'recursive module');
+            git('-c', 'protocol.file.allow=always', 'submodule', 'add', module, 'vendor/module');
+            git('-c', 'protocol.file.allow=always', 'submodule', 'update', '--init', '--recursive'); assert.equal(git('remote'), '');
+        }
         git('add', '.'); git('commit', '-qm', 'versioned project context'); baseline = git('rev-parse', 'HEAD'); git('tag', 'runweft-smoke-base');
         writeFileSync(join(cwd, 'parent-newer.txt'), 'newer parent commit\n'); git('add', '.'); git('commit', '-qm', 'parent advances beyond selected base');
         writeFileSync(join(cwd, 'parent-newer.txt'), 'parent uncommitted change\n');
+        if (remote) for (const [index, name] of ['input-first.txt', 'input-next.txt'].entries()) writeFileSync(join(cwd, name), inputMarkers[index]!);
         parentState = { head: git('rev-parse', 'HEAD'), index: git('write-tree'), status: git('status', '--porcelain') };
         if (retryFinish) {
             const hooks = join(root, `${id}-hooks`); mkdirSync(hooks); git('config', 'core.hooksPath', hooks);
@@ -119,27 +138,32 @@ async function runCase(spec: typeof cases[number], home: string) {
     }
     const cutLog = join(root, `${id}-cut.jsonl`);
     // Both real native hosts lose one MCP connection in Hub mode, on opposite runtime flavors.
-    const disconnect = !controls && mode === 'hub' && host !== flavor;
+    const disconnect = !remote && !controls && mode === 'hub' && host !== flavor;
     instrument(home, cutLog, disconnect);
     if (!worktree) assert.notEqual(spawnSync('git', ['-C', cwd, 'rev-parse', '--show-toplevel'], { env, stdio: 'pipe' }).status, 0);
-    const firstMessage = worktree
+    const firstMessage = remote
+        ? `这是专用远端 worktree 验收。使用 worktree-mcp skill，各调用一次 keep_probe/project_probe 的 probe_report。所有工程相对路径都相对于任务的真实 worktree cwd。读取本轮 input.txt 附件；用 Python 以二进制方式读取 cwd 下的 asset.bin（内含 NUL），读取 vendor/module/leaf/note，最终报告完整附件文本与 nested module baseline。附件使用任务提供的绝对路径，工程文件在 cwd 下，不需要搜索 /tmp 或其他运行目录。将 result.txt 写为 ${marker} 加换行，将 result.bin 写为附件原文重复 1024 次（UTF-8，不加换行）。只修改这两个文件，不提交、不委派。记住 ${memory}，不要将它写入文件。报告 WORKTREE_DONE、工程指令与 skill 标记。`
+        : worktree
         ? `这是专用独立工作区验收。使用本项目 worktree-mcp skill；各调用一次 keep_probe 和 project_probe 的 probe_report。在当前工作目录将 result.txt 写成 ${marker} 加一个换行，不修改其他文件、不自行提交。记住 ${memory}，不要把记忆标记写入任何文件。不调用子代理。最终报告 WORKTREE_DONE、工程指令标记和 skill 标记。`
         : `这是专用非 Git 共享目录验收。在当前目录只调用一次 keep_probe 的 probe_report，然后把文件 ${file} 的完整内容写成 ${marker} 加一个换行。记住 ${memory}，不要将此记忆标记写入任何文件。不要调用其他子代理。最终简短报告 SHARED_DONE。`;
-    const nextMessage = '这是下一轮纯报告任务：回忆上一轮明确要求记住、但不写入文件的标记，原样输出该标记和 RESUME_DONE。不要调用任何工具或读写文件。';
+    const nextMessage = remote ? '这是第二轮远端任务：回忆上一轮要求记住且不写入文件的 MEMORY_ 标记。读取本轮新的 input.txt 附件，将 round2.txt 写成附件全文加换行，将 round2.bin 写为附件原文重复 1024 次（UTF-8，不加换行）。不修改其他文件、不提交、不委派。报告完整附件文本、原记忆标记和 RESUME_DONE。'
+        : '这是下一轮纯报告任务：回忆上一轮明确要求记住、但不写入文件的标记，原样输出该标记和 RESUME_DONE。不要调用任何工具或读写文件。';
     const controlSteps = `${flavor === 'codex'
         ? '4. send_input(mode=next,message="先运行 sleep 30，再回复 SLOW_DONE，不修改文件、不委派。")。read_agent 直到该轮 inputs[0].observation.phase=accepted；然后恰好一次 send_input(mode=steer,round_id=该活跃轮次,message="本轮追加：最终报告必须包含 MCP_STEER_OK。")。wait 到 completed 后 read_agent 读取这轮报告。'
         : '4. 用第二轮 round_id 调用一次 send_input(mode=steer,message="验证不支持 steer")；预期返回 steer_unsupported。不要重试或改成其他任务。'}
 5. send_input(mode=next,message="运行 sleep 60，再回复 INTERRUPT_LATE，不修改文件、不委派。")。read_agent 直到这个新 round 的 inputs[0].observation.phase=accepted，然后立即 interrupt_agent(id,round_id=这个新轮次)。wait 到 interrupted，最后 read_agent 读取中断事实，再回复 CONTROLS_DONE。不要批准这轮 sleep，也不要自动再派生或重跑。`;
     const prompt = `你是专用 Runweft 协作验收主会话。只使用 runweft MCP 工具，不用 shell、内置 subagent 或其他 MCP。按顺序完成：
-1. list_agent_definitions，调用一次 spawn_agent，agent_type=${flavor}${worktree ? '，workspace_mode=worktree，base_ref=runweft-smoke-base' : ''}，message 必须原样照抄、不得补充上下文：${JSON.stringify(firstMessage)}。
-2. wait 等待该任务，每次 timeout_ms=30000；needs_attention 时 read_agent，respond_to_permission 只批准${worktree ? '对子任务 cwd 内 result.txt 的读写、工程指令/skill 读取、当前目录的只读 Git 检查以及 keep_probe/project_probe 调用' : `对 ${file} 的读写、当前 cwd 查询或 keep_probe 调用`}，其余停止并报告。${retryFinish ? '本夹具首轮 Git hook 会失败一次：read_agent 确认 git.status=needs_attention 且 native_status 为 completed 后，调用恰好一次 retry_finish，id/round_id 使用该首轮，然后继续 wait，不能重发任务或再次 spawn。' : ''}直到 completed，必须 read_agent 读取第一轮结果。
-3. 调用一次 send_input，mode=next，message 必须完整照抄这段，不能附加记忆标记或其他上下文：${JSON.stringify(nextMessage)}。继续 wait 到 completed，再 read_agent，确认包含 RESUME_DONE。
+1. list_agent_definitions，${remote ? 'upload_artifact 上传 input-first.txt，' : ''}调用一次 spawn_agent，agent_type=${flavor}${worktree ? '，workspace_mode=worktree，base_ref=runweft-smoke-base' : ''}${remote ? '，inputs=[{artifactId:刚上传对象ID,name:"input.txt"}]，outputs=[{name:"result.txt",relativePath:"result.txt"}]' : ''}，message 必须原样照抄、不得补充上下文：${JSON.stringify(firstMessage)}。
+2. wait 等待该任务，每次 timeout_ms=30000；needs_attention 时 read_agent，respond_to_permission 只批准${remote ? '读取本轮输入、asset.bin、子模块、工程指令/skill；在子任务 cwd 内生成约定的 result.txt/result.bin/round2.txt/round2.bin（可用 Python 或 shell）；只读 Git 查询及 keep_probe/project_probe 调用' : worktree ? '对子任务 cwd 内 result.txt 的读写、工程指令/skill 读取、当前目录的只读 Git 检查以及 keep_probe/project_probe 调用' : `对 ${file} 的读写、当前 cwd 查询或 keep_probe 调用`}，其余停止并报告。${retryFinish ? '本夹具首轮 Git hook 会失败一次：read_agent 确认 git.status=needs_attention 且 native_status 为 completed 后，调用恰好一次 retry_finish，id/round_id 使用该首轮，然后继续 wait，不能重发任务或再次 spawn。' : ''}直到 completed，必须 read_agent 读取第一轮结果。
+${remote ? '2.1 首轮完成后调用 fetch_result，read_agent 直到 code.fetch.status=available；不要仅凭 accepted 判断取回成功。' : ''}
+3. ${remote ? 'upload_artifact 上传 input-next.txt。' : ''}调用一次 send_input，mode=next${remote ? '，inputs=[{artifactId:新上传对象ID,name:"input.txt"}]，outputs=[{name:"round2.txt",relativePath:"round2.txt"}]' : ''}，message 必须完整照抄这段，不能附加记忆标记或其他上下文：${JSON.stringify(nextMessage)}。继续 wait 到 completed，再 read_agent，确认包含 RESUME_DONE。
+${remote ? '3.1 第二轮完成后 fetch_result，再 read_agent 直到 code.fetch.status=available。不要合码，不下载文件到主目录。' : ''}
 ${controls ? controlSteps : disconnect ? '4. 再 send_input 一次，mode=next，message="DISCONNECT_PROBE：请只运行 sleep 20，结束后回复 DISCONNECT_DONE，不修改文件、不委派。"。收到接受结果后调用 wait。该工具连接会被测试程序主动断开；出现传输错误后不要重试、不要再次派生、不要取消任务，直接结束回复 DISCONNECTED。后续由独立测试操作者收尾。' : '4. 完成后回复 MATRIX_DONE。'}
 只允许一次 spawn_agent。next 只排上述轮次，不修改 agent 定义。`;
     const item: any = { ...spec, cwd, file, marker, memory, baseline, parentState, disconnect, controls, worktree, retryFinish, calls: [], inventories: {}, approvals: [] }; evidence.cases.push(item);
     const calls = new Map<string, any>(), roundFacts = new Map<string, any>();
     const args = host === 'codex' ? ['exec', '--json', '--skip-git-repo-check', prompt]
-        : ['-p', '--output-format', 'stream-json', '--verbose', '--tools', '', '--allowedTools', 'mcp__runweft__*', '--max-turns', '40', prompt];
+        : ['-p', '--output-format', 'stream-json', '--verbose', '--tools', '', '--allowedTools', 'mcp__runweft__*', '--max-turns', remote ? '60' : '40', prompt];
     const child = spawn(host === 'codex' ? 'codex' : nativeClaude!, args, { cwd, env, stdio: ['ignore', 'pipe', 'pipe'] });
     assert(child.pid); pids.add(child.pid);
     let buffer = '', done = false, code: number | null = null, failure: Error | undefined;
@@ -173,7 +197,7 @@ ${controls ? controlSteps : disconnect ? '4. 再 send_input 一次，mode=next�
         child.once('exit', status => { code = status; done = true; resolve(); });
     });
     const soft = setTimeout(() => child.kill('SIGTERM'), 420_000), hard = setTimeout(() => child.kill('SIGKILL'), 430_000);
-    const paths = cli(home, ['paths']);
+    const paths = cli(remote ? targetHome : home, ['paths']);
     async function observe() {
         const listed = cli(home, ['task', 'list'], cwd).agents;
         assert(listed.length <= 1, 'Native host spawned more than one child task');
@@ -248,12 +272,38 @@ ${controls ? controlSteps : disconnect ? '4. 再 send_input 一次，mode=next�
         assert(reads.some((value: any) => value.round_id === second.round_id && value.status === 'completed'));
         if (worktree) {
             assert.notEqual(first.cwd, cwd); assert.equal(first.preparation.startHead, baseline); assert(first.git.checkpoint);
-            assert.equal(second.git.start_head, first.git.result_head); assert.equal(second.git.result_head, first.git.result_head); assert.equal(second.git.checkpoint, undefined);
+            assert.equal(second.git.start_head, first.git.result_head);
+            if (remote) { assert.notEqual(second.git.result_head, first.git.result_head); assert(second.git.checkpoint); }
+            else { assert.equal(second.git.result_head, first.git.result_head); assert.equal(second.git.checkpoint, undefined); }
             assert(first.report.text.includes(contextMarker)); assert(first.report.text.includes(skillMarker));
             assert(lines(projectProbeLog).some(value => value.event === 'call' && value.cwd === first.cwd), 'Project MCP was not actually called in prepared cwd');
             assert(!existsSync(join(first.cwd, 'parent-newer.txt'))); assert(!existsSync(file));
             assert.equal(git('rev-parse', 'HEAD'), parentState!.head); assert.equal(git('write-tree'), parentState!.index); assert.equal(git('status', '--porcelain'), parentState!.status);
-            assert.equal(git('show', `${current.git.result_ref}:result.txt`), marker);
+            let resultRef = current.git.result_ref;
+            if (remote) {
+                const fetches = item.calls.filter((call: any) => call.name === 'fetch_result'); assert.equal(fetches.length, 2);
+                assert.equal(first.code.fetch.status, 'available'); assert.equal(second.code.fetch.status, 'available');
+                assert.notEqual(first.environment.source.machineId, first.environment.remote.origin.machineId);
+                for (const [index, detail] of [first, second].entries()) {
+                    assert.equal(detail.code.status, 'available'); assert.equal(detail.artifacts.status, 'delivered');
+                    assert(detail.report.text.includes(inputMarkers[index]!)); assert(detail.input_files.paths.length === 1);
+                    assert.deepEqual(readFileSync(join(detail.cwd, index ? 'round2.bin' : 'result.bin')), Buffer.from(inputMarkers[index]!.repeat(1024)));
+                    const output = detail.artifacts.manifest.items[0];
+                    const downloaded = cli(home, ['artifact', 'download', output.artifactId, '--output', join(root, `${id}-round-${index + 1}.txt`)], cwd);
+                    assert.equal(readFileSync(downloaded.path, 'utf8'), (index ? inputMarkers[index] : marker) + '\n');
+                }
+                // Subsequent offline recovery is a public CLI action against the same native-host task.
+                cli(targetHome, ['stop']); git('checkout', '--detach');
+                for (const ref of git('for-each-ref', '--format=%(refname)', 'refs/heads').split('\n').filter(Boolean)) git('update-ref', '-d', ref);
+                const indexBefore = readFileSync(join(cwd, '.git/index')), configBefore = readFileSync(join(cwd, '.git/config'));
+                cli(home, ['task', 'result', 'fetch', current.agent_id, '--round', current.round_id], cwd);
+                const fetched = await until(() => cli(home, ['task', 'result', 'show', current.agent_id, '--round', current.round_id], cwd),
+                    value => { const fetch = value.fetches.at(-1); if (fetch?.status === 'failed') throw new Error(JSON.stringify(fetch.error)); return fetch?.status === 'available' && fetch.released; }, 'offline result recovery');
+                resultRef = fetched.code.ref; assert(resultRef);
+                assert.deepEqual(readFileSync(join(cwd, '.git/index')), indexBefore); assert.deepEqual(readFileSync(join(cwd, '.git/config')), configBefore);
+                item.offlineRecovery = fetched; cli(targetHome, ['start']);
+            }
+            assert.equal(git('show', `${resultRef}:result.txt`), marker);
             const retries = item.calls.filter((call: any) => call.name === 'retry_finish');
             assert.equal(retries.length, retryFinish ? 1 : 0);
             if (retryFinish) {
@@ -263,9 +313,15 @@ ${controls ? controlSteps : disconnect ? '4. 再 send_input 一次，mode=next�
                 assert.equal(readFileSync(hookLog, 'utf8'), 'failed\nretry\n');
             }
             // Explicit fixture operator integration; task execution itself never merges or pushes.
-            git('cherry-pick', current.git.result_ref); assert.equal(readFileSync(file, 'utf8'), marker + '\n');
+            if (remote) {
+                git('merge', '--no-edit', resultRef); git('lfs', 'checkout');
+                assert.deepEqual(readFileSync(join(cwd, 'result.bin')), Buffer.from(inputMarkers[0]!.repeat(1024)));
+                assert.deepEqual(readFileSync(join(cwd, 'round2.bin')), Buffer.from(inputMarkers[1]!.repeat(1024)));
+                assert.equal(readFileSync(join(cwd, 'vendor/module/leaf/note'), 'utf8'), 'nested module baseline');
+            } else git('cherry-pick', resultRef);
+            assert.equal(readFileSync(file, 'utf8'), marker + '\n');
             assert(existsSync(first.cwd)); assert.equal(current.git.retained, 'retained');
-            item.integration = { before: parentState!.head, after: git('rev-parse', 'HEAD'), resultRef: current.git.result_ref };
+            item.integration = { before: parentState!.head, after: git('rev-parse', 'HEAD'), resultRef };
         }
         if (controls) {
             const interrupts = item.calls.filter((call: any) => call.name === 'interrupt_agent'); assert.equal(interrupts.length, 1);
@@ -293,7 +349,7 @@ ${controls ? controlSteps : disconnect ? '4. 再 send_input 一次，mode=next�
             assert(!alive(cut[0].pid)); assert(!alive(cut[0].childPid));
         }
         item.success = true;
-        console.log(`PASS ${id}: ${worktree ? 'prepared Git edit, project context/skill/MCP, sealed results and operator cherry-pick' : 'shared edit'}, memory resume, pure report, MCP filtering, native stop${disconnect ? ', real host transport cut' : controls ? ', MCP steer/interrupt' : ''}${retryFinish ? ', native MCP retry_finish' : ''}`);
+        console.log(`PASS ${id}: ${remote ? 'remote automatic preparation, two-round inputs/outputs and Git/LFS edits, native MCP fetch, offline CLI recovery and explicit merge' : worktree ? 'prepared Git edit, project context/skill/MCP, sealed results and operator cherry-pick' : 'shared edit'}, memory resume${remote ? '' : ', pure report'}, MCP filtering, native stop${disconnect ? ', real host transport cut' : controls ? ', MCP steer/interrupt' : ''}${retryFinish ? ', native MCP retry_finish' : ''}`);
     } finally {
         item.calls = [...calls.values()]; item.roundFacts = [...roundFacts.values()]; clearTimeout(soft);
         if (!done) { child.kill('SIGTERM'); await exited; } clearTimeout(hard);
@@ -304,15 +360,21 @@ ${controls ? controlSteps : disconnect ? '4. 再 send_input 一次，mode=next�
 console.log(`Evidence directory: ${root}`);
 try {
     cli(local, ['init']); cli(local, ['config', 'set', 'server.port', String(await freePort())]); homes.push(local);
+    if (remote) cli(local, ['config', 'set', 'server.runner', 'false']);
     const service = cli(local, ['start']);
     token = JSON.parse(readFileSync(join(local, 'server/hapi/settings.json'), 'utf8')).cliApiToken; assert(token);
     hapi = new HapiClient(service.url, token);
+    if (remote) {
+        assert.equal((await hapi.request('/api/machines')).machines.length, 0);
+        cli(targetHome, ['init', '--url', service.url]); cli(targetHome, ['auth', 'login', '--token-stdin'], root, token); homes.push(targetHome); cli(targetHome, ['start']); cli(targetHome, ['machine', 'register']);
+    }
     for (const mode of ['local', 'hub'] as const) {
+        if (remote && mode === 'local') continue;
         if (selected && !selected.startsWith(mode + '-')) continue;
         const home = mode === 'local' ? local : hub;
         if (mode === 'hub') { cli(home, ['init', '--url', service.url]); cli(home, ['auth', 'login', '--token-stdin'], root, token); homes.push(home); cli(home, ['start']); }
         cli(home, ['machine', 'register']);
-        for (const flavor of ['codex', 'claude']) { const runtime = cli(home, ['runtime', 'register', flavor]).runtime; cli(home, ['agent', 'init', flavor, '--runtime', runtime.id]); }
+        for (const flavor of ['codex', 'claude']) { const runtime = cli(remote ? targetHome : home, ['runtime', 'register', flavor]).runtime; cli(home, ['agent', 'init', flavor, '--runtime', runtime.id]); }
         for (const spec of cases.filter(spec => spec.mode === mode && (!selected || selected === spec.id))) await runCase(spec, home);
     }
     evidence.success = true;

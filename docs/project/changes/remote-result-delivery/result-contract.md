@@ -1,6 +1,6 @@
 # 代码成果与取回契约
 
-> 来源：[Technical](technical.md)；状态：T1–T5 已实现机器导出/取回、中心清单、CLI/MCP、正式远端委派及显式释放；完整原生 MCP 矩阵与候选安装在 T6 验收。
+> 来源：[Technical](technical.md)；状态：机器导出/取回、中心清单、CLI/MCP、正式远端委派及显式释放已实现；完整原生 MCP 矩阵与候选安装已通过，见[验收](acceptance.md)。
 
 ## 身份与不变事实
 

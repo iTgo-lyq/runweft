@@ -11,7 +11,9 @@ const packageRoot = resolve(process.argv[2] ?? 'dist/packages');
 const workspaceFixtures = JSON.parse(process.env.RUNWEFT_SMOKE_WORKTREE_EVIDENCE ?? '[]');
 const artifactFixture = process.env.RUNWEFT_SMOKE_ARTIFACT_EVIDENCE;
 const remotePreparation = process.env.RUNWEFT_SMOKE_REMOTE_PREPARATION === '1';
+const remoteFixtures = JSON.parse(process.env.RUNWEFT_SMOKE_REMOTE_EVIDENCE ?? '[]');
 assert(Array.isArray(workspaceFixtures) && workspaceFixtures.every(file => typeof file === 'string'));
+assert(Array.isArray(remoteFixtures) && remoteFixtures.every(file => typeof file === 'string'));
 const index = JSON.parse(readFileSync(join(packageRoot, 'index.json'), 'utf8'));
 const smokeRoot = resolve(process.env.RUNWEFT_SMOKE_ROOT ?? '.dev-smoke');
 mkdirSync(smokeRoot, { recursive: true });
@@ -75,6 +77,7 @@ try {
     assert(guide.includes('retry-finish')); assert(guide.includes('task workspace remove')); assert(guide.includes('Git common directory'));
     assert(guide.includes('upload_artifact')); assert(guide.includes('task artifacts release'));
     assert(guide.includes('workspace prepare')); assert(guide.includes('workspace release'));
+    assert(guide.includes('task result fetch')); assert(guide.includes('task result release'));
     assert(requests.includes('/runweft'));
     assert(requests.some(path => path.endsWith(`${platformName}-${index.version}.tgz`)));
     for (const file of ['bin/runweft', 'bin/hapi', 'HAPI-LICENSE', 'HAPI-NOTICE', 'SOURCES.txt', 'hapi-source.tar.gz']) assert(existsSync(join(platformDirectory, file)), `Missing packaged ${file}`);
@@ -84,7 +87,7 @@ try {
     evidence.checks.push('npm registry metadata and platform optional dependency installation');
     const help = spawnSync(cli, ['task', '--help'], { env: cleanEnv, cwd: consumer, encoding: 'utf8' });
     assert.equal(help.status, 0, help.stderr);
-    for (const command of ['spawn', 'list', 'show', 'wait', 'send', 'interrupt', 'permission', 'retry-finish', 'workspace']) assert(help.stdout.includes(command));
+    for (const command of ['spawn', 'list', 'show', 'wait', 'send', 'interrupt', 'permission', 'retry-finish', 'workspace', 'result']) assert(help.stdout.includes(command));
     const spawnHelp = spawnSync(cli, ['task', 'spawn', '--help'], { env: cleanEnv, cwd: consumer, encoding: 'utf8' });
     assert.equal(spawnHelp.status, 0, spawnHelp.stderr);
     assert(spawnHelp.stdout.includes('--workspace-mode')); assert(spawnHelp.stdout.includes('--base'));
@@ -106,6 +109,10 @@ try {
         // Bun runs the acceptance harness only; both service executables come from npm.
         await command('bun', [resolve('scripts/smoke-workspace-preparation.ts'), cli, join(platformDirectory, 'bin/hapi')], { cwd: process.cwd(), env });
         evidence.checks.push('installed CLI prepares, queries and releases remote diagnostic workspaces across Hub restarts; shared Git/LFS recovery objects and cache protection verified');
+    }
+    if (remoteFixtures.length) {
+        await command('bun', [resolve('scripts/smoke-remote-package.ts'), cli, join(platformDirectory, 'bin/hapi'), ...remoteFixtures.map(file => resolve(file))], { cwd: process.cwd(), env });
+        evidence.checks.push('installed CLI preserves completed native remote tasks across restart, downloads both rounds and fetches code with executor offline without model replay');
     }
     if (workspaceFixtures.length) {
         await command(process.execPath, [resolve('scripts/smoke-worktree-package.mjs'), cli, ...workspaceFixtures.map(file => resolve(file))], { cwd: process.cwd(), env: cleanEnv });

@@ -71,3 +71,13 @@
 - 实际清理：`bun run test:result-retention .dev-smoke/remote-tasks-native-DGZxg9` 复用 T4 已完成两种 runtime 各两轮的专用现场；`.dev-smoke/result-retention-qMZipR/evidence.json` success、cleanupErrors=[]。公开编译 CLI 预览/释放一轮，其他轮次和旧/新 LFS pin 保留；第一任务移除后共享 cache 存在，第二任务移除后真实 checkout/cache 均消失。目标 Runner 停止后再次取回两份最终代码成功，主库 refs/index/config 字节保持，最后解除剩余中心恢复引用；原生 session 集合不变，没有新增模型调用。该脚本会清理传入的专用测试环境，不用于用户数据。
 - 实际回归：新的 HAPI pin 下 C9 `.dev-smoke/workspace-preparation-xCj3QZ/evidence.json` success、cleanupErrors=[]，覆盖 103 个文件、共享和跨快照消费者、重启、离线、dirty/ignored 保护及最终 cache 删除。验证均为同机多进程；T6 继续真实 MCP 委派矩阵与四平台候选安装。
 - Commit：HAPI `remote-result-delivery T5: release exact sealed refs and retire owned caches`；Runweft `remote-result-delivery T5: release retained code and remote environments explicitly`
+
+
+## T6 完整原生协作与候选安装
+
+- 结果：扩展既有 collaboration 验收脚本的 remote 分支；两宿主 × 两 runtime 四组均通过原生 MCP 两轮委派、输入/输出、Git/LFS 与递归未变模块、fetch、session 续接、进程停止和保留 worktree。每组执行端停机、源分支删除后由公开 CLI 再次取回，保护主库 index/config/dirty 后显式 merge。中心无 Runner，source/target 为不同机器身份和数据根；逐组证据见[验收](acceptance.md#原生矩阵)，全部 success=true、cleanupErrors=[]。
+- 本地回归：`.dev-smoke/collaboration-ObEUnr/evidence.json` 与 `.dev-smoke/worktree-mcp-GmaTIy/evidence.json` 成功，分别真实 local Codex→Codex shared、Claude→Claude worktree 两轮；后者检查 checkpoint、纯报告无空提交、工程 skill/MCP 与操作者 cherry-pick。C9 最终配套实际回归复用 T5 成功证据，未因代码未变重复运行。
+- 源码与构建：根最终 `bun test ./test` 158 pass / 0 fail、3513 断言，typecheck/diff 检查通过。HAPI 未在 T6 改动，复用 T5 全包结果及已说明的唯一环境失败。四平台 HAPI 和 Runweft private 候选构建成功，保持固定 HAPI revision；无发布。
+- 安装：`.dev-smoke/install-H1OwUN/evidence.json` success。通过专用本地 npm registry 安装平台包，在 Node-only PATH 验证托管服务、HAPI Web/协议、认证、Runner、重启、数据/配置保留和卸载。新 `smoke-remote-package.ts` 复用两组已结束的原生远端任务：安装产物重启中心和发起端、查询两轮、下载两份输出，执行端离线取回代码，主库 index/config 不变、原生 session 集合未增加；`.dev-smoke/remote-package-ZvgvPh/evidence.json` success、cleanupErrors=[]。
+- 修正与边界：首次 Codex→Claude 测试因越出夹具读取范围的命令被正确 abort，补明 cwd 与二进制读取指令后通过；不放宽默认权限。安装断言同步 doctor 新路径，并等待 HAPI 已有历史心跳离线超时，未改产品状态。Linux x64 真实原生及同机多 Runner 证据不冒称物理跨机或其他 OS 新功能验收；逐项映射与已知 HAPI 测试失败见验收。
+- Commit：`remote-result-delivery T6: verify native remote collaboration and candidate installation`

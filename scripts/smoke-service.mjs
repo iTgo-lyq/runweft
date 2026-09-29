@@ -66,7 +66,12 @@ try {
     assert.equal(diagnosis.ok, true); assert.equal(diagnosis.modelAuthentication, 'not_checked');
     assert.equal(paths.taskWorkspaces, join(paths.hapiClient, 'workspaces', 'environments'));
     assert.deepEqual(diagnosis.checks.find(check => check.name === 'task_workspaces'), {
-        name: 'task_workspaces', ok: true, detail: { root: paths.taskWorkspaces, checkoutCount: 0, scope: 'current_connection_on_this_machine' },
+        name: 'task_workspaces', ok: true, detail: {
+            root: paths.taskWorkspaces, checkoutCount: 0, scope: 'current_connection_on_this_machine',
+            repositoryCaches: paths.repositoryCaches, repositoryExports: paths.repositoryExports,
+            repositoryFetches: paths.repositoryFetches,
+            cleanup: 'task result release → task workspace remove → artifact prune/remove；查询任务确认操作结束，不直接删除这些目录。',
+        },
     });
     assert(!existsSync(paths.taskWorkspaces), 'Diagnostics created a task workspace');
     assert(diagnosis.ignoredEnvironment.includes('HAPI_HOME'));
