@@ -30,3 +30,25 @@
 **限制：** 托管目录保留不等于成果已交付。GC 完整删除路径主要核对归属、活跃状态和生命周期，不能从 checkout 对脏文件/未推送提交的保护推导出它们永久免于回收。`Environment.Cleanup` 虽有删除 workdir 的实现，但源码注明生产路径不调用它、由 GC 回收；不能据此判断每轮结束会立即删目录。
 
 用户于 2026-09-29 确认轮次结束保留 worktree 供续接，随后另行明确确认独立 worktree 自动 checkpoint 与默认 Git bundle 传输。这些是 Runweft 产品决策，不是 Multica 源码行为或已实现结论。
+
+## 2026-09-30 实现前复核
+
+基于当前配套 HAPI `0d7618c3fe7d20ac10be2954e57a00d59431bba9` 和 Runweft C9 归档状态复核：
+
+- HAPI WorkspaceManager 已持久封存 base/start/result/ref 和停止依据；RepositoryManager 已从固定来源导出完整根/模块 bundle 和 LFS，RepositoryCache 在独立空库验证 bundle/fsck/清单后导入。缺口是“从受管成果直接导出并带验证回执”和“只向原主仓库导入成果对象/专用引用”，不需要新的执行器或原生 adapter。
+- `resolveSource` 要求有工作树，不能直接把导入的 bare sourcePath 当成果导出 cwd。使用受管 checkout 根及已封存 resultRef 可准确导出，也不依赖业务 cwd 是否仍存在。next round 应在不可变候选捕获后放行，不能让上传重试依赖后来变化的 checkout。
+- 当前 cache 回收拒绝任何非初始成果，即使中心已经发布；需要公共 remove 的明确成果 ref 释放事实，保持默认本机行为与未知 ref 保护。业务层不能靠直接删 cache 绕过。
+- RemoteBaselines 的 consumer 目前都绑定一个目标 import；结果对输入基线的依赖只需要中心保留，不应因此永久占住目标缓存。评审后采用代码清单直接 pin 依赖文件，不新建 result consumer 或修改 importId；诊断与任务仍共享同一个 baselines 实例及锁。
+- TaskCoordinator 的 prepare/finalize/stop/resume 与 TaskFiles/TaskOutputs 可继续使用。跨机拒绝位于客户端、accept 和 queued；只在基线、交付、取回、清理形成闭环后解除。schema 中 base 默认值不能抹掉远端用户是否明确指定基线的事实。
+
+专用无模型实验 `.dev-smoke/c10-result-research-14IO6t/evidence.json` **success=true**：真实调用现有 HAPI 导出/导入/prepare/finalize，在源路径与模块 URL 不可用时，修改二进制 LFS 并封存，从受管 resultRef 导出；独立接收库验证完整成果与初始 base 祖先关系。随后隐藏执行端，删除原主分支，制造主目录 staged/unstaged/untracked 内容，再用验证后的 Git 对象导入专用 ref、LFS 及缺失模块对象库；主 HEAD/config/index/文件/status 保持相同且没有 FETCH_HEAD 写入。恢复的未初始化模块可在后续显式 `submodule update --init --no-fetch` 中正确检出，无需原 URL。
+
+首次实验 `.dev-smoke/c10-result-research-pUklk0/evidence.json` 在上述取回不变性检查通过后，模块的显式初始化失败：简单复制 bare cache 会留下 core.bare=true，Git 后续设置 core.worktree 后配置冲突。修正只对新创建的原生模块对象库设置 core.bare=false；不改已有模块/主仓库配置，再验通过。嵌套、重复 module name、已有自定义 storage 和故障恢复由正式 T2 覆盖，不能用这一个模块实验宣称完整应用验收。
+
+该脚本使用 Bun 直接加载 HAPI 源文件，退出时报告 tsconfig directory mismatch 内部警告，但修正实验 exit=0、全部断言和 evidence 成功；正式配套编译程序与 RPC 的验收仍须逐任务执行。
+
+消费者迁移原语实验 `.dev-smoke/c10-consumer-migration-34tvyf5h/evidence.json` **success=true**：复制已停止的 C9 真实 v5 业务库，在事务内将 repository_consumers.importId 放宽为 nullable，14 张原表、11 条原行逐项保持不变，插入只保护中心的 result consumer 后 foreign_key_check 仍为空。实验仅证明该形式可行；评审后选择直接文件 pin，不采用 nullable consumer 迁移。正式 v6 只新增代码结果表，T3 用包含既有任务/附件的 v5 数据验证旧表/行全部保留。
+
+方案据此选择完整成果快照，复用 C9 的导出/独立验证/文件通道；同结果 HEAD 复用快照，LFS 按内容复用。初始设计中的增量 bundle 是建议而非已确认交付条件，本轮不增加增量前置链。中心继续无 Git/Runner：可信机器导出回执提供 Git 语义验证，中心核对封存关联、清单和持久文件，取回端再次独立验证；不能把字节上传成功等同于语义或业务验收。
+
+评审复核补充：完整 Git bundle 只含 LFS 指针，不含初始基线中后来被替换或删除的 LFS 字节。去掉 result consumer 后，代码清单须内嵌基线与成果两端的恢复文件映射、直接 pin 去重集合；不能把“完整 Git 历史”误写成“全部旧 LFS 已在结果包”。模块 bundle 可按固定 commit/format/映射复用已验证 artifact，保留原 bundleRef/摘要，不以重新打包得到的随机 hash 判断内容身份。
