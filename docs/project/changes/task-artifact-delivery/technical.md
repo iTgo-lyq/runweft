@@ -29,7 +29,7 @@ MCP 提供本机路径上传、对象元数据/下载，以及 task 的 input/ou
 
 轮次 preparing 调用 HAPI 机器文件 materialize，异步受理后按 operation ID 查询。Runner 通过 `/cli` 同 namespace HTTP 下载并核验，返回本机文件路径与准备引用，materialize 不绑定 cwd。shared 不更改源目录；worktree 继续调用公共 Git prepare 传入这些本地文件并使用它返回的最终输入映射，成功后释放中间下载副本。
 
-共享目录的 spawn/resume 使用可选 preparedFiles，沿 shared schema、回执指纹、metadata、Hub/RPC 和 Runner；独立 worktree 只使用既有 preparedWorkspace，其 inputs 校验不再与 preparedFiles 重复。Runner 在启动前验证当前目录及相应准备凭据和摘要，再进入原有原生启动函数；新一轮 resume 显式传当前准备引用。能力缺失时在派生前拒绝，未携带附件的原有启动不变。只改外围启动参数与门禁，不修改 Codex/Claude runtime 执行循环。
+共享目录的 spawn/resume 使用可选 preparedFiles，沿 shared schema、回执指纹、metadata、Hub/RPC 和 Runner；独立 worktree 只使用既有 preparedWorkspace，其 inputs 校验不再与 preparedFiles 重复。Runner 在启动前验证当前目录及相应准备凭据和摘要，再进入原有原生启动函数；新一轮 resume 显式传当前准备引用，没有输入则传 null 清除旧绑定；普通 HAPI 省略该字段仍继承。能力缺失时在派生前拒绝，未携带附件的原有启动不变。只改外围启动参数与门禁，不修改 Codex/Claude runtime 执行循环。
 
 ### 输出
 
@@ -55,7 +55,7 @@ JWT `/api` 与 CLI token `/cli` 各沿现有 namespace 规则，业务任务归�
 
 ## 就绪性与验证
 
-调用/存储/身份/准备/续接入口已从当前源码核对；无必须询问用户的外部契约。新增流式对象与 preparedFiles 尚未实现，其真实 HTTP/Runner 验证安排在前两项。独立会话关闭、>68 MiB 文件、错误摘要/配额、断线重试、pin/delete 竞争、跨 namespace、路径逃逸、部分清单与旧版本稳定均须实际验证。
+调用/存储/身份/准备/续接入口已从当前源码核对；无必须询问用户的外部契约。T1–T2 已完成流式对象与 preparedFiles 的真实 HTTP/Runner 和原生读取验证，证据见 [Execution](execution.md)；任务关联、输出清单与留存仍待后续任务。独立会话关闭、>68 MiB 文件、错误摘要/配额、断线重试、pin/delete 竞争、跨 namespace、路径逃逸、部分清单与旧版本稳定均须按阶段实际验证。
 
 真实 Codex/Claude 在本地和同机 Hub 接入 CLI/MCP，确认输入可读、默认权限继承、输出可下载及子工具仍禁用。T2 先实测两 runtime 读取程序已准备的输入；Claude 如要求额外目录授权，Runner 仅将当前输入目录沿已有 --add-dir / claudeArgs 通道转交，不覆盖 permissionMode、不改 runtime 循环。其他任意目录仍沿原生审批，不扩大为 home。已核对 HAPI 参数过滤器保留 --add-dir，实际效果须用模型探针确认。实际跨机验收不在本 Change 冒称通过。
 

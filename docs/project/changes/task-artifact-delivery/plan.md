@@ -29,7 +29,7 @@
 
 ### T2 机器输入准备与原生读取门禁
 
-- 状态：待开始
+- 状态：已完成
 - 依赖：T1。
 - 交付：既有 Runner/API 的 materialize/inspect/release、持久回执与统一 inputs；shared 的 preparedFiles 贯穿启动/续接 schema、指纹、metadata、Hub/RPC、Runner 与 Runweft ExecutionClient，worktree 复用 prepare.inputs。共享安全 Unicode 输入名 schema，当前输入目录必要时走既有 --add-dir 通道。
 - 验收：无需 agent 的真实 Runner 可准备输入，耗时操作快速受理、断网/重启可查原回执。两 runtime 各有真实模型探针读取本轮输入，确认原生默认权限和项目配置；worktree 的中文/空格名称通过。准备失效的 spawn/resume 在 childStarted=false 阶段拒绝，纯文字和无关会话不受影响。

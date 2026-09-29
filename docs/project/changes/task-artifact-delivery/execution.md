@@ -29,3 +29,14 @@
 - HAPI：独立 Commit `Add persistent namespace files with verified streaming and retention references`（`61f42c3a140bccad6a5a3128892ac8bc2f4d5b47`），root pin 已同步。
 - 后续：T2 接通机器输入与原生读取，T3–T6 才接任务/MCP、输出和留存清理；本任务没有提前暴露这些能力。
 - Commit：`task-artifact-delivery T1: ship verified session-free file storage and CLI`
+
+## T2 机器输入准备与原生读取门禁
+
+- 结果：既有机器 HTTP/RPC 接通 materialize/inspect/release，Runner 在连接 HAPI 数据根保存回执和输入；异步受理、流式核验、取消与断线失败可查询，同请求显式重试，释放后不能复活。shared 的 preparedFiles 贯穿请求指纹、Hub metadata/adoption、RPC 和 Runner 启动门禁；worktree 继续使用 prepare.inputs/preparedWorkspace，统一支持安全中文/空格名称且拒绝重复名称。输入释放要求关联执行停止，启动前缺失/摘要错误/已释放均返回 childStarted=false。Claude 仅通过已有 --add-dir 接收本次输入目录，未改 runtime 循环和权限模式。
+- 续接：省略 preparedFiles 继承原绑定，新引用替换，显式 null 清除以支持无新附件的下一轮；确定的输入拒绝保留 archived 与旧绑定。Runweft ExecutionClient 透传此契约。真实探针发现 RPC 原有错误码过滤漏传 files_not_prepared，已补齐并新增 RPC 边界回归，不能将确定拒绝误报为结果未知。
+- 原生验证：`bun scripts/smoke-inputs.ts --source hapi/cli/dist-exe/bun-linux-x64-baseline/hapi` 通过，两 runtime 各两轮真实读取准备文件中的随机值、加载项目指令；第二轮保持同一 HAPI/native session，受控子执行仍禁用 runweft MCP。已释放输入续接失败，无输入显式清除后正常续接。证据 `.dev-smoke/inputs-native-g80VEV/evidence.json`，success=true、cleanupErrors=[]，记录的四个执行 PID 均已退出。测试未传权限覆盖；Codex 继承本环境实际 yolo，Claude 为原生 default，不把此证据宣称为 Codex 严格沙箱验证。
+- 编译验证：独立 HAPI Commit 后更新 root pin 并构建配套 Linux x64。`bun run test:inputs dist/runweft dist/hapi --machine-only` 通过真实 72 MiB Hub→Runner 下载、重启查原回执、worktree 准备中文/空格名输入、释放中间副本后 worktree 文件 hash 不变、未执行工作区封存与清理。证据 `.dev-smoke/inputs-native-yvvmnc/evidence.json`，success=true、cleanupErrors=[]；没有启动模型。不重复已通过且代码未变的模型轮次；最终四平台组合安装仍在 T6。
+- 检查：root typecheck 通过、全量 105 pass；HAPI 跨包 typecheck 通过、fixturegen 无变化。CLI 聚焦 69 pass，覆盖真实文件/HTTP 断流取消、重启未知状态、hash/路径/引用门禁及 Git 输入；CLI 全量 2990 pass/11 skip，唯一失败仍为已记录的 `/tmp/.git` 导致 skills 非 Git 用例失败。Web 3249 pass、Shared 323 pass、Relay 118 pass。Hub 全量 1404 pass/3 skip/1 fail，失败为新增可选位置参数后的旧调用断言；修正该断言并补 RPC 错误码回归后，受影响 Hub 三组共 69 pass/253 assertions。日志 `.dev-smoke/artifact-t2-*.log`。
+- HAPI：独立 Commit `Prepare persistent machine inputs before native spawn and resume`（`96acb4c1fce3badd7b79077caf6c055b64a8c467`），root pin 已同步。
+- 后续：T3 接通实际 task spawn/next 输入、任务引用与接受意图；当前机器准备接口不等于任务附件业务已交付。
+- Commit：`task-artifact-delivery T2: prepare machine inputs before native execution`

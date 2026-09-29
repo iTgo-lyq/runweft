@@ -5,7 +5,7 @@
   "type": "module",
   "packageManager": "bun@1.4.2",
   "hapi": {
-    "revision": "61f42c3a140bccad6a5a3128892ac8bc2f4d5b47",
+    "revision": "96acb4c1fce3badd7b79077caf6c055b64a8c467",
     "version": "0.30.7",
     "protocolVersion": 1
   },
@@ -29,7 +29,8 @@
     "build": "bun scripts/build.ts",
     "build:hapi": "bun scripts/build-hapi.ts",
     "package": "bun scripts/package.ts",
-    "test:artifacts": "bun scripts/smoke-artifacts.ts"
+    "test:artifacts": "bun scripts/smoke-artifacts.ts",
+    "test:inputs": "bun scripts/smoke-inputs.ts"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.25.1",

@@ -1,6 +1,6 @@
 # 文件对象、机器传输与任务关联契约
 
-> 属于 [Technical](technical.md) 的正式设计；尚未实现。
+> 属于 [Technical](technical.md) 的正式设计；分阶段实现状态见 [Execution](execution.md)。
 
 ## 1. 中心对象
 
@@ -48,7 +48,7 @@ SQLite 保存对象和 references，字节保存到 `HAPI_HOME/artifacts/<namesp
 
 materialize/capture/deliver/release 不是一般脚本执行或可配置 workflow；复用 Runner 生命周期、PathPolicy、固定 Hub URL/token 和已有连接。API 不接受 shell 命令、任意环境或外部下载地址。
 
-preparedFiles 为 `{operationId}`，绑定当前 Runner 的 materialize 结果和摘要，仅共享目录的 spawn/resume 保存并核验它；新一轮传当前引用，缺失/失败/已释放引用明确拒绝。worktree 公共 prepare 接收落地 path/hash/size，使用既有 preparedWorkspace 门禁和复制后的路径，成功后释放 materialize 副本。两种模式在原 Runner 启动点各用一个门禁。准备文件目录可沿既有 Claude --add-dir 参数传递，T2 先真实验证读取，不新增权限模式或 runtime 循环。
+preparedFiles 为 `{operationId}`，绑定当前 Runner 的 materialize 结果和摘要，仅共享目录的 spawn/resume 保存并核验它；新一轮传当前引用，缺失/失败/已释放引用明确拒绝。resume 省略 preparedFiles 时继承原绑定，显式 null 清除绑定，用于下一轮没有新输入的情况。worktree 公共 prepare 接收落地 path/hash/size，使用既有 preparedWorkspace 门禁和复制后的路径，成功后释放 materialize 副本。两种模式在原 Runner 启动点各用一个门禁。准备文件目录可沿既有 Claude --add-dir 参数传递，T2 先真实验证读取，不新增权限模式或 runtime 循环。
 
 ## 4. Runweft 业务记录
 
