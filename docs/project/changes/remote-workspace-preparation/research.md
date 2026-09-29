@@ -100,3 +100,16 @@ Git LFS 3.3.0 在源仓库执行 `ls-files --json` 时可能补写 `lfs.reposito
 已冻结 source 的重新校验跳过 dirty 刷新，避免 Git status 通过 LFS clean 重新创建源对象；只有身份和固定 commit 参与校验，保留最初 dirty 提示。现有本机 resolve 默认行为不改。
 
 HTTP 故障探针最初只调用 Bun Node HTTP ServerResponse.destroy，实际并未可靠断开 socket，因此“应该收到连接错误”的断言失败。补充代理请求记录并显式关闭 socket 后，确认只有一条 export 转发、调用方收到 connection_failed，随后查询及重启恢复同一操作。不能把第一次现象归因为客户端自动重试；HapiClient 本身不重放不确定业务 POST。
+
+
+## 2026-09-30 T2 实现验证发现
+
+仅通过命令级 `-c submodule.<name>.url=<cache>` 做 update，会把文件检出，但不会持久登记初始化状态。第一次真实 Hub/双 Runner probe 的 prepare 成功，公共 finalize 却因 `submodule status` 仍为未初始化而失败，见 `.dev-smoke/repository-import-x9S0is/evidence.json`；服务均已停止、无原生会话。
+
+修正为受管 bare 开启 `extensions.worktreeConfig`，把 bare 的 `core.bare=true` 移到自身 `config.worktree`；每个 checkout 用 `git config --worktree` 登记模块 URL/active，并继续逐层显式 checkout 与禁用网络 fetch。这样同来源缓存的不同环境不会相互改写模块登记；原有公共 status/finalize/remove 可以直接识别，未增加第二套封存逻辑。两层重名模块、根改动封存再准备的聚焦测试，以及真实 RPC 的封存、重启、续接、删除另一个环境均通过。
+
+只安装 git-lfs 可执行文件，不等于已经设置全局过滤器。导入/准备只在自有 cache/模块配置 `git lfs install --local --skip-repo --skip-smudge` 与本地 storage，不安装 hooks、不改全局配置。禁用全局/system Git 配置的真实测试验证初始 LFS、变更 LFS 封存、下一轮复用实体和损坏实体拒绝；没有 lfs pull 回退。Git clean 和 LFS checkout/downloaded 组合拒绝 pointer-only 启动，不依赖某个单一错误码。
+
+完整导入必须进入独立空库，即使共享 cache 已具备历史对象。测试用同一基线生成带 prerequisite 的增量 bundle 并更新正确摘要，目标仍在空库验证阶段拒绝，已有成功快照不受影响。导出与导入共用固定 gitlink/LFS 枚举助手。
+
+实际无模型闭环 `.dev-smoke/repository-import-vfcKCF/evidence.json`：Hub 无 Runner；源端 capture/deliver 后移走所有源 fixture 路径、释放 export/spool 并停止源 Runner；另一身份与数据根 materialize/import，再释放下载副本；两独立工作树准确读取子目录和模块二进制 LFS；重启查询原 import、从封存成果准备下一轮，移除另一干净工作树后保留缓存 refs。success=true、cleanupErrors=[]。这是同机独立 Runner 验证，不能替代跨物理机器或原生 agent 验收。

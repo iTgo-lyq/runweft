@@ -5,7 +5,7 @@
   "type": "module",
   "packageManager": "bun@1.4.2",
   "hapi": {
-    "revision": "20f10899c49db4f2ac431eb66bef45ba24a3d0fd",
+    "revision": "1d55d5d91e05c6df31493b7425abe64babdf09a4",
     "version": "0.30.7",
     "protocolVersion": 1
   },
@@ -37,7 +37,8 @@
     "test:artifact-prune": "bun scripts/smoke-artifact-prune.ts",
     "test:task-retention": "bun scripts/smoke-task-retention.ts",
     "test:artifact-mcp": "bun scripts/smoke-artifact-mcp.ts",
-    "test:repository-export": "bun scripts/smoke-repository-export.ts"
+    "test:repository-export": "bun scripts/smoke-repository-export.ts",
+    "test:repository-import": "bun scripts/smoke-repository-import.ts"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.25.1",

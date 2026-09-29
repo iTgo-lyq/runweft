@@ -34,7 +34,7 @@ HAPI 提供 repository export/import/inspect/release 机器操作，复用 names
 
 公共 WorkspaceSource 增加可选 `snapshot` 引用 `{importOperationId, manifestId}`，strict schema 显式接纳；原 source 没有此字段时行为不变。缓存来源的 `sourcePath = repositoryRoot = commonDir = 实际 bare cache`，baseRef 为不可变 snapshot ref、dirty=false、relativePath 为当前消费者的子目录；展示源 baseRef/dirty 使用 origin。
 
-公共 WorkspaceManager 对 snapshot source 核对自有导入记录，然后用缓存资产 hydrate。各层 submodule URL 显式设为受控本地 cache，逐层 `update --init --checkout`，只在该命令允许 file 协议；不用一次 recursive 初始化，不使用 `.gitmodules` 的网络 URL/custom update。cache 路径永不回退到 `lfs pull`。
+公共 WorkspaceManager 对 snapshot source 核对自有导入记录，然后用缓存资产 hydrate。各层 submodule URL/active 登记在对应 worktree 自身配置，URL 显式设为受控本地 cache，逐层 `update --init --checkout`，只在该命令允许 file 协议；不用一次 recursive 初始化，不使用 `.gitmodules` 的网络 URL/custom update。cache 路径永不回退到 `lfs pull`。
 
 准备时校验 LFS oid/size 与实体；启动再校验沿现有 HEAD/clean/inputs，加 manifest/gitlink 关联和 LFS downloaded/checkout 标志，拒绝 pointer 文本冒充实体。避免每次启动额外全量散列大型 LFS 文件。原生进程和 session 行为不变；Runweft MCP 禁用和内置 subagent 的边界沿已验收实现。
 

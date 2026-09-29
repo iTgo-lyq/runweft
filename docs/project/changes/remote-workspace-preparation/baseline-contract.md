@@ -1,6 +1,6 @@
 # 固定 Git 基线契约
 
-> 来源：[Technical](technical.md)；状态：设计，待实现验证。
+> 来源：[Technical](technical.md)；状态：T1/T2 的导出、导入与公共准备已实现并验证；中心复用和留存仍按 T3/T4 推进。
 
 ## 身份与消费者
 
@@ -38,11 +38,11 @@ export 成功表示固定候选已形成，不等于目标 ready。目标独立�
 
 先检查中心下载摘要/大小，再在自有空 bare 中验证 bundle header/ref/format、实际导入和所选 commit 的闭包。该库不设 alternates/promisor；不能用共享 cache 已有对象掩盖坏 bundle。校验后进入共享 cache，写入和工作区 Git 操作共用仓库锁。成功后立即释放 materialize 副本。
 
-cache 的 HEAD 指向初次基线的内部 `refs/heads/cache-base`，后续不移动；各 manifest 使用不可变 ref。目标 WorkspaceSource 的 machineId/repositoryId/commonDir 都是目标真实值，sourcePath/repositoryRoot/commonDir 指向根 bare cache，baseRef 指向 snapshot ref、dirty=false、relativePath 取当前消费者。
+cache 的 HEAD 指向初次基线的内部 `refs/heads/cache-base`，后续不移动；各 manifest 使用不可变 ref。目标 WorkspaceSource 的 machineId/repositoryId/commonDir 都是目标真实值，sourcePath/repositoryRoot/commonDir 指向根 bare cache，baseRef 指向 snapshot ref、dirty=false、import 返回 relativePath 为空的仓库根来源，消费者再填入原相对 cwd，公共 prepare 校验该目录存在于固定 commit。
 
 可选 source.snapshot = `{importOperationId, manifestId}` 由 import 回执产生；WorkspaceManager 校验自有记录与 source 字段匹配，不能只凭目录前缀信任 cache。没有该字段的本机 source 继续原有路径。
 
-公共 prepare 按 manifest 逐层用本地模块 cache 初始化精确 gitlink，命令级设置 URL/file protocol/checkout；相对 URL 和重名 module 不回退到源地址。LFS 复制到实际对象目录后执行 checkout，核对实体 oid/size；cache 来源绝不调用 lfs pull。启动时沿现有 HEAD/clean/inputs，再核对 gitlink/manifest 与 LFS downloaded/checkout，拒绝 pointer-only。准备后不额外增加一次全量 LFS hash 扫描。
+公共 prepare 按 manifest 逐层用本地模块 cache 初始化精确 gitlink；在各 worktree 自身配置登记 URL/active，再命令级设置 URL/file protocol/checkout。受管 bare 开启 worktreeConfig，并把 core.bare 留在 bare 自身 config.worktree，避免不同环境共享模块注册；相对 URL 和重名 module 不回退到源地址。LFS 复制到实际对象目录后执行 checkout，核对实体 oid/size；cache 来源绝不调用 lfs pull。启动时沿现有 HEAD/clean/inputs，再核对 gitlink/manifest 与 LFS downloaded/checkout，拒绝 pointer-only。准备后不额外增加一次全量 LFS hash 扫描。
 
 ## 留存与 C10 接口
 

@@ -28,7 +28,7 @@
 
 ### T2 目标缓存导入与已有 worktree 准备
 
-- 状态：待开始
+- 状态：已完成
 - 依赖：T1。
 - 交付：repository import/inspect，校验 bundle/清单/实体，来源缓存共享与 target WorkspaceSource；source.snapshot 明确归属，公共 prepare 的 cache 资产逐层 hydrate/启动再校验，不回退源 URL 或 lfs pull。复用既有 prepare/finalize/remove 和仓库锁。
 - 验收：两个环境共享同来源 cache、各用独立 branch/worktree；准确子目录、递归子模块和 LFS；原操作查询不重复导入，损坏资产或漂移不能 ready/launch；续接从上一封存成果继续。原本本机 worktree 行为保留。

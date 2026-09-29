@@ -43,3 +43,22 @@
 - 固定新 HAPI revision 后，`bun run build:hapi`、`bun run build` 通过（`c9-t1-hapi-build.log`、`c9-t1-build.log`）；当前 `dist/runweft`/`dist/hapi` 的正式配套再验 `.dev-smoke/repository-export-i3qiDt/evidence.json` **success=true / cleanupErrors=[]**。本任务仅构建/运行本机 Linux x64，其他平台与候选 npm 包随 T5 更新，不冒称已更新四平台包。
 - 目标 import、缓存/worktree 对接、中心复用与诊断 CLI 尚属 T2–T4；本次没有真实跨机器或原生模型验收。
 - Commit：`remote-workspace-preparation T1: export fixed baselines through HAPI`。
+
+
+## T2 目标缓存导入与公共准备（2026-09-30）
+
+- 结果：HAPI 增加 `repositoryImport:1` 与 import 请求；文件摘要固定后，在独立空 bare 验证单一 ref、对象格式、完整闭包、gitlink/LFS 清单，再写入按认证范围和来源身份共享的 cache。原操作、失败与停止后的中断回执均保留，不重发导入。
+- 目标来源：`imported.source` 携带本机仓库身份和 `snapshot` 导入引用，relativePath 由消费者指定；公共 prepare/launch 核对自有回执、映射和 refs，拒绝去掉或伪造 marker。import 与公共 worktree 共用仓库锁，未增加 TaskCoordinator/轮次逻辑。
+- 工作树：每个环境独立分支、checkout 与模块配置，逐层仅用本地 cache 初始化子模块；LFS 只从本地实体 checkout。准备完整校验字节，启动检查 clean/HEAD/inputs 和模块/LFS 状态；续接保留上一封存成果，包括改动后的 LFS。成功导入立即删除自有验证中间副本，下载材料由既有 artifacts release 释放。
+- 配套 HAPI 本地 Commit：`1d55d5d91e05c6df31493b7425abe64babdf09a4`（`remote-workspace-preparation T2: import baselines into owned worktree caches`）。根 pin 同步；新增 `test:repository-import` 实际 Hub/双 Runner 无模型脚本。import/cache 的显式回收仍由 T4 落实，当前 candidate release 不会删除缓存。
+
+验证：
+
+- 最终聚焦 **30 pass**（导出 8、缓存 6、既有 worktree 16），`.dev-smoke/c9-t2-focused.log`；覆盖 sha1/sha256、并发导入/独立工作树、同源缓存、两层重名/空格模块、无全局 LFS 配置、LFS 变更续接、损坏文件/增量 bundle 拒绝、身份和 ref 漂移、停止中断回执。最后增加模块配置修正后，专项和真实 RPC 均再次通过。
+- HAPI 全类型检查通过（`c9-t2-types-final.log`）；全量 Hub **1412 pass / 3 skip**、Web **3249 pass**、Shared **323 pass**、Relay **118 pass**；CLI **3010 pass / 11 skip / 1 fail**，仅仍为既有 `/tmp/.git` 导致的 skills 非 Git 目录假设失败。未删除该目录或改无关逻辑。日志 `.dev-smoke/c9-t2-{hub,web,shared,relay,cli}.log`；全量之后的模块配置修正由上述最终聚焦覆盖。`gen:fixtures` 无漂移。
+- 根项目 **129 pass / 0 fail / 2609 assertions**（`c9-t2-root-tests.log`），类型检查通过。
+- 原始编译 probe `.dev-smoke/repository-import-vfcKCF/evidence.json` **success=true / cleanupErrors=[]**；源目录隐藏及 Runner 停止后仍能从中心导入，两工作树准备、封存、目标重启、下一轮沿成果继续和独立移除通过；无原生会话。首个 probe 揭示的子模块初始化配置问题及修正见 Research。
+- 固定新 revision 后，`bun run build:hapi` 与 `bun run build` 通过（`c9-t2-hapi-build.log`、`c9-t2-build.log`）；正式 `dist/runweft`/`dist/hapi` 配套再验 `.dev-smoke/repository-import-pQhZMb/evidence.json` **success=true / cleanupErrors=[]**。根最终类型检查 `c9-t2-root-types-commit.log` 通过。仅更新本机 Linux x64，四平台与 npm 候选仍在 T5 统一更新。
+- Change 结构校验通过，7 份修改文档的本地文件链接无断链；两个仓库 diff 检查通过。
+- 本任务不开放正式远端任务，不做跨物理机器或原生模型验收；中心基线服务、诊断 CLI、保留/释放与原生准备探针仍按 T3–T5 继续。
+- Commit：`remote-workspace-preparation T2: prepare worktrees from imported baselines`。
