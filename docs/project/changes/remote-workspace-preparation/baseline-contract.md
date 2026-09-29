@@ -1,6 +1,6 @@
 # 固定 Git 基线契约
 
-> 来源：[Technical](technical.md)；状态：T1/T2 的导出、导入与公共准备已实现并验证；中心复用和留存仍按 T3/T4 推进。
+> 来源：[Technical](technical.md)；状态：T1–T3 的导出、导入、中心复用及诊断准备已实现并验证；显式留存释放仍按 T4 推进。
 
 ## 身份与消费者
 
@@ -49,5 +49,7 @@ cache 的 HEAD 指向初次基线的内部 `refs/heads/cache-base`，后续不�
 RemoteBaselines 输出 snapshotId、origin、targetSource；C10 在 task 接受/首轮准备使用它，然后继续 TaskFiles/TaskWorkspaces。模型上下文和 inputs 的固定版本沿现有轮次事实，snapshot 不保存任务 prompt。
 
 snapshot 的 recovery pin 引用全部 Git/LFS 文件，最后一个 consumer 释放后才解除。复用前检查 available；已回收对象需要新的传输代次，不能复活原 artifact ID 或改写旧回执。目标同 manifest 缓存有效时跳过下载；释放后的缓存需要重新 import。
+
+中心快照和各目标导入分别有代次与阶段。目标导入明确失败后，新请求只为该目标创建新导入记录，仍可复用已发布快照；旧消费者保持原失败回执。未知操作继续按原 ID 查询，不能通过新消费者绕过。capture/deliver/materialize 的 ≤100 项批次及文件请求 ID 在执行前持久化；部分发布时只释放已确认 available 且取得 recovery pin 的候选，其余保留。
 
 C10 消费公共封存结果并登记 result consumer，负责新增代码/LFS/子模块成果的验证和回收。C9 不能把非初始成果当可丢弃诊断数据。缓存清理必须考虑公共保留 refs 与全部消费者；普通附件 TTL/释放不能解除 baseline recovery pin。

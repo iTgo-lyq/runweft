@@ -36,7 +36,7 @@
 
 ### T3 中心准备编排与诊断 CLI
 
-- 状态：待开始
+- 状态：已完成
 - 依赖：T2。
 - 交付：state v5 snapshot/consumer/LFS 索引与诊断记录，namespace/parent/request 归属；RemoteBaselines 编排及完整 snapshot/LFS 复用，确定文件分批/recovery pin/成功中间副本释放。Agent/runtime 选择、workspace prepare/preparations/inspect 诊断命令只创建诊断 worktree；C10 复用基线服务而不接管诊断环境或轮次。
 - 验收：单一 CLI 不需填写源/目标绝对路径、Git URL 或手动传 bundle；明确 base，响应有稳定请求 ID、SHA、脏文件排除、阶段/字节/错误提示。同 SHA 多次准备不重打包或上传，另一 commit 的相同 LFS 不重传；Hub 重启/丢响应继续原记录，文件配额或导入失败不启动模型；Hub 无 Runner 也能转发和保留对象。正式远端 task/MCP 仍明确拒绝。

@@ -2,7 +2,7 @@
 
 > 来源：[Requirement](requirement.md)、[Research](research.md#2026-09-29-实现前复核)
 > 状态：已确认
-> 更新：2026-09-29
+> 更新：2026-09-30
 > 确认依据：用户授权自主落实细节；本 Change 唯一一次 iclaude 评审已完成，主 agent 的采纳与补充验证见 [Execution](execution.md)。
 
 ## Review 导读
@@ -40,11 +40,12 @@ HAPI 提供 repository export/import/inspect/release 机器操作，复用 names
 
 ## 中心记录、复用与保留
 
-业务 state.sqlite 扩展到 v5，保存 snapshot、LFS artifact 索引、consumer 和诊断记录；任务轮次不迁移到这里。准备推进沿既有 serial/kick/启动对账模式；服务仅编排对象与 consumer，不复制 stop/finalize/resume 状态机。
+业务 state.sqlite 扩展到 v5，新增 snapshot、目标 import、LFS artifact 索引、consumer 和诊断记录五张表；任务轮次不迁移到这里。准备推进沿既有 serial/kick/启动对账模式；服务仅编排对象与 consumer，不复制 stop/finalize/resume 状态机。
 
 - snapshot 按 namespace/sourceRepositoryId/baseCommit 复用，包含不可变 manifest、文件与传输回执。另一次 commit 使用完整 bundle；增量基线不是本次范围。LFS oid 已存在时只新增引用，不重复传输。
 - consumer 类型是 diagnostic 或 task/result；记录 owner、source 相对 cwd/dirty/baseRef、target 与引用归属。C9 只创建 diagnostic，C10 登记 task/result。最后一个 consumer 解除后才 unpin 对应 snapshot；被其他快照引用的 LFS 不受影响。
 - 复用前核实中心对象 available 或目标缓存有效；旧对象已过期/删除时不复活原 artifact ID，重新导出同 SHA 建立新的传输代次，旧回执保持原状态。没有可用源对象则报错。
+- 目标 import 代次独立于中心快照；明确导入失败后，新消费者可创建新 import 并复用中心对象，原消费者仍关联原失败回执。目标离线或未知只影响该导入，不降低中心 available 状态。
 - 源端 `HAPI_HOME/workspaces/exports/<op>/` 仅保留未交付候选与回执；目标 `workspaces/repositories/<origin-key>/` 保留仓库/内容缓存与归属。实际 worktree/inputs 沿原有 `workspaces/environments/<id>/`。key 隔离当前认证 namespace 与来源身份，不能由输入指定路径。
 - 单文件、namespace 配额沿 artifacts 默认及现有配置；CLI 显示预计上传/复用字节。超大 bundle/LFS 给出明确限额与配置提示，本次不再增加文件切片/拼接协议。传输沿既有流式空闲超时。
 

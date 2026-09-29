@@ -13,7 +13,7 @@ export function openState(path: string) {
         db.exec('PRAGMA busy_timeout=5000; PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON;');
         db.transaction(() => {
             const { user_version: version } = db.query('PRAGMA user_version').get() as { user_version: number };
-            if (version > 4) throw new ResourceError(503, 'state_version_newer', '业务数据版本高于当前程序。', '使用创建该数据的新版 Runweft；不要删除数据库。');
+            if (version > 5) throw new ResourceError(503, 'state_version_newer', '业务数据版本高于当前程序。', '使用创建该数据的新版 Runweft；不要删除数据库。');
             if (version < 1) db.exec(`
                 CREATE TABLE machine_registrations (
                     namespace TEXT NOT NULL, machineId TEXT NOT NULL, registered INTEGER NOT NULL,
@@ -70,6 +70,34 @@ export function openState(path: string) {
                     PRIMARY KEY(taskId, roundId, version)
                 );
                 PRAGMA user_version=4;
+            `);
+            if (version < 5) db.exec(`
+                CREATE TABLE repository_snapshots (
+                    id TEXT PRIMARY KEY, namespace TEXT NOT NULL, repositoryId TEXT NOT NULL,
+                    baseCommit TEXT NOT NULL, generation INTEGER NOT NULL, phase TEXT NOT NULL, data TEXT NOT NULL,
+                    UNIQUE(namespace, repositoryId, baseCommit, generation)
+                );
+                CREATE TABLE repository_imports (
+                    id TEXT PRIMARY KEY, snapshotId TEXT NOT NULL REFERENCES repository_snapshots(id),
+                    machineId TEXT NOT NULL, generation INTEGER NOT NULL, phase TEXT NOT NULL, data TEXT NOT NULL,
+                    UNIQUE(snapshotId, machineId, generation)
+                );
+                CREATE TABLE repository_consumers (
+                    id TEXT PRIMARY KEY, namespace TEXT NOT NULL, snapshotId TEXT NOT NULL REFERENCES repository_snapshots(id),
+                    importId TEXT NOT NULL REFERENCES repository_imports(id), kind TEXT NOT NULL,
+                    owner TEXT NOT NULL, active INTEGER NOT NULL, data TEXT NOT NULL
+                );
+                CREATE TABLE repository_lfs (
+                    namespace TEXT NOT NULL, oid TEXT NOT NULL, size INTEGER NOT NULL, artifactId TEXT NOT NULL,
+                    PRIMARY KEY(namespace, oid, size)
+                );
+                CREATE TABLE workspace_preparations (
+                    id TEXT PRIMARY KEY, namespace TEXT NOT NULL, requestId TEXT NOT NULL, parentKey TEXT NOT NULL,
+                    machineId TEXT NOT NULL, cwd TEXT NOT NULL, fingerprint TEXT NOT NULL,
+                    phase TEXT NOT NULL, updatedAt INTEGER NOT NULL, data TEXT NOT NULL,
+                    UNIQUE(namespace, requestId)
+                );
+                PRAGMA user_version=5;
             `);
         }).immediate();
         return db;

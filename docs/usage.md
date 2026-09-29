@@ -1,6 +1,6 @@
 # Runweft 基础入口使用说明
 
-当前实现包含配置、HAPI 服务管理、机器/runtime 登记、Agent 定义，以及 Codex/Claude Code 经 MCP 或 CLI 进行本机共享目录、独立 worktree 协作。已支持 CLI 文件上传、任务输入、成果交付、补交及留存清理；MCP 附件、远端任务和看板仍按后续任务推进；当前候选包不是完整项目的最终发布。
+当前实现包含配置、HAPI 服务管理、机器/runtime 登记、Agent 定义，以及 Codex/Claude Code 经 MCP 或 CLI 进行本机共享目录、独立 worktree 协作。已支持 CLI/MCP 文件上传、任务输入、成果交付、补交及留存清理；源码配套构建新增远端 Git 诊断准备。正式远端任务和看板仍按后续任务推进；当前候选包不是完整项目的最终发布。
 
 ## 安装与首次使用
 
@@ -222,6 +222,25 @@ runweft task workspace remove <任务ID> --discard-ignored
 
 删除命令返回受理后，用 `show` 确认 `git.retained=removed`。存在排队/活跃任务、停止未知、未封存或脏改动时会拒绝；删除进行中拒绝追加任务。成功删除移除自有 checkout 和任务分支，保留报告、原生历史与 base/round 成果引用，之后不能再续接该环境。未启动的失败准备也只有在确认归属和没有唯一改动后才可清理；不要用直接删除目录代替此命令。
 
+### 远端 Git 诊断准备
+
+在主 Git 工作区使用已绑定另一台机器 runtime 的 Agent：
+
+```sh
+runweft workspace prepare --agent developer --base HEAD
+runweft workspace inspect <准备ID>
+runweft workspace preparations
+runweft workspace preparations --all
+```
+
+源、目标 Runner 均须在线并连接同一 Hub/namespace；中心本身不需要 Runner 或 Git。`--base` 必须显式提供，接受后固定为提交 SHA；未提交内容排除并在详情提示。支持没有 remote 或尚未 push 的基线；源端必须已有所需 Git、子模块和 LFS 对象。目标是发起机时会提示改用本机 worktree 委派，不创建远端诊断。
+
+命令输出准备 ID、请求 ID、固定 SHA、阶段、预计上传/复用字节与错误。响应丢失时用原参数和 `--request-id <原请求ID>` 查询同一次准备；未知状态先 inspect，不盲目新建。明确失败后按提示修复，用新请求和原固定 SHA 再准备，旧记录保留。同 namespace、源仓库及 SHA 复用基线和目标缓存，不重复打包或上传；另一提交使用新的完整 bundle，相同 LFS 实体只增加引用。目标导入失败与中心基线可用性分别展示。
+
+准备完成时可看到独立 worktree 的目录和分支，不启动模型。诊断不接收任务消息或附件，也不会在以后被业务任务接管。当前尚未开放正式远端委派；输入与上下文仍属于任务生命周期。准备记录、中心恢复对象和目标缓存默认保留，显式释放在当前 Change 的下一阶段实现，不应手工删目录或恢复引用。
+
+此入口已通过配套源码构建验证；四平台安装候选会在本 Change 整体验收时更新，旧候选包可能尚无这些命令。
+
 ### 主 agent 的 MCP 流程
 
 例如让主 agent：“用 reviewer 检查当前改动，等待结果，并总结需要处理的问题。”它可以先发现定义，再按下表操作；Codex 宿主可以选 Claude runtime，Claude 宿主也可以选 Codex runtime。
@@ -275,7 +294,7 @@ runweft artifact remove <文件ID>
 
 下载流式校验后才保存目标，默认不覆盖已有文件；明确替换时加 `--overwrite`。只接受显式普通文件，目录请先自行打包。`--name` 可指定显示文件名，支持中文和空格。列表按 `--offset`、`--limit` 分页（最多 200），也展示删除记录。
 
-默认单文件 512 MiB，每 namespace 的已保存文件与上传预约合计 10 GiB。用 `artifact limits` 查看当前服务的真实用量和限制。有留存引用的对象不能删除，`artifact refs` 会列出引用原因；不要直接删数据目录来腾空间。用 task artifacts release 预览已结束轮次的留存释放；MCP 文件工具仍在后续任务接入。
+默认单文件 512 MiB，每 namespace 的已保存文件与上传预约合计 10 GiB。用 `artifact limits` 查看当前服务的真实用量和限制。有留存引用的对象不能删除，`artifact refs` 会列出引用原因；不要直接删数据目录来腾空间。用 task artifacts release 预览已结束轮次的留存释放。
 
 ### 将文件带入任务
 
@@ -404,9 +423,11 @@ Hub 客户端 `stop` 只停止该机器在当前连接上的 Runner，不关闭�
 | `config.yaml` | 可编辑配置；升级保留 |
 | `agents/` | 可编辑全局 Agent YAML；项目定义留在项目 `.runweft/agents/` |
 | `server/hapi/` | 托管 Hub 的原有数据库、令牌、JWT 密钥及状态；备份保留 |
-| `server/runweft/state.sqlite` | 中心机器/runtime 登记、任务/轮次/请求关联及报告；原生完整历史仍归 HAPI，不保存模型凭据 |
+| `server/runweft/state.sqlite` | 中心机器/runtime 登记、任务/轮次/请求关联及报告；v5 增加基线、导入、消费者、LFS 索引及诊断准备；原生完整历史仍归 HAPI，不保存模型凭据 |
 | `connections/<连接>/hapi/` | 本机 Runner 的连接配置、机器身份和原生日志；各连接分开 |
-| `connections/<连接>/hapi/workspaces/environments/<任务ID>/` | 独立任务的 checkout、准备/收尾回执及树外输入；持久保存，不能当缓存清理 |
+| `connections/<连接>/hapi/workspaces/environments/<环境ID>/` | 独立任务或诊断的 checkout、准备/收尾回执及树外输入；持久保存，不能当缓存清理 |
+| `connections/<连接>/hapi/workspaces/repositories/` | 远端基线的自有共享 Git/LFS 缓存，checkout 依赖此处；不是可随意删除的临时缓存 |
+| `connections/<连接>/hapi/workspaces/exports/`、`imports/` | 仓库操作与清单回执；成功传输的导出/捕获/下载中间副本自动释放，未交付候选保留 |
 | `client.sqlite` | 本机工作目录与 Agent 个人 runtime 绑定；Claude MCP hook 的逐调用身份用后删除，未消费记录保留 24 小时 |
 | `logs/` | 托管服务日志；当前由部署方按磁盘需要归档或轮转 |
 | `backups/mcp/` | MCP 安装、更新、卸载及恢复前的原生配置快照；可能包含原配置中的秘密，权限仅限当前用户 |
@@ -423,7 +444,7 @@ local 模式的资源库位于本机中心；hub 模式只读写所连中心的�
 
 备份前停止对应服务；备份 `config.yaml`、`agents/`、`server/`、`connections/` 和 `client.sqlite`。SQLite 使用 WAL，整个停止后的数据根一起备份最直接。恢复时使用匹配的 Runweft/HAPI 版本；未来数据升级由所属 Change 定义，当前不承诺跨任意版本回退。npm 卸载只删除软件包，数据根需另行管理。
 
-有独立 worktree 时，先等待所有轮次停止并完成收尾，再停止服务，同时备份源仓库及其 Git common directory、Runweft 数据和需要续接的原生历史。checkout 的 `.git` 指向源仓库，Git 对象/refs 不在 Runweft 数据根；只备份其中一侧不完整。按原路径恢复后检查 `git worktree list` 和任务状态；迁移路径涉及 Git 注册及持久环境记录，当前没有自动迁移命令，不能仅移动目录后直接续接。子模块对象和 LFS 实体也应一起保存。
+有本机源仓库派生的 worktree 时，先等待所有轮次停止并完成收尾，再停止服务，同时备份源仓库及其 Git common directory、Runweft 数据和需要续接的原生历史。checkout 的 `.git` 指向源仓库，Git 对象/refs 不在 Runweft 数据根；只备份其中一侧不完整。远端诊断 worktree 指向执行机数据根内的 `workspaces/repositories/`，备份时同时保留该缓存、环境目录及中心基线记录/文件对象。按原路径恢复后检查 `git worktree list` 和对应记录；迁移路径涉及 Git 注册及持久环境记录，当前没有自动迁移命令，不能仅移动目录后直接续接。子模块对象和 LFS 实体也应一起保存。
 
 任务分支为 `hapi-task/<任务ID>`，基线与每轮成果引用为 `refs/hapi/workspaces/<任务ID>/base`、`refs/hapi/workspaces/<任务ID>/rounds/<轮次ID>`。显式清理 checkout 会删除自有任务分支，保留这些成果引用，因此普通 Git GC 仍会保留被引用的对象。当前不提供成果引用的自动清理；只有确认所有报告引用都不再需要、成果已另有备份后，才由操作者按 Git 规则手动维护，Runweft 不把“已合入”当成可以丢弃历史的证明。
 
@@ -452,6 +473,8 @@ bun run test:install
 安装验收启动一次性 registry，并使用 `.dev-smoke/` 下的专用 npm 配置、缓存、安装前缀和数据目录；不改用户的全局 Runweft、HAPI 或模型配置。平台包附有 HAPI 许可、NOTICE、工具许可和对应源码归档。候选包保持 private，不会由构建或 CI 自动发布到 npm。
 
 `test:resources` 需要已安装 Codex 和 Claude Code（优先 iclaude，可设置 `RUNWEFT_SMOKE_CLAUDE`），仅执行版本查询，不需要模型登录。它使用专用空原生配置和配套编译程序验证本地与 Hub 资源命令、MCP 安装/握手、稳定 ID、离线、恢复和环境故障；离线等待沿 HAPI 的 45 秒活跃超时。脚本保存证据并关闭自建服务，故障环境只作用于测试 Runner；macOS 若发现原生 Codex.app 回退路径，会如实记录，命令缺失仍通过专用 Claude 覆盖验证。
+
+`test:workspace-preparation` 验证配套编译 CLI 的远端诊断准备：专用 Hub 无 Runner，同机两个 Runner 传输 103 个 Git/LFS 文件，检查请求接受后重启、同提交与 LFS 复用、源端离线后的查询，以及 local 模式同机目标拒绝。需要 Git/LFS 和已安装 Codex，仅查询 runtime 版本，不调用模型；证据在 `.dev-smoke/workspace-preparation-*`。底层导出与导入可分别运行 `test:repository-export`、`test:repository-import`。这些实验不代替真实跨物理机器验收。
 
 `test:agents` 同样只需要已安装的原生工具，不需要模型登录。它用配套编译 CLI 和专用 Hub/Runner 验证定义创建、worktree 绑定、local/Hub 连接、真实 token namespace 后缀、目标失效与恢复；保存证据并停止自建服务，不启动模型会话。
 

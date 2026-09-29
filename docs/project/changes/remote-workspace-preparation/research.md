@@ -113,3 +113,11 @@ HTTP 故障探针最初只调用 Bun Node HTTP ServerResponse.destroy，实际�
 完整导入必须进入独立空库，即使共享 cache 已具备历史对象。测试用同一基线生成带 prerequisite 的增量 bundle 并更新正确摘要，目标仍在空库验证阶段拒绝，已有成功快照不受影响。导出与导入共用固定 gitlink/LFS 枚举助手。
 
 实际无模型闭环 `.dev-smoke/repository-import-vfcKCF/evidence.json`：Hub 无 Runner；源端 capture/deliver 后移走所有源 fixture 路径、释放 export/spool 并停止源 Runner；另一身份与数据根 materialize/import，再释放下载副本；两独立工作树准确读取子目录和模块二进制 LFS；重启查询原 import、从封存成果准备下一轮，移除另一干净工作树后保留缓存 refs。success=true、cleanupErrors=[]。这是同机独立 Runner 验证，不能替代跨物理机器或原生 agent 验收。
+
+## 2026-09-30 T3 编排与诊断验证
+
+目标导入需要独立代次：一次明确失败不能污染可用中心快照，也不能让新消费者改写旧准备所关联的失败回执。实现按 snapshot/目标机器生成 import 代次；故障测试修复目标后，只重新下载/导入，中心不重复发布。丢失发布响应先查原 deliver，Hub 重启沿持久批次和 ID 继续；未知 capture/export 不重新执行。
+
+文件发布可能部分成功。`deliver` 回执中的 available 项经摘要/大小和 request ID 匹配后记录 recovery pin，再按名称释放这些 export/capture 副本；未发布候选继续保留。测试证明部分失败不会等待全批成功才释放已交付字节，也不会删除剩余候选。
+
+配套 CLI 实验 `.dev-smoke/workspace-preparation-M6ji4H/evidence.json` 在接受准备后立即重启 Hub，完成 103 个真实 Git/LFS 文件的分批传输，并验证相同 request 返回同一记录、同提交不重复上传、新提交只传新 bundle、源目录隐藏/Runner 停止后的持久查询。另有 local 部署同机目标拒绝；全程没有原生模型会话。首次脚本因把格式化 CLI JSON 当单行 JSON 解析而失败，修正为解析完整 stdout 后通过，不能把脚本解析错误视为产品失败或成功证据。

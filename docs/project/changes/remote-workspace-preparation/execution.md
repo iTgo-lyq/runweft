@@ -62,3 +62,15 @@
 - Change 结构校验通过，7 份修改文档的本地文件链接无断链；两个仓库 diff 检查通过。
 - 本任务不开放正式远端任务，不做跨物理机器或原生模型验收；中心基线服务、诊断 CLI、保留/释放与原生准备探针仍按 T3–T5 继续。
 - Commit：`remote-workspace-preparation T2: prepare worktrees from imported baselines`。
+
+## T3 中心准备编排与诊断 CLI
+
+- 结果：state v5 以新增五张表保存快照、目标导入、消费者、LFS 内容索引及诊断准备。`RemoteBaselines` 只编排固定源 → 中心恢复文件 → 目标缓存；沿用 HAPI repository、文件传输与公共 workspace 回执，TaskCoordinator 无改动。没有新 runtime adapter、任务轮次或原生执行路径。
+- CLI：`workspace prepare --agent --base`、`workspace preparations [--all]`、`workspace inspect`；稳定 request ID、明确 SHA/dirty 排除、分阶段与字节提示、原操作对账。使用已有 Agent/runtime 绑定，不要求手填 Git URL 或源/目标绝对路径；同机目标提示本地 worktree 委派。无 Runner 的 Hub 操作者也可查询当前 namespace 的诊断记录。
+- 复用与失败：同 namespace/源仓库/SHA 共享 snapshot，子目录与发起归属留在 consumer；LFS 按 oid/size 复用。确定的 ≤100 项批次和文件 ID 在执行前保存，全部文件取得 recovery pin 才 available；目标导入独立保留代次，失败不改写中心可用性。部分交付只释放已发布候选；下载/导出成功副本及时回收，清理失败单独显示并对账。未知原操作不换 ID 重做，已删除中心对象使用新快照代次。
+- 聚焦：`test/remote.test.ts` **7 pass / 144 assertions**（`.dev-smoke/c9-t3-remote-fourth.log`），真实 HTTP/SQLite、模拟 HAPI 故障覆盖 103 文件批次、并发/归属、同 SHA/LFS 复用、请求冲突、配额、丢响应/重启、目标离线、导入失败新代次、部分发布释放及 child 委派拒绝。这组测试不作为真实 Git 磁盘副作用证据。
+- 根项目：`bun run typecheck` 通过（`c9-t3-types-commit.log`）；`bun test ./test` **136 pass / 0 fail / 2751 assertions**（`c9-t3-root-final.log`）。配套构建通过（`c9-t3-build-final.log`）。HAPI 源码、revision 和二进制沿 T2，本任务未重复无改动的 HAPI 全量检查。
+- 实际配套 CLI：`bun run test:workspace-preparation`，`.dev-smoke/workspace-preparation-M6ji4H/evidence.json` **success=true / cleanupErrors=[]**。Hub 无 Runner、两个独立身份/数据根的 Runner：接受后立即重启 Hub，原 ID 继续；真实 102 个 LFS 实体和 bundle 分批传输，准确准备脏源子目录，三次准备验证同 SHA/cache 复用及新 commit 的 LFS pin 复用。隐藏源路径并停止源 Runner 后再重启中心，所有记录可查，原生 session 数为 0；独立 local 部署拒绝同机诊断且没有准备记录。仅注册/查询 Codex 版本，不是原生模型验收，也不是物理跨机验证。
+- 使用说明补齐诊断路径、中心 v5 归属及 exports/imports/repositories 的保留规则；`paths` 显示受控目录。根 README/使用说明修正已完成附件能力的旧进度文字。四平台安装候选仍在 T5 更新，正式远端 task/MCP 仍未开放，显式释放按 T4 继续。
+- 升级实验：用 T2 的原 state 实现建立 v4，写入机器/runtime、任务、轮次及附件清单后执行当前迁移；旧表/索引定义与全部旧行保持不变，只新增五张表，外键检查通过（`.dev-smoke/c9-t3-migration-M8EgFi/evidence.json`）。最终路径文案更新后重建通过（`c9-t3-build-docs.log`），编译 CLI 的 `paths`/prepare help 检查、Change 结构校验及 8 份修改文档本地链接检查通过，diff 无空白错误。
+- Commit：`remote-workspace-preparation T3: orchestrate shared baselines and diagnostic preparation`。

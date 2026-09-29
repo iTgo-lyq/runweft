@@ -10,6 +10,7 @@ import type { Flavor, Inspection, RuntimeView } from '../src/resources/types';
 import type { Machine } from '../hapi/shared/src/schemas';
 import { fixture } from './helpers';
 import { TaskCoordinator } from '../src/tasks/coordinator';
+import { WorkspacePreparations } from '../src/remote/service';
 
 export const resourcePrefix = '/api/runweft/resources';
 export const resourceWrite = (value: unknown, method = 'POST'): RequestInit => ({ method, headers: { 'content-type': 'application/json' }, body: JSON.stringify(value) });
@@ -23,7 +24,7 @@ function machine(id: string, namespace = 'alpha', active = true): Machine {
 }
 
 export async function resourceFixture(cleanups: (() => Promise<void> | void)[], extra?: {
-    capabilities?: object; fetch: (request: Request, namespace: string) => Promise<Response | undefined> | Response | undefined;
+    capabilities?: object; preparations?: boolean; fetch: (request: Request, namespace: string) => Promise<Response | undefined> | Response | undefined;
 }) {
     const home = fixture('resources');
     cleanups.push(() => rmSync(home, { recursive: true, force: true }));
@@ -77,8 +78,10 @@ export async function resourceFixture(cleanups: (() => Promise<void> | void)[], 
     const statePath = dataPaths(config).state;
     const tasks = extra ? new TaskCoordinator(statePath, namespace => new HapiClient(native.url.origin, `test-${namespace}`), 20) : undefined;
     if (tasks) cleanups.push(() => tasks.close());
+    let preparations = extra?.preparations ? new WorkspacePreparations(statePath, namespace => new HapiClient(native.url.origin, `test-${namespace}`), 10) : undefined;
+    if (preparations) cleanups.push(() => preparations?.close());
     const gateway = await createGateway({ host: '127.0.0.1', port: 0, target: native.url.origin,
-        handle: createRunweftHandler({ key, hapiUrl: native.url.origin, statePath, tasks,
+        handle: createRunweftHandler({ key, hapiUrl: native.url.origin, statePath, tasks, get preparations() { return preparations; },
             health: () => ({ service: 'runweft', role: 'hub-server', ready: true, protocolVersion: 1 }) }),
     });
     cleanups.push(() => gateway.close());
@@ -90,5 +93,7 @@ export async function resourceFixture(cleanups: (() => Promise<void> | void)[], 
         return (await client.request(`${resourcePrefix}/runtimes`, resourceWrite({ machineId, flavor }))).runtime;
     };
     return { home, config, statePath, url, alpha, beta, machines, inspections, calls, tokens, failures, hooks, register, tasks, nativeUrl: native.url.origin,
+        get preparations() { return preparations; },
+        async restartPreparations() { await preparations!.close(); preparations = new WorkspacePreparations(statePath, namespace => new HapiClient(native.url.origin, `test-${namespace}`), 10); preparations.start(); },
         setInventorySupported(value: boolean) { inventorySupported = value; } };
 }

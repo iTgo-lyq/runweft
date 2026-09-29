@@ -10,8 +10,11 @@ import { handleResourceRequest } from './resources/api';
 import { TaskCoordinator } from './tasks/coordinator';
 import { handleTaskRequest } from './tasks/api';
 import { TaskError } from './tasks/types';
+import { WorkspacePreparations } from './remote/service';
+import { PreparationError } from './remote/types';
+import { handlePreparationRequest } from './remote/api';
 
-export function createRunweftHandler(options: { key: Uint8Array; hapiUrl: string; statePath: string; health: () => object; tasks?: TaskCoordinator }) {
+export function createRunweftHandler(options: { key: Uint8Array; hapiUrl: string; statePath: string; health: () => object; tasks?: TaskCoordinator; preparations?: WorkspacePreparations }) {
     return async (request: IncomingMessage, response: ServerResponse): Promise<boolean> => {
         const path = new URL(request.url ?? '/', 'http://localhost').pathname;
         if (path === '/api/runweft/health' && request.method === 'GET') {
@@ -29,6 +32,15 @@ export function createRunweftHandler(options: { key: Uint8Array; hapiUrl: string
         }
         if (path === '/api/runweft/identity' && request.method === 'GET') {
             jsonResponse(response, 200, { userId: identity.uid, namespace: identity.ns }); return true;
+        }
+        if (path.startsWith('/api/runweft/workspaces/')) {
+            try {
+                if (!options.preparations) throw new PreparationError(503, 'preparation_service_unavailable', '当前服务没有启用工作区准备；请更新并重启配套 Runweft。');
+                await handlePreparationRequest(request, response, identity.ns, options.preparations);
+            } catch (error) {
+                if (!response.destroyed) jsonResponse(response, error instanceof PreparationError || error instanceof TaskError || error instanceof ResourceError || error instanceof HapiRequestError ? error.status : 500, { error: errorDetails(error) });
+            }
+            return true;
         }
         if (path.startsWith('/api/runweft/tasks/')) {
             try {

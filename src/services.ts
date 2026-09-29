@@ -10,6 +10,7 @@ import { createGateway } from './proxy';
 import { createRunweftHandler } from './api';
 import { ArtifactClient } from './artifacts/client';
 import { TaskCoordinator } from './tasks/coordinator';
+import { WorkspacePreparations } from './remote/service';
 
 export type ServiceState = {
     pid: number; instanceId: string; version: string; hapiRevision: string;
@@ -115,6 +116,7 @@ export async function serve(c: ResolvedConfig, publicly = false): Promise<void> 
     const children: ChildProcess[] = [];
     let gateway: Awaited<ReturnType<typeof createGateway>> | undefined;
     let tasks: TaskCoordinator | undefined;
+    let preparations: WorkspacePreparations | undefined;
     let stopping = false, ready = false;
     let failure: Error | undefined;
     let complete!: () => void;
@@ -126,6 +128,8 @@ export async function serve(c: ResolvedConfig, publicly = false): Promise<void> 
         stopping = true; failure = error;
         for (const signal of ['SIGINT', 'SIGTERM', 'SIGHUP'] as const) process.off(signal, onSignal);
         try {
+            try { await preparations?.close(); }
+            catch (error) { failure ??= error instanceof Error ? error : new Error(String(error)); }
             try { await tasks?.close(); }
             catch (error) { failure ??= error instanceof Error ? error : new Error(String(error)); }
             try { await gateway?.close(); }
@@ -165,8 +169,9 @@ export async function serve(c: ResolvedConfig, publicly = false): Promise<void> 
         const key = Buffer.from(secret.secretBase64, 'base64');
         tasks = new TaskCoordinator(paths.state, namespace => new HapiClient(privateUrl, namespace === 'default' ? token : `${token}:${namespace}`));
         await tasks.reconcileFileIntents();
+        preparations = new WorkspacePreparations(paths.state, namespace => new HapiClient(privateUrl, namespace === 'default' ? token : `${token}:${namespace}`));
         gateway = await createGateway({ host, port: c.config.server.port, target: privateUrl,
-            handle: createRunweftHandler({ key, hapiUrl: privateUrl, statePath: paths.state, tasks,
+            handle: createRunweftHandler({ key, hapiUrl: privateUrl, statePath: paths.state, tasks, preparations,
                 health: () => ({ service: 'runweft', protocolVersion: 1, ready, version: BUILD.version,
                     hapiRevision: BUILD.hapi.revision, instanceId: state.instanceId, role: publicly ? 'hub-server' : 'local' }),
             }),
@@ -182,7 +187,7 @@ export async function serve(c: ResolvedConfig, publicly = false): Promise<void> 
                 return runnerOnline(local);
             }, 'Runner 未能在 Hub 注册。');
         }
-        tasks.start();
+        tasks.start(); preparations.start();
         ready = true;
         atomicWrite(paths.process, JSON.stringify(state, null, 2));
         console.error(`Runweft ${BUILD.version} 已就绪：${publicUrl}\n数据目录：${c.home}`);

@@ -10,6 +10,7 @@ import { addMcpCommands } from './mcp/commands';
 import { addResourceCommands } from './resources/commands';
 import { addAgentCommands } from './agents/commands';
 import { addTaskCommands } from './tasks/commands';
+import { addPreparationCommands } from './remote/commands';
 import { addArtifactCommands } from './artifacts/commands';
 
 export const VERSION = pkg.version;
@@ -61,15 +62,16 @@ export function createProgram() {
             `本机中心业务库：${paths.state}${c.config.mode === 'hub' ? '（当前为 Hub 客户端，权威资源库位于所连中心）' : ''}`,
             `当前连接 HAPI 数据：${paths.hapiClient}`, `本机工作区/Agent 绑定与身份数据：${paths.bindings}`, `全局 Agent 定义：${paths.agents}`,
             `当前连接的本机任务工作区：${paths.taskWorkspaces}`,
+            `当前连接的仓库缓存：${paths.repositoryCaches}`, `基线导出候选与回执：${paths.repositoryExports}`, `基线导入回执：${paths.repositoryImports}`,
             `本机托管 Hub 的文件：${paths.artifacts}${c.config.mode === 'hub' ? '（当前文件权威在所连 Hub）' : ''}`,
             `当前连接的文件准备/候选：${paths.artifactTransfers}`,
             `日志：${paths.logs}`, `配置备份：${paths.backups}`, `可再生缓存：${paths.cache}`, `临时目录：${paths.temporary}`,
             `原生 Codex：${paths.nativeCodex}`, `原生 Claude Code：${paths.nativeClaude}`,
             '备份：停止托管服务后备份配置、agents、server、connections 和 client.sqlite；原生目录按各工具规则备份。',
-            '独立 worktree 还依赖源仓库的 Git 目录与对象；一并备份并保留原路径，不能只搬运数据根。',
+            '本机仓库派生的 worktree 还依赖源 Git 目录；远端准备的 worktree 依赖上述仓库缓存。备份时保留对应对象和原路径。',
         ].join('\n'));
     });
-    const workspace = program.command('workspace').description('绑定本机真实工作目录');
+    const workspace = program.command('workspace').description('绑定本机目录、诊断远端 Git 准备');
     workspace.command('bind [directory]').description('绑定目录；省略时使用当前目录').action((directory = process.cwd()) => {
         const binding = bindWorkspace(context(), directory);
         output(binding, `工作区：${binding.id}\n目录：${binding.path}\nGit 仓库：${binding.repositoryRoot ?? '无（仅共享目录模式可用）'}`);
@@ -78,6 +80,7 @@ export function createProgram() {
         const items = listWorkspaces(context());
         output({ workspaces: items }, items.length ? items.map(w => `${w.id}  ${w.path}`).join('\n') : '尚未绑定工作区。进入项目目录后运行 runweft workspace bind。');
     });
+    addPreparationCommands(workspace, program, context, output);
     addServiceCommands(program, context, output);
     addMcpCommands(program, context, output);
     addResourceCommands(program, context, output);
