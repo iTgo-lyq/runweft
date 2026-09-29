@@ -17,7 +17,7 @@
 
 新增 Runner capability `managedWorkspaces: 1`。通用 spawn/resume 接受 `preparedWorkspace` 引用，在 Runner 实际启动前核对 cwd、归属、准备版本、开始 HEAD 和所需文件；它与 sessionType=worktree 互斥。引用贯穿 protocol 的 spawn/resume schema、spawn 回执指纹、SyncEngine/RpcGateway 参数、apiMachine、SpawnSessionOptions，以及 Runweft ExecutionClient 的 start/resume 请求。新旧会话 metadata 由通用合并路径保留环境关联，不要求原生 adapter 回写。Codex/Claude adapter 不主动改造。
 
-准备校验在 simple 分支的目录创建之前运行，preparedWorkspace 强制 approvedNewDirectoryCreation=false，并在实际 spawn 前再核对；checkout 丢失不会被重建成空目录。已绑定受控环境的 resume 严格匹配原机器/环境，并要求当前有效准备证据；包括 HAPI 界面续接/clear 触发的通用恢复入口，省略参数不能绕过约束。未使用受控工作区的 HAPI 会话维持原行为。
+准备校验在 simple 分支的目录创建之前运行，preparedWorkspace 强制 approvedNewDirectoryCreation=false，并在实际 spawn 前再核对；checkout 丢失不会被重建成空目录。已绑定受控环境的 resume 严格匹配原机器/环境，并要求当前有效准备证据；包括 HAPI 界面触发的通用恢复入口，省略参数不能绕过约束；受控会话的 HAPI clear 拒绝绕过轮次收尾另开会话，须由委派中心停止、封存后继续。未使用受控工作区的 HAPI 会话维持原行为。
 
 HAPI 子仓库单独提交通用改造，Runweft 只更新固定 revision 与调用层，不复制其实现。未升级 Runner 明确提示兼容错误，不退回默认 HEAD 创建工作树。
 

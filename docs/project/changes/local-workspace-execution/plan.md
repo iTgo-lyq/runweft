@@ -2,7 +2,7 @@
 
 > 来源：[Requirement](requirement.md)
 > 技术方案：[Technical](technical.md)、[工作区契约](workspace-contract.md)
-> 状态：待执行
+> 状态：执行中
 > 执行模式：逐任务提交
 > 评审：当前工作区 iclaude 一次已完成；会话与主审采纳见 [Execution](execution.md)，不重复评审。
 
@@ -22,7 +22,7 @@ CLI/MCP 可从主仓库准确 commit 派生本地独立任务，准备完成后�
 
 ### T1 HAPI 独立 Git 生命周期与准备启动校验
 
-- 状态：待开始
+- 状态：已完成
 - 交付：现有 Runner/Git 路径提供机器级 resolve/prepare/inspect/finalize/remove，持久环境、异步操作回执与幂等事实；spawn/resume 消费准备引用，原生 runtime 不改造。修改 protocol 两种 schema/回执指纹、SyncEngine/RpcGateway、apiMachine/SpawnSessionOptions、metadata 保留，以及 Runweft ExecutionClient start/resume 的参数传递。
 - 依赖：已验收 HAPI 执行契约。
 - 验收：真实 Git 的固定基线/相对 cwd、重复准备、启动失效、checkpoint/保留引用、hook/签名/锁失败、LFS/子模块与安全清理可从 HAPI 机器接口独立运行；未知结果不重放副作用。经过 Hub HTTP 验证 spawn/resume 的错误/旧准备均 childStarted=false，checkout 删除后不重建；耗时操作断线后仍可查。验证 hook 修改暂存树、提交响应丢失、Git 超时与手工提交后的封存，子模块共享配置和候选 index gitlink 检查。

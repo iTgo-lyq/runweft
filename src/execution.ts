@@ -4,6 +4,7 @@ import { SpawnReceiptSchema, SpawnSessionRequestSchema, SendMessageRequestSchema
 import { ExecutionObservationSchema, InterruptExecutionResponseSchema, type ExecutionObservation } from '../hapi/shared/src/execution';
 import { errorDetails, RunweftError } from './errors';
 import { HapiClient, HapiRequestError } from './hapi';
+import type { PreparedWorkspace } from '../hapi/shared/src/workspaces';
 import { SteerQueuedMessageResponseSchema } from '../hapi/shared/src/schemas';
 
 export type StartRequest = Omit<SpawnSessionRequest, 'requestId' | 'agent'> & {
@@ -181,13 +182,13 @@ export class ExecutionClient {
             ?? new RunweftError('execution_stop_unconfirmed', 'HAPI 尚未确认该执行已关闭。')) };
     }
 
-    async resume(previousSessionId: string) {
+    async resume(previousSessionId: string, preparedWorkspace?: PreparedWorkspace) {
         const previous = await this.inspect(previousSessionId);
         const previousNativeSessionId = nativeIdentity(previous);
         let sessionId = previous.id;
         try {
             const response = await this.hapi.request(`/api/sessions/${encodeURIComponent(previous.id)}/resume`, {
-                method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}', signal: AbortSignal.timeout(45_000),
+                method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(preparedWorkspace ? { preparedWorkspace } : {}), signal: AbortSignal.timeout(45_000),
             });
             if (response?.type !== 'success' || typeof response.sessionId !== 'string') {
                 throw new RunweftError('invalid_hapi_response', 'HAPI 未确认续接后的会话身份。');

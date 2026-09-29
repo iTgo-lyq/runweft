@@ -10,4 +10,17 @@
 - 独立核对：hook 可以改变候选树，因此采纳 parent/trailer/身份/clean 事实对账；签名改变 commit 对象，不把它误写成必然改变 tree。post-checkout hook 报错保留已创建现场并报告失败，不因 HEAD 存在就跳过 hook 错误或换目录重建。
 - 子模块：补做专用 Git 实验确认 init 对共享 config 的影响及单次配置的可行路径，见 [Research](research.md)；T1 继续验证相对 URL/递归。采纳新增 index gitlink 检查和可用本地对象复用，不把 file 源实验称为远端凭据验证。
 - 未采纳的可选项：retry-finish 保留固定 round 参数，避免多轮竞态；不新增“已合入”推断字段，合码/接纳仍属主 agent；baseRef 缺省规范为 HEAD、prepare 提前核对 roots、Git/LFS 命令诊断纳入现有任务。
-- 确认：用户已授权自主细化/验收，主 agent 采用修订后的 Requirement/Technical/Plan；当前只完成调查和规划，T1–T5 尚未实现。
+- 确认：用户已授权自主细化/验收，主 agent 采用修订后的 Requirement/Technical/Plan；评审结束时仅完成调查和规划；后续实现见逐任务记录。
+
+
+## T1 HAPI 独立 Git 生命周期与准备启动校验
+
+- 结果：机器接口提供 resolve/prepare/inspect/finalize/remove，保存固定基线、自有 worktree、异步操作与成果引用。准备引用贯穿 schema/指纹、HTTP/RPC、Runner、原生 bootstrap metadata 和 Runweft start/resume；失效或丢失目录在启动前拒绝，默认 mkdir 不会重建 checkout。原生 runtime adapters 未修改。
+- 结果：收尾保留 agent 提交、使用明确机器身份 checkpoint，遵守 hooks/签名且不提交空改动；原生停止事实与 Git 成果分开。Git 超时停止自有进程组，重启只对账已知结果，不重跑未知 hook；确认退出的中断可显式重试。清理检查子模块及 ignored 内容，保留 base/round refs。HAPI clear 不能绕过受控轮次；普通会话/原生子代理行为保持原有边界。
+- 验证：15 个真实 Git 专项通过，涵盖固定子目录基线、主目录/index 不变、幂等与缺失 checkout、格式化 hook/已有提交、签名/index 锁失败、超时及手工修复、丢 checkpoint 响应、重启中断、外部输入变更、新 gitlink、子模块递归/相对 URL/共享 config、本地 LFS 和 ignored 清理；与 machine RPC 参数用例共 44 项通过。最后一次 Git 专项记录 `.dev-smoke/workspace-t1-final-git.log`。
+- 验证：HAPI 跨包 typecheck 通过；Hub 1393、Web 3249、Shared 323、Relay 118 项通过；`bun run gen:fixtures` 生成 88 个 fixture 及模式目录，无 Git 差异。CLI 全套运行结果 2980 通过、11 跳过、1 项失败：未改动的 `skills.test.ts` 非 Git 场景因既存 `/tmp/.git`（2026-09-14）读取到父级 skill，单独重跑同样失败；未删除该外部目录，未把全套标成通过。Runweft 类型检查与 85 项/1509 断言通过。
+- 真实编译验证：配套 HAPI Linux x64 二进制通过专用 home 的 Hub → machine RPC → Runner 链路，Codex/Claude 均真实启动、回答固定标记并停止；随后测试操作者在已停的专用 checkout 写入 fixture，HAPI 自动封存。验证 metadata 关联保留、旧准备的无参数 resume 拒绝、缺失目录启动 childStarted=false，未改变主目录。初轮证据 `.dev-smoke/workspace-http-n81aoG/evidence.json`；固定 revision 后 `bun run build:hapi --platform linux-x64 && bun run build` 成功，`bun scripts/smoke-workspaces.ts dist/runweft dist/hapi` 再次通过，最终证据 `.dev-smoke/workspace-http-LIxpEG/evidence.json` success=true、sourceLauncher=false、cleanupErrors 为空。这里不把操作者写文件说成模型编辑，真实开发/第二轮原生续接属于 T2。
+- 真实传输验证：专用 HTTP 代理丢弃 prepare 受理响应；慢 post-checkout hook 仅执行一次，inspect/同身份重交命中原结果，Runner 重启后回执仍在，未启动 worktree 可移除且保留 base。证据 `.dev-smoke/workspace-http-tDIaBW/evidence.json` success=true，cleanupErrors 为空。原始实验保存在 `.dev-smoke/workspace-transport.ts`。
+- 偏差：remove 使用独立 attemptId，支持 ignored 拒绝或部分删除修复后的显式重试；Git submodule update 实际提供 --reference，没有 --reference-if-able，因此仅在本机引用目录有效时传入 --reference。原生 bootstrap 接管预分配会话和客户端 metadata 更新也须保留 Hub 管理的准备引用，已加回归。
+- 交付边界：本任务完成 HAPI 机器能力和 Runweft 调用参数；CLI/MCP 的 worktree 模式、中心准备/收尾状态和发布包完整交付继续由 T2–T5 承担。初轮用源码 Runweft 编排服务，最终复核使用编译 Runweft 与 HAPI；尚未做本 Change 的安装包整体验收或远端验证。
+- Commit：`local-workspace-execution T1: add managed Git workspaces and prepared execution gates`（HAPI）；`local-workspace-execution T1: pin verified workspace lifecycle and execution calls`（Runweft）。

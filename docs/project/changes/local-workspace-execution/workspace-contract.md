@@ -22,13 +22,13 @@ environmentId 为一个 delegation 的 UUID，preparationId 为一次轮次准�
 
 这些操作沿 HAPI machine namespace、MachinePathPolicy 与既有 Runner 连接。相同身份/参数查询和重试命中原记录，不随机改名新建；已有路径没有匹配归属记录时拒绝。进程内按 common directory 串行 Git 元数据变更，各 worktree 内的 agent 开发不共用此锁；Git 原生锁仍为最终保护。跨重启的不确定副作用只做事实对账，不偷删 lock 文件。
 
-prepare/finalize/remove 的 HTTP/RPC 只持久受理并立即返回 accepted/running/succeeded/failed/unknown 回执，副作用在 Runner 进程内运行，inspect 返回后续事实。固定操作键分别为 preparationId、roundId+finalizeAttemptId、environmentId+remove；相同键同参数不再执行，冲突拒绝。prepare 丢受理响应可用相同 preparationId 查/重交受理，不能换目录；finalize 未知只查询，显式 retry-finish 才生成新 attempt。Runner 重启后先检查既有 Git/回执及本次 Git 子进程退出证据，不自动重跑未知 hook。
+prepare/finalize/remove 的 HTTP/RPC 只持久受理并立即返回 accepted/running/succeeded/failed/unknown 回执，副作用在 Runner 进程内运行，inspect 返回后续事实。固定操作键分别为 preparationId、roundId+finalizeAttemptId、environmentId+removeAttemptId；相同键同参数不再执行，冲突拒绝。prepare 丢受理响应可用相同 preparationId 查/重交受理，不能换目录；finalize 未知只查询，显式 retry-finish 才生成新 attempt。Runner 重启后先检查既有 Git/回执及本次 Git 进程组退出证据，不自动重跑未知 hook；确认进程已停止但无完整结果时记录中断失败，操作者修复后可用新 attempt 明确重试。
 
 ## 准备与真实启动
 
 1. resolve 拒绝非 Git、unborn、歧义 ref、非 commit、越界/不在基线的子目录；保留源目录未提交内容未包含的提示。不在主目录 stash/add/commit。
 2. 准备先保存归属意图，再按准确 commit 创建自有 branch/worktree，并固定 base 引用；路径已存在时检查记录、Git registration、真实路径与分支。创建过程中崩溃可按同一身份检查已完成步骤，不覆盖未知目录。
-3. 初始化基线子模块并核对递归 status、所需 commit 与内容；按既有凭据取得缺少对象，有可用本机模块对象时使用 reference-if-able。优先用单次命令配置复用已解析 URL/active；原生 init 若需保存新的子模块登记，会写入主仓库共享 Git config 的对应条目，不能声称 Git 元数据完全不变；不得覆盖已有用户设置/remote 或修改全局配置。对 LFS 先复用同仓库本地对象，必要时沿已有 LFS remote 下载，再检查 oid/size 与实际实体；缺内容不就绪，不接受指针占位。
+3. 初始化基线子模块并核对递归 status、所需 commit 与内容；按既有凭据取得缺少对象，有可用本机模块对象时使用 Git submodule update 支持的 --reference；缺少可用目录时省略。优先用单次命令配置复用已解析 URL/active；原生 init 若需保存新的子模块登记，会写入主仓库共享 Git config 的对应条目，不能声称 Git 元数据完全不变；不得覆盖已有用户设置/remote 或修改全局配置。对 LFS 先复用同仓库本地对象，必要时沿已有 LFS remote 下载，再检查 oid/size 与实际实体；缺内容不就绪，不接受指针占位。
 4. 验证 inputs 的 hash/长度及源码树外的归属（如有），验证实际 cwd。未提交/ignored 工程 skill 不在新 checkout 时明确说明；不创建空白原生配置 home，不自动安装项目依赖。
 5. 新轮次要求 HEAD 等于上轮固定结果、Git 工作区无遗留改动，ignored 依赖保留。记录 startHead 后得到准备证据。
 6. prepare 先核对配置的 workspace roots，避免完成后才发现目标路径被禁用。spawn/resume 携带 preparedWorkspace，先于 validateWorkspaceDirectory 验证存在性与归属并强制 approvedNewDirectoryCreation=false，再在 Runner 真正启动前重查证据及 cwd/HEAD/必要输入。失效、丢失或旧轮次证据返回 childStarted=false；不重建空目录，不再调用 HAPI 默认 worktree 创建。中心仍核对实际会话 machine/path/flavor 后才发 prompt。
