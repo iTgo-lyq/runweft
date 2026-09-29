@@ -38,6 +38,7 @@
     "test:task-retention": "bun scripts/smoke-task-retention.ts",
     "test:artifact-mcp": "bun scripts/smoke-artifact-mcp.ts",
     "test:repository-export": "bun scripts/smoke-repository-export.ts",
+    "test:task-results": "bun scripts/smoke-result-export.ts --tasks",
     "test:result-fetch": "bun scripts/smoke-result-export.ts --fetch",
     "test:result-export": "bun scripts/smoke-result-export.ts",
     "test:repository-import": "bun scripts/smoke-repository-import.ts",

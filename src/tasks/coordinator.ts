@@ -1,3 +1,6 @@
+import { BaselineStore } from '../remote/store';
+import { TaskResults, codeView } from './results';
+import { ResultShowSchema, ResultFetchSchema, ResultRetrySchema } from './result-types';
 import { setTimeout as delay } from 'node:timers/promises';
 import { ExecutionClient } from '../execution';
 import { errorDetails } from '../errors';
@@ -17,12 +20,13 @@ import { TaskRetention } from './retention';
 export class TaskCoordinator {
     readonly store: TaskStore;
     private readonly resources: ResourceStore;
+    private readonly resultBaselines: BaselineStore;
     private readonly clients = new Map<string, HapiClient>();
     private readonly working = new Map<string, Promise<void>>();
     private timer?: ReturnType<typeof setInterval>;
     private closing = false;
     constructor(path: string, private readonly clientFor: (namespace: string) => HapiClient, private readonly pollMs = 1000) {
-        this.store = new TaskStore(path); this.resources = new ResourceStore(path);
+        this.store = new TaskStore(path); this.resources = new ResourceStore(path); this.resultBaselines = new BaselineStore(path);
     }
     private client(namespace: string) {
         if (!this.clients.has(namespace)) this.clients.set(namespace, this.clientFor(namespace));
@@ -67,7 +71,7 @@ export class TaskCoordinator {
         this.closing = true;
         clearInterval(this.timer); this.timer = undefined;
         await Promise.all(this.working.values());
-        this.store.close(); this.resources.close();
+        this.store.close(); this.resources.close(); this.resultBaselines.close();
     }
     lookup(namespace: string, value: unknown) {
         const { parent, requestId, intent } = parseTask(LookupSchema, value);
@@ -101,6 +105,20 @@ export class TaskCoordinator {
     private requireLocal(target: ExecutionTarget, parent: Parent, mode: Task['environment']['mode']) {
         if (target.machineId !== parent.machineId) throw new TaskError(409, mode === 'shared' ? 'shared_target_required' : 'remote_workspace_unavailable',
             '当前任务需要发起机上的 runtime，Hub 模式也支持同机执行。', '绑定本机 runtime；跨机工作区准备与结果回收尚未交付。');
+    }
+    result(namespace: string, value: unknown) {
+        const { parent, id, roundId } = parseTask(ResultShowSchema, value);
+        const { task, rounds } = this.store.require(namespace, id, parent);
+        const round = roundId ? rounds.find(item => item.id === roundId) : rounds.at(-1);
+        if (!round) throw new TaskError(404, 'round_unknown', '此任务中没有指定轮次。');
+        return { agent_id: id, round_id: round.id, revision: task.revision, code_revision: round.codeRevision, code: codeView(task, round),
+            manifests: this.store.codeManifests(id, round.id), fetches: this.store.codeFetches(id, round.id) };
+    }
+    async resultAction(namespace: string, action: 'fetch' | 'retry', value: unknown) {
+        const parsed = parseTask(action === 'fetch' ? ResultFetchSchema : ResultRetrySchema, value);
+        const accepted = await this.serial(parsed.id, () => this.store.resultAction(namespace, { ...parsed, action }));
+        this.kick(namespace, parsed.id);
+        return { ...accepted, ...this.result(namespace, { parent: parsed.parent, id: parsed.id, roundId: accepted.round_id }) };
     }
     async retryFinish(namespace: string, value: unknown) {
         const { parent, id, roundId } = parseTask(InterruptSchema, value);
@@ -224,14 +242,14 @@ export class TaskCoordinator {
             const agents = ids.map(id => {
                 const bundle = this.store.require(namespace, id, parent);
                 const round = after[id] === undefined ? bundle.rounds.find(round => round.id === targets.get(id))!
-                    : bundle.rounds.filter(round => Math.max(round.completedRevision ?? 0, round.artifactsRevision ?? 0) > after[id])
-                        .sort((a, b) => Math.max(a.completedRevision ?? 0, a.artifactsRevision ?? 0) - Math.max(b.completedRevision ?? 0, b.artifactsRevision ?? 0))[0] ?? bundle.rounds.at(-1)!;
+                    : bundle.rounds.filter(round => Math.max(round.completedRevision ?? 0, round.artifactsRevision ?? 0, round.codeRevision ?? 0) > after[id])
+                        .sort((a, b) => Math.max(a.completedRevision ?? 0, a.artifactsRevision ?? 0, a.codeRevision ?? 0) - Math.max(b.completedRevision ?? 0, b.artifactsRevision ?? 0, b.codeRevision ?? 0))[0] ?? bundle.rounds.at(-1)!;
                 const view = overview(bundle, round);
-                return after[id] !== undefined && Math.max(round.completedRevision ?? 0, round.artifactsRevision ?? 0) > after[id]
-                    ? { ...view, revision: Math.max(round.completedRevision ?? 0, round.artifactsRevision ?? 0), current_revision: bundle.task.revision } : { ...view, current_revision: bundle.task.revision };
+                return after[id] !== undefined && Math.max(round.completedRevision ?? 0, round.artifactsRevision ?? 0, round.codeRevision ?? 0) > after[id]
+                    ? { ...view, revision: Math.max(round.completedRevision ?? 0, round.artifactsRevision ?? 0, round.codeRevision ?? 0), current_revision: bundle.task.revision } : { ...view, current_revision: bundle.task.revision };
             });
             const ready = agents.some(agent => agent.status !== 'running' && (after[agent.agent_id] === undefined
-                || (['completed', 'failed', 'interrupted'].includes(agent.status) ? Math.max(agent.completed_revision ?? 0, agent.artifacts_revision ?? 0) > after[agent.agent_id] : agent.revision > after[agent.agent_id])));
+                || (['completed', 'failed', 'interrupted'].includes(agent.status) ? Math.max(agent.completed_revision ?? 0, agent.artifacts_revision ?? 0, agent.code_revision ?? 0) > after[agent.agent_id] : agent.revision > after[agent.agent_id])));
             if (ready || Date.now() >= deadline) return { agents, timed_out: !ready };
             await delay(Math.min(200, Math.max(1, deadline - Date.now())), undefined, { signal });
         }
@@ -241,13 +259,19 @@ export class TaskCoordinator {
         const workspaces = new TaskWorkspaces(this.client(namespace), task.target.machineId);
         const files = new TaskFiles(this.client(namespace));
         const outputs = new TaskOutputs(this.client(namespace), this.store);
+        const results = new TaskResults(this.client(namespace), this.store, this.resultBaselines);
         for (const previous of rounds.filter(item => ['finished', 'failed'].includes(item.phase))) {
             const savePrevious = () => this.store.save(task, previous, []);
+            if (previous.code) await results.advance(task, previous, savePrevious);
             await outputs.advance(task, previous, savePrevious);
             await files.releaseAfterStop(task, previous, savePrevious);
             await new TaskRetention(this.client(namespace)).advance(task, previous, savePrevious, () => {
                 previous.artifactsRevision = this.store.require(namespace, id).task.revision + 1; savePrevious();
             });
+        }
+        for (const fetch of this.store.codeFetches(id)) {
+            const selected = rounds.find(round => round.id === fetch.roundId)!;
+            await results.advanceFetch(task, selected, fetch);
         }
         if (task.environment.mode === 'worktree' && task.environment.status === 'deleting') {
             try { await workspaces.remove(task, () => this.store.saveEnvironment(task)); }

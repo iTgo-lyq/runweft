@@ -27,7 +27,7 @@
 
 ### T3 中心代码清单、交付与取回入口
 
-- 状态：待开始
+- 状态：已完成
 - 依赖：T2。
 - 交付：state v6、不可变代码清单、发布/取回/retry 记录和 code revision；与 TaskOutputs 同形的 TaskResults.advance 入口、共享仓库文件传输 helper、完整快照/HEAD/模块 bundle/LFS 复用与直接 recovery pin；不改变原 consumer 表。CLI task result show/fetch/retry 和 MCP fetch_result/retry_result；沿现有身份/任务读取，尚不开放远端 spawn。
 - 验收：中心无 Runner/Git；字节成功但封存/语义不匹配不能 available；分批/配额/上传丢响应/重启/目标离线/重传均不重跑封存或模型。取回冻结轮次、校验原仓库，不静默读旧结果；本机已有成果直接展示原引用。原生结论、代码与附件完整性分别表达。

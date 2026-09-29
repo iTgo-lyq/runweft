@@ -13,7 +13,7 @@ export function openState(path: string) {
         db.exec('PRAGMA busy_timeout=5000; PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON;');
         db.transaction(() => {
             const { user_version: version } = db.query('PRAGMA user_version').get() as { user_version: number };
-            if (version > 5) throw new ResourceError(503, 'state_version_newer', '业务数据版本高于当前程序。', '使用创建该数据的新版 Runweft；不要删除数据库。');
+            if (version > 6) throw new ResourceError(503, 'state_version_newer', '业务数据版本高于当前程序。', '使用创建该数据的新版 Runweft；不要删除数据库。');
             if (version < 1) db.exec(`
                 CREATE TABLE machine_registrations (
                     namespace TEXT NOT NULL, machineId TEXT NOT NULL, registered INTEGER NOT NULL,
@@ -98,6 +98,19 @@ export function openState(path: string) {
                     UNIQUE(namespace, requestId)
                 );
                 PRAGMA user_version=5;
+            `);
+            if (version < 6) db.exec(`
+                CREATE TABLE delegation_code_manifests (
+                    taskId TEXT NOT NULL REFERENCES delegation_tasks(id), roundId TEXT NOT NULL REFERENCES delegation_rounds(id),
+                    version INTEGER NOT NULL, jobId TEXT NOT NULL UNIQUE, data TEXT NOT NULL,
+                    PRIMARY KEY(taskId, roundId, version)
+                );
+                CREATE TABLE delegation_code_fetches (
+                    id TEXT PRIMARY KEY, taskId TEXT NOT NULL REFERENCES delegation_tasks(id),
+                    roundId TEXT NOT NULL REFERENCES delegation_rounds(id), status TEXT NOT NULL, data TEXT NOT NULL
+                );
+                CREATE INDEX delegation_code_fetch_task ON delegation_code_fetches(taskId);
+                PRAGMA user_version=6;
             `);
         }).immediate();
         return db;

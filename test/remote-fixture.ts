@@ -11,7 +11,7 @@ export async function remoteFixture(cleanups: (() => Promise<void> | void)[], as
     const repos = new Map<string, RepositoryOperation>(), transfers = new Map<string, ArtifactTransfer>(), objects = new Map<string, Artifact>();
     const refs = new Map<string, Set<string>>(), workspaces = new Map<string, ManagedWorkspace>();
     const faults = { exportHold: false, deliverLost: false, partialDelivery: false, targetOffline: false, import: false, prepare: false, cleanup: false,
-        releaseLost: false, dirty: false, ignored: false, cacheHeld: false, unpinLost: false, maxFileBytes: 1_000_000, quota: 100_000_000 };
+        releaseLost: false, resultMismatch: false, resultFail: false, fetchLost: false, sourceOffline: false, dirty: false, ignored: false, cacheHeld: false, unpinLost: false, maxFileBytes: 1_000_000, quota: 100_000_000 };
     const requests: { domain: string; machine: string; body: any }[] = [];
     let commit = 'a'.repeat(40);
     const source = (cwd: string, ref: string): WorkspaceSource => ({ machineId: 'own', repositoryId: 'source-repository', sourcePath: cwd, repositoryRoot: '/source', commonDir: '/source/.git',
@@ -31,7 +31,7 @@ export async function remoteFixture(cleanups: (() => Promise<void> | void)[], as
         const machine = parts[3], domain = parts[4];
         if (!['repositories', 'artifacts', 'workspaces'].includes(domain)) return;
         if (namespace !== 'alpha') return error('machine_not_found', 404);
-        if (machine === 'remote' && faults.targetOffline) return error('machine_offline');
+        if ((machine === 'remote' && faults.targetOffline) || (machine === 'own' && faults.sourceOffline)) return error('machine_offline');
         const body = await request.json() as any; requests.push({ domain, machine, body });
         if (domain === 'repositories') {
             let operation = repos.get(body.operationId);
@@ -45,17 +45,32 @@ export async function remoteFixture(cleanups: (() => Promise<void> | void)[], as
                     operation.cache = { retained: faults.cacheHeld, directory: '/target/cache.git', ...(faults.cacheHeld ? { reason: { code: 'repository_unknown_ref', message: 'unknown code reference' } } : {}) };
                 }
                 if (!body.names) operation.retention = 'released';
-                operation.releasedFiles.push(...(body.names ?? operation.snapshot!.files.map(file => file.name)));
+                operation.releasedFiles.push(...(body.names ?? (operation.snapshot?.files ?? []).map(file => file.name)));
             } else if (!operation) {
+                const sealed = body.action === 'export-result' ? workspaces.get(body.environmentId)! : undefined;
+                const fixed = sealed?.results[body.roundId];
+                const origin = sealed ? { ...sealed.source, baseCommit: fixed!.resultHead } : body.source;
+                if (body.action === 'fetch-result') {
+                    operation = { version: 1, request: body, directory: `/fetches/${body.operationId}`, status: 'succeeded', retention: 'retained', releasedFiles: [], createdAt: Date.now(), updatedAt: Date.now(),
+                        fetched: { target: body.target, ref: `refs/hapi/results/${body.result.environmentId}/${body.result.roundId}`, head: body.result.resultHead, fetchedAt: Date.now(), repositories: [], lfs: [] } };
+                    repos.set(body.operationId, operation);
+                    if (faults.fetchLost) { faults.fetchLost = false; return error('rpc_response_lost', 502); }
+                    return Response.json({ operation });
+                }
                 const snapshot: RepositorySnapshot = body.action === 'import' ? body.snapshot : {
-                    version: 1, manifestId: body.operationId, sourceMachineId: 'own', repositoryId: body.source.repositoryId, baseCommit: body.source.baseCommit, objectFormat: 'sha1',
-                    repositories: [{ path: '', commit: body.source.baseCommit, objectFormat: 'sha1', bundleRef: `refs/heads/baseline-${body.operationId}`, file: 'root.bundle' }],
+                    version: 1, manifestId: body.operationId, sourceMachineId: machine, repositoryId: origin.repositoryId, baseCommit: origin.baseCommit, objectFormat: 'sha1',
+                    repositories: [{ path: '', commit: origin.baseCommit, objectFormat: 'sha1', bundleRef: `refs/heads/baseline-${body.operationId}`, file: 'root.bundle' }],
                     lfs: Array.from({ length: assetCount }, (_, index) => ({ repository: '', path: `file-${index}.bin`, oid: digest(`lfs:${index}`), size: 10, file: `lfs-${index}` })),
-                    files: [{ name: 'root.bundle', kind: 'bundle', sha256: digest(body.source.baseCommit), size: 20 },
+                    files: [{ name: 'root.bundle', kind: 'bundle', sha256: digest(origin.baseCommit), size: 20 },
                         ...Array.from({ length: assetCount }, (_, index) => ({ name: `lfs-${index}`, kind: 'lfs' as const, sha256: digest(`lfs:${index}`), size: 10 }))],
                 };
                 operation = { version: 1, request: body, directory: `/exports/${body.operationId}`, snapshot,
                     status: body.action === 'export' && faults.exportHold ? 'running' : 'succeeded', retention: 'retained', releasedFiles: [], createdAt: Date.now(), updatedAt: Date.now() };
+                if (sealed) {
+                    operation.sealed = { source: { ...sealed.source, sourcePath: sealed.checkout, baseCommit: fixed!.resultHead }, result: structuredClone(fixed!), verifiedAt: Date.now() };
+                    if (faults.resultMismatch) operation.sealed.result.resultHead = 'e'.repeat(40);
+                    if (faults.resultFail) { operation.status = 'failed'; operation.error = { code: 'repository_result_missing', message: 'missing result bytes' }; }
+                }
                 if (body.action === 'import') operation.imported = { source: { ...source('/target/cache.git', 'baseline'), sourcePath: '/target/cache.git',
                     machineId: machine, repositoryId: 'target-repository', repositoryRoot: '/target/cache.git', commonDir: '/target/cache.git', relativePath: '', dirty: false,
                     baseCommit: snapshot.baseCommit, baseRef: `refs/hapi/snapshots/${snapshot.manifestId}`, snapshot: { importOperationId: body.operationId, manifestId: snapshot.manifestId } },

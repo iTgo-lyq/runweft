@@ -9,6 +9,7 @@ import type { ExecutionTarget, Problem } from '../resources/types';
 import { ArtifactNameSchema } from '../../hapi/shared/src/artifacts';
 import { ArtifactOutputsSchema, type MaterializedInput, type MaterializeRequest } from '../../hapi/shared/src/artifactTransfers';
 import type { ArtifactRetention } from './retention';
+import type { CodeDelivery, CodeFetch } from './result-types';
 import type { OutputFiles } from './output-types';
 import { RunweftError } from '../errors';
 
@@ -51,7 +52,7 @@ export const ArtifactActionSchema = z.discriminatedUnion('action', [
 ]);
 export const ArtifactReleaseSchema = z.strictObject({ parent: ParentSchema, id: z.uuid(), roundId: z.uuid().optional(), apply: z.boolean().default(false), discardPending: z.boolean().default(false) });
 export type ArtifactAction = z.infer<typeof ArtifactActionSchema>;
-export type Attention = Problem & { stage: string; scope?: 'workspace' | 'artifacts'; permissionIds?: string[] };
+export type Attention = Problem & { stage: string; scope?: 'workspace' | 'artifacts' | 'code'; permissionIds?: string[] };
 export type Status = 'running' | 'needs_attention' | 'completed' | 'failed' | 'interrupted' | 'unknown';
 export type Acceptance = { agent_id: string; round_id: string; request_id: string; revision: number; accepted: true; input_id?: string };
 export type StructuredReport = { summary: string; changes: string; tests: string; remaining: string };
@@ -59,6 +60,7 @@ export type WorkspaceRemoval = { attemptId: string; expectedHead: string; discar
     status: 'pending' | 'running' | 'succeeded' | 'failed' | 'unknown'; error?: Problem };
 export type TaskEnvironment = { mode: 'shared'; machineId: string; cwd: string }
     | { mode: 'worktree'; machineId: string; environmentId: string; source: WorkspaceSource; cwd: string;
+        remote?: { origin: WorkspaceSource; snapshotId: string; consumerId: string };
         checkout?: string; branch?: string; status: 'retained' | 'deleting' | 'removed'; removal?: WorkspaceRemoval };
 export type Task = { version: 2; id: string; namespace: string; parent: Parent; agent: AgentSnapshot; target: ExecutionTarget;
     environment: TaskEnvironment; createdAt: number; revision: number; updatedAt: number };
@@ -78,7 +80,7 @@ export type InputFiles = { reference: string; files: FrozenInput[]; operationId:
 export type ArtifactIntent = { namespace: string; requestId: string; reference: string; requests: ArtifactInput[]; files?: FrozenInput[] };
 export type Round = { id: string; taskId: string; ordinal: number; requestId: string; message: string;
     phase: 'queued' | 'preparing' | 'starting' | 'resuming' | 'running' | 'stopping' | 'finishing' | 'finished' | 'failed';
-    preparation: Preparation; git?: GitDelivery; inputFiles?: InputFiles; outputFiles?: OutputFiles; artifactRetention?: ArtifactRetention; artifactsRevision?: number;
+    preparation: Preparation; git?: GitDelivery; inputFiles?: InputFiles; outputFiles?: OutputFiles; artifactRetention?: ArtifactRetention; artifactsRevision?: number; code?: CodeDelivery; codeRevision?: number; resultFetch?: Pick<CodeFetch, 'id' | 'requestId' | 'status' | 'error' | 'cleanupError'> & { ref?: string; head?: string };
     spawnRequestId: string; spawnAttempted: boolean; sessionId?: string; nativeSessionId?: string;
     cursor?: HistoryCursor; report: string; structuredMissing: boolean;
     stop: 'not_started' | 'stopping' | 'stopped'; finish: 'pending' | 'complete';

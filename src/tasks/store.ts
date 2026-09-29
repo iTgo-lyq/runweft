@@ -1,3 +1,5 @@
+import { isDeepStrictEqual } from 'node:util';
+import type { CodeFetch, CodeManifest, ResultAction } from './result-types';
 import type { ArtifactRetention } from './retention';
 import { randomUUID } from 'node:crypto';
 import { openState } from '../state';
@@ -39,6 +41,10 @@ export class TaskStore {
         return this.db.query(`SELECT DISTINCT t.namespace, t.id FROM delegation_tasks t JOIN delegation_rounds r ON t.id=r.taskId
             WHERE r.phase NOT IN ('finished', 'failed') OR json_extract(t.data, '$.environment.status')='deleting'
             OR json_extract(r.data, '$.artifactRetention.state')='releasing'
+            OR json_extract(r.data, '$.code.retryRequested')=1
+            OR json_extract(r.data, '$.code.status') IN ('capturing', 'publishing', 'unknown')
+            OR (json_extract(r.data, '$.code.status')='available' AND json_extract(r.data, '$.code.sourceReleased')=0)
+            OR EXISTS (SELECT 1 FROM delegation_code_fetches f WHERE f.taskId=t.id AND (f.status NOT IN ('failed', 'available') OR (f.status='available' AND json_extract(f.data, '$.released')=0)))
             OR (json_extract(r.data, '$.inputFiles.attempted')=1 AND json_extract(r.data, '$.inputFiles.intermediateReleased')=0)
             OR EXISTS (SELECT 1 FROM json_each(r.data, '$.outputFiles.jobs') WHERE json_extract(value, '$.phase') <> 'complete')`).all() as { namespace: string; id: string }[];
     }
@@ -220,6 +226,76 @@ export class TaskStore {
             round.outputFiles!.latest = manifest; job.publishedVersion = manifest.version; job.phase = 'cleanup'; delete job.error;
             round.artifactsRevision = this.require(task.namespace, task.id).task.revision + 1;
             this.save(task, round, []);
+        }).immediate();
+    }
+    codeManifests(taskId: string, roundId?: string): CodeManifest[] {
+        return (this.db.query('SELECT data FROM delegation_code_manifests WHERE taskId=? AND (? IS NULL OR roundId=?) ORDER BY rowid')
+            .all(taskId, roundId ?? null, roundId ?? null) as { data: string }[]).map(read<CodeManifest>);
+    }
+    publishCode(task: Task, round: Round, manifest: CodeManifest) {
+        this.db.transaction(() => {
+            this.db.query('INSERT INTO delegation_code_manifests VALUES (?, ?, ?, ?, ?)')
+                .run(task.id, round.id, manifest.version, manifest.jobId, JSON.stringify(manifest));
+            round.code!.latest = manifest; round.code!.status = 'available'; delete round.code!.error;
+            if (round.attention?.scope === 'code') round.attention = null;
+            round.codeRevision = this.require(task.namespace, task.id).task.revision + 1;
+            this.save(task, round, []);
+        }).immediate();
+    }
+    codeFetches(taskId: string, roundId?: string): CodeFetch[] {
+        return (this.db.query('SELECT data FROM delegation_code_fetches WHERE taskId=? AND (? IS NULL OR roundId=?) ORDER BY rowid')
+            .all(taskId, roundId ?? null, roundId ?? null) as { data: string }[]).map(read<CodeFetch>);
+    }
+    saveCodeFetch(task: Task, round: Round, fetch: CodeFetch) {
+        this.db.transaction(() => {
+            const previous = this.codeFetches(task.id).find(item => item.id === fetch.id);
+            if (JSON.stringify(previous) === JSON.stringify(fetch)) return;
+            fetch.updatedAt = Date.now();
+            this.db.query('INSERT INTO delegation_code_fetches VALUES (?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET status=excluded.status, data=excluded.data')
+                .run(fetch.id, task.id, round.id, fetch.status, JSON.stringify(fetch));
+            const latest = this.codeFetches(task.id, round.id).at(-1)!;
+            round.resultFetch = { id: latest.id, requestId: latest.requestId, status: latest.status, error: latest.error,
+                cleanupError: latest.cleanupError, ref: latest.fetched?.ref ?? latest.localRef, head: latest.fetched?.head };
+            if (['available', 'failed', 'unknown'].includes(fetch.status)
+                && (previous?.status !== fetch.status || !isDeepStrictEqual(previous?.error, fetch.error))) {
+                round.codeRevision = this.require(task.namespace, task.id).task.revision + 1;
+            }
+            this.save(task, round, []);
+        }).immediate();
+    }
+    resultAction(namespace: string, value: ResultAction) {
+        return this.db.transaction(() => {
+            const { parent, requestId, ...intent } = value;
+            this.assertCanDelegate(namespace, parent);
+            const { task, rounds } = this.require(namespace, intent.id, parent);
+            const fingerprint = contentVersion({ parentKey: parentKey(parent), machineId: parent.machineId, cwd: parent.cwd, resultAction: intent });
+            const previous = this.db.query('SELECT fingerprint, accepted FROM delegation_requests WHERE namespace=? AND requestId=?').get(namespace, requestId) as { fingerprint: string; accepted: string } | null;
+            if (previous) {
+                if (previous.fingerprint !== fingerprint) throw new TaskError(409, 'task_request_conflict', '同一 request ID 已用于其他操作。');
+                return JSON.parse(previous.accepted) as Acceptance & { result_operation_id: string };
+            }
+            if (this.db.query('SELECT 1 FROM delegation_artifact_intents WHERE namespace=? AND requestId=?').get(namespace, requestId)) throw new TaskError(409, 'task_request_conflict', '同一 request ID 已用于附件接受意图。');
+            const round = intent.roundId ? rounds.find(item => item.id === intent.roundId) : rounds.at(-1);
+            if (!round) throw new TaskError(404, 'round_unknown', '此任务中没有指定轮次。');
+            if (task.environment.mode !== 'worktree') throw new TaskError(409, 'result_not_applicable', '共享目录的改动直接位于主工作区，没有独立代码成果。');
+            let operationId: string;
+            if (intent.action === 'retry') {
+                if (!round.code || !['needs_attention', 'unknown'].includes(round.code.status)) throw new TaskError(409, 'result_retry_unavailable', '该轮没有需要重试的代码交付。');
+                if (round.code.retryRequested) throw new TaskError(409, 'result_retry_pending', '已有重试请求，先查询该轮状态。');
+                round.code.retryRequested = true; operationId = round.code.id;
+                this.save(task, round, []);
+            } else {
+                const origin = task.environment.remote?.origin ?? task.environment.source;
+                if (parent.machineId !== origin.machineId) throw new TaskError(409, 'result_target_mismatch', '请在发起仓库所在机器取回代码。');
+                const fetch: CodeFetch = { id: randomUUID(), requestId, taskId: task.id, roundId: round.id, parent,
+                    target: { machineId: origin.machineId, repositoryId: origin.repositoryId, commonDir: origin.commonDir, objectFormat: origin.objectFormat, cwd: parent.cwd },
+                    status: 'waiting', operationId: randomUUID(), attempted: false, baseline: [], output: [], released: false,
+                    createdAt: Date.now(), updatedAt: Date.now() };
+                this.saveCodeFetch(task, round, fetch); operationId = fetch.id;
+            }
+            const accepted = { agent_id: task.id, round_id: round.id, request_id: requestId, result_operation_id: operationId, revision: task.revision, accepted: true as const };
+            this.db.query('INSERT INTO delegation_requests VALUES (?, ?, ?, ?, ?, ?, ?)').run(namespace, requestId, fingerprint, task.id, round.id, JSON.stringify(accepted), Date.now());
+            return accepted;
         }).immediate();
     }
     beginRemoval(namespace: string, parent: Parent, id: string, discardIgnored: boolean): Task {

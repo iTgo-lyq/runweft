@@ -79,7 +79,7 @@ try {
     note('same request returns the original preparation; another consumer reuses snapshot/import, while another commit uploads only its new bundle and pins existing LFS objects');
     const db = new Database(join(center, 'server/runweft/state.sqlite'), { readonly: true });
     try {
-        assert.deepEqual(db.query('PRAGMA user_version').get(), { user_version: 5 });
+        assert.deepEqual(db.query('PRAGMA user_version').get(), { user_version: 6 });
         assert.equal((db.query('SELECT COUNT(*) AS n FROM repository_snapshots').get() as { n: number }).n, 2);
         assert.equal((db.query('SELECT COUNT(*) AS n FROM repository_lfs').get() as { n: number }).n, 102);
         for (const row of db.query('SELECT data FROM repository_snapshots').all() as { data: string }[]) {
@@ -92,7 +92,7 @@ try {
     const inspector = cli(center, ['workspace', 'inspect', ready.id], { cwd: root }).preparation;
     assert.equal(inspector.phase, 'ready'); assert.equal(cli(center, ['workspace', 'preparations', '--all'], { cwd: root }).preparations.length, 3);
     assert.equal((await hapi.request('/api/sessions')).sessions.length, 0);
-    note('state v5, cache/import receipts and pins survive Hub restart with source paths hidden and source Runner stopped; Hub operator without local Runner can inspect all diagnostics');
+    note('state v6, cache/import receipts and pins survive Hub restart with source paths hidden and source Runner stopped; Hub operator without local Runner can inspect all diagnostics');
     const records = <T>(table: string): T[] => {
         const database = new Database(join(center, 'server/runweft/state.sqlite'), { readonly: true });
         try { return (database.query(`SELECT data FROM ${table}`).all() as { data: string }[]).map(row => JSON.parse(row.data)); } finally { database.close(); }

@@ -38,6 +38,12 @@ export class TaskClient {
         const { namespace: _, ...accepted } = await this.request('send', { requestId, intent: { id, message, mode: options.mode ?? 'next', roundId: options.roundId, ...(options.inputs?.length ? { inputs: options.inputs } : {}), ...(options.outputs?.length ? { outputs: options.outputs } : {}) } }, signal);
         return accepted;
     }
+    async result(id: string, roundId?: string, signal?: AbortSignal): Promise<ReturnType<TaskCoordinator['result']>> {
+        return this.request('result/show', { id, roundId }, signal);
+    }
+    async resultAction(id: string, roundId: string | undefined, requestId: string, action: 'fetch' | 'retry', signal?: AbortSignal): Promise<Awaited<ReturnType<TaskCoordinator['resultAction']>>> {
+        return this.request(`result/${action}`, { id, roundId, requestId }, signal);
+    }
     async artifactAction(id: string, roundId: string, requestId: string, action: 'retry' | 'collect', files?: ArtifactOutput[], signal?: AbortSignal): Promise<Awaited<ReturnType<TaskCoordinator['artifactAction']>>> {
         return this.request('artifacts/action', { id, roundId, requestId, action, ...(action === 'collect' ? { files } : {}) }, signal);
     }

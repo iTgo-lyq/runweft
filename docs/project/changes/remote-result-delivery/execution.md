@@ -43,3 +43,12 @@
 - 实际验证：固定干净 HAPI pin 构建 linux-x64 配套 CLI 后执行 `bun run test:result-fetch`，`.dev-smoke/repository-result-fetch-I9yrha/evidence.json` success、cleanupErrors=[]；两轮成果均取回，真实 HTTP 丢响应共 3 次（导出 1、取回 2），Runner 重启返回同一成功回执且不要求下载临时文件继续存在。执行机停机且 Git 存储隐藏、源分支删除、原主库旧 LFS/模块对象移走后，从中心恢复两轮及旧/新实体，原父状态逐字节不变且拒绝 hook 未执行。最后明确 merge、原生 submodule 初始化和 LFS checkout 成功，执行端及模块上游均不可用，零 native sessions。同机多进程不作为物理跨机证据。
 - 配套：HAPI 通用 fetch 与契约独立提交，root 更新 revision；复用 T1 实际脚本的 --fetch 分支，不增加第二套环境脚手架。中心结果清单和 Runweft 业务取回入口仍由 T3 完成。
 - Commit：HAPI `remote-result-delivery T2: fetch verified results into the original repository`；Runweft `remote-result-delivery T2: verify original-repository recovery and explicit merge`
+
+## T3 中心代码清单、交付与取回入口
+
+- 结果：提取 RepositoryTransfers 和 SnapshotPublisher，基线/成果共用回执对账、100 项批次、capture/deliver、配额检查和候选释放。state v6 只新增代码清单/取回表，交付操作归原 round，请求沿原事务指纹。TaskResults 依据真实 HAPI 封存事实发布不可变清单，完整 HEAD/模块 bundle/LFS 复用，逐轮直接 pin 初始基线与成果文件的去重集合；无 result consumer 或原表改写。CLI result show/fetch/retry 与 MCP fetch_result/retry_result 接入，code_revision 使用既有 wait。取回固定轮次、原主库身份和操作 ID，本机成果直接展示原 ref；MCP 返回有界操作摘要。远端 spawn 仍按计划关闭，正式 finishing 接入留在 T4。
+- 聚焦：6 项结果测试覆盖 100+ 文件、丢上传回执、配额/部分失败重试、封存不匹配拒绝、已停止 finishing 捕获失败的显式 retry、原 HEAD 无变化且目标离线的基线复用、取回待发布/固定轮次/离线与丢响应、code_revision、原 Git facts 不变。v5→v6 对 14 张原表逐行比较，包括机器/runtime、任务/输入/session/请求、文件意图/版本与基线/import/consumer/LFS/诊断记录，全部保留；consumer.importId 保持 NOT NULL。
+- 回归：公共 helper 提取后立即通过 C9 11 项聚焦与实际诊断。`.dev-smoke/workspace-preparation-XJz8Ae/evidence.json` 验证传输层提取；进一步共用发布后 `.dev-smoke/workspace-preparation-ZTA1nW/evidence.json` 验证 schema v6、103 文件批次、重启恢复、源端离线、消费者及跨快照 LFS pin、真实缓存释放。两次均 success、cleanupErrors=[]。root typecheck 与全量 `bun test ./test` 146 pass / 0 fail；第一次新版本断言遗漏已修正。最终查询 next/通知游标/人类可读用量显示通过 22 项聚焦、typecheck 与配套编译，另存于 `.dev-smoke/c10-t3-final-*.log`。
+- 实际成果：复用 T1/T2 环境脚手架的 `bun run test:task-results`，无模型实际 HAPI prepare/finalize 事实进入已结束 fixture 记录，编译 Hub 协调器随后完成两轮发布。`.dev-smoke/task-result-delivery-OBwjjj/evidence.json` success、cleanupErrors=[]；详细代码清单与取回回执在同目录 task-results.json。第二轮 HEAD 不变，零新增上传；模块 bundle 和 LFS 正确复用，初始旧 LFS 仍有本轮 recovery pin。目标 Runner 停止且 Git 存储移走，中心重启后，公开 CLI 与 MCP handler 均完成固定轮次取回；原分支删除、parent index/config/脏文件不变，明确 merge/LFS checkout 恢复代码及二进制，零 native sessions。这里的 MCP 使用无模型宿主身份 fixture，完整原生 MCP 委派矩阵留在 T6；不冒称物理跨机。
+- 配套：HAPI 无新增改动，继续 T2 固定 revision；root linux-x64 配套构建完成。四平台候选更新和实际 npm 安装按 Plan 留在 T6。
+- Commit：`remote-result-delivery T3: publish and recover task code through CLI and MCP`

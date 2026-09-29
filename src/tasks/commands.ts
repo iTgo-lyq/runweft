@@ -63,6 +63,30 @@ export function addTaskCommands(program: Command, context: () => ResolvedConfig,
             output(result, result.environment.mode === 'worktree' && result.environment.status === 'removed' ? '工作区已移除；报告和 Git 成果引用保留。'
                 : `已请求删除工作区：${id}\n完成前不接受新轮次；报告和成果引用保留。\n查询结果：runweft task show ${id}`);
         });
+    const result = task.command('result').description('查看、取回或重试独立工作区代码成果');
+    const resultText = (value: Awaited<ReturnType<TaskClient['result']>>) => {
+        const fetch = value.fetches.at(-1), ref = fetch?.fetched?.ref ?? fetch?.localRef ?? value.code.ref;
+        return `代码成果：${value.code.status}\n轮次：${value.round_id}`
+            + (value.code.bytes ? `\n传输：上传 ${value.code.bytes.uploaded} 字节，复用 ${value.code.bytes.reused} 字节；中心保留 ${value.code.bytes.retained} 字节` : '')
+            + (fetch ? `\n取回：${fetch.status} · ${fetch.id}` : '')
+            + (value.code.error ? `\n${value.code.error.message}\n${value.code.error.hint ?? ''}` : '')
+            + (fetch?.error ? `\n${fetch.error.message}\n${fetch.error.hint ?? ''}` : '')
+            + (ref ? `\n成果引用：${ref}\n查看修改：git diff ${value.code.result?.startHead} ${ref}\n审查后自行 merge 或 cherry-pick。` : '')
+            + (value.code.next ? `\n下一步：${value.code.next.command}` : '')
+            + (fetch && !['available', 'failed'].includes(fetch.status) ? `\n查询取回：runweft task result show ${value.agent_id} --round ${value.round_id}` : '');
+    };
+    result.command('show <id>').option('--round <id>', '指定轮次；省略时显示最新接受轮次')
+        .action(async (id, options) => { const value = await client().result(id, options.round); output(value, resultText(value)); });
+    for (const action of ['fetch', 'retry'] as const) {
+        const command = result.command(`${action} <id>`).description(action === 'fetch' ? '在原主仓库取回专用成果引用；不自动合入' : '只重试代码交付；不重新执行模型或封存')
+            .option('--request-id <uuid>', '响应不明时以原 ID 和参数查询同一操作');
+        if (action === 'retry') command.requiredOption('--round <id>', '指定需要重试的轮次');
+        else command.option('--round <id>', '指定轮次；省略时固定最新接受轮次');
+        command.action(async (id, options) => {
+            const value = await client().resultAction(id, options.round, announceRequest(program, options.requestId), action);
+            output(value, resultText(value));
+        });
+    }
     const artifacts = task.command('artifacts').description('查看成果版本、重传候选或显式补收文件');
     artifacts.command('show <id>').requiredOption('--round <id>', '指定业务轮次').option('--version <n>', '只查看某个不可变版本')
         .action(async (id, options) => {

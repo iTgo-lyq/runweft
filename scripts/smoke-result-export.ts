@@ -1,3 +1,4 @@
+import { taskResultsProbe } from './task-results-probe';
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
 import { ArtifactClient } from '../src/artifacts/client';
@@ -12,9 +13,9 @@ import type { ArtifactTransfer } from '../hapi/shared/src/artifactTransfers';
 import type { ManagedWorkspace, WorkspaceSource } from '../hapi/shared/src/workspaces';
 
 // Real Hub and two Runner identities/data roots; source paths disappear before import.
-const fetchResults = process.argv.includes('--fetch'), paths = process.argv.slice(2).filter(arg => arg !== '--fetch');
+const taskResults = process.argv.includes('--tasks'), fetchResults = process.argv.includes('--fetch'), paths = process.argv.slice(2).filter(arg => !['--fetch', '--tasks'].includes(arg));
 const binary = resolve(paths[0] ?? 'dist/runweft'), hapiBinary = resolve(paths[1] ?? 'dist/hapi');
-mkdirSync('.dev-smoke', { recursive: true }); const root = mkdtempSync(resolve(fetchResults ? '.dev-smoke/repository-result-fetch-' : '.dev-smoke/repository-result-export-'));
+mkdirSync('.dev-smoke', { recursive: true }); const root = mkdtempSync(resolve(taskResults ? '.dev-smoke/task-result-delivery-' : fetchResults ? '.dev-smoke/repository-result-fetch-' : '.dev-smoke/repository-result-export-'));
 const center = join(root, 'center'), sourceHome = join(root, 'source-runner'), targetHome = join(root, 'target-runner');
 const env = { ...process.env }; for (const key of Object.keys(env)) if (key.startsWith('RUNWEFT_')) delete env[key];
 env.GIT_CONFIG_GLOBAL = '/dev/null'; env.GIT_CONFIG_NOSYSTEM = '1';
@@ -80,15 +81,18 @@ async function prepare(source: WorkspaceSource, prior?: ManagedWorkspace) {
     if (!evidence.environments.includes(environmentId)) evidence.environments.push(environmentId);
     return { workspace, request };
 }
+async function startHub(url: string) {
+    const fd = openSync(join(root, 'hub.log'), 'a', 0o600);
+    try { foreground = spawn(binary, ['--home', center, 'serve', '--public'], { env, stdio: ['ignore', fd, fd] }); } finally { closeSync(fd); }
+    await until(async () => { if (foreground!.exitCode !== null) throw new Error('Hub exited'); return fetch(`${url}/api/runweft/health`).then(r => r.ok).catch(() => false); }, ready => ready);
+}
 try {
     const port = await freePort(), url = `http://127.0.0.1:${port}`;
     cli(center, ['init']); homes.push(center); cli(center, ['config', 'set', 'server.port', String(port)]);
     cli(center, ['config', 'set', 'server.runner', 'false']); cli(center, ['config', 'set', 'hapi.executable', hapiBinary]);
     cli(center, ['config', 'set', 'server.publicUrl', url]); cli(center, ['start']);
     token = JSON.parse(readFileSync(join(center, 'server/hapi/settings.json'), 'utf8')).cliApiToken; assert(token); cli(center, ['stop']);
-    const fd = openSync(join(root, 'hub.log'), 'a', 0o600);
-    try { foreground = spawn(binary, ['--home', center, 'serve', '--public'], { env, stdio: ['ignore', fd, fd] }); } finally { closeSync(fd); }
-    await until(async () => { if (foreground!.exitCode !== null) throw new Error('Hub exited'); return fetch(`${url}/api/runweft/health`).then(r => r.ok).catch(() => false); }, ready => ready);
+    await startHub(url);
     hapi = new HapiClient(url, token); assert.equal((await hapi.request('/api/machines')).machines.length, 0);
     for (const home of [sourceHome, targetHome]) {
         cli(home, ['init', '--url', url]); homes.push(home); cli(home, ['config', 'set', 'hapi.executable', hapiBinary]);
@@ -132,6 +136,9 @@ try {
     await call(evidence.targetMachineId, 'artifacts', { action: 'release', operationId: materializeId });
     assert(materialized.files.every(file => !existsSync(file.path))); assert(!existsSync(imported.directory));
     const targetSource = { ...imported.imported.source, relativePath: source.relativePath };
+    if (taskResults) {
+        await taskResultsProbe({ root, center, sourceHome, targetHome, repo, binary, env, hapi, source, targetSource, imported, exported, delivered, note, restartHub: async () => { cli(center, ['stop']); await startHub(url); } });
+    } else {
     const [a, b] = await Promise.all([prepare(targetSource), prepare(targetSource)]);
     assert.notEqual(a.workspace.branch, b.workspace.branch); assert.equal(a.workspace.source.commonDir, b.workspace.source.commonDir);
     for (const value of [a, b]) { assert.equal(readFileSync(join(value.workspace.cwd, 'note'), 'utf8'), 'baseline'); assert.deepEqual(readFileSync(join(value.workspace.checkout, 'vendor/module/asset.bin')), content); }
@@ -247,6 +254,7 @@ try {
         assert.equal(readFileSync(join(repo, 'untracked'), 'utf8'), 'parent untracked');
         assert.equal(readFileSync(join(repo, '.gitattributes'), 'utf8'), '*.bin filter=lfs diff=lfs merge=lfs -text\n# unstaged parent change\n');
         note('public fetch-result restores both rounds and baseline/result LFS from center with executor offline, preserves staged/unstaged/untracked/index/config/HEAD/FETCH_HEAD, suppresses configured hooks, recovers lost responses/restarts, and then explicit merge/module initialization succeeds offline');
+    }
     }
     evidence.success = true;
 } catch (error) { evidence.error = error instanceof Error ? error.stack ?? error.message : String(error); process.exitCode = 1; }

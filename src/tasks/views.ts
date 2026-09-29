@@ -1,3 +1,4 @@
+import { codeView } from './results';
 import { nativeTerminal, type Round, type Status, type TaskBundle } from './types';
 
 function gitDelivery(bundle: TaskBundle, round: Round) {
@@ -23,7 +24,7 @@ export function overview(bundle: TaskBundle, round: Round = bundle.rounds.at(-1)
     else if (attention) status = attention.scope !== 'workspace' && attention.code.includes('unknown') ? 'unknown' : 'needs_attention';
     return { agent_id: bundle.task.id, agent_type: bundle.task.agent.id, round_id: round.id, round: round.ordinal, request_id: round.requestId,
         active_round_id: bundle.rounds.find(round => !['finished', 'failed'].includes(round.phase))?.id,
-        revision: bundle.task.revision, completed_revision: round.completedRevision, artifacts_revision: round.artifactsRevision, status, attention, blocking_round_id: blocking?.id,
+        revision: bundle.task.revision, completed_revision: round.completedRevision, artifacts_revision: round.artifactsRevision, code_revision: round.codeRevision, code: codeView(bundle.task, round), status, attention, blocking_round_id: blocking?.id,
         report: { text: round.report.slice(0, 4000), total: round.report.length, next_offset: round.report.length > 4000 ? 4000 : null, structuredMissing: round.structuredMissing,
             structured: round.structuredReport ? Object.fromEntries(Object.entries(round.structuredReport).map(([key, value]) => [key, value.slice(0, 1000)])) : undefined,
             incomplete: !round.executionAbsent && !!round.cancellation?.confirmed && !inputs.every(input => nativeTerminal(input.observation)) },
@@ -53,6 +54,6 @@ export function detail(bundle: TaskBundle, options: { roundId?: string; offset?:
             observation: input.observation ? (({ nativeResult, ...fact }) => fact)(input.observation) : undefined })),
         report: { ...overview(bundle, round).report, text: round.report.slice(offset, offset + limit), offset, total: round.report.length,
             next_offset: offset + limit < round.report.length ? offset + limit : null, structuredMissing: round.structuredMissing },
-        delivery: { report: round.report ? 'available' : round.phase === 'finished' ? 'no_final_text' : 'pending', git: gitDelivery(bundle, round), attachments: overview(bundle, round).artifacts, acceptance: 'external' },
-        rounds: bundle.rounds.map(item => ({ id: item.id, ordinal: item.ordinal, phase: item.phase, request_id: item.requestId, completed_revision: item.completedRevision, artifacts_revision: item.artifactsRevision })) };
+        delivery: { code: codeView(bundle.task, round), report: round.report ? 'available' : round.phase === 'finished' ? 'no_final_text' : 'pending', git: gitDelivery(bundle, round), attachments: overview(bundle, round).artifacts, acceptance: 'external' },
+        rounds: bundle.rounds.map(item => ({ id: item.id, ordinal: item.ordinal, phase: item.phase, request_id: item.requestId, completed_revision: item.completedRevision, artifacts_revision: item.artifactsRevision, code_revision: item.codeRevision })) };
 }

@@ -1,6 +1,6 @@
 # 代码成果与取回契约
 
-> 来源：[Technical](technical.md)；状态：T1/T2 已实现机器成果导出与原仓库取回；其余字段在各切片以协议类型和验收结果落实。
+> 来源：[Technical](technical.md)；状态：T1/T2 已实现机器导出与取回，T3 已实现中心清单与 CLI/MCP 入口；正式远端委派与释放分别由 T4/T5 接入。
 
 ## 身份与不变事实
 
@@ -42,3 +42,13 @@ task consumer 同时保护输入 snapshot 和目标 import；不新增 result co
 worktree 的目标成果 refs 只有在调用方确认持久交付或明确放弃后才能随显式 remove 释放。HAPI 只验证自己的环境、停止、ref 和 SHA 事实；Runweft 负责中央清单、引用和用户释放意图。未决动作与未知 refs 始终保留，不用一个“已完成”状态替代两个系统的事实。
 
 捕获明确失败但原生已停止、Git 已封存、相关操作已确定停止时，显式 discard-pending 可放弃尚未固定的候选；持久 tombstone 后结束该轮并解除后续已排队轮次的门控。它不会改写 resultHead 或跳过下一轮 prepare 校验；未知操作不能用此选项绕过。首次基线准备失败提示按原 SHA 重新 spawn，不复活旧请求。
+
+## T3 业务记录与接口
+
+state v6 新增 `delegation_code_manifests`、`delegation_code_fetches`；可变交付记录位于既有 round 的 `code`，请求复用 `delegation_requests` 的 namespace/requestId 指纹事务。初次完整发布是每轮 version 1，不因重试创建虚假的新内容版本；同 HEAD 的后续轮次仍有自己的清单与恢复引用。表与字段类型见 `src/tasks/result-types.ts`。
+
+`POST /api/runweft/tasks/result/show|fetch|retry` 继续当前 parent 身份，show/fetch 可省略 roundId，retry 要求明确 roundId；fetch/retry 接受 requestId。fetch 第一次接受时保存选定轮次与原主库 target，相同请求即使已有新轮次也返回原操作。尚未发布时保存 waiting，发布后只消费这一轮的清单；本机 worktree 验证当前目录属于原仓库后直接返回既有引用。
+
+read/wait 的 `code` 包含 status、round_id、result、ref、fetch、bytes 和 next；取回进行中 next 指向读取状态，成功后给出 diff，失败则保留可操作错误。`code_revision` 让原完成轮次的补交与取回结果沿既有 wait 游标可见。CLI show 返回清单和取回历史；MCP fetch_result/retry_result 只返回操作摘要，不复制整份文件映射和下载副本路径到模型上下文。
+
+T3 尚不开放远端 spawn。实际成果编排验收使用无模型 fixture：TaskStore 接受记录后保持非运行状态，将真实 HAPI prepare/finalize 返回的 facts 接入既有任务，而不是手工编造 sealed SHA；随后由编译服务的协调器完成中心交付和公开取回。

@@ -14,7 +14,7 @@ export const LookupPreparationSchema = z.strictObject({ parent: ParentSchema, re
 export const AcceptPreparationSchema = LookupPreparationSchema.extend({ agent: SelectionSchema });
 export type PreparationIntent = z.infer<typeof PreparationIntentSchema>;
 export type Selection = z.infer<typeof SelectionSchema>;
-export type TransferBatch = { captureId: string; deliveryId: string; names: string[]; captured: boolean; delivered: boolean;
+export type TransferBatch = { captureId: string; deliveryId: string; deliveryNames?: string[]; names: string[]; captured: boolean; delivered: boolean;
     captureAttempted: boolean; deliveryAttempted: boolean; deliveryStopped: boolean; released: boolean; releasedNames: string[] };
 export type SnapshotFile = RepositoryFile & { requestId: string; artifactId?: string; reused: boolean; pinned: boolean };
 export type BaselineSnapshot = { id: string; namespace: string; generation: number; origin: WorkspaceSource;
