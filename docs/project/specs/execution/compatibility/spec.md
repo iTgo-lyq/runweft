@@ -4,6 +4,8 @@ Runweft 使用 package.json 固定的 HAPI revision 及配套构建，原有健�
 
 HAPI health 的 spawnReceipts:1 表示可重查启动；execution:1 表示本版本执行观察协议。会话 metadata.capabilities.execution:1 在对应控制器就绪后发布；归档后可保留用于历史查询，不证明会话仍活跃。缺少所需能力明确拒绝，提示更新配套 Hub/Runner。
 
+health 的 mcpToolFilter:1 与 Runner 的 capabilities.mcpToolFilter:true 表示支持逐执行 disabledMcpServers。携带禁用表时，Runweft 和 Hub 在首次启动前核对相应能力；Hub 在续接已保存禁用表的会话前也核对 Runner。缺少能力或 runtime 不支持时明确拒绝；不携带此参数的原有执行行为保持不变。参数计入持久 requestId 的一致性检查。原生落点见 [宿主 MCP](../../host-mcp/spec.md#受控执行的工具禁用)。
+
 HAPI 的 HTTP 状态、code 与错误被保留。只有 native_session_missing 是确认缺失；其他错误和未知执行状态由上层处理，不能解释成可安全重发。
 
 Codex/Claude 内置启动、配置、审批和会话管理继续复用 HAPI。补充的持久启动回执、原生事实、目标中断和已复现缺口修正均位于独立 HAPI fork；不支持 npm/path runtime 插件，私有 runtime 扩展不属于当前交付。

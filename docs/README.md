@@ -2,7 +2,7 @@
 
 基础入口的安装、配置、部署与数据维护见[使用说明](usage.md)；完整协作功能仍按下列 Change 推进。
 
-[统一 CLI 与部署](project/archive/2026-09-29-unified-cli-and-deployment/execution.md#t5-实际平台与整体验收)已验收归档，macOS 与 Linux 的 arm64/x64 已通过真实安装和服务验证；[HAPI 执行契约](project/archive/2026-09-29-hapi-subagent-foundation/execution.md#t4-配套构建与整体验收)也已完成两种 runtime 的本地真实执行验收，下一项为宿主 MCP 适配，完整协作产品尚未交付。本地验收由 agent 自动完成，真实远端验收单独记录。先读[项目能力边界与讨论地图](project/architecture.md)，查看模块分工和 Change 依赖。
+[统一 CLI 与部署](project/archive/2026-09-29-unified-cli-and-deployment/execution.md#t5-实际平台与整体验收)已验收归档，macOS 与 Linux 的 arm64/x64 已通过真实安装和服务验证；[HAPI 执行契约](project/archive/2026-09-29-hapi-subagent-foundation/execution.md#t4-配套构建与整体验收)也已完成两种 runtime 的本地真实执行验收，[宿主 MCP 适配](project/archive/2026-09-29-host-mcp-adapter/execution.md#t4-配套构建与宿主整体验收)已通过真实安装、身份及子工具禁用验收，下一项为全局机器与 Runtime 注册，完整协作产品尚未交付。本地验收由 agent 自动完成，真实远端验收单独记录。先读[项目能力边界与讨论地图](project/architecture.md)，查看模块分工和 Change 依赖。
 
 实现以当前 HAPI 为第一依据，Runweft 尽量只做上层流程封装与 MCP；旧工程技术方案不直接沿用。
 
@@ -20,7 +20,7 @@
 | 任务附件交付 | [Requirement](project/changes/task-artifact-delivery/requirement.md) | [Design](project/changes/task-artifact-delivery/design.md) |
 | 远端工作区准备 | [Requirement](project/changes/remote-workspace-preparation/requirement.md) | [Design](project/changes/remote-workspace-preparation/design.md)、[Research](project/changes/remote-workspace-preparation/research.md) |
 | 远端代码回收 | [Requirement](project/changes/remote-result-delivery/requirement.md) | [Design](project/changes/remote-result-delivery/design.md)、[Research](project/changes/remote-result-delivery/research.md) |
-| 宿主身份与 MCP 适配 | [Requirement](project/changes/host-mcp-adapter/requirement.md) | [Technical](project/changes/host-mcp-adapter/technical.md)、[Plan](project/changes/host-mcp-adapter/plan.md)、[Research](project/changes/host-mcp-adapter/research.md) |
+| 宿主身份与 MCP 适配（已归档） | [Requirement](project/archive/2026-09-29-host-mcp-adapter/requirement.md) | [Technical](project/archive/2026-09-29-host-mcp-adapter/technical.md)、[Plan](project/archive/2026-09-29-host-mcp-adapter/plan.md)、[Research](project/archive/2026-09-29-host-mcp-adapter/research.md) |
 | 本地独立工作区与公共 Git 能力 | [Requirement](project/changes/local-workspace-execution/requirement.md) | [Design](project/changes/local-workspace-execution/design.md) |
 | 全局机器与 Runtime 注册 | [Requirement](project/changes/execution-resource-registry/requirement.md) | [Research](project/changes/execution-resource-registry/research.md) |
 | Agent 定义 | [Requirement](project/changes/agent-definition/requirement.md) | 轻量定义；暂不集中管理 skill/MCP |
@@ -32,7 +32,7 @@
 按照 [project-workflow](../.agents/skills/project-workflow/SKILL.md)：
 
 - `project/changes/` 保存未关闭的目标、技术方案和计划。
-- 已验收 Specs：[CLI 安装](project/specs/installation/cli/spec.md)、[部署与数据](project/specs/deployment/spec.md)、[工作区绑定](project/specs/workspaces/bindings/spec.md)、[执行事实](project/specs/execution/lifecycle/spec.md)、[执行恢复](project/specs/execution/recovery/spec.md)、[执行兼容](project/specs/execution/compatibility/spec.md)。
+- 已验收 Specs：[CLI 安装](project/specs/installation/cli/spec.md)、[MCP 安装](project/specs/installation/mcp/spec.md)、[宿主 MCP](project/specs/host-mcp/spec.md)、[部署与数据](project/specs/deployment/spec.md)、[工作区绑定](project/specs/workspaces/bindings/spec.md)、[执行事实](project/specs/execution/lifecycle/spec.md)、[执行恢复](project/specs/execution/recovery/spec.md)、[执行兼容](project/specs/execution/compatibility/spec.md)。
 - `project/archive/` 保存已关闭 Change 的完整过程与验收记录。
 
 新仓库不迁入旧实现、旧 Changes 或运行认证。历史证据定位到 [runweft-archive](https://github.com/iTgo-lyq/runweft-archive)。

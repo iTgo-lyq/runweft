@@ -19,7 +19,7 @@
 | --- | --- | --- |
 | 前置 | [统一 CLI](../2026-09-29-unified-cli-and-deployment/requirement.md) | 基础安装、HAPI 连接与诊断可用；不依赖完整业务发行 |
 | 外部基础 | 固定版本的 HAPI 构建 | 默认直接使用内置适配；先验证已有能力，不能把关联仓库视为链路已验证 |
-| 下游 | [宿主适配](../../changes/host-mcp-adapter/requirement.md)、[委派生命周期](../../changes/delegation-lifecycle/requirement.md)、[本地工作区](../../changes/local-workspace-execution/requirement.md) | 消费执行身份、真实状态和控制入口；各自验收不并入本 Change |
+| 下游 | [宿主适配](../2026-09-29-host-mcp-adapter/requirement.md)、[委派生命周期](../../changes/delegation-lifecycle/requirement.md)、[本地工作区](../../changes/local-workspace-execution/requirement.md) | 消费执行身份、真实状态和控制入口；各自验收不并入本 Change |
 
 ## 独立验收与交付边界
 

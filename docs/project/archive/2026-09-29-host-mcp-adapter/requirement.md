@@ -1,13 +1,13 @@
 # Codex 与 Claude Code 的宿主身份及 MCP 适配
 
-> 状态：待验收
+> 状态：已完成
 > 规模：大型
 > 更新：2026-09-29
 > 确认依据：用户确认只在 HAPI 调度的 Runweft subagent 中移除全部 Runweft MCP 工具；subagent 使用原生内置 subagent 不由 Runweft 管控。主宿主仍仅支持 Codex/Claude Code，在线协作、全局安装及自主实施授权继续有效。
 
 ## Review 导读
 
-本 Change 提供可信宿主身份、MCP 工具承载、受控子执行的工具禁用和结果传递机制。具体协作工具及派生到结果返回的用户流程归[委派生命周期](../delegation-lifecycle/requirement.md)，避免身份识别反向依赖调度系统。
+本 Change 提供可信宿主身份、MCP 工具承载、受控子执行的工具禁用和结果传递机制。具体协作工具及派生到结果返回的用户流程归[委派生命周期](../../changes/delegation-lifecycle/requirement.md)，避免身份识别反向依赖调度系统。
 
 接入侧仅支持 Codex 和 Claude Code。这是宿主 MCP 适配范围，不是重新开发它们的执行 runtime；执行侧由 HAPI 内置适配负责。
 
@@ -17,9 +17,9 @@
 
 | 关系 | Change | 依赖内容与满足条件 |
 | --- | --- | --- |
-| 前置 | [统一 CLI](../../archive/2026-09-29-unified-cli-and-deployment/requirement.md) | CLI 命令扩展入口、配置、真实 cwd 绑定及 HAPI 连接可用 |
-| 前置 | [HAPI 执行契约](../../archive/2026-09-29-hapi-subagent-foundation/requirement.md) | 原生身份、受控启动上下文和已有会话读取能力可用 |
-| 下游 | [委派生命周期](../delegation-lifecycle/requirement.md) | 消费宿主身份、角色、工具承载和结果传递能力，注册实际协作操作 |
+| 前置 | [统一 CLI](../2026-09-29-unified-cli-and-deployment/requirement.md) | CLI 命令扩展入口、配置、真实 cwd 绑定及 HAPI 连接可用 |
+| 前置 | [HAPI 执行契约](../2026-09-29-hapi-subagent-foundation/requirement.md) | 原生身份、受控启动上下文和已有会话读取能力可用 |
+| 下游 | [委派生命周期](../../changes/delegation-lifecycle/requirement.md) | 消费宿主身份、角色、工具承载和结果传递能力，注册实际协作操作 |
 
 ## 独立验收与交付边界
 

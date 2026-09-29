@@ -9,7 +9,7 @@
 
 主 agent 能派生子任务、继续工作、查看和等待结果、追加任务及中断指定执行。Runweft 保存必要父子关联，原生状态与历史沿 HAPI 读取；不要求主宿主关闭后恢复。
 
-本 Change 定义本地与远端共用的协作语义，并交付 CLI/MCP 在本地共享 cwd 中的完整用户流程。[宿主适配](../host-mcp-adapter/requirement.md)只提供身份与传递机制，[Agent 定义](../agent-definition/requirement.md)提供解析结果；独立工作区与远端通过后续 Change 接入。具体流程见 [Design](design.md)。
+本 Change 定义本地与远端共用的协作语义，并交付 CLI/MCP 在本地共享 cwd 中的完整用户流程。[宿主适配](../../archive/2026-09-29-host-mcp-adapter/requirement.md)只提供身份与传递机制，[Agent 定义](../agent-definition/requirement.md)提供解析结果；独立工作区与远端通过后续 Change 接入。具体流程见 [Design](design.md)。
 
 ## Change 依赖
 
@@ -17,7 +17,7 @@
 | --- | --- | --- |
 | 前置 | [HAPI 执行契约](../../archive/2026-09-29-hapi-subagent-foundation/requirement.md) | 执行、输入、终态和控制可可靠关联；不能用模拟终态作为最终验收 |
 | 前置 | [统一 CLI 与部署](../../archive/2026-09-29-unified-cli-and-deployment/requirement.md) | 主体、工作区绑定入口及 HAPI 目标配置可供协作服务使用 |
-| 前置 | [宿主适配](../host-mcp-adapter/requirement.md) | 可信身份、角色、MCP 工具承载与结果传递已有证据；调度不再反向定义宿主身份 |
+| 前置 | [宿主适配](../../archive/2026-09-29-host-mcp-adapter/requirement.md) | 可信身份、角色、MCP 工具承载与结果传递已有证据；调度不再反向定义宿主身份 |
 | 前置 | [Agent 定义](../agent-definition/requirement.md) | 职责、指令与 HAPI 目标可解析；发现工具由本 Change 注册 |
 | 前置 | [全局资源注册](../execution-resource-registry/requirement.md) | runtime 引用解析到机器；启动前重新核对目标，不混淆业务 agent 和执行资源 |
 | 下游 | [本地独立工作区](../local-workspace-execution/requirement.md) | 消费协作工具和准备/收尾条件，增加独立模式 |
@@ -75,4 +75,4 @@
 
 ## 后续技术核对
 
-宿主身份与可用通知入口见[宿主调查](../host-mcp-adapter/research.md)。沿 HAPI 核对结果读取、停止执行和原生 resume 的顺序；并发上限先沿 HAPI/原生已有默认，不新增资源调度系统。旧工程交互可作参考，不能默认搬入它的内部事件库与重试引擎。
+宿主身份与可用通知入口见[宿主调查](../../archive/2026-09-29-host-mcp-adapter/research.md)。沿 HAPI 核对结果读取、停止执行和原生 resume 的顺序；并发上限先沿 HAPI/原生已有默认，不新增资源调度系统。旧工程交互可作参考，不能默认搬入它的内部事件库与重试引擎。

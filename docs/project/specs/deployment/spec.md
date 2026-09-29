@@ -40,8 +40,9 @@ HAPI Hub 只监听本机私有端口，省略端口配置时自动选择。Runwe
 | `server/hapi/` | 托管 Hub 的原有数据库、令牌和状态 |
 | `server/runweft/` | 已保留的上层服务数据位置，尚无任务业务表 |
 | `connections/local/hapi/` 或 `connections/<主机名>-<URL hash>/hapi/` | 当前机器 Runner 的连接身份、配置与原生日志 |
-| `client.sqlite` | 本机真实工作区绑定 |
+| `client.sqlite` | 本机真实工作区绑定及 Claude MCP hook 的短期调用身份 |
 | `logs/` | 服务日志，由部署方管理保留和轮转 |
+| `backups/mcp/` | 显式 MCP 配置修改前的快照，可能含原配置秘密，仅当前用户可读写 |
 | `cache/`、`tmp/` | 可再生内容，不能保存唯一成果 |
 | `server/process.json` | 托管服务定位信息，正常停止后移除 |
 

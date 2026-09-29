@@ -31,7 +31,7 @@
 | --- | --- | --- |
 | [统一 CLI 与部署（已完成）](archive/2026-09-29-unified-cli-and-deployment/requirement.md) | 可安装的基础入口、公共配置/数据位置、HAPI 管理与诊断 | 无；固定现有 HAPI 构建 |
 | [HAPI 内置能力验证与调用封装（已完成）](archive/2026-09-29-hapi-subagent-foundation/requirement.md) | 验证并封装已有启动、输入、原生结果、停止与续接入口 | 统一 CLI |
-| [宿主适配](changes/host-mcp-adapter/requirement.md) | 两宿主可信身份、受控子执行的 MCP 禁用与结果传递机制 | 统一 CLI、HAPI 执行契约 |
+| [宿主适配（已完成）](archive/2026-09-29-host-mcp-adapter/requirement.md) | 两宿主可信身份、受控子执行的 MCP 禁用与结果传递机制 | 统一 CLI、HAPI 执行契约 |
 | [全局资源注册](changes/execution-resource-registry/requirement.md) | 分别注册机器和 runtime，查询真实可用性 | 统一 CLI |
 | [Agent 定义](changes/agent-definition/requirement.md) | 可发现、校验及解析的全局/项目定义，引用 runtime | 统一 CLI、全局资源注册 |
 | [委派生命周期](changes/delegation-lifecycle/requirement.md) | CLI/MCP 本地共享目录的完整协作与统一查询 | 统一 CLI、HAPI 执行契约、宿主适配、Agent 定义、全局资源注册 |
@@ -125,7 +125,7 @@ Runweft 只补必要协作与交付关联，原生会话/执行事实优先读�
 
 | 事项 | 当前证据与下一步 |
 | --- | --- |
-| 宿主身份与工具分流 | Codex 调用元数据与 Claude stdio/hook 身份已有实测；用户已将工具禁用限定到 HAPI 调度的 Runweft subagent，原生子 agent 不管控，见[宿主调查](changes/host-mcp-adapter/research.md) |
+| 宿主身份与工具禁用 | 两宿主身份、Claude clear/resume、全局安装及 HAPI 子执行启动/续接的工具禁用已实测，见[宿主验收](archive/2026-09-29-host-mcp-adapter/execution.md#t4-配套构建与宿主整体验收)；原生子 agent 不管控 |
 | 子进程关闭与 session 续接 | HAPI 已有原生读取/恢复路径，先核对何处可直接使用；共享 runtime 不得因关闭一个子执行而影响其他任务 |
 | 配置继承 | 核对 HAPI 是否保留原生全局/项目配置与 cwd；远端不自动拥有发起机的全局 skill/MCP，ignored 项目配置不凭空随 Git 同步 |
 | 通知与结果进入上下文 | 旧 wait 工具响应可作交互参考，但不等同原生后台唤醒。在线宿主注入能力按公开入口验证，不增加主宿主退出恢复目标 |
@@ -141,7 +141,7 @@ Runweft 只补必要协作与交付关联，原生会话/执行事实优先读�
 | --- | --- |
 | 协作逻辑的部署与存储 | 统一 CLI 已验证服务进程、HAPI JWT 复用、服务端持久目录、双模式生命周期和协议代理。业务关联表及迁移由所属 Change 落实，不预建下游表 |
 | HAPI 原生执行契约 | 两种内置 runtime 的输入关联、原生结果、请求重查、定向中断、审批、停止与续接已通过真实验收；共享进程兄弟会话可继续执行，已证实缺口在 HAPI 原路径最小增补 |
-| 宿主身份与结果交互 | 主宿主调用身份、受控子执行启动/续接时禁用 Runweft MCP、会话切换、等待与可支持的结果注入；原生内置 subagent 不纳入工具分流管控 |
+| 宿主身份与结果交互 | 身份、安装、工具禁用、结果返回及取消已通过配套本地验收；当前支持工具响应，不声明后台唤醒。实际派生/等待流程由委派 Change 接入 |
 | 工作区与交付一致性 | 基线准备、启动校验、轮次封存、成果取回、跨轮次复用、失败保留和最终回收的契约；落实 LFS/子模块等既定验收边界 |
 | 发行与运行维护 | 基础包组织、版本固定、启停诊断与四平台安装已验收；完整业务版本的数据升级、组合验收和公开发行由集成 Change 落实 |
 | 真实验收条件 | 专用本地/远端机器、两种原生 CLI 的可用认证及 macOS 环境；只记录资源与授权状态，不读取或搬运凭据来替代配置 |
@@ -155,11 +155,11 @@ Runweft 只补必要协作与交付关联，原生会话/执行事实优先读�
 
 正式方案从[阶段 1](delivery-structure.md#阶段与可验收结果)的双模式安装与数据承载、全局资源注册、HAPI 执行和宿主接入开始。先固定跨 Change 的职责及必要契约，当前阶段落实其直接前置，不要求一次写完所有下游内部细节。后续能力仍在完整版本承诺内，按阶段逐项实现和验收；各领域不能把自己的核心功能留给最后的集成 Change。
 
-统一 CLI 与 HAPI 执行契约均完成正式 Technical/Plan、各一次 iclaude 评审、实现与验收，并同步 Specs 归档。基础安装通过四平台运行验证，执行契约在本机完成两种 runtime 的编译版本真实验收；宿主身份与 MCP 禁用、业务委派和最终发行仍按后续 Change 推进，不能据此宣布完整产品完成。
+统一 CLI、HAPI 执行契约与宿主 MCP 适配均完成正式 Technical/Plan、各一次 iclaude 评审、实现与验收，并同步 Specs 归档。基础安装通过四平台运行验证，执行契约和宿主适配在本机完成配套编译版本真实验收；全局资源、agent 定义、业务委派和最终发行仍按后续 Change 推进，不能据此宣布完整产品完成。
 
 ## 调查与验证状态
 
 - HAPI/Multica 的源码与文档证据按主题保留在[执行基础调查](archive/2026-09-29-hapi-subagent-foundation/research.md)、[远端准备调查](changes/remote-workspace-preparation/research.md)和[代码传输实验](changes/remote-result-delivery/research.md)。
 - 已验证临时 Git 仓库的 bundle 传出、worktree 修改和结果取回；另已在 macOS/Linux arm64/x64 的专用环境通过候选 npm 包验证 Runweft/HAPI 服务、认证、Runner、协议代理与配置/工作区绑定，见[部署执行记录](archive/2026-09-29-unified-cli-and-deployment/execution.md)与[调查](archive/2026-09-29-unified-cli-and-deployment/research.md)。未运行真实远端 HAPI/agent 链路。
 - 正式验收须覆盖两类主客户端与两种内置 runtime 的本地/远端组合，以及 macOS 正式安装；分别由所属 Change 记录实际证据，不能相互代替。
-- 宿主身份调查记录的版本是 Claude Code `2.1.269`、Codex `0.156.1`；2026-09-29 整体方案评审使用本机 iclaude（Claude Code `2.1.283`）。评审进程不是执行验收任务。其后通过 Runweft/HAPI 启动的两种内置 runtime 探测见[执行基础调查](archive/2026-09-29-hapi-subagent-foundation/research.md#当前基线与真实探测)，仍不替代宿主 MCP 验收。
+- 历史宿主调查使用 Claude Code `2.1.269`；正式宿主 MCP 验收使用 Codex `0.156.1`、iclaude/Claude Code `2.1.283`，覆盖专用 local/hub 连接、真实安装调用、clear/resume 和子工具禁用，见[宿主执行记录](archive/2026-09-29-host-mcp-adapter/execution.md)。评审进程与执行验收分开记录。

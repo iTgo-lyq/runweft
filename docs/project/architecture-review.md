@@ -4,7 +4,7 @@
 > 评审者：当前工作区 iclaude，Claude Code 2.1.283；主 agent 独立复核。
 > 基线：Runweft `fbb440e` 及当时尚未提交的 CLI 服务代码；HAPI `86c88df`。
 
-> 后续决策：用户已将工具禁用限定为 HAPI 调度的 Runweft subagent，并明确不管控原生内置 subagent。下表保留当时评审意见；其中原生子会话工具分流的验收前置已由[最新需求](changes/host-mcp-adapter/requirement.md)取代，启动/续接的原生入口已有[实测依据](changes/host-mcp-adapter/research.md#指定-mcp-工具禁用的启动与续接验证)。
+> 后续决策：用户已将工具禁用限定为 HAPI 调度的 Runweft subagent，并明确不管控原生内置 subagent。下表保留当时评审意见；其中原生子会话工具分流的验收前置已由[最新需求](archive/2026-09-29-host-mcp-adapter/requirement.md)取代，启动/续接的原生入口已有[实测依据](archive/2026-09-29-host-mcp-adapter/research.md#指定-mcp-工具禁用的启动与续接验证)。
 
 ## 结论
 
