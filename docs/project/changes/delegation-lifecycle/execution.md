@@ -41,8 +41,17 @@
 ## T4 两宿主两 runtime 配套验收
 
 - 结果：新增 `test:collaboration`，使用编译 CLI/HAPI、专用原生配置和实际模型，在 local 与同机 Hub 各运行 Codex/Claude 宿主 × Codex/Claude runtime 的四种组合。每项由真实父会话经 MCP 派生并处理审批，子执行调用保留的其他 MCP、修改共享文件，随后父会话经 send_input 续接原生 session，子执行仅凭历史返回未写入文件的记忆标记；父会话实际读取两轮完成报告。
-- 真实验证：`.dev-smoke/collaboration-859Dxz/evidence.json` success=true、八项均通过、cleanupErrors=[]。检查文件精确内容、纯报告轮次不改 mtime、目录未新增 Git/业务文件、原生 completed、session archived/inactive 和各轮 host PID 退出。专用 MCP 注册显式传入 Git 搜索上界，使实际 Git/Agent 解析确认为非仓库；未修改用户配置。每轮原生工具目录验证无 Runweft 工具，其他 MCP 实际可调用，Claude 原生 Agent/Task 保留。
-- 真实断线：Hub 的 Codex→Claude、Claude→Codex 各在第三轮持久接受后由测试代理关闭真实 MCP stdio 连接，父会话不重发任务；中心最终仍获得原生完成并关闭进程，只有一个 delegation、三个单输入轮次。Claude 子执行断线后的固定 sleep 审批由测试操作者经 CLI 显式响应；没有自动提升默认权限或要求恢复主会话。
+- 真实验证：`.dev-smoke/collaboration-859Dxz/evidence.json` success=true、八项均通过、cleanupErrors=[]。检查文件精确内容、纯报告轮次不改 mtime、共享目录仅保留任务写入的目标文件、原生 completed、session archived/inactive 和各轮 host PID 退出。专用 MCP 注册显式传入 Git 搜索上界，使实际 Git/Agent 解析确认为非仓库；未修改用户配置。启动/续接的原生工具目录验证无 Runweft 工具，其他 MCP 实际可调用，Claude 原生 Agent/Task 保留。
+- 真实断线：Hub 的 Codex→Claude、Claude→Codex 各在第三轮持久接受后由测试代理关闭真实 MCP stdio 连接，父会话不重发任务；中心最终仍获得原生完成并关闭进程，只有一个 delegation、三个单输入轮次。脚本允许测试操作者经 CLI 响应断线后的固定 sleep 审批，本次两项均未出现该审批（approvals=[]）；没有自动提升默认权限或要求恢复主会话。
 - 真实控制：`RUNWEFT_SMOKE_CASE=local-codex-codex RUNWEFT_SMOKE_CONTROLS=1 bun run test:collaboration` 在 `.dev-smoke/collaboration-lt1Y4J/evidence.json` success=true、cleanupErrors=[]，实际 MCP steer 返回 steered，同一业务轮次两个输入完成；后续 MCP 中断命中读到的同一原生 executionId，终态 interrupted 并退出进程。`RUNWEFT_SMOKE_CASE=hub-claude-claude RUNWEFT_SMOKE_CONTROLS=1 bun run test:collaboration` 在 `.dev-smoke/collaboration-5B8eS8/evidence.json` success=true、cleanupErrors=[]，Claude steer 明确返回 steer_unsupported，随后定向中断/退出通过。
 - 验证边界：本任务无产品代码或 HAPI 修改；类型检查、测试代理语法检查、Change 校验与 git diff --check 通过。T3 的两 runtime 子 CLI 再委派拒绝、T2 的真实模型参数/权限拒绝及缺失恢复协议测试继续有效，不重复同范围模型调用；真实跨机器远端仍不在本 Change 内。
 - Commit：`delegation-lifecycle T4: verify native collaboration across hosts and connection modes`
+
+## T5 完整使用说明与阶段关闭
+
+- 结果：使用说明补齐 MCP 工具、默认/带游标等待、模糊接受重查、共享目录边界、审批、中断、续接、数据与关闭流程，说明 Git/原生工具前提及旧 Codex MCP 注册升级。新增[验收映射](acceptance.md)，区分真实模型验证、HTTP/SQLite fixture、四平台构建和当前平台安装；复核并修正 T4 记录，断线用例本次没有发生 CLI sleep 审批。
+- 候选包：`bun run package --all` 成功，`dist/packages/index.json` 包含主包与四个平台包，HAPI 固定 revision 不变、工作区干净。首次 `--reuse-hapi` 因缺失 darwin-arm64 缓存明确拒绝，随后完整重建成功；日志 `.dev-smoke/delegation-package.log`。
+- 安装验证：`bun run test:install` 在 `.dev-smoke/install-jQUdtx/evidence.json` success=true。新增安装产物的 task 命令与九工具 MCP 目录验证，在无 Bun/source PATH 下可用且发现不创建数据；真实 npm 平台依赖、服务/信号、缺平台诊断和卸载保留数据通过。服务证据 `.dev-smoke/install-jQUdtx/services/service-AfqK7i/evidence.json` success=true，覆盖 local、Hub 客户端及不带 Runner 的 Hub 服务端。此轮实际安装平台为 Linux x64，不将跨平台编译称作其他平台原生协作验收。
+- 最终回归：`bun run typecheck`、`bun test ./test` 85 项/1509 次断言、四平台构建、Change 校验及 git diff --check 通过。此前真实模型 smoke 的 HAPI/Runweft 产品代码未再修改，其证据继续有效；当前没有未解释失败或待清理测试进程。
+- 关闭依据：用户已授权本地自主验收和归档，按 acceptance.md 逐项核对满足本 Change；T5 提交后按独立关闭流程同步 Specs、更新依赖引用并归档。本地独立工作区及其他下游能力继续按顺序推进，完整目标未完成。
+- Commit：`delegation-lifecycle T5: document collaboration and verify installable candidate packages`

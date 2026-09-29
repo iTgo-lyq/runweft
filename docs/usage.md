@@ -1,10 +1,10 @@
 # Runweft 基础入口使用说明
 
-当前实现包含配置、HAPI 服务管理、机器/runtime 登记、Agent 定义及 Codex/Claude Code 的 MCP 安装与身份诊断；任务委派与看板尚未交付。这里不是完整协作版本的完成声明。
+当前实现包含配置、HAPI 服务管理、机器/runtime 登记、Agent 定义，以及 Codex/Claude Code 经 MCP 或 CLI 进行本机共享目录协作。独立 worktree、附件、远端任务和看板仍按后续 Change 推进；当前候选包不是完整项目的最终发布。
 
 ## 安装与首次使用
 
-运行环境需要 Node.js 20+。候选包覆盖 macOS arm64/x64、glibc Linux arm64/x64；不需要全局 Bun 或单独安装 HAPI。当前尚未发布到公共 npm，使用提供候选包的 registry：
+运行环境需要 Node.js 20+，工作区识别需要 Git 命令；执行任务还需安装所选的原生 Codex/Claude Code 并完成模型登录。候选包覆盖 macOS arm64/x64、glibc Linux arm64/x64；不需要全局 Bun 或单独安装 HAPI。当前尚未发布到公共 npm，使用提供候选包的 registry：
 
 ```sh
 npm install -g runweft@0.1.0 --registry <候选包-registry> --include=optional
@@ -34,9 +34,11 @@ runweft mcp install
 runweft mcp check
 ```
 
-默认检测本机的 Codex 和 Claude Code，也可用 `--client codex`、`--client claude` 或 `--client all` 明确选择。然后进入实际项目目录启动原生会话，调用 `runweft_status` 检查当前身份、工作区和服务连接。全局注册不会固定安装时所在的项目目录；当前仅提供诊断工具，业务委派工具由后续 Change 接入。
+默认检测本机的 Codex 和 Claude Code，也可用 `--client codex`、`--client claude` 或 `--client all` 明确选择。然后进入实际项目目录启动原生会话，调用 `runweft_status` 检查当前身份、工作区和服务连接。全局注册不会固定安装时所在的项目目录；定义绑定完成后，可让主 agent 使用下文的委派工具。
 
 `mcp check` 分开报告配置、stdio 握手与服务连接，不执行模型，不把握手当作原生会话已经调用成功。服务未连接时继续用 `runweft status`、`runweft doctor` 检查。不同数据目录使用全局 `--home`：例如 `runweft --home /srv/runweft mcp install`；检查及恢复时也使用相同目录。
+
+Codex 的受管入口使用 600 秒工具超时，支持最长 540 秒的单次任务等待。旧入口若缺少该设置，`mcp check` 会提示重新执行 `mcp install --client codex`；检查和服务启动不会自动改写原生配置。
 
 安装只维护名为 `runweft` 的 MCP 及 Claude 身份 hook，其他 MCP、原生配置、注释和模型凭据保留。Codex 使用 `CODEX_HOME/config.toml`（默认 `~/.codex/config.toml`）；Claude 默认使用 `~/.claude.json` 和 `~/.claude/settings.json`，设置 `CLAUDE_CONFIG_DIR` 时改用该目录下的 `.claude.json` 和 `settings.json`。重复安装会更新自己的入口，命令路径变化后重新运行安装即可。已存在非 Runweft 管理的同名条目时会明确报冲突。
 
@@ -148,7 +150,7 @@ runweft --json agent check reviewer
 
 ## 本机共享任务
 
-CLI 提供派生、查看、等待、多轮续接和定向控制；MCP 协作工具仍在当前 Change 中推进。进入实际工作目录，先用 `agent check` 确认定义绑定本机 runtime：
+CLI 和 MCP 提供同一组派生、查看、等待、多轮续接和定向控制能力。进入实际工作目录，先用 `agent check` 确认定义绑定本机 runtime：
 
 ```sh
 runweft agent check reviewer
@@ -172,6 +174,31 @@ runweft task permission <任务ID> --round <轮次ID> --request <原生审批ID>
 `send` 默认排下一轮，前轮确认停止后才开始，优先续接原生 session；只有原生明确报告历史缺失，才用旧任务和报告构造有界上下文。现有任务始终使用原目录、runtime 和定义快照；改 YAML 或换当前目录不重定向它。运行中追加只支持 Codex，必须指定活跃轮次；接受后通过 `show` 的输入状态区分已注入、已消费、排队和未知，Claude 使用默认下一轮排队。
 
 `interrupt` 只针对指定轮次；迟到请求不影响后轮。取消未知执行也需要停止证明，保留原生未知与报告不完整标记。`show` 显示当前待审批内容与 HAPI 详情地址；`permission` 可选 approved、denied、abort，问答可附 `--answers <JSON>`，仅响应当前请求，不改变默认权限策略。等待超时可再次等待；自动化调用可将返回的 revision 用于 `--after-revision '{"任务ID":版本}'`，按序读取新结果。
+
+### 主 agent 的 MCP 流程
+
+例如让主 agent：“用 reviewer 检查当前改动，等待结果，并总结需要处理的问题。”它可以先发现定义，再按下表操作；Codex 宿主可以选 Claude runtime，Claude 宿主也可以选 Codex runtime。
+
+| 工具 | 用途 |
+| --- | --- |
+| `list_agent_definitions` | 查看当前项目有效定义和各自 runtime 可选状态 |
+| `spawn_agent` | 传 `agent_type`、`message`，立即返回 `agent_id`、`round_id`、`request_id` 和接受状态；当前 `workspace_mode` 仅 `shared` |
+| `list_agents` | 查看当前原生父会话的任务、状态及最近接受记录 |
+| `wait` | 传 `ids`，等待任一任务完成或需要处理；`timeout_ms` 默认 30000，最大 540000，超时返回 `timed_out=true` |
+| `read_agent` | 传 `id`，读取最新接受轮次的完整事实、审批与报告；可指定 `round_id`、`offset`、`limit` |
+| `send_input` | 传 `id`、`message`，默认 `mode=next`；Codex 的 `mode=steer` 还须传活跃 `round_id` |
+| `interrupt_agent` | 传 `id`、`round_id`，请求取消该轮次，再通过读取/等待确认停止 |
+| `respond_to_permission` | 传 `id`、`round_id`、原生 `request_id`、`decision`，显式响应当前审批；可带原生 `answers` |
+
+`spawn_agent`/`send_input` 的接受结果不等于任务完成。省略 `request_id` 时，同一次原生调用有稳定请求 ID；重新发起另一次调用会生成新 ID。遇到模糊接受响应，先 `list_agents` 查已接受记录，再用原 `request_id` 和相同参数重试，避免重复派生。审批工具的 `request_id` 则是原生审批 ID，两者用途不同。
+
+概览提供 `status`、需处理原因、轮次和有界报告。`needs_attention` 通常需要响应原生审批；`unknown` 表示现有证据不能确认某个步骤，不应盲目重跑。`completed` 表示本轮执行及关闭已确认，不表示成果已合并或验收。缺少结构化报告时仍保留原生文本。
+
+等待默认观察调用开始时最新接受轮次；想消费新通知时，传 `after_revision: {"任务ID": 上次返回的revision}`。新轮次排队时不会被旧轮次的完成提前满足；前轮审批阻塞后轮时会返回 `blocking_round_id`，应处理该轮次。长报告按 `next_offset` 分页，历史报告用固定 `round_id` 读取。
+
+MCP 仅操作当前父会话自己的任务，CLI 是当前 namespace 的操作者入口。受控子执行禁用全部 Runweft MCP，并拒绝经 CLI 再派生或追加 Runweft 任务；其他 MCP 和内置 subagent 保留。子端从 HAPI 原生输出交回报告，无需专门汇报工具。
+
+取消等待或宿主连接断开不会取消中心已接受的任务；需要中断时显式调用对应工具或 CLI 命令。主宿主关闭后不承诺新会话自动接回原父身份，已有结果仍可用 CLI 查看。服务停止会暂停中心观察，不能代替任务中断；需要有序关闭时先等待任务收尾或逐轮中断，再停止服务。
 
 ## 配置
 
@@ -309,6 +336,8 @@ bun run test:mcp
 bun run test:execution
 bun run test:tasks
 bun run test:task-controls
+bun run test:task-mcp
+bun run test:collaboration
 ```
 
 `test:mcp` 复制原生配置及认证到 `.dev-smoke/` 专用目录，用编译产物验证 local/hub 两种连接下的真实全局安装、身份和 HAPI 子执行启动/续接的工具禁用，并记录证据和进程清理结果。默认 Claude 命令优先使用 `iclaude`，可通过 `RUNWEFT_SMOKE_CLAUDE` 指定。`test:execution` 使用当前原生模型配置和专用服务/工作目录，验证执行事实、审批、中断、续接与结果不确定时的查询。二者会实际调用模型，不属于常规单元测试。
@@ -316,3 +345,7 @@ bun run test:task-controls
 `test:tasks` 使用专用 Codex 配置副本、非 Git 工作目录和编译 CLI，验证任务接受/去重、原生完成、自动关闭进程、等待游标及服务重启后读取。它会实际调用模型，证据保存在 `.dev-smoke/tasks-*`，结束后关闭自建服务。
 
 `test:task-controls` 用专用 Codex/Claude 配置及明确模型/推理参数，验证真实续接、权限批准/拒绝、定向中断与 Codex 追加。只在专用 Codex 配置副本中启用 on-request 和 workspace-write 以产生审批；产品继续继承用户原生默认配置。可通过 RUNWEFT_SMOKE_CODEX_MODEL/EFFORT 和 RUNWEFT_SMOKE_CLAUDE_MODEL/EFFORT 选择当前可用参数，证据保存在 `.dev-smoke/task-controls-*`。
+
+`test:task-mcp` 由两个真实原生宿主分别完成派生、等待、结果读取，验证子 CLI 拒绝递归委派和超过 60 秒的 MCP 等待；`RUNWEFT_SMOKE_HOST=codex|claude` 可只验证一个宿主。
+
+`test:collaboration` 覆盖 local 与同机 Hub 下两宿主 × 两 runtime 的八个组合，包括共享编辑、纯报告续接、其他 MCP 保留、Runweft 工具过滤、进程退出及实际 MCP 连接中断。`RUNWEFT_SMOKE_CASE=hub-claude-codex` 可选择一个组合；指定组合后加 `RUNWEFT_SMOKE_CONTROLS=1` 验证原生 MCP steer/不支持分支与定向中断。证据保存在 `.dev-smoke/collaboration-*`。这些测试会调用模型，只修改专用原生配置；同机 Hub 结果不代替真实跨机远端验收。

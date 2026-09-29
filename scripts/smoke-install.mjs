@@ -4,6 +4,8 @@ import { createReadStream, existsSync, mkdirSync, mkdtempSync, readFileSync, ren
 import { basename, dirname, join, resolve } from 'node:path';
 import { spawn, spawnSync } from 'node:child_process';
 import { createRequire } from 'node:module';
+import { Client } from '@modelcontextprotocol/sdk/client/index.js';
+import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 
 const packageRoot = resolve(process.argv[2] ?? 'dist/packages');
 const index = JSON.parse(readFileSync(join(packageRoot, 'index.json'), 'utf8'));
@@ -72,6 +74,20 @@ try {
     const version = spawnSync(cli, ['--version'], { env: cleanEnv, cwd: consumer, encoding: 'utf8' });
     assert.equal(version.status, 0, version.stderr); assert.equal(version.stdout.trim(), index.version);
     evidence.checks.push('npm registry metadata and platform optional dependency installation');
+    const help = spawnSync(cli, ['task', '--help'], { env: cleanEnv, cwd: consumer, encoding: 'utf8' });
+    assert.equal(help.status, 0, help.stderr);
+    for (const command of ['spawn', 'list', 'show', 'wait', 'send', 'interrupt', 'permission']) assert(help.stdout.includes(command));
+    const mcpHome = join(root, 'mcp-discovery');
+    const transport = new StdioClientTransport({ command: cli, args: ['--home', mcpHome, 'mcp', 'serve', '--client', 'codex'],
+        cwd: consumer, env: cleanEnv, stderr: 'pipe' });
+    transport.stderr?.on('data', () => {});
+    const client = new Client({ name: 'installed-runweft-probe', version: '1' });
+    try {
+        await client.connect(transport, { timeout: 5000 });
+        assert.deepEqual((await client.listTools()).tools.map(tool => tool.name), ['runweft_status', 'list_agent_definitions', 'spawn_agent', 'list_agents', 'read_agent', 'wait', 'send_input', 'interrupt_agent', 'respond_to_permission']);
+        assert(!existsSync(mcpHome), 'MCP discovery created runtime data');
+    } finally { await client.close(); }
+    evidence.checks.push('installed task commands and side-effect-free MCP catalog without Bun or source checkout on PATH');
     await command(process.execPath, [resolve('scripts/smoke-service.mjs'), cli], { env: cleanEnv });
     evidence.checks.push('installed CLI services and signals with no Bun or source checkout on PATH');
     const unavailable = `${platformDirectory}.unavailable`;
