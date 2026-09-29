@@ -18,4 +18,6 @@ MCP 省略 request_id 时由 host、nativeSessionId、callId 和操作生成稳�
 
 自有任务 API 为认证后的 `/api/runweft/tasks/{spawn,lookup,send,interrupt,permission,list,read,wait}` POST，使用同一 HAPI JWT namespace；业务身份来自入口适配。中心后台以对应 namespace 的原生认证继续观察，不依赖宿主短期 JWT。客户端按 exp 提前续期认证，不自动重放业务 POST。
 
+独立工作区增加 `retry-finish` 与 `workspace/remove` POST，沿同一父权限/操作者规则；MCP 不暴露删除工具。Task JSON v2 保存固定 source/环境状态，轮次保存准备与 Git 成果/回执，写入使用 revision 比较；旧 shared 记录保持可读/续接，不迁移原生历史库。删除操作身份和选项持久保存，中心重启也查询未完成删除。
+
 服务关闭停止扫描并等待当前协调步骤结束；服务重启读取持久未完成轮次继续查询/收尾。宿主退出不等于任务取消；停止中心/Runner 也不代替显式轮次中断。

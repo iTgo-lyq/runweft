@@ -13,3 +13,5 @@ Codex 通过原生 user item 与 turn ID 关联输入，以 turn/completed 的 s
 审批沿 HAPI 原有 approve/deny 路由和原生请求 ID，不修改默认权限。Claude 当前工具拒绝流程关闭原生进程，确认清理后记为 interrupted/control；未确认关闭仍为 unknown。
 
 真实执行继承原有模型配置和认证；专用项目的说明与 skill 由原生客户端加载。调用层不集中管理 skill/MCP，不写用户全局配置。
+
+独立工作区启动/续接可携带 `preparedWorkspace: { environmentId, preparationId }`，与 HAPI 原有 sessionType=worktree 快捷创建互斥。该引用贯穿持久启动指纹、Hub/RPC、Runner 和会话 metadata；Runner 在目录创建前及真正启动点核对当前准备，不重建丢失目录。此能力由通用启动路径提供，不要求修改 Codex/Claude runtime adapter；Git 准备见[公共生命周期](../../git-workspace/lifecycle/spec.md)。

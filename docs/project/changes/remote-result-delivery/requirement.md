@@ -16,7 +16,7 @@
 | 关系 | Change | 依赖内容与满足条件 |
 | --- | --- | --- |
 | 前置 | [远端工作区准备](../remote-workspace-preparation/requirement.md) | 环境归属、确定基线与可恢复 Git 对象可用 |
-| 前置 | [本地工作区执行](../local-workspace-execution/requirement.md) | 公共 Git 封存和成果引用可用，本 Change 不再实现第二份提交或回收规则 |
+| 前置 | [本地工作区执行](../../archive/2026-09-29-local-workspace-execution/requirement.md) | 公共 Git 封存和成果引用可用，本 Change 不再实现第二份提交或回收规则 |
 | 前置 | [委派生命周期](../../archive/2026-09-29-delegation-lifecycle/requirement.md) | round/HAPI 关联、原生结束事实及下一轮写入调度；未知状态不能触发封存 |
 | 前置 | [任务附件](../task-artifact-delivery/requirement.md) | 持久对象上传、校验、访问控制和引用保留 |
 
@@ -60,7 +60,7 @@
 
 ## 已确认的交付策略
 
-2026-09-29 用户确认默认中心 Git bundle 交付，Git push/PR 作为显式发布。独立 worktree 遗留改动的自动 checkpoint 统一遵循[公共 Git 工作区](../local-workspace-execution/requirement.md#已确认的成果策略)，不在本 Change 制定另一份策略。无 push 合码路径见 [Design](design.md#4-主工作区取回)。
+2026-09-29 用户确认默认中心 Git bundle 交付，Git push/PR 作为显式发布。独立 worktree 遗留改动的自动 checkpoint 统一遵循[公共 Git 工作区](../../archive/2026-09-29-local-workspace-execution/requirement.md#已确认的成果策略)，不在本 Change 制定另一份策略。无 push 合码路径见 [Design](design.md#4-主工作区取回)。
 
 ## 协作资源
 

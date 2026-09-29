@@ -19,3 +19,5 @@ resume 沿原有入口返回实际 HAPI session、新旧原生身份，等待该
 上层业务委派消费这一明确缺失结果，按[轮次规则](../../delegation/rounds/spec.md)选择续接或构造业务历史；不改变原生执行调用层的上述职责。
 
 Claude 缺失检查读取当前 cwd 对应原生 transcript；Codex 用既有 native app-server 查询指定 thread，仅精确的原生缺失响应可判缺失。预检查不发送 prompt，查询进程随后关闭；明确拒绝时保留原归档状态。
+
+已关联受控工作区的 resume 必须携带同环境的当前有效 preparedWorkspace，实际启动前再校验；包括 HAPI 通用恢复入口，省略参数不能绕过上一轮封存与新轮准备。受控会话 clear 拒绝另开无准备会话，应通过 Runweft 结束并续轮。普通 HAPI 会话与原生内置子代理不新增这项约束，缺失目录/旧准备不作为原生历史缺失处理。

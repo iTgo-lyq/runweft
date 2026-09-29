@@ -11,7 +11,7 @@
 
 **HAPI 已有能力优先复用。** 技术方案按“当前入口 → 是否足够 → 最小缺口”推导；已有会话、消息、状态、恢复、审批、文件与 UI 不重复实现。旧工程只参考交互和历史证据，不能完全照搬其 daemon、状态机、认证锁或补丁；具体边界见[执行基础需求](archive/2026-09-29-hapi-subagent-foundation/requirement.md#已确认的架构决策)。
 
-协作服务的运行位置已在[统一 CLI 技术方案](archive/2026-09-29-unified-cli-and-deployment/technical.md#服务与数据归属)中落实：Runweft 服务与原有 HAPI Hub 同机部署，共用 HTTP 入口和 HAPI 认证；本地模式部署在本机，Hub 模式部署在所选中心。只补父子关联、角色分流、工作区准备与成果交付，不复制 HAPI 原生会话库。基础安装与部署已通过四个平台验收并归档，当前行为见[部署 Spec](specs/deployment/spec.md)；业务关联与协作仍由后续 Change 实现。
+协作服务的运行位置已在[统一 CLI 技术方案](archive/2026-09-29-unified-cli-and-deployment/technical.md#服务与数据归属)中落实：Runweft 服务与原有 HAPI Hub 同机部署，共用 HTTP 入口和 HAPI 认证；本地模式部署在本机，Hub 模式部署在所选中心。只补父子关联、角色分流、工作区准备与成果交付，不复制 HAPI 原生会话库。基础安装与部署已通过四个平台验收并归档，当前行为见[部署 Spec](specs/deployment/spec.md)；本机业务委派及独立工作区已验收，当前行为见[委派入口](specs/delegation/interface/spec.md)和[工作区模式](specs/local-workspace/mode/spec.md)；附件和远端协作继续由后续 Change 实现。
 
 ## 完整版本的交付目标
 
@@ -35,7 +35,7 @@
 | [全局资源注册（已完成）](archive/2026-09-29-execution-resource-registry/requirement.md) | 分别注册机器和 runtime，查询真实可用性 | 统一 CLI |
 | [Agent 定义（已完成）](archive/2026-09-29-agent-definition/requirement.md) | 可发现、校验及解析的全局/项目定义，引用 runtime | 统一 CLI、全局资源注册 |
 | [委派生命周期（已完成）](archive/2026-09-29-delegation-lifecycle/requirement.md) | CLI/MCP 本地共享目录的完整协作与统一查询 | 统一 CLI、HAPI 执行契约、宿主适配、Agent 定义、全局资源注册 |
-| [本地工作区执行](changes/local-workspace-execution/requirement.md) | 独立本地协作及公共 Git 准备/封存/保留能力 | HAPI 执行契约、委派生命周期 |
+| [本地工作区执行（已完成）](archive/2026-09-29-local-workspace-execution/requirement.md) | 独立本地协作及公共 Git 准备/封存/保留能力 | HAPI 执行契约、委派生命周期 |
 | [任务附件交付](changes/task-artifact-delivery/requirement.md) | 独立文件交付及既有任务的输入/输出接入 | 统一 CLI、委派生命周期 |
 | [远端工作区准备](changes/remote-workspace-preparation/requirement.md) | 跨机基线与输入落地，复用公共工作区启动校验 | HAPI 执行契约、本地工作区、任务附件 |
 | [远端代码回收](changes/remote-result-delivery/requirement.md) | 真实远端协作至主仓库取得成果的完整链路 | 远端准备、本地工作区、委派生命周期、任务附件 |

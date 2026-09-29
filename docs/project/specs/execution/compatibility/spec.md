@@ -8,6 +8,8 @@ health 的 mcpToolFilter:1 与 Runner 的 capabilities.mcpToolFilter:true 表示
 
 HAPI 的 HTTP 状态、code 与错误被保留。只有 native_session_missing 是确认缺失；其他错误和未知执行状态由上层处理，不能解释成可安全重发。
 
+独立 Git 操作与 preparedWorkspace 启动需要 Runner `capabilities.managedWorkspaces:1`。不满足时明确拒绝并提示配套版本，不能回退到默认 HEAD 的快捷 worktree 创建；shared 与不使用准备引用的原有 HAPI 执行保持原行为。
+
 资源查询要求 Hub 的 machineInventory:1 完整库存能力。原生版本详情使用 Runner 可选 agentAvailabilityDetails:true，缺少时提示升级；不将该能力加入普通 Runner 的强制要求。资源解析与实际执行的区别见 [Runtime 登记](../../resources/runtimes/spec.md)。
 
 Codex/Claude 内置启动、配置、审批和会话管理继续复用 HAPI。补充的持久启动回执、原生事实、目标中断和已复现缺口修正均位于独立 HAPI fork；不支持 npm/path runtime 插件，私有 runtime 扩展不属于当前交付。

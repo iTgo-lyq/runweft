@@ -21,7 +21,7 @@ Agent 提供的测试结论属于其报告；程序实际运行的检查另记�
 
 ## 2. 消费公共 Git 封存结果
 
-Git 收尾由[公共工作区设计](../local-workspace-execution/design.md#本轮固定成果)统一定义并实现，本 Change 不再维护另一套自动提交逻辑。HAPI 确认终态和停止写入后，由公共能力按已确认的 checkpoint 策略保存初始 base、本轮开始 HEAD、成果 HEAD 与不可变引用。
+Git 收尾由[公共工作区设计](../../archive/2026-09-29-local-workspace-execution/design.md#本轮固定成果)统一定义并实现，本 Change 不再维护另一套自动提交逻辑。HAPI 确认终态和停止写入后，由公共能力按已确认的 checkpoint 策略保存初始 base、本轮开始 HEAD、成果 HEAD 与不可变引用。
 
 远端交付只接受与 delegation/round/环境匹配的有效封存证据。封存失败保留 worktree，不生成“完整交付”；失败或中断执行可交付部分成果，但执行结论不变。报告任务无改动时只交报告；意外改动按公共规则明确列出，不能隐藏。
 

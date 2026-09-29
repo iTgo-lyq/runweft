@@ -4,6 +4,8 @@
 
 首轮通过 HAPI 启动。后轮优先 resume 前轮已停止的原生 session，核对实际返回的 machineId/path/flavor 与能力就绪后才投递新输入。只有明确 native_session_missing 才按[上下文规则](../context/spec.md)构造历史并新建 session；离线、权限、读取失败或未知响应不当作历史缺失。真实新旧 HAPI/native 身份在输入前关联。
 
+独立模式在 preparing 取得当前准备引用，spawn/resume 都消费该引用；每轮完成前须经 finishing 固定 Git 成果。收尾失败/未知阻塞后轮，显式 retry_finish 只重试收尾；已排队的轮次不重建目录或重新选择基线。环境删除与 next 在同一事务互斥，已删除环境拒绝续接。
+
 ## 本轮追加
 
 steer 要求当前活跃 round_id，只支持 Codex；Claude 返回 steer_unsupported。接受记录不等于已经注入原生 turn，输入分别展示 pending、steered、queued、invoked、unknown。沿 HAPI 已有消息队列及 steer 入口查询实际归属；同一业务轮次可能包含同原生 turn 的追加，也可能由后续原生 turn 消费，不伪造二者一致。
@@ -13,6 +15,8 @@ steer 要求当前活跃 round_id，只支持 Codex；Claude 返回 steer_unsupp
 ## 中断与审批
 
 interrupt 固定业务轮次。排队且未启动的轮次可直接取消，不触碰正在执行的前轮；已结束轮次返回 already_finished，不影响后轮。活跃轮次优先取消队列输入或按 localId/executionId 定向中断，再归档该轮 session；requested 不代表已停止。
+
+独立任务在准备中取消时先等待原 Git 操作明确；准备成功但没有启动执行的轮次同样封存后才结束，不为收尾启动模型。已在 finishing 的执行已经停止，interrupt 返回 execution_already_stopped，不改变取消或原生结果。
 
 原生执行未知时也可显式请求取消，但必须确认同一实际执行已停止后才完成业务取消，保留 native unknown 和不完整报告标记，不能伪造原生 interrupted。停止未知或失败通过 attention 返回。
 

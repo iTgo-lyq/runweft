@@ -41,6 +41,7 @@ HAPI Hub 只监听本机私有端口，省略端口配置时自动选择。Runwe
 | `server/hapi/` | 托管 Hub 的原有数据库、令牌和状态 |
 | `server/runweft/state.sqlite` | 中心机器/runtime 登记、最后原生探测及委派任务/轮次/请求关联和报告；WAL、事务化 schema version，不保存模型凭据 |
 | `connections/local/hapi/` 或 `connections/<主机名>-<URL hash>/hapi/` | 当前机器 Runner 的连接身份、配置与原生日志 |
+| `connections/<连接>/hapi/workspaces/environments/<任务ID>/` | 独立任务 checkout、树外输入与准备/成果/操作回执；持久数据，不是缓存 |
 | `client.sqlite` | 本机工作区与 Agent 个人 runtime 绑定及 Claude MCP hook 的短期调用身份 |
 | `logs/` | 服务日志，由部署方管理保留和轮转 |
 | `backups/mcp/` | 显式 MCP 配置修改前的快照，可能含原配置秘密，仅当前用户可读写 |
@@ -49,6 +50,10 @@ HAPI Hub 只监听本机私有端口，省略端口配置时自动选择。Runwe
 
 Hub 客户端不保存权威资源库；paths 明确指出登记位于中心，备份资源须停止中心后保留其业务库与尚存 WAL 文件。全局范围见[资源范围](../resources/scope/spec.md)。
 
+paths.taskWorkspaces 指向当前连接的本机环境根。doctor 的 task_workspaces 检查只读统计实际 checkout 目录（含失败准备现场），即使中心离线仍可取得本机数量；读取失败明确报告错误，不推断零目录或成功任务数，不统计其他连接/机器。具体状态通过 task list/show 查询。
+
 任务协调器复用 serve，CLI/MCP 无需再安装独立 daemon。业务表及请求恢复见[委派生命周期](../delegation/lifecycle/spec.md)；当前 schema v2 事务保留既有资源，遇到更高版本明确拒绝，不自动删除数据或降级。
 
 Codex/Claude 配置和历史仍沿各自原生位置；已有 HAPI 数据不自动搬迁，工作区留在原处。停止后备份数据根及相应原生数据，恢复使用兼容版本；不承诺任意版本间回退。
+
+独立 worktree 还依赖源仓库 Git common directory、对象与保留引用。备份前完成轮次停止/封存，再停止服务，并保存源仓库、Runweft 数据及所需原生历史；仅复制 checkout 或数据根不完整。当前不提供自动路径迁移，按原路径恢复后检查 Git 注册。卸载保留数据，工作区显式清理保留成果 refs；引用维护和迁移限制见[使用说明](../../../usage.md#数据升级与诊断)。

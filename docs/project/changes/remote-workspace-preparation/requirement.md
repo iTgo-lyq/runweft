@@ -16,7 +16,7 @@
 | 关系 | Change | 依赖内容与满足条件 |
 | --- | --- | --- |
 | 前置 | [HAPI 执行契约](../../archive/2026-09-29-hapi-subagent-foundation/requirement.md) | 目标机器与稳定启动关联；本 Change 在 HAPI 内补准备与启动校验，不另建执行器 |
-| 前置 | [本地工作区执行](../local-workspace-execution/requirement.md) | 公共 Git 环境身份、确定基线、worktree 准备及启动检查已验收；远端消费同一能力 |
+| 前置 | [本地工作区执行](../../archive/2026-09-29-local-workspace-execution/requirement.md) | 公共 Git 环境身份、确定基线、worktree 准备及启动检查已验收；远端消费同一能力 |
 | 前置 | [任务附件](../task-artifact-delivery/requirement.md) | 会话创建前可取回、校验并保留输入；bundle 作为输入时也沿此路径 |
 | 下游 | [远端代码回收](../remote-result-delivery/requirement.md) | 消费环境身份、固定基线和可恢复基线对象 |
 

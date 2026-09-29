@@ -49,7 +49,7 @@ Git bundle 只提供 Git 对象，不自动包含 LFS 实体、子模块仓库�
 
 ## 4. 复用公共 Git 工作区
 
-HAPI Runner 在已明确的受控数据根中维护仓库对象缓存；跨机取得精确基线后，调用[公共 Git 准备](../local-workspace-execution/design.md#准备与启动)创建或复用 worktree。repository/environment/preparation 身份及 Git 收尾由公共工作区 Change 唯一定义。
+HAPI Runner 在已明确的受控数据根中维护仓库对象缓存；跨机取得精确基线后，调用[公共 Git 准备](../../archive/2026-09-29-local-workspace-execution/design.md#准备与启动)创建或复用 worktree。repository/environment/preparation 身份及 Git 收尾由公共工作区 Change 唯一定义。
 
 本 Change 负责远端机器选择、Git 对象来源、缓存同步和输入落地。缓存中的 Git 修改沿公共并发保护，不重复实现分支、worktree 或归属检查，也不创建另一个执行器。
 
@@ -69,7 +69,7 @@ runtime 对仓库外输入/上下文目录的访问规则必须实测；若只�
 
 ## 6. 远端准备完成与启动条件
 
-远端回执组合公共准备证据、执行机器/runtime 引用、Git 来源、输入摘要和上下文版本。基础 Git、目录归属、HEAD 与版本的实际启动检查沿[公共工作区能力](../local-workspace-execution/design.md#准备与启动)执行；远端额外核对目标机器、已到达输入和对象完整性。
+远端回执组合公共准备证据、执行机器/runtime 引用、Git 来源、输入摘要和上下文版本。基础 Git、目录归属、HEAD 与版本的实际启动检查沿[公共工作区能力](../../archive/2026-09-29-local-workspace-execution/design.md#准备与启动)执行；远端额外核对目标机器、已到达输入和对象完整性。
 
 任一必需准备失败不启动 agent。Hub 可提前保存关联，但不能让子 agent 通过 prompt 补做任务根仓库初始化；启动已准备路径时也不再创建默认 HEAD 的 worktree。
 

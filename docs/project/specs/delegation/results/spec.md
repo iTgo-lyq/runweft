@@ -6,6 +6,10 @@ status 为 running、needs_attention、completed、failed、interrupted、unknow
 
 执行、交付和接纳分开表达。共享模式报告为 available/pending/no_final_text，Git 与附件为 not_applicable，接纳为 external；completed 不表示已经合码或验收，也不要求文本报告任务制造提交/bundle/PR。
 
+独立模式展示 preparation、实际 cwd 和环境 retained/deleting/removed。Git 交付区分 pending/not_prepared/sealing/sealed/needs_attention/unknown，成功返回 base/start/result SHA、成果 ref、可选 checkpoint、partial、变更数量/有界路径。finishing 仍为 running，收尾错误返回 workspace attention 且保留原生 completed/failed/unknown 与报告，不伪造模型失败或重放任务。
+
+未启动且已明确失败/取消的执行显示 not_started；准备失败的 Git 为 not_prepared，不伪造模型终态或已固定的成果。执行取消的部分结果仅在停止确认后封存。删除错误单独保存在环境 removal 中，不覆盖原生结论；清理后报告与 Git 引用继续可查。
+
 ## 报告
 
 概览报告最多 4000 字符，详细读取默认 16000、上限 64000，使用 offset/next_offset 分页。结构化 summary/changes/tests/remaining 可选，解析失败仍保留原生原文并标记 structuredMissing；不根据报告文本猜成功。详细事实不通过原生结果字段重复返回完整报告。

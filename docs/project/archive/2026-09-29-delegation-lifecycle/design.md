@@ -4,7 +4,7 @@
 > 来源：[本 Change 需求](requirement.md)、[跨 Change 架构](../../architecture.md)
 > 按用户要求保留需求阶段的方案讨论；本文件不是已确认 Technical，也不代表已实现。
 
-本 Change 负责共用委派语义、实际 CLI/MCP 协作工具，以及本地共享 cwd 的完整流程。宿主适配只提供身份和传递机制；共享目录并发由主 agent 安排，不自动提交或清理。下文的 Git 基线、准备回执和封存要求适用于远端组合；公共 Git 准备和封存归属[本地工作区](../../changes/local-workspace-execution/requirement.md)，跨机传输分别归属[远端准备](../../changes/remote-workspace-preparation/requirement.md)与[代码回收](../../changes/remote-result-delivery/requirement.md)。
+本 Change 负责共用委派语义、实际 CLI/MCP 协作工具，以及本地共享 cwd 的完整流程。宿主适配只提供身份和传递机制；共享目录并发由主 agent 安排，不自动提交或清理。下文的 Git 基线、准备回执和封存要求适用于远端组合；公共 Git 准备和封存归属[本地工作区](../2026-09-29-local-workspace-execution/requirement.md)，跨机传输分别归属[远端准备](../../changes/remote-workspace-preparation/requirement.md)与[代码回收](../../changes/remote-result-delivery/requirement.md)。
 
 先复用当前 HAPI 的状态、消息、历史和控制入口，再补必要父子关联。Agent 定义解析到全局 runtime，runtime 再关联机器；启动前核对当前模式允许的目标，不能由业务 agent 名称替代资源身份。下文的记录与对账是逻辑要求，不预设照搬旧 daemon、独立执行状态库或 durable inbox。
 
