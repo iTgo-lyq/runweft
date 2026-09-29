@@ -15,3 +15,10 @@
 - 验证：`bun run typecheck` 通过；`bun test ./test/agents.test.ts ./test/cli.test.ts` 6 项、60 个断言通过，包含真实 Git worktree/clone、配置错误和 CLI 子进程；Change 结构校验通过。读取未创建数据库或服务目录。
 - 边界：个人绑定和在线目标检查按计划由 T2 加入；当前不创建任务。
 - Commit：`agent-definition T1: add scoped YAML definitions and offline agent commands`
+
+## T2 个人绑定与委派参数快照
+
+- 结果：个人绑定集中保存于 client.sqlite 自有表，沿现有 connectionName 和认证 namespace 选择；bind/unbind/check/list --check 与离线绑定展示已接通。公共 AgentClient 显式接收 cwd，生成可序列化快照，映射两种 HAPI 参数并禁用 Runweft MCP；不创建执行。
+- 验证：`bun run typecheck` 通过；`bun test ./test/agent-targets.test.ts ./test/agents.test.ts` 10 项、235 个断言通过。使用真实 SQLite、HTTP/JWT 网关与 CLI 子进程，验证原生参数映射、内容/目标版本、来源与连接/namespace 隔离、旧客户端表保留、文件不改写、离线/注销/错误 flavor、批量探测一次及派生解析重新检查。
+- 边界：HTTP 测试中的 Runner 由 fixture 提供；配套 HAPI 原生命令与真实 namespace 由 T3 验收，不宣称模型组合已运行。
+- Commit：`agent-definition T2: resolve personal runtime bindings and native launch snapshots`

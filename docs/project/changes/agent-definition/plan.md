@@ -29,7 +29,7 @@
 
 ### T2 个人绑定与委派参数快照
 
-- 状态：待开始
+- 状态：已完成
 - 交付：集中 SQLite 个人绑定、在线 bind/unbind/check/list --check、ResourceClient 目标组合、定义与解析版本及原生 launchOptions。
 - 依赖：T1、已验收全局资源
 - 验收：绑定不改共享文件/资源；精确来源、连接和 namespace 隔离，同仓库 worktree 共享绑定；空值不覆盖，Codex/Claude 参数各沿已有 HAPI 字段，隐藏 Runweft MCP，不增加权限或启动目录。
