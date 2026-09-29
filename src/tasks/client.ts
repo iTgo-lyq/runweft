@@ -5,7 +5,7 @@ import { hapiClient, type HapiClient } from '../hapi';
 import { hostDirectory, type HostIdentity } from '../mcp/identity';
 import { ResourceClient } from '../resources/client';
 import type { TaskCoordinator } from './coordinator';
-import { SpawnIntentSchema, parseTask, type Acceptance, type Parent } from './types';
+import { SpawnIntentSchema, parseTask, type Acceptance, type Parent, type SendIntent } from './types';
 
 export class TaskClient {
     readonly parent: Parent;
@@ -33,6 +33,16 @@ export class TaskClient {
         return accepted;
     }
     async list(all = false, signal?: AbortSignal): Promise<ReturnType<TaskCoordinator['list']>> { return this.request('list', { all }, signal); }
+    async send(id: string, message: string, requestId: string, options: { mode?: SendIntent['mode']; roundId?: string } = {}, signal?: AbortSignal): Promise<Acceptance> {
+        const { namespace: _, ...accepted } = await this.request('send', { requestId, intent: { id, message, mode: options.mode ?? 'next', roundId: options.roundId } }, signal);
+        return accepted;
+    }
+    async interrupt(id: string, roundId: string, signal?: AbortSignal): Promise<Awaited<ReturnType<TaskCoordinator['interrupt']>>> {
+        return this.request('interrupt', { id, roundId }, signal);
+    }
+    async permission(id: string, roundId: string, requestId: string, decision: 'approved' | 'denied' | 'abort', answers?: Record<string, string[]> | Record<string, { answers: string[] }>, signal?: AbortSignal) {
+        return this.request('permission', { id, roundId, requestId, decision, answers }, signal);
+    }
     async read(id: string, options: { roundId?: string; offset?: number; limit?: number } = {}, signal?: AbortSignal): Promise<ReturnType<TaskCoordinator['read']>> {
         return this.request('read', { id, ...options }, signal);
     }

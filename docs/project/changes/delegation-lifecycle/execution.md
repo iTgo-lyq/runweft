@@ -18,3 +18,12 @@
 - 配套验证：`bun run test:service` 通过 local/Hub、网关 SSE/WebSocket、Runner、重启与 SIGTERM 清理；证据 `.dev-smoke/service-NLa7vo/evidence.json` success=true。该验证是同机服务组合，不是实际跨机执行。
 - 后续：续接/多轮/控制/格式化报告属 T2，MCP 业务入口属 T3，两宿主两 runtime 完整矩阵属 T4；本任务不代替这些验收。
 - Commit：`delegation-lifecycle T1: persist and execute shared tasks through CLI and HAPI`
+
+## T2 串行续接与定向控制
+
+- 结果：CLI 新增 task send/interrupt/permission。next 持久排队并等待前轮关闭，沿固定环境/定义优先 resume；仅 native_session_missing 构造有界业务历史，保留实际新旧 HAPI/native 身份。Codex steer 在本轮串行接受，原生排队/注入/消费/未知分别展示；Claude 明确拒绝 steer。中断绑定轮次，明确取消可关闭未知执行但不伪造原生 interrupted；审批仅响应当前真实请求。
+- 结果：格式化报告可选，解析失败保留原文；Claude 原生结果中的完整报告不通过事实字段重复返回。列表展示仍在处理的轮次，历史完成 revision 可逐次消费，排队轮次显示前轮阻塞原因。原生可靠终态和已读输出不会被后来的未知传输或关闭后查询失败覆盖。
+- 真实验证：`bun run test:task-controls` 在 `.dev-smoke/task-controls-7etrzQ/evidence.json` success=true、cleanupErrors=[]。配套 CLI/HAPI 实际验证 Codex gpt-6-sol/xhigh、Claude claude-opus-5-5/high 的非空参数、原生完成、续接首轮记忆、改定义后仍用既有目标、每种 runtime 各一次批准/拒绝及对应文件效果、迟到中断不影响当前轮次、定向原生 interrupted、HAPI archived/inactive 和 host PID 退出。Codex 实际返回 steered，同一业务 round 两个输入均完成；Claude steer 返回不支持。
+- 修正依据：首次 `.dev-smoke/task-controls-Twbjtz` 复制了原生无审批配置，模型正确拒绝发起 require_escalated；测试改为仅在专用 Codex 副本启用 on-request/workspace-write，产品不覆盖用户默认。第二次 `.dev-smoke/task-controls-teHsIX` 暴露 Claude 回填旧历史导致 epoch 改变，已依据 HAPI 源码修复按 localId 重新核对并恢复正常游标；没有修改 HAPI 或重发原任务。两次失败进程均已退出、cleanupErrors=[]，不计为通过。
+- 验证：最终 `bun test ./test` 80 项、1326 次断言通过，含串行门禁、改身份的 resume、未知续接、精确缺失重建、目录/机器不匹配、迟到控制、追加去重、审批约束、等待游标、已知事实保留和回填分页；`bun run typecheck`、`bun run build`、Change 校验、git diff --check 通过。真实远端、MCP 两宿主组合仍分别属于后续 Change/T3–T4。
+- Commit：`delegation-lifecycle T2: resume rounds and expose targeted native controls`

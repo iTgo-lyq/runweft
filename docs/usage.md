@@ -148,7 +148,7 @@ runweft --json agent check reviewer
 
 ## 本机共享任务
 
-当前 CLI 提供单轮派生、查看和等待；多轮续接与 MCP 协作工具仍在当前 Change 中推进。进入实际工作目录，先用 `agent check` 确认定义绑定本机 runtime：
+CLI 提供派生、查看、等待、多轮续接和定向控制；MCP 协作工具仍在当前 Change 中推进。进入实际工作目录，先用 `agent check` 确认定义绑定本机 runtime：
 
 ```sh
 runweft agent check reviewer
@@ -160,7 +160,18 @@ runweft task list
 
 可用 `--message-file <文件>` 读取较长任务，`-` 表示 stdin。派生先在 stderr 输出 request ID，再返回接受结果；若响应丢失，保持任务参数并传 `--request-id <原ID>` 重试，或用 `task list` 查已接受记录。中心持续观察并收尾，CLI 退出或等待超时不取消任务。只有原生结果可靠、执行确认停止及共享收尾完成后，才显示完成。
 
-目录可以没有 Git；共享模式在同一 cwd 执行，不自动提交或清理。Hub 模式也必须选择发起机的 runtime。`task list` 默认当前发起机和目录（包含 MCP 来源），`--all` 查看当前 namespace；长报告用 `task show --offset <字符偏移> --limit <字符数>` 分页。遇到原生权限请求，当前在 HAPI 会话中处理，不改默认权限。
+目录可以没有 Git；共享模式在同一 cwd 执行，不自动提交或清理。Hub 模式也必须选择发起机的 runtime。`task list` 默认当前发起机和目录（包含 MCP 来源），`--all` 查看当前 namespace；长报告用 `task show --offset <字符偏移> --limit <字符数>` 分页。
+
+```sh
+runweft task send <任务ID> --message "继续处理刚才发现的问题"
+runweft task send <任务ID> --steer --round <轮次ID> --message "本轮补充要求"
+runweft task interrupt <任务ID> --round <轮次ID>
+runweft task permission <任务ID> --round <轮次ID> --request <原生审批ID> --decision approved
+```
+
+`send` 默认排下一轮，前轮确认停止后才开始，优先续接原生 session；只有原生明确报告历史缺失，才用旧任务和报告构造有界上下文。现有任务始终使用原目录、runtime 和定义快照；改 YAML 或换当前目录不重定向它。运行中追加只支持 Codex，必须指定活跃轮次；接受后通过 `show` 的输入状态区分已注入、已消费、排队和未知，Claude 使用默认下一轮排队。
+
+`interrupt` 只针对指定轮次；迟到请求不影响后轮。取消未知执行也需要停止证明，保留原生未知与报告不完整标记。`show` 显示当前待审批内容与 HAPI 详情地址；`permission` 可选 approved、denied、abort，问答可附 `--answers <JSON>`，仅响应当前请求，不改变默认权限策略。等待超时可再次等待；自动化调用可将返回的 revision 用于 `--after-revision '{"任务ID":版本}'`，按序读取新结果。
 
 ## 配置
 
@@ -297,8 +308,11 @@ bun run test:install
 bun run test:mcp
 bun run test:execution
 bun run test:tasks
+bun run test:task-controls
 ```
 
 `test:mcp` 复制原生配置及认证到 `.dev-smoke/` 专用目录，用编译产物验证 local/hub 两种连接下的真实全局安装、身份和 HAPI 子执行启动/续接的工具禁用，并记录证据和进程清理结果。默认 Claude 命令优先使用 `iclaude`，可通过 `RUNWEFT_SMOKE_CLAUDE` 指定。`test:execution` 使用当前原生模型配置和专用服务/工作目录，验证执行事实、审批、中断、续接与结果不确定时的查询。二者会实际调用模型，不属于常规单元测试。
 
 `test:tasks` 使用专用 Codex 配置副本、非 Git 工作目录和编译 CLI，验证任务接受/去重、原生完成、自动关闭进程、等待游标及服务重启后读取。它会实际调用模型，证据保存在 `.dev-smoke/tasks-*`，结束后关闭自建服务。
+
+`test:task-controls` 用专用 Codex/Claude 配置及明确模型/推理参数，验证真实续接、权限批准/拒绝、定向中断与 Codex 追加。只在专用 Codex 配置副本中启用 on-request 和 workspace-write 以产生审批；产品继续继承用户原生默认配置。可通过 RUNWEFT_SMOKE_CODEX_MODEL/EFFORT 和 RUNWEFT_SMOKE_CLAUDE_MODEL/EFFORT 选择当前可用参数，证据保存在 `.dev-smoke/task-controls-*`。

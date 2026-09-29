@@ -4,6 +4,7 @@ import { SpawnReceiptSchema, SpawnSessionRequestSchema, SendMessageRequestSchema
 import { ExecutionObservationSchema, InterruptExecutionResponseSchema, type ExecutionObservation } from '../hapi/shared/src/execution';
 import { errorDetails, RunweftError } from './errors';
 import { HapiClient, HapiRequestError } from './hapi';
+import { SteerQueuedMessageResponseSchema } from '../hapi/shared/src/schemas';
 
 export type StartRequest = Omit<SpawnSessionRequest, 'requestId' | 'agent'> & {
     requestId: string;
@@ -79,6 +80,7 @@ export class ExecutionClient {
         let before: { at: number; seq: number } | undefined;
         let forward = after;
         let until: { at: number; seq: number } | undefined;
+        let historyEpoch: number | undefined, historyReset = false;
         do {
             const params = new URLSearchParams({ limit: '200' });
             if (before) { params.set('beforeAt', String(before.at)); params.set('beforeSeq', String(before.seq)); }
@@ -87,7 +89,15 @@ export class ExecutionClient {
                 if (until) { params.set('untilAt', String(until.at)); params.set('untilSeq', String(until.seq)); }
             }
             const page = await this.hapi.request(`${base}?${params}`) as MessagesResponse;
-            if (after && page.page.reset) throw new RunweftError('execution_history_changed', '原生历史已被重写，无法按本轮起点确认完整结果。', '检查 HAPI 原生会话；不会重发本轮输入。');
+            if (after && page.page.reset) {
+                // Native resume may backfill older messages and legitimately invalidate this cursor.
+                // Reconcile by stable input IDs once for the new epoch, then return to bounded reads.
+                historyReset = true; forward = undefined; before = undefined; until = undefined; messages.length = 0; historyEpoch = undefined;
+            }
+            if (historyEpoch !== undefined && page.page.epoch !== undefined && page.page.epoch !== historyEpoch) {
+                throw new RunweftError('execution_history_changed', '原生历史在本次读取期间发生变化。', '稍后重新查询；不会重发任务输入。');
+            }
+            historyEpoch = page.page.epoch ?? historyEpoch;
             messages.push(...page.messages);
             if (!page.page.hasMore) break;
             if (forward) {
@@ -127,7 +137,8 @@ export class ExecutionClient {
         }
         return { session, localId, delivery, facts, output,
             inputMessageId: messages.find(m => m.localId === localId && record(m.content).role === 'user')?.id,
-            permissions: session.agentState?.requests ?? {} };
+            permissions: session.agentState?.requests ?? {}, historyReset,
+            historyCursor: after ? { ...after, epoch: historyEpoch ?? after.epoch } : undefined };
     }
 
     async interrupt(sessionId: string, inputLocalId: string, executionId: string) {
@@ -137,8 +148,12 @@ export class ExecutionClient {
         }));
     }
 
-    async cancelQueued(sessionId: string, localId: string) {
-        const current = await this.query(sessionId, localId);
+    async steer(sessionId: string, messageId: string) {
+        return SteerQueuedMessageResponseSchema.parse(await this.hapi.request(`/api/sessions/${encodeURIComponent(sessionId)}/messages/${encodeURIComponent(messageId)}/steer`, { method: 'POST' }));
+    }
+
+    async cancelQueued(sessionId: string, localId: string, after?: HistoryCursor) {
+        const current = await this.query(sessionId, localId, after);
         if (!current.inputMessageId || !current.delivery.queuedLocalIds.includes(localId)) {
             return { status: 'not_queued', localId };
         }

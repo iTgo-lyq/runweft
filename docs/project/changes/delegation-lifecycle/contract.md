@@ -25,6 +25,7 @@
 
 - `task spawn <agent> --message <text>`，或 `--message-file <path>`（`-` 读 stdin）；可传 `--request-id`，无则先生成并在发请求前输出到 stderr（JSON 模式为进度 JSON 行），丢响应提示用同一 ID 重试；不新增本地接受记录表。
 - `task send <id> --message ...` 默认下一轮；`--steer --round <id>` 明确本轮追加。
+- 追加先返回持久接受与 input_id；read/show 展示该输入实际 pending/steered/queued/invoked/unknown，接受不等于已注入原生 turn。相同 request_id 重试返回原关联。
 - `task show <id> [--round <id>]`、`task list`；列表默认当前发起目录，可 `--all` 查看 namespace 全局概览，作为简单看板的后台基础。
 - `task wait <ids...> [--timeout <ms>]`；JSON 支持游标，人工输出显示状态/报告与下一步，不每秒刷屏。
 - `task interrupt <id> --round <id>`；`task permission <id> --round <id> --request <native-id> --decision ...`。
@@ -46,6 +47,10 @@ Codex 受管 MCP 条目配置 tool_timeout_sec=600；wait 上限 540 秒，HTTP/
 - 接纳：主 agent/用户外部决定，工具不将执行成功冒充代码已合并。
 
 正常轮次完成须满足本轮全部实际投递输入已获可靠终态、受控执行已确认停止，以及当前模式的收尾条件。显式 interrupt 可以在未知原生结果下关闭同一 session 并取消业务轮次，但必须确认停止、保留原生 unknown 和不完整报告标记，不能伪造原生 interrupted。审批请求、未知状态、关闭失败及时返回需关注原因，不把它们当成功。输出附当前状态与 revision，不带游标的 wait 观察调用开始时已接受的最新 round，不能被上一轮的历史完成立即满足；带 after_revision 则读取其后新的完成/需关注结果，每个 round 保存完成 revision，后续排队启动不会抹掉前轮通知。游标仅抑制已交付通知，不删除结果。
+
+等待排队轮次时，前轮的审批或未知状态仍作为阻塞原因返回，附 blocking_round_id。带游标读取历史完成通知时，revision 指向该次完成，current_revision 指向任务当前版本，逐次消费不会跳过后续轮次完成。
+
+列表优先展示仍在处理的轮次，无活跃轮次时展示最新结果；read/show 默认最新接受轮次，可显式指定旧轮次。快照附 active_round_id，取消尚未启动的后轮不会把仍执行的前轮隐藏成整个任务已结束。
 
 任务 prompt 由职责、程序确认的 cwd/目标、轮次任务组成，说明共享写入由主 agent 调度、不使用 Runweft 递归委派，原生工具按现有规则使用。请求末尾报告 summary/changes/tests/remaining（可选 fenced `runweft-report` JSON）；解析失败保留全部原生最终文本并标记 structuredMissing，不据文本猜执行成功。
 

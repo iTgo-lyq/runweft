@@ -17,6 +17,9 @@ export const ParentSchema = z.discriminatedUnion('kind', [
 export type Parent = z.infer<typeof ParentSchema>;
 export const SpawnIntentSchema = z.strictObject({ agentType: AgentIdSchema, message: z.string().trim().min(1).max(200_000), workspaceMode: z.literal('shared') });
 export type SpawnIntent = z.infer<typeof SpawnIntentSchema>;
+export const SendIntentSchema = z.strictObject({ id: z.uuid(), message: z.string().trim().min(1).max(200_000), mode: z.enum(['next', 'steer']), roundId: z.uuid().optional() })
+    .refine(value => value.mode === 'steer' ? !!value.roundId : value.roundId === undefined, 'steer 必须指定 roundId；next 不接受 roundId');
+export type SendIntent = z.infer<typeof SendIntentSchema>;
 export const SnapshotSchema = z.strictObject({ id: AgentIdSchema, definition: DefinitionSchema,
     source: z.strictObject({ scope: ScopeSchema, path: z.string(), key: z.string(), linkTarget: z.string().nullable() }),
     definitionVersion: z.string().min(1), resolvedVersion: z.string().min(1), runtimeId: z.uuid(),
@@ -24,23 +27,33 @@ export const SnapshotSchema = z.strictObject({ id: AgentIdSchema, definition: De
 export type AgentSnapshot = z.infer<typeof SnapshotSchema>;
 export const AcceptSchema = z.strictObject({ parent: ParentSchema, requestId: z.uuid(), intent: SpawnIntentSchema, agent: SnapshotSchema });
 export const LookupSchema = z.strictObject({ parent: ParentSchema, requestId: z.uuid(), intent: SpawnIntentSchema });
+export const SendSchema = z.strictObject({ parent: ParentSchema, requestId: z.uuid(), intent: SendIntentSchema });
+export const InterruptSchema = z.strictObject({ parent: ParentSchema, id: z.uuid(), roundId: z.uuid() });
+export const PermissionSchema = InterruptSchema.extend({ requestId: z.string().min(1), decision: z.enum(['approved', 'denied', 'abort']),
+    answers: z.union([z.record(z.string(), z.array(z.string())), z.record(z.string(), z.object({ answers: z.array(z.string()) }))]).optional() });
 export type Attention = Problem & { stage: string; permissionIds?: string[] };
 export type Status = 'running' | 'needs_attention' | 'completed' | 'failed' | 'interrupted' | 'unknown';
-export type Acceptance = { agent_id: string; round_id: string; request_id: string; revision: number; accepted: true };
+export type Acceptance = { agent_id: string; round_id: string; request_id: string; revision: number; accepted: true; input_id?: string };
+export type StructuredReport = { summary: string; changes: string; tests: string; remaining: string };
 export type Task = { id: string; namespace: string; parent: Parent; agent: AgentSnapshot; target: ExecutionTarget;
     environment: { mode: 'shared'; machineId: string; cwd: string }; createdAt: number; revision: number; updatedAt: number };
 export type Round = { id: string; taskId: string; ordinal: number; requestId: string; message: string;
-    phase: 'queued' | 'starting' | 'running' | 'stopping' | 'finished' | 'failed';
+    phase: 'queued' | 'starting' | 'resuming' | 'running' | 'stopping' | 'finished' | 'failed';
     preparation: { mode: 'shared'; status: 'pending' | 'ready'; checkedAt?: number };
     spawnRequestId: string; spawnAttempted: boolean; sessionId?: string; nativeSessionId?: string;
     cursor?: HistoryCursor; report: string; structuredMissing: boolean;
     stop: 'not_started' | 'stopping' | 'stopped'; finish: 'pending' | 'complete';
     attention: Attention | null; createdAt: number; completedAt?: number; completedRevision?: number;
     observedAt?: number; permissions: NonNullable<SessionResponse['session']['agentState']>['requests'];
-    startupFailure?: Problem; hostPid?: number };
+    startupFailure?: Problem; hostPid?: number; permissionBaseline?: string[]; structuredReport?: StructuredReport;
+    resume?: { previousSessionId: string; previousNativeSessionId?: string; attempted: boolean; candidateSessionId: string; outcome: 'pending' | 'resumed' | 'missing' | 'unknown' };
+    reconstruction?: { reason: 'native_session_missing'; sourceRoundIds: string[]; context: string };
+    cancellation?: { requestedAt: number; controlAttempted?: boolean; confirmed?: boolean; error?: Problem } };
 export type Input = { id: string; roundId: string; kind: 'initial' | 'steer'; text: string;
+    requestId?: string;
     delivery: 'pending' | 'attempted' | 'stored' | 'unknown'; messageId?: string;
-    observation?: ExecutionObservation; output: { messageId: string; text: string }[]; observedAt?: number };
+    observation?: ExecutionObservation; output: { messageId: string; text: string }[]; observedAt?: number;
+    steer?: { attempted: boolean; status: 'pending' | 'steered' | 'queued' | 'invoked' | 'unknown'; error?: string } };
 export type TaskBundle = { task: Task; rounds: Round[]; inputs: Input[] };
 export class TaskError extends RunweftError {
     constructor(readonly status: number, code: string, message: string, hint?: string) { super(code, message, hint); }

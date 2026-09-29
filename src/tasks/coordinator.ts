@@ -6,8 +6,9 @@ import { ResourceStore } from '../resources/store';
 import { ResourceService } from '../resources/service';
 import type { ExecutionTarget } from '../resources/types';
 import { TaskStore } from './store';
-import { AcceptSchema, LookupSchema, nativeTerminal, parseTask, TaskError, type Input, type Parent, type Round, type Task } from './types';
+import { AcceptSchema, LookupSchema, SendSchema, InterruptSchema, PermissionSchema, nativeTerminal, parseTask, TaskError, type Input, type Parent, type Round, type Task } from './types';
 import { detail, overview } from './views';
+import { historyContext, parseReport } from './reports';
 
 export class TaskCoordinator {
     readonly store: TaskStore;
@@ -38,11 +39,19 @@ export class TaskCoordinator {
     }
     kick(namespace: string, id: string) {
         if (this.closing || this.working.has(id)) return;
-        const work = this.advance(namespace, id).catch(error => {
+        void this.serial(id, () => this.advance(namespace, id)).catch(error => {
             // Domain failures are stored below; this is an outer storage/runtime failure.
             console.error(JSON.stringify({ code: 'task_coordinator_failed', taskId: id, error: errorDetails(error) }));
-        }).finally(() => { this.working.delete(id); });
-        this.working.set(id, work);
+        });
+    }
+    private serial<T>(id: string, action: () => Promise<T> | T): Promise<T> {
+        const operation = (this.working.get(id) ?? Promise.resolve()).then(() => {
+            if (this.closing) throw new TaskError(503, 'service_stopping', '服务正在停止；请查询已接受记录。');
+            return action();
+        });
+        const busy = operation.then(() => {}, () => {}).finally(() => { if (this.working.get(id) === busy) this.working.delete(id); });
+        this.working.set(id, busy);
+        return operation;
     }
     async close() {
         if (this.closing) { await Promise.all(this.working.values()); return; }
@@ -76,9 +85,51 @@ export class TaskCoordinator {
     private requireShared(target: ExecutionTarget, parent: Parent) {
         if (target.machineId !== parent.machineId) throw new TaskError(409, 'shared_target_required', '共享目录任务只能在发起机执行，Hub 模式也需要同机 runtime。', '绑定本机 runtime；独立工作区与远端模式将在后续能力就绪后开放。');
     }
+    async send(namespace: string, value: unknown) {
+        const { parent, requestId, intent } = parseTask(SendSchema, value);
+        if (this.closing) throw new TaskError(503, 'service_stopping', '服务正在停止；请查询已接受记录。');
+        const accept = () => this.store.append(namespace, parent, requestId, intent);
+        // New rounds do not modify the active round. Steer must serialize with its completion/close.
+        const accepted = intent.mode === 'steer' ? await this.serial(intent.id, accept) : accept();
+        this.kick(namespace, intent.id);
+        return accepted;
+    }
+    async interrupt(namespace: string, value: unknown) {
+        const { parent, id, roundId } = parseTask(InterruptSchema, value);
+        const result = await this.serial(id, () => {
+            const { task, rounds, inputs } = this.store.require(namespace, id, parent);
+            const round = rounds.find(round => round.id === roundId);
+            if (!round) throw new TaskError(404, 'round_unknown', '此任务中没有指定轮次。');
+            if (['finished', 'failed'].includes(round.phase)) return { status: 'already_finished', agent_id: id, round_id: roundId };
+            round.cancellation ??= { requestedAt: Date.now() };
+            if (round.phase === 'queued') {
+                round.cancellation.confirmed = true; round.phase = 'finished'; round.finish = 'complete'; round.completedAt = Date.now();
+            }
+            this.store.save(task, round, inputs.filter(input => input.roundId === round.id));
+            return { status: 'requested', agent_id: id, round_id: roundId };
+        });
+        this.kick(namespace, id); return result;
+    }
+    async permission(namespace: string, value: unknown) {
+        const { parent, id, roundId, requestId, decision, answers } = parseTask(PermissionSchema, value);
+        return this.serial(id, async () => {
+            const { task, rounds, inputs } = this.store.require(namespace, id, parent);
+            const round = rounds.find(round => !['finished', 'failed'].includes(round.phase));
+            if (round?.id !== roundId || round.phase !== 'running' || round.cancellation || !round.sessionId) throw new TaskError(409, 'round_not_running', '权限请求不属于指定的活跃轮次。');
+            const execution = new ExecutionClient(this.client(namespace));
+            const session = await execution.inspect(round.sessionId);
+            if (!session.active || !session.agentState?.requests?.[requestId] || round.permissionBaseline?.includes(requestId)) throw new TaskError(409, 'permission_not_pending', '该原生权限请求已经处理或不属于当前轮次。');
+            await execution.respondPermission(round.sessionId, requestId, decision, answers);
+            round.permissions = Object.fromEntries(Object.entries((await execution.inspect(round.sessionId)).agentState?.requests ?? {})
+                .filter(([id]) => !round.permissionBaseline?.includes(id)));
+            if (!Object.keys(round.permissions).length && round.attention?.code === 'permission_required') round.attention = null;
+            this.store.save(task, round, inputs.filter(input => input.roundId === round.id));
+            return { agent_id: id, round_id: roundId, request_id: requestId, decision, responded: true };
+        });
+    }
     list(namespace: string, parent: Parent, all = false) {
-        return { agents: this.store.list(namespace, parent, all).map(bundle => ({ ...overview(bundle),
-            accepted_requests: bundle.rounds.slice(-20).map(round => ({ request_id: round.requestId, round_id: round.id, created_at: round.createdAt })) })) };
+        return { agents: this.store.list(namespace, parent, all).map(bundle => ({ ...overview(bundle, bundle.rounds.find(round => !['finished', 'failed'].includes(round.phase)) ?? bundle.rounds.at(-1)!),
+            accepted_requests: this.store.requests(namespace, bundle.task.id) })) };
     }
     read(namespace: string, parent: Parent, id: string, options?: { roundId?: string; offset?: number; limit?: number }) {
         const result = detail(this.store.require(namespace, id, parent), options);
@@ -95,9 +146,12 @@ export class TaskCoordinator {
                 const bundle = this.store.require(namespace, id, parent);
                 const round = after[id] === undefined ? bundle.rounds.find(round => round.id === targets.get(id))!
                     : bundle.rounds.find(round => (round.completedRevision ?? 0) > after[id]) ?? bundle.rounds.at(-1)!;
-                return overview(bundle, round);
+                const view = overview(bundle, round);
+                return after[id] !== undefined && (round.completedRevision ?? 0) > after[id]
+                    ? { ...view, revision: round.completedRevision!, current_revision: bundle.task.revision } : { ...view, current_revision: bundle.task.revision };
             });
-            const ready = agents.some(agent => agent.status !== 'running' && (after[agent.agent_id] === undefined || agent.revision > after[agent.agent_id]));
+            const ready = agents.some(agent => agent.status !== 'running' && (after[agent.agent_id] === undefined
+                || (['completed', 'failed', 'interrupted'].includes(agent.status) ? (agent.completed_revision ?? 0) > after[agent.agent_id] : agent.revision > after[agent.agent_id])));
             if (ready || Date.now() >= deadline) return { agents, timed_out: !ready };
             await delay(Math.min(200, Math.max(1, deadline - Date.now())), undefined, { signal });
         }
@@ -115,9 +169,34 @@ export class TaskCoordinator {
                 this.requireShared(target, task.parent);
                 if (target.machineId !== task.target.machineId || target.flavor !== task.target.flavor) throw new TaskError(409, 'task_target_changed', '已接受任务的固定 runtime 目标不一致。');
                 round.preparation = { mode: 'shared', status: 'ready', checkedAt: Date.now() };
-                round.phase = 'starting'; round.attention = null; save();
+                const previous = [...rounds].reverse().find(item => item.ordinal < round.ordinal && item.sessionId && item.stop === 'stopped' && !item.startupFailure);
+                if (previous) round.resume = { previousSessionId: previous.sessionId!, previousNativeSessionId: previous.nativeSessionId,
+                    candidateSessionId: previous.sessionId!, attempted: false, outcome: 'pending' };
+                round.phase = previous ? 'resuming' : 'starting'; round.attention = null; save();
             }
             if (this.closing) return;
+            if (round.phase === 'resuming') {
+                const resume = round.resume!;
+                if (!resume.attempted) {
+                    resume.attempted = true; save();
+                    const result = await execution.resume(resume.previousSessionId);
+                    resume.outcome = result.outcome;
+                    if (result.outcome === 'missing') {
+                        round.reconstruction = historyContext({ task, rounds, inputs: allInputs }, round);
+                        round.phase = 'starting'; round.attention = null; save();
+                    } else {
+                        resume.candidateSessionId = result.outcome === 'resumed' ? result.session.id : result.sessionId;
+                        save();
+                    }
+                }
+                if (round.phase === 'resuming') {
+                    const candidate = await execution.inspect(resume.candidateSessionId);
+                    if (!candidate.active || candidate.metadata?.capabilities?.execution !== 1) {
+                        round.attention = { stage: 'resuming', code: 'task_resume_unknown', message: '尚未确认续接执行就绪。', hint: '中心只查询已知 session，不重复 resume，也不创建替代会话。' }; save(); return;
+                    }
+                    round.sessionId = candidate.id; resume.outcome = 'resumed'; round.phase = 'starting'; save();
+                }
+            }
             if (round.phase === 'starting') {
                 if (!round.sessionId) {
                     const attempted = round.spawnAttempted;
@@ -146,18 +225,37 @@ export class TaskCoordinator {
                 }
                 if (round.phase === 'starting') {
                     const session = await execution.waitUntilReady(round.sessionId!);
-                    round.nativeSessionId = task.target.flavor === 'codex' ? session.metadata?.codexSessionId : session.metadata?.claudeSessionId;
+                    round.nativeSessionId = (task.target.flavor === 'codex' ? session.metadata?.codexSessionId : session.metadata?.claudeSessionId) ?? round.nativeSessionId;
                     round.hostPid = session.metadata?.hostPid; save(); // Persist role before any task input.
                     if (session.metadata?.machineId !== task.target.machineId || session.metadata.path !== task.environment.cwd || session.metadata.flavor !== task.target.flavor) {
                         round.startupFailure = { code: 'execution_target_mismatch', message: 'HAPI 返回的执行目录、机器或 runtime 与绑定目标不一致。' };
                         round.phase = 'stopping'; save();
+                    } else if (round.cancellation) {
+                        round.phase = 'stopping'; save();
                     } else {
                         round.cursor = await execution.historyHead(session.id);
+                        round.permissionBaseline = Object.keys(session.agentState?.requests ?? {});
                         round.phase = 'running'; round.attention = null; save();
                     }
                 }
             }
             if (this.closing) return;
+            if (round.phase === 'running' && round.cancellation) {
+                if (!round.cancellation.controlAttempted) {
+                    round.cancellation.controlAttempted = true; save();
+                    try {
+                        for (const input of inputs) {
+                            if (input.delivery === 'pending') continue;
+                            const observed = await execution.query(round.sessionId!, input.id, round.cursor);
+                            this.observe(input, observed);
+                            const fact = input.observation;
+                            if (observed.delivery.queuedLocalIds.includes(input.id)) await execution.cancelQueued(round.sessionId!, input.id, round.cursor);
+                            else if (fact && !nativeTerminal(fact)) await execution.interrupt(round.sessionId!, input.id, fact.executionId);
+                        }
+                    } catch (error) { round.cancellation.error = errorDetails(error); }
+                }
+                round.phase = 'stopping'; save();
+            }
             if (round.phase === 'running') {
                 for (const input of inputs) {
                     if (input.delivery === 'pending') {
@@ -167,26 +265,42 @@ export class TaskCoordinator {
                     }
                 }
                 round.attention = null;
+                const epochs = new Set<number>();
                 for (const input of inputs) {
                     const observed = await execution.query(round.sessionId!, input.id, round.cursor);
+                    if (observed.historyCursor) epochs.add(observed.historyCursor.epoch);
                     round.observedAt = input.observedAt = Date.now();
-                    round.permissions = observed.permissions;
+                    round.permissions = Object.fromEntries(Object.entries(observed.permissions).filter(([id]) => !round.permissionBaseline?.includes(id)));
                     round.hostPid = observed.session.metadata?.hostPid ?? round.hostPid;
-                    round.nativeSessionId = task.target.flavor === 'codex' ? observed.session.metadata?.codexSessionId : observed.session.metadata?.claudeSessionId;
-                    if (observed.inputMessageId || observed.facts.length || observed.delivery.queuedLocalIds.includes(input.id)
-                        || observed.delivery.invokedLocalMessages.some(item => item.localId === input.id)) input.delivery = 'stored';
-                    if (observed.inputMessageId) input.messageId = observed.inputMessageId;
-                    const latest = observed.facts.at(-1)?.observation;
-                    const terminal = [...observed.facts].reverse().find(fact => nativeTerminal(fact.observation))?.observation;
-                    if (terminal || !nativeTerminal(input.observation)) input.observation = terminal ?? latest ?? input.observation;
-                    if (observed.output.length) input.output = observed.output;
-                    if (!nativeTerminal(input.observation) && (!observed.session.active || input.observation?.phase === 'unknown' || input.delivery !== 'stored')) {
+                    round.nativeSessionId = (task.target.flavor === 'codex' ? observed.session.metadata?.codexSessionId : observed.session.metadata?.claudeSessionId)
+                        ?? observed.facts.at(-1)?.observation.nativeSessionId ?? round.nativeSessionId;
+                    this.observe(input, observed);
+                    if (input.steer) {
+                        if (observed.delivery.invokedLocalMessages.some(item => item.localId === input.id)
+                            || observed.facts.some(fact => fact.observation.source === 'native' && fact.observation.phase === 'accepted')) {
+                            if (input.steer.status !== 'steered') input.steer.status = 'invoked';
+                        } else if (observed.delivery.indeterminateLocalIds?.includes(input.id)) input.steer.status = 'unknown';
+                        else if (observed.delivery.queuedLocalIds.includes(input.id)) input.steer.status = 'queued';
+                        if (!input.steer.attempted && input.messageId && input.steer.status === 'queued') {
+                            input.steer.attempted = true; save();
+                            try {
+                                const result = await execution.steer(round.sessionId!, input.messageId);
+                                input.steer.status = result.status === 'failed' ? 'unknown' : result.status;
+                                if (result.status === 'failed') input.steer.error = result.error;
+                            } catch (error) { input.steer.status = 'unknown'; input.steer.error = errorDetails(error).message; }
+                        }
+                    }
+
+                    if (!nativeTerminal(input.observation) && (!observed.session.active || input.observation?.phase === 'unknown' || input.delivery !== 'stored' || input.steer?.status === 'unknown')) {
                         round.attention = { stage: 'running', code: 'task_execution_unknown', message: '尚无本轮输入的可靠执行结论。', hint: '查看 HAPI 会话和 Runner；中心不会重复发送输入。' };
                     }
                 }
+                // All inputs must reconcile the same epoch before we suppress further backfill scans.
+                if (round.cursor && epochs.size === 1) round.cursor.epoch = [...epochs][0];
                 round.report = [...new Map(inputs.flatMap(input => input.output).map(output => [output.messageId, output.text])).values()].join('\n\n');
+                round.structuredReport = parseReport(round.report); round.structuredMissing = !round.structuredReport;
                 const permissionIds = Object.keys(round.permissions ?? {});
-                if (permissionIds.length) round.attention = { stage: 'running', code: 'permission_required', message: '原生执行正在等待权限响应。', hint: '在 HAPI 会话中处理当前请求。', permissionIds };
+                if (permissionIds.length) round.attention = { stage: 'running', code: 'permission_required', message: '原生执行正在等待权限响应。', hint: `运行 runweft task show ${id} --round ${round.id} 查看请求，并用 task permission 显式响应。`, permissionIds };
                 if (inputs.every(input => nativeTerminal(input.observation))) { round.phase = 'stopping'; round.attention = null; }
                 save();
             }
@@ -197,22 +311,44 @@ export class TaskCoordinator {
                     round.attention = { ...stopped.error, code: 'task_stop_unknown', stage: 'stopping', hint: '报告已保留；确认停止前不会启动下一轮。' }; save(); return;
                 }
                 round.stop = 'stopped'; round.finish = 'complete'; round.phase = 'finished'; round.completedAt = Date.now();
+                if (round.cancellation) {
+                    round.cancellation.confirmed = true;
+                    try {
+                        for (const input of inputs.filter(input => input.delivery !== 'pending')) {
+                            const observed = await execution.query(round.sessionId!, input.id, round.cursor);
+                            this.observe(input, observed);
+                        }
+                    } catch (error) { round.cancellation.error = errorDetails(error); }
+                    round.report = [...new Map(inputs.flatMap(input => input.output).map(output => [output.messageId, output.text])).values()].join('\n\n');
+                    round.structuredReport = parseReport(round.report); round.structuredMissing = !round.structuredReport;
+                }
                 round.attention = round.startupFailure ? { ...round.startupFailure, stage: 'starting' } : null; round.permissions = {}; save();
             }
         } catch (error) {
             const problem = errorDetails(error);
             round.attention = { ...problem, stage: round.phase };
             // Preparation and explicit pre-dispatch rejection are business failures, never invented native failures.
-            if (round.phase === 'queued' || (round.phase === 'starting' && !round.sessionId && !['connection_failed', 'invalid_hapi_response', 'request_failed'].includes(problem.code))) {
+            if (round.phase === 'queued' || (round.phase === 'starting' && !round.sessionId && !['connection_failed', 'invalid_hapi_response', 'request_failed'].includes(problem.code))
+                || (round.phase === 'resuming' && ['no_machine_online', 'resume_unavailable', 'access_denied', 'authentication_failed'].includes(problem.code))) {
                 round.phase = 'failed'; round.completedAt = Date.now();
             }
             save();
         }
     }
+    private observe(input: Input, observed: Awaited<ReturnType<ExecutionClient['query']>>) {
+        input.observedAt = Date.now();
+        if (observed.inputMessageId || observed.facts.length || observed.delivery.queuedLocalIds.includes(input.id)
+            || observed.delivery.invokedLocalMessages.some(item => item.localId === input.id)) input.delivery = 'stored';
+        if (observed.inputMessageId) input.messageId = observed.inputMessageId;
+        const latest = observed.facts.at(-1)?.observation;
+        const terminal = [...observed.facts].reverse().find(fact => nativeTerminal(fact.observation))?.observation;
+        if (terminal || !nativeTerminal(input.observation)) input.observation = terminal ?? latest ?? input.observation;
+        if (observed.output.length) input.output = [...new Map([...input.output, ...observed.output].map(output => [output.messageId, output])).values()];
+    }
     private prompt(task: Task, round: Round, input: Input) {
         return [`你是 Runweft 委派的 ${task.agent.definition.name ?? task.agent.id}。`, task.agent.definition.description, task.agent.definition.instructions,
             `工作目录：${task.environment.cwd}\n模式：本机共享目录；共享写入由主 agent 调度。任务 ${task.id}，轮次 ${round.id}。`,
-            '请完成以下任务并报告结果。不要通过 Runweft 再次委派；原生内置工具按原有规则使用。', input.text,
+            '请完成以下任务并报告结果。不要通过 Runweft 再次委派；原生内置工具按原有规则使用。', round.reconstruction?.context ?? '', input.text,
             '最后给出完成内容、测试结果和未解决事项；可用 fenced runweft-report JSON，字段 summary、changes、tests、remaining。'].filter(Boolean).join('\n\n');
     }
 }

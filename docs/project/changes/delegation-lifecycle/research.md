@@ -35,3 +35,9 @@
 
 - HAPI auth 路由签发 4 小时 JWT；当前 HapiClient 缓存 token 不按 exp 续期，短命 CLI 不明显，常驻协调器需在发请求前按已有 exp 重新认证。只刷新认证，不对结果不明的业务 POST 自动重放。
 - HAPI resume 对 Codex/Claude 使用现有机器匹配规则，可能包含同 host 的后备机器；协调器不能直接把 resume success 当成绑定环境未变。resume 前重新核对固定 runtime/machine 可用，返回后在投递输入前核对实际 metadata.machineId/path/flavor；不符则报告并关闭本次错误目标，不发送任务。固定 HAPI/native 身份实际取返回值，原归档历史不能自行改写。
+
+## T2 真实续接补充
+
+Claude 真实续接在 `.dev-smoke/task-controls-teHsIX` 暴露历史 epoch 变化。HAPI [消息存储](../../../../hapi/hub/src/store/messages.ts) 会在回填消息位置早于当前 head 时增加 epoch，[对应测试](../../../../hapi/hub/src/store/messages.test.ts) 明确证明新 seq 也可能落在旧位置之前；epoch 变化不等于执行失败或历史被删除。固定旧 epoch 会永久阻断后续读取，简单丢掉 epoch 又可能漏掉回填事实。
+
+采用现有 API 的 reset/latest/before 分页：仅在 epoch 变化时重新按固定 input localId 核对历史，本轮所有输入看到同一新 epoch 后再持久更新游标；稳定期继续 after 查询。已确认观察和输出保留，按原生消息 ID 更新，读取过程中再次变更则下次只读重查。无需 HAPI 改造或重新投递。

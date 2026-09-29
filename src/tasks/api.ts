@@ -29,6 +29,9 @@ export async function handleTaskRequest(request: IncomingMessage, response: Serv
         if (value?.intent?.workspaceMode && value.intent.workspaceMode !== 'shared') throw new TaskError(409, 'capability_unavailable', '当前只支持本机 shared 工作区模式。');
         result = await coordinator.accept(namespace, value);
     } else if (path === '/api/runweft/tasks/lookup') result = { accepted: coordinator.lookup(namespace, value) };
+    else if (path === '/api/runweft/tasks/send') result = await coordinator.send(namespace, value);
+    else if (path === '/api/runweft/tasks/interrupt') result = await coordinator.interrupt(namespace, value);
+    else if (path === '/api/runweft/tasks/permission') result = await coordinator.permission(namespace, value);
     else if (path === '/api/runweft/tasks/list') {
         const input = parseTask(ListSchema, value); result = coordinator.list(namespace, input.parent, input.all);
     } else if (path === '/api/runweft/tasks/read') {

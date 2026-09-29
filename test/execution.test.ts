@@ -237,7 +237,7 @@ test('long-lived HAPI client renews expired JWT before a mutation and never repl
     } finally { await server.stop(true); }
 });
 
-test('round cursor uses bounded forward pages and rejects structural history reset', async () => {
+test('round cursor uses bounded forward pages and reconciles backfilled facts after an epoch reset', async () => {
     let pages = 0, reset = false;
     const { server, client } = serverFor(request => {
         const url = new URL(request.url);
@@ -245,6 +245,13 @@ test('round cursor uses bounded forward pages and rejects structural history res
         if (url.pathname.endsWith('/queued-state')) return Response.json({ queuedLocalIds: [], invokedLocalMessages: [] });
         if (url.searchParams.get('limit') === '1') return Response.json({ messages: [], page: { snapshotHeadAt: 10, snapshotHeadSeq: 2, epoch: 3 } });
         pages++;
+        if (reset) {
+            const backward = url.searchParams.has('beforeSeq');
+            if (backward) { expect(url.searchParams.has('afterSeq')).toBe(false); expect(url.searchParams.get('beforeAt')).toBe('5'); }
+            return Response.json({ messages: backward ? [{ id: 'backfilled-completion', seq: 4, createdAt: 4, content: { role: 'agent', content: { type: 'event', data: {
+                type: 'execution', version: 1, runtime: 'claude', executionId: 'result', inputLocalIds: ['input'], phase: 'completed', source: 'native', nativeResult: { result: 'Backfilled result' },
+            } } } }] : [], page: { epoch: 4, reset: !backward, hasMore: !backward, nextBeforeAt: 5, nextBeforeSeq: 3 } });
+        }
         expect(url.searchParams.get('epoch')).toBe('3'); expect(url.searchParams.has('beforeSeq')).toBe(false);
         const first = url.searchParams.get('afterSeq') === '2';
         if (!first) { expect(url.searchParams.get('afterAt')).toBe('12'); expect(url.searchParams.get('untilAt')).toBe('20'); expect(url.searchParams.get('untilSeq')).toBe('5'); }
@@ -254,6 +261,8 @@ test('round cursor uses bounded forward pages and rejects structural history res
         const cursor = await client.historyHead('session'); expect(cursor).toEqual({ at: 10, seq: 2, epoch: 3 });
         await client.query('session', 'input', cursor); expect(pages).toBe(2);
         reset = true;
-        await expect(client.query('session', 'input', cursor)).rejects.toMatchObject({ code: 'execution_history_changed' });
+        const reconciled = await client.query('session', 'input', cursor);
+        expect(reconciled.historyReset).toBe(true); expect(reconciled.historyCursor).toEqual({ ...cursor, epoch: 4 });
+        expect(reconciled.facts[0].observation.phase).toBe('completed'); expect(reconciled.output[0].text).toBe('Backfilled result');
     } finally { await server.stop(true); }
 });
