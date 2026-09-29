@@ -24,13 +24,13 @@ origin 的仓库身份与目标 cache 的本机身份分别保存。来源绝对
 
 ## 源端导出
 
-Runweft 先持久冻结 resolve 返回的真实 source，HAPI export 只接受准确 SHA 和期望源仓库身份；导出开始再核对路径/仓库身份与 commit 存在，不重新解析分支。
+Runweft 先持久冻结 resolve 返回的真实 source，HAPI export 只接受准确 SHA 和期望源仓库身份；导出开始再核对路径/仓库身份与 commit 存在，不重新解析分支或刷新 dirty 状态。
 
 在 `exports/<op>/` 建立自有 scratch bare，objects/info/alternates 指向源 commonDir/objects；ref 只写 scratch。使用 `GIT_NO_REPLACE_OBJECTS=1`，源读取/导出命令以空 `GIT_ALLOW_PROTOCOL` 禁用 transport，避免 partial clone 懒取。scratch 不复制源 config、promisor 设置、hooks 或凭据；成功 bundle 不再依赖 alternates。源对象被并发 GC 移走时明确失败，不换基线。
 
 根与子模块分别打包完整可达历史。基线 gitlink 从固定树读取，在源已有模块对象库找对应 commit；不以当前模块 HEAD 代替，不自动初始化/更新源模块。缺对象时给路径与 SHA。拒绝 shallow；partial clone 只有必要对象本来齐全、完整打包成功时可用。
 
-LFS 从固定 commit 枚举指针，按 oid 从源对象库读取并固定候选，校验大小/SHA-256；不读可能已改动的工作树文件。缺工具/实体则失败。只归档基线工作树所需 LFS/子模块，Git 可达历史不意味着历史 LFS 全量归档。
+LFS 在 scratch 仓库中从固定 commit 枚举指针，按 oid 从源对象库读取并固定候选，校验大小/SHA-256；不读可能已改动的工作树文件。缺工具/实体则失败。只归档基线工作树所需 LFS/子模块，Git 可达历史不意味着历史 LFS 全量归档。
 
 export 成功表示固定候选已形成，不等于目标 ready。目标独立导入负责完整性放行；源端不再额外导入一次相同 full pack。发布成功后立即释放已交付导出文件/capture spool，保留操作与清单回执；未交付候选保留，不长期依赖源 Git ref。
 

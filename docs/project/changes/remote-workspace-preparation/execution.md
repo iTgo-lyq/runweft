@@ -22,6 +22,24 @@
 
 - Git 2.39.5 / Git LFS 3.3.0 的原语实验已通过：完整 bundle/sha256、共享 bare cache 多 worktree、固定 commit 的 LFS、两层离线子模块、scratch 导出及 shallow/partial 拒绝。详见 Research 的本地证据路径。
 - `validate-change.mjs` 通过；修改文档的本地文件链接检查无断链、`git diff --check` 通过。文档变更不运行无关应用测试。
-- 当前只完成方案、实验与 Plan 评审，尚未实现 C9 API、编排或 CLI；未运行本 Change 应用测试，也没有真实跨机执行证据。
-- Requirement/Technical 依据用户持续授权已确认，Plan 待执行；下一个任务 T1。没有待用户确认项。
+- 规划提交时仅完成方案、实验与 Plan 评审；后续实现与检查见各任务记录。
+- Requirement/Technical 依据用户持续授权已确认；按 Plan 顺序执行，没有待用户确认项。
 - 规划 Commit：`remote-workspace-preparation: confirm reviewed baseline and preparation plan`。
+
+
+## T1 HAPI 固定基线导出（2026-09-30）
+
+- 结果：HAPI 新增 `repositoryExport:1`、`POST /api/machines/:id/repositories` 与 export/inspect/release；固定 source/SHA、持久回执、原操作查询、停止核对及可选择释放候选。source identity 校验复用 WorkspaceManager，Git 进程控制复用既有工具。
+- 导出：scratch bare/alternates 中创建根及递归子模块完整 bundle；LFS 在 scratch 枚举，从源对象库按 oid/size 固定实体，支持自定义 storage 和 linked worktree。无 remote/未 push 可用，源 refs/config/index/工作文件不改。shallow、缺 Git/LFS/module 对象、错误身份明确失败；无 LFS 仓库不要求 git-lfs。
+- 文件闭环：新增 `test:repository-export` 专用无模型脚本。实际 HTTP 丢响应后用原 ID 查回，Hub/Runner 重启仍返回同一 snapshot；使用现有 capture/deliver 发布 bundle/LFS，释放 export/spool、移走源目录后，中心下载和空 bare 导入/fsck 成功；原生 session 数为 0。
+- 配套 HAPI 本地提交：`20f10899c49db4f2ac431eb66bef45ba24a3d0fd`（`remote-workspace-preparation T1: export fixed repository baselines`），根 package pin 已同步，版本仍为 0.30.7。新增通用 API 文档，不新增 Runweft MCP 工具或正式远端任务入口。
+
+验证：
+
+- 导出与原工作区聚焦测试 **24 pass**（新导出 8，原 worktree 16），`.dev-smoke/c9-t1-focused.log`；HAPI 全类型检查通过（`c9-t1-types.log`）。
+- HAPI 全量：Hub **1411 pass / 3 skip**，Web **3249 pass**，Shared **323 pass**，Relay **118 pass**。CLI **3004 pass / 11 skip / 1 fail**；唯一失败为既有 `skills.test.ts` 非 Git 目录用例，实际 `/tmp/.git` 使其读到 parent-skill。未改或删除该环境，也未修改无关 skills 行为。日志分别为 `.dev-smoke/c9-t1-{hub,web,shared,relay,cli}.log`。
+- 根类型检查通过（`c9-t1-root-types-final.log`），**129 pass / 0 fail / 2608 assertions**（`c9-t1-root-tests.log`）。`gen:fixtures` 无漂移。
+- 首次断线 fixture 的 `ServerResponse.destroy` 没有实际断 socket，两次 probe 因断线断言失败，未产生原生执行且服务均停止。改用 socket.destroy 并记录请求后，`.dev-smoke/repository-export-W1wcbQ/evidence.json` 成功、只有一次 export 转发、cleanupErrors=[]；原因与修正见 Research。
+- 固定新 HAPI revision 后，`bun run build:hapi`、`bun run build` 通过（`c9-t1-hapi-build.log`、`c9-t1-build.log`）；当前 `dist/runweft`/`dist/hapi` 的正式配套再验 `.dev-smoke/repository-export-i3qiDt/evidence.json` **success=true / cleanupErrors=[]**。本任务仅构建/运行本机 Linux x64，其他平台与候选 npm 包随 T5 更新，不冒称已更新四平台包。
+- 目标 import、缓存/worktree 对接、中心复用与诊断 CLI 尚属 T2–T4；本次没有真实跨机器或原生模型验收。
+- Commit：`remote-workspace-preparation T1: export fixed baselines through HAPI`。

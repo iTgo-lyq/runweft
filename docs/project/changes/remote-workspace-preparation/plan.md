@@ -1,7 +1,7 @@
 # 远端工作区准备实施计划
 
 > 来源：[Requirement](requirement.md)、[Technical](technical.md)、[基线契约](baseline-contract.md)
-> 状态：待执行
+> 状态：执行中
 > 执行模式：逐任务本地提交
 > 评审：当前工作区 iclaude 一次已完成；主 agent 已复核并更新分层、复用和留存方案，见 [Execution](execution.md)。按用户持续授权执行，不重复评审。
 
@@ -20,7 +20,7 @@
 
 ### T1 HAPI 固定基线导出
 
-- 状态：待开始
+- 状态：已完成
 - 依赖：已验收公共 Git 与文件能力。
 - 交付：机器 repository export/inspect/release capability/API/RPC，冻结源身份与持久回执；自有 scratch bare/alternates 导出根和递归子模块 bundle、LFS 候选与清单，源仓库无写入；沿已有 Git 进程控制。重复相同 ID 不重新解析分支，确认交付后可释放自有候选。
 - 验收：无 remote/未 push、移动分支、脏主工作树/子目录不影响固定 SHA；源 refs/config/工作文件/暂存区不改。源缺 commit/LFS/submodule、shallow、对象不完整明确失败。sha1/sha256 导出可独立空库导入；shallow/partial 缺对象失败且不访问源 remote，完整性放行归目标 import。

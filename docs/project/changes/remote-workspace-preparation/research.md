@@ -91,3 +91,12 @@ Multica 的 daemon 在执行机器上领取任务、准备目录、启动 agent 
 另一个实验 `.dev-smoke/remote-preparation-research/no-fetch-faraexk6/evidence.json` 证实原 promisor 仓库直接 bundle 会尝试懒取缺失对象；空 `GIT_ALLOW_PROTOCOL` 将其阻止。按 [Git 官方环境变量说明](https://git-scm.com/docs/git)，源读取/导出命令使用空协议白名单，目标导入只在处理自有已校验文件时允许 file。这是 Git 对象准备的副作用控制，不是新的 agent 权限沙箱。
 
 评审的缓存来源标识建议采用显式 source.snapshot；其仅检查 LFS checkout 标志的性能建议与现有 Git clean 检查组合使用，准备时仍完整校验实体。相同快照与 LFS 复用、中间副本及时释放、C10 不接管诊断环境均纳入最终 Technical；上方“方案推导”只作为推导依据，最终契约以 Technical 为准。
+
+
+## 2026-09-30 T1 实现验证发现
+
+Git LFS 3.3.0 在源仓库执行 `ls-files --json` 时可能补写 `lfs.repositoryformatversion`；看似只读的命令也不能直接用于“源配置不改”的导出。T1 把枚举移到 scratch bare，源端只通过 Git config 读取 lfs.storage，再按 oid 读取对象。自定义相对 storage、linked worktree 与递归子模块的真实测试通过。
+
+已冻结 source 的重新校验跳过 dirty 刷新，避免 Git status 通过 LFS clean 重新创建源对象；只有身份和固定 commit 参与校验，保留最初 dirty 提示。现有本机 resolve 默认行为不改。
+
+HTTP 故障探针最初只调用 Bun Node HTTP ServerResponse.destroy，实际并未可靠断开 socket，因此“应该收到连接错误”的断言失败。补充代理请求记录并显式关闭 socket 后，确认只有一条 export 转发、调用方收到 connection_failed，随后查询及重启恢复同一操作。不能把第一次现象归因为客户端自动重试；HapiClient 本身不重放不确定业务 POST。
