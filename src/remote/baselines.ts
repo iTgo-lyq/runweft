@@ -37,6 +37,16 @@ export class RemoteBaselines {
             return consume(record);
         });
     }
+    async forTask(namespace: string, origin: WorkspaceSource, machine: string, taskId: string) {
+        const previous = this.store.consumerForOwner(namespace, 'task', taskId);
+        if (previous) {
+            if (!previous.active || this.store.imported(previous.importId).machineId !== machine) throw new PreparationError(409, 'baseline_consumer_conflict', '任务基线已经释放或目标不一致。');
+            return previous;
+        }
+        const existing = this.store.latest(namespace, origin);
+        if (existing?.phase === 'available') await this.checkTarget(existing, machine);
+        return this.forSource(namespace, origin, snapshot => this.store.consume(snapshot, machine, origin, 'task', taskId));
+    }
     async checkTarget(snapshot: BaselineSnapshot, machine: string) {
         const previous = this.store.latestImport(snapshot.id, machine);
         if (!previous || previous.phase !== 'available' || previous.retention && previous.retention !== 'retained') return;

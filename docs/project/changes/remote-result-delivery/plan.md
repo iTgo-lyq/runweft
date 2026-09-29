@@ -35,7 +35,7 @@
 
 ### T4 远端 worktree 委派接入
 
-- 状态：待开始
+- 状态：已完成
 - 依赖：T3 已实际证明交付/取回闭环。
 - 交付：客户端/中心允许远端 worktree+明确 base；task origin/consumer/targetSource 持久关联，同一 baselines 实例和恢复扫描；TaskCoordinator 在 prepare 前消费基线，在已有 finalize 后调用 TaskResults，其他原生/轮次流程复用。
 - 验收：不手工 prepare，首次失败无模型、dirty 排除、来源分支移动不改基线；两种 runtime 两轮续接同 worktree/native session，新输入和输出正常；固定候选后下一轮不破坏前轮重传；代码交付错误不回写已 sealed facts，捕获失败的 finishing 轮次能显式 retry；未知 start/stop 不重复执行；远端 shared/缺 base 拒绝，本机默认 HEAD 与 request ID 兼容。远端删除在完整清理规则接入前明确拒绝。

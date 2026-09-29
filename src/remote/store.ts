@@ -42,7 +42,17 @@ export class BaselineStore {
     releaseConsumer(consumer: BaselineConsumer) {
         consumer.active = false; this.db.query('UPDATE repository_consumers SET active=0, data=? WHERE id=?').run(JSON.stringify(consumer), consumer.id);
     }
+    consumerForOwner(namespace: string, kind: BaselineConsumer['kind'], owner: string): BaselineConsumer | null {
+        const row = this.db.query('SELECT data FROM repository_consumers WHERE namespace=? AND kind=? AND owner=? ORDER BY rowid LIMIT 1')
+            .get(namespace, kind, owner) as { data: string } | null;
+        return row ? read(row) : null;
+    }
     consume(snapshot: BaselineSnapshot, machineId: string, origin: WorkspaceSource, kind: BaselineConsumer['kind'], owner: string): BaselineConsumer {
+        const previous = this.consumerForOwner(snapshot.namespace, kind, owner);
+        if (previous) {
+            if (!previous.active || previous.snapshotId !== snapshot.id || this.imported(previous.importId).machineId !== machineId) throw new PreparationError(409, 'baseline_consumer_conflict', '此消费者已绑定其他基线或已释放。');
+            return previous;
+        }
         const prior = this.latestImport(snapshot.id, machineId);
         let imported: BaselineImport;
         if (prior && prior.phase !== 'failed' && (!prior.retention || prior.retention === 'retained')) imported = prior;

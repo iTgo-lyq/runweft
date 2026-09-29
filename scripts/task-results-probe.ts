@@ -22,7 +22,7 @@ import type { TaskCoordinator } from '../src/tasks/coordinator';
 /** No-model probe: only actual HAPI prepare/finalize receipts enter the task result coordinator. */
 export async function taskResultsProbe(p: { root: string; center: string; sourceHome: string; targetHome: string; repo: string; binary: string;
     env: NodeJS.ProcessEnv; hapi: HapiClient; source: WorkspaceSource; targetSource: WorkspaceSource; imported: RepositoryOperation;
-    exported: RepositoryOperation; delivered: ArtifactTransfer; restartHub: () => Promise<void>; note: (message: string) => void }) {
+    exported: RepositoryOperation; delivered: ArtifactTransfer; restartHub: () => Promise<void>; editTasks: <T>(edit: () => T) => Promise<T>; note: (message: string) => void }) {
     const { hapi, source, targetSource, repo } = p;
     const cli = (home: string, args: string[], cwd = p.root) => {
         const result = spawnSync(p.binary, ['--home', home, '--json', ...args], { cwd, env: p.env, encoding: 'utf8', timeout: 45_000 });
@@ -58,26 +58,29 @@ export async function taskResultsProbe(p: { root: string; center: string; source
             source: { scope: 'global', path: '/no-model-fixture', key: 'global/result-probe', linkTarget: null }, definitionVersion: 'probe', resolvedVersion: 'probe',
             runtimeId: runtime.id, machineId: targetSource.machineId, flavor: 'codex', namespace };
         const parent: Parent = { kind: 'mcp', host: 'codex', nativeSessionId: randomUUID(), machineId: source.machineId, cwd: repo };
+        let { bundle, round } = await p.editTasks(() => {
         const accepted = tasks.accept(namespace, parent, randomUUID(), { workspaceMode: 'worktree', baseRef: source.baseCommit, agentType: agent.id, message: 'No-model actual sealing fixture' }, agent,
             { runtimeId: runtime.id, machineId: targetSource.machineId, flavor: 'codex', inspection: runtime.inspection }, targetSource);
-        let bundle = tasks.require(namespace, accepted.agent_id), round = bundle.rounds[0]!;
+        const bundle = tasks.require(namespace, accepted.agent_id), round = bundle.rounds[0]!;
         const consumer = baselines.consume(baseline, targetSource.machineId, source, 'task', bundle.task.id);
         const imported = baselines.imported(consumer.importId); imported.operationId = p.imported.request.operationId; imported.attempted = true;
         imported.phase = 'available'; imported.source = targetSource; baselines.saveImport(imported);
         assert.equal(bundle.task.environment.mode, 'worktree'); if (bundle.task.environment.mode !== 'worktree') throw new Error('worktree required');
         bundle.task.environment.machineId = targetSource.machineId;
         bundle.task.environment.remote = { origin: source, snapshotId: baseline.id, consumerId: consumer.id };
-        // Remote spawn remains gated in T3. Keep the fixture dormant until actual Git facts exist.
+        // The service is stopped while inserting a no-model fixture; no queued row can dispatch a native process.
         round.phase = 'finished'; round.finish = 'complete'; round.stop = 'stopped'; round.executionAbsent = true;
         round.git = { status: 'not_prepared', attempted: false }; tasks.save(bundle.task, round, []);
+            return { bundle, round };
+        });
         const rounds: string[] = [];
         for (let index = 0; index < 2; index++) {
-            if (index) {
+            if (index) await p.editTasks(() => {
                 const next = tasks.append(namespace, parent, randomUUID(), { id: bundle.task.id, mode: 'next', message: 'Unchanged result round' });
                 bundle = tasks.require(namespace, bundle.task.id); round = bundle.rounds.find(item => item.id === next.round_id)!;
                 round.phase = 'finished'; round.finish = 'complete'; round.stop = 'stopped'; round.executionAbsent = true;
                 round.git = { status: 'not_prepared', attempted: false }; tasks.save(bundle.task, round, []);
-            }
+            });
             assert.equal(round.preparation.mode, 'worktree'); if (round.preparation.mode !== 'worktree') throw new Error('worktree required');
             const environment = bundle.task.environment; if (environment.mode !== 'worktree') throw new Error('worktree required');
             const prior = bundle.rounds.filter(item => item.ordinal < round.ordinal && item.git?.result).at(-1)?.git?.result;

@@ -1,4 +1,5 @@
 import { BaselineStore } from '../remote/store';
+import { RemoteBaselines, uncertainPreparation } from '../remote/baselines';
 import { TaskResults, codeView } from './results';
 import { ResultShowSchema, ResultFetchSchema, ResultRetrySchema } from './result-types';
 import { setTimeout as delay } from 'node:timers/promises';
@@ -7,9 +8,8 @@ import { errorDetails } from '../errors';
 import type { HapiClient } from '../hapi';
 import { ResourceStore } from '../resources/store';
 import { ResourceService } from '../resources/service';
-import type { ExecutionTarget } from '../resources/types';
 import { TaskStore } from './store';
-import { AcceptSchema, ArtifactActionSchema, ArtifactReleaseSchema, LookupSchema, SendSchema, InterruptSchema, PermissionSchema, RemoveWorkspaceSchema, nativeTerminal, parseTask, TaskError, type Input, type Parent, type Round, type Task } from './types';
+import { AcceptSchema, ArtifactActionSchema, ArtifactReleaseSchema, LookupSchema, SendSchema, InterruptSchema, PermissionSchema, RemoveWorkspaceSchema, validateWorkspaceTarget, nativeTerminal, parseTask, TaskError, type Input, type Parent, type Round, type Task } from './types';
 import { detail, overview } from './views';
 import { historyContext, parseReport } from './reports';
 import { TaskWorkspaces, preparedReference } from './workspaces';
@@ -20,13 +20,15 @@ import { TaskRetention } from './retention';
 export class TaskCoordinator {
     readonly store: TaskStore;
     private readonly resources: ResourceStore;
-    private readonly resultBaselines: BaselineStore;
+    private readonly baselines: RemoteBaselines;
+    private readonly ownsBaselines: boolean;
     private readonly clients = new Map<string, HapiClient>();
     private readonly working = new Map<string, Promise<void>>();
     private timer?: ReturnType<typeof setInterval>;
     private closing = false;
-    constructor(path: string, private readonly clientFor: (namespace: string) => HapiClient, private readonly pollMs = 1000) {
-        this.store = new TaskStore(path); this.resources = new ResourceStore(path); this.resultBaselines = new BaselineStore(path);
+    constructor(path: string, private readonly clientFor: (namespace: string) => HapiClient, private readonly pollMs = 1000, baselines?: RemoteBaselines) {
+        this.store = new TaskStore(path); this.resources = new ResourceStore(path); this.ownsBaselines = !baselines;
+        this.baselines = baselines ?? new RemoteBaselines(new BaselineStore(path), namespace => this.client(namespace));
     }
     private client(namespace: string) {
         if (!this.clients.has(namespace)) this.clients.set(namespace, this.clientFor(namespace));
@@ -71,7 +73,7 @@ export class TaskCoordinator {
         this.closing = true;
         clearInterval(this.timer); this.timer = undefined;
         await Promise.all(this.working.values());
-        this.store.close(); this.resources.close(); this.resultBaselines.close();
+        this.store.close(); this.resources.close(); if (this.ownsBaselines) this.baselines.store.close();
     }
     lookup(namespace: string, value: unknown) {
         const { parent, requestId, intent } = parseTask(LookupSchema, value);
@@ -91,9 +93,10 @@ export class TaskCoordinator {
             if (agent.machineId !== target.machineId || agent.flavor !== target.flavor || (agent.definition.flavor && agent.definition.flavor !== target.flavor)) {
                 throw new TaskError(409, 'agent_target_changed', 'Agent 快照与当前 runtime 不一致。', '重新运行 agent check 后创建新任务。');
             }
-            this.requireLocal(target, parent, intent.workspaceMode);
+            validateWorkspaceTarget(target.machineId, parent, intent);
+            if (target.machineId !== parent.machineId) await this.requireRemoteCapabilities(namespace, parent.machineId, target.machineId);
             if (intent.outputs?.length) await new TaskOutputs(this.client(namespace), this.store).requireSupported(target.machineId);
-            const source = intent.workspaceMode === 'worktree' ? await new TaskWorkspaces(this.client(namespace), target.machineId).resolve(parent.cwd, intent.baseRef) : undefined;
+            const source = intent.workspaceMode === 'worktree' ? await new TaskWorkspaces(this.client(namespace), parent.machineId).resolve(parent.cwd, intent.baseRef ?? 'HEAD') : undefined;
             if (this.closing) throw new TaskError(503, 'service_stopping', '服务正在停止；请用同一 request ID 查询接受结果。');
             const accepted = await new TaskFiles(this.client(namespace)).accept(this.store, namespace, parent, requestId, intent,
                 () => this.store.accept(namespace, parent, requestId, intent, agent, target, source));
@@ -102,9 +105,45 @@ export class TaskCoordinator {
         });
     }
 
-    private requireLocal(target: ExecutionTarget, parent: Parent, mode: Task['environment']['mode']) {
-        if (target.machineId !== parent.machineId) throw new TaskError(409, mode === 'shared' ? 'shared_target_required' : 'remote_workspace_unavailable',
-            '当前任务需要发起机上的 runtime，Hub 模式也支持同机执行。', '绑定本机 runtime；跨机工作区准备与结果回收尚未交付。');
+    private async requireRemoteCapabilities(namespace: string, origin: string, target: string) {
+        const { machines } = await this.client(namespace).request('/api/machines?includeOffline=true');
+        for (const [id, capabilities] of [[origin, ['repositoryExport', 'repositoryResults', 'artifactTransfers', 'artifactOutputs']],
+            [target, ['repositoryImport', 'repositoryResults', 'artifactTransfers', 'artifactOutputs', 'managedWorkspaces', 'mcpToolFilter']]] as const) {
+            const machine = machines.find((item: { id: string }) => item.id === id);
+            if (!machine?.active) throw new TaskError(409, 'machine_offline', '源或目标 Runner 不在线。', '在对应机器运行 runweft start。');
+            if (capabilities.some(name => machine.runnerState?.capabilities?.[name] !== (name === 'mcpToolFilter' ? true : 1))) throw new TaskError(409, 'runner_upgrade_required', '源或目标 Runner 缺少远端准备或成果回收能力。', '更新两端配套 Runweft 后 restart。');
+        }
+    }
+    private async prepareRemote(task: Task, round: Round, save: () => void) {
+        const environment = task.environment;
+        if (environment.mode !== 'worktree' || !environment.remote) return true;
+        const remote = environment.remote;
+        try {
+            if (!remote.consumerId) {
+                const consumer = await this.baselines.forTask(task.namespace, remote.origin, task.target.machineId, task.id);
+                remote.consumerId = consumer.id; remote.snapshotId = consumer.snapshotId; save();
+            }
+            const consumer = this.baselines.store.consumer(remote.consumerId);
+            await this.baselines.advanceSnapshot(consumer.snapshotId);
+            await this.baselines.advanceImport(consumer.importId);
+            const snapshot = this.baselines.store.snapshot(consumer.snapshotId), imported = this.baselines.store.imported(consumer.importId);
+            if (snapshot.phase === 'failed' || imported.phase === 'failed') {
+                const problem = snapshot.phase === 'failed' ? snapshot.error : imported.error;
+                throw new TaskError(409, problem?.code ?? 'remote_baseline_failed', problem?.message ?? '固定基线准备失败。',
+                    `${problem?.hint ?? ''} 修复后重新 spawn，明确指定 --workspace-mode worktree --base ${remote.origin.baseCommit}；不会重新解析原任务基线。`.trim());
+            }
+            const baseline = this.baselines.result(consumer.id);
+            if (!baseline) {
+                const error = snapshot.error ?? imported.error;
+                round.attention = error ? { ...error, scope: 'workspace', stage: 'remote_preparation' } : null; save(); return false;
+            }
+            environment.source = baseline.targetSource;
+            if (!environment.checkout) environment.cwd = baseline.targetSource.sourcePath;
+            round.attention = null; save(); return true;
+        } catch (error) {
+            if (!uncertainPreparation(error)) throw error;
+            round.attention = { ...errorDetails(error), scope: 'workspace', stage: 'remote_preparation' }; save(); return false;
+        }
     }
     result(namespace: string, value: unknown) {
         const { parent, id, roundId } = parseTask(ResultShowSchema, value);
@@ -259,7 +298,7 @@ export class TaskCoordinator {
         const workspaces = new TaskWorkspaces(this.client(namespace), task.target.machineId);
         const files = new TaskFiles(this.client(namespace));
         const outputs = new TaskOutputs(this.client(namespace), this.store);
-        const results = new TaskResults(this.client(namespace), this.store, this.resultBaselines);
+        const results = new TaskResults(this.client(namespace), this.store, this.baselines.store);
         for (const previous of rounds.filter(item => ['finished', 'failed'].includes(item.phase))) {
             const savePrevious = () => this.store.save(task, previous, []);
             if (previous.code) await results.advance(task, previous, savePrevious);
@@ -291,8 +330,9 @@ export class TaskCoordinator {
             if (round.phase === 'queued') {
                 if (round.outputFiles?.declarations.length) await outputs.requireSupported(task.target.machineId);
                 const target = await this.resourceService(namespace).resolveExecutionTarget(task.target.runtimeId);
-                this.requireLocal(target, task.parent, task.environment.mode);
+                if (task.environment.mode === 'shared' && target.machineId !== task.parent.machineId) throw new TaskError(409, 'shared_target_required', '共享目录任务只能使用发起机上的 runtime。');
                 if (target.machineId !== task.target.machineId || target.flavor !== task.target.flavor) throw new TaskError(409, 'task_target_changed', '已接受任务的固定 runtime 目标不一致。');
+                if (!await this.prepareRemote(task, round, save)) return;
                 if (task.environment.mode === 'worktree' && round.preparation.mode === 'worktree') {
                     const prior = [...rounds].reverse().find(item => item.ordinal < round.ordinal && item.git?.status === 'sealed');
                     round.preparation.expectedHead = prior?.git?.result?.resultHead ?? task.environment.source.baseCommit;
@@ -478,10 +518,11 @@ export class TaskCoordinator {
             }
             if (round.phase === 'finishing' && !this.closing) {
                 if (task.environment.mode === 'worktree' && round.git?.status !== 'sealed' && !await workspaces.finish(task, round, inputs, save)) return;
+                if (!await results.advance(task, round, save)) return;
                 if (!await outputs.advance(task, round, save)) return;
                 await files.releaseAfterStop(task, round, save);
                 round.finish = 'complete'; round.phase = 'finished'; round.completedAt = Date.now();
-                if (round.attention?.scope !== 'artifacts') round.attention = round.startupFailure ? { ...round.startupFailure, stage: 'starting' } : null; save();
+                if (!['artifacts', 'code'].includes(round.attention?.scope ?? '')) round.attention = round.startupFailure ? { ...round.startupFailure, stage: 'starting' } : null; save();
             }
         } catch (error) {
             const problem = errorDetails(error);
@@ -489,7 +530,7 @@ export class TaskCoordinator {
             const workspacePhase = !artifactPhase && (round.phase === 'preparing' || round.phase === 'finishing');
             round.attention = { ...problem, stage: round.phase, ...(artifactPhase ? { scope: 'artifacts' as const } : workspacePhase ? { scope: 'workspace' as const } : {}) };
             if (round.phase === 'preparing' && !artifactPhase && round.preparation.mode === 'worktree') round.preparation.status = 'unknown';
-            if (round.phase === 'finishing' && round.git) round.git.status = 'unknown';
+            if (round.phase === 'finishing' && round.git && round.git.status !== 'sealed') round.git.status = 'unknown';
             // Preparation and explicit pre-dispatch rejection are business failures, never invented native failures.
             if ((artifactPhase && round.inputFiles?.status === 'failed') || round.phase === 'queued' || (round.phase === 'starting' && !round.sessionId && !['connection_failed', 'invalid_hapi_response', 'request_failed'].includes(problem.code))
                 || (round.phase === 'resuming' && ['no_machine_online', 'resume_unavailable', 'access_denied', 'authentication_failed', 'workspace_not_prepared', 'files_not_prepared'].includes(problem.code))) {
@@ -524,8 +565,8 @@ export class TaskCoordinator {
         return [`你是 Runweft 委派的 ${task.agent.definition.name ?? task.agent.id}。`, task.agent.definition.description, task.agent.definition.instructions,
             `工作目录：${task.environment.cwd}\n任务 ${task.id}，轮次 ${round.id}。`,
             task.environment.mode === 'shared' ? '模式：本机共享目录；共享写入由主 agent 调度。'
-                : `模式：独立 Git worktree；来源 ${task.environment.source.sourcePath}，固定基线 ${task.environment.source.baseCommit}，本轮起点 ${round.preparation.mode === 'worktree' ? round.preparation.startHead : ''}。\n`
-                    + `${task.environment.source.dirty ? '主工作区有未提交改动，未带入本工作区。' : ''}工程指令/skills 来自该基线；未提交或 ignored 内容不会自动复制。\n`
+                : `模式：独立 Git worktree；来源 ${(task.environment.remote?.origin ?? task.environment.source).sourcePath}，固定基线 ${task.environment.source.baseCommit}，本轮起点 ${round.preparation.mode === 'worktree' ? round.preparation.startHead : ''}。\n`
+                    + `${(task.environment.remote?.origin ?? task.environment.source).dirty ? '主工作区有未提交改动，未带入本工作区。' : ''}工程指令/skills 来自该基线；未提交或 ignored 内容不会自动复制。\n`
                     + '在此目录完成任务，按需安装依赖；可以自行提交完成的修改。进程停止后 HAPI 会为遗留修改创建 checkpoint 并保留 worktree。不要修改主目录；合入与冲突由主 agent 处理。',
             round.inputFiles?.paths.length ? `本轮输入文件已准备并校验，按以下实际路径读取；不要覆盖这些输入：\n${JSON.stringify(round.inputFiles.paths.map(file => ({ name: file.name, path: file.path, sha256: file.sha256, size: file.size })))}` : '',
             round.outputFiles?.declarations.length ? `本轮约定成果文件：${JSON.stringify(round.outputFiles.declarations)}。在工作目录内按 relativePath 写入，结束后由程序收集；worktree 中未忽略的成果文件会随 Git 封存纳入修改。` : '',

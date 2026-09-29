@@ -68,6 +68,7 @@ export class TaskResults {
         const environment = task.environment;
         if (environment.mode !== 'worktree' || !environment.remote || !round.git?.result) throw new TaskError(409, 'result_source_missing', '缺少远端仓库来源或封存事实。');
         if (!code.baseline) {
+            if (!environment.remote.snapshotId) throw new TaskError(409, 'result_baseline_unavailable', '任务尚未绑定固定输入基线。');
             const baseline = this.baselines.snapshot(environment.remote.snapshotId);
             if (baseline.namespace !== task.namespace || baseline.phase !== 'available' || !baseline.manifest || !baseline.files
                 || ['machineId', 'repositoryId', 'commonDir', 'baseCommit', 'objectFormat'].some(key => baseline.origin[key as keyof typeof baseline.origin] !== environment.remote!.origin[key as keyof typeof baseline.origin])) throw new TaskError(409, 'result_baseline_unavailable', '任务固定输入基线尚不可恢复。');

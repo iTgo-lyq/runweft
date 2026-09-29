@@ -43,6 +43,7 @@
     "test:result-export": "bun scripts/smoke-result-export.ts",
     "test:repository-import": "bun scripts/smoke-repository-import.ts",
     "test:workspace-preparation": "bun scripts/smoke-workspace-preparation.ts",
+    "test:remote-tasks": "bun scripts/smoke-remote-native.ts --tasks",
     "test:remote-native": "bun scripts/smoke-remote-native.ts"
   },
   "dependencies": {

@@ -6,7 +6,7 @@ function gitDelivery(bundle: TaskBundle, round: Round) {
     if (environment.mode === 'shared') return 'not_applicable' as const;
     const result = round.git?.result;
     return { status: round.git?.status ?? 'pending', environment_id: environment.environmentId, retained: environment.status,
-        source_cwd: environment.source.sourcePath, checkout: environment.checkout, branch: environment.branch,
+        source_cwd: (environment.remote?.origin ?? environment.source).sourcePath, source_machine_id: (environment.remote?.origin ?? environment.source).machineId, remote: environment.remote, checkout: environment.checkout, branch: environment.branch,
         base_commit: environment.source.baseCommit, start_head: round.preparation.mode === 'worktree' ? round.preparation.startHead : undefined,
         result_head: result?.resultHead, result_ref: result?.resultRef, checkpoint: result?.checkpoint,
         partial: result?.partial, file_count: result?.fileCount, paths: result?.paths, error: round.git?.error,

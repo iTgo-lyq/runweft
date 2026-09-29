@@ -128,9 +128,9 @@ export async function serve(c: ResolvedConfig, publicly = false): Promise<void> 
         stopping = true; failure = error;
         for (const signal of ['SIGINT', 'SIGTERM', 'SIGHUP'] as const) process.off(signal, onSignal);
         try {
-            try { await preparations?.close(); }
-            catch (error) { failure ??= error instanceof Error ? error : new Error(String(error)); }
             try { await tasks?.close(); }
+            catch (error) { failure ??= error instanceof Error ? error : new Error(String(error)); }
+            try { await preparations?.close(); }
             catch (error) { failure ??= error instanceof Error ? error : new Error(String(error)); }
             try { await gateway?.close(); }
             catch (error) { failure ??= error instanceof Error ? error : new Error(String(error)); }
@@ -167,9 +167,10 @@ export async function serve(c: ResolvedConfig, publicly = false): Promise<void> 
         }, 'HAPI 启动超时。');
         const secret = JSON.parse(readFileSync(join(paths.hapiServer, 'jwt-secret.json'), 'utf8'));
         const key = Buffer.from(secret.secretBase64, 'base64');
-        tasks = new TaskCoordinator(paths.state, namespace => new HapiClient(privateUrl, namespace === 'default' ? token : `${token}:${namespace}`));
+        const clientFor = (namespace: string) => new HapiClient(privateUrl, namespace === 'default' ? token : `${token}:${namespace}`);
+        preparations = new WorkspacePreparations(paths.state, clientFor);
+        tasks = new TaskCoordinator(paths.state, clientFor, 1000, preparations.baselines);
         await tasks.reconcileFileIntents();
-        preparations = new WorkspacePreparations(paths.state, namespace => new HapiClient(privateUrl, namespace === 'default' ? token : `${token}:${namespace}`));
         gateway = await createGateway({ host, port: c.config.server.port, target: privateUrl,
             handle: createRunweftHandler({ key, hapiUrl: privateUrl, statePath: paths.state, tasks, preparations,
                 health: () => ({ service: 'runweft', protocolVersion: 1, ready, version: BUILD.version,

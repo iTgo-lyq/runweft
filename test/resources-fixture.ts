@@ -76,12 +76,13 @@ export async function resourceFixture(cleanups: (() => Promise<void> | void)[], 
     cleanups.push(() => native.stop(true));
     const config = loadConfig(home, {});
     const statePath = dataPaths(config).state;
-    const tasks = extra ? new TaskCoordinator(statePath, namespace => new HapiClient(native.url.origin, `test-${namespace}`), 20) : undefined;
-    if (tasks) cleanups.push(() => tasks.close());
-    let preparations = extra?.preparations ? new WorkspacePreparations(statePath, namespace => new HapiClient(native.url.origin, `test-${namespace}`), 10) : undefined;
+    const clientFor = (namespace: string) => new HapiClient(native.url.origin, `test-${namespace}`);
+    let preparations = extra?.preparations ? new WorkspacePreparations(statePath, clientFor, 10) : undefined;
     if (preparations) cleanups.push(() => preparations?.close());
+    let tasks = extra ? new TaskCoordinator(statePath, clientFor, 20, preparations?.baselines) : undefined;
+    if (tasks) cleanups.push(() => tasks?.close());
     const gateway = await createGateway({ host: '127.0.0.1', port: 0, target: native.url.origin,
-        handle: createRunweftHandler({ key, hapiUrl: native.url.origin, statePath, tasks, get preparations() { return preparations; },
+        handle: createRunweftHandler({ key, hapiUrl: native.url.origin, statePath, get tasks() { return tasks; }, get preparations() { return preparations; },
             health: () => ({ service: 'runweft', role: 'hub-server', ready: true, protocolVersion: 1 }) }),
     });
     cleanups.push(() => gateway.close());
@@ -92,8 +93,8 @@ export async function resourceFixture(cleanups: (() => Promise<void> | void)[], 
         await client.request(`${resourcePrefix}/machines`, resourceWrite({ machineId }));
         return (await client.request(`${resourcePrefix}/runtimes`, resourceWrite({ machineId, flavor }))).runtime;
     };
-    return { home, config, statePath, url, alpha, beta, machines, inspections, calls, tokens, failures, hooks, register, tasks, nativeUrl: native.url.origin,
+    return { home, config, statePath, url, alpha, beta, machines, inspections, calls, tokens, failures, hooks, register, get tasks() { return tasks; }, nativeUrl: native.url.origin,
         get preparations() { return preparations; },
-        async restartPreparations() { await preparations!.close(); preparations = new WorkspacePreparations(statePath, namespace => new HapiClient(native.url.origin, `test-${namespace}`), 10); preparations.start(); },
+        async restartPreparations() { await tasks?.close(); await preparations!.close(); preparations = new WorkspacePreparations(statePath, clientFor, 10); tasks = new TaskCoordinator(statePath, clientFor, 20, preparations.baselines); preparations.start(); },
         setInventorySupported(value: boolean) { inventorySupported = value; } };
 }

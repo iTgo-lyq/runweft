@@ -52,3 +52,12 @@
 - 实际成果：复用 T1/T2 环境脚手架的 `bun run test:task-results`，无模型实际 HAPI prepare/finalize 事实进入已结束 fixture 记录，编译 Hub 协调器随后完成两轮发布。`.dev-smoke/task-result-delivery-OBwjjj/evidence.json` success、cleanupErrors=[]；详细代码清单与取回回执在同目录 task-results.json。第二轮 HEAD 不变，零新增上传；模块 bundle 和 LFS 正确复用，初始旧 LFS 仍有本轮 recovery pin。目标 Runner 停止且 Git 存储移走，中心重启后，公开 CLI 与 MCP handler 均完成固定轮次取回；原分支删除、parent index/config/脏文件不变，明确 merge/LFS checkout 恢复代码及二进制，零 native sessions。这里的 MCP 使用无模型宿主身份 fixture，完整原生 MCP 委派矩阵留在 T6；不冒称物理跨机。
 - 配套：HAPI 无新增改动，继续 T2 固定 revision；root linux-x64 配套构建完成。四平台候选更新和实际 npm 安装按 Plan 留在 T6。
 - Commit：`remote-result-delivery T3: publish and recover task code through CLI and MCP`
+
+## T4 远端 worktree 委派接入
+
+- 结果：正式 CLI/MCP 开放远端 worktree，显式 base 在发起机固定；本机默认 HEAD 及原请求指纹兼容。environment 保存 origin/consumer/snapshot 与目标 source，按任务身份复用消费者，诊断与任务共享基线锁，服务先关闭任务再关闭基线。自动准备后进入原有输入/工作区/原生生命周期，收尾先封存、发布代码与附件，再形成完成通知；代码捕获失败可直接 retry，不改写 sealed facts。两轮沿原环境和 session 续接；T5 前明确拒绝远端删除。
+- 聚焦与回归：root 全量 `bun test ./test` 151 pass / 0 fail、3320 断言；随后新增恢复与兼容案例，相关 workspaces/remote 聚焦 32 pass / 0 fail，最终 remote 7 pass / 0 fail、204 断言。覆盖源分支移动、上传丢响应、首次 import 失败零模型、捕获失败阻止排队下一轮、consumer 插入后崩溃恢复、同请求缺 base 拒绝、未知启动/停止不重发。typecheck、linux-x64 配套 build、diff 检查通过；HAPI 未新增改动。
+- 真实原生：`bun run test:remote-tasks` 的 `.dev-smoke/remote-tasks-native-DGZxg9/evidence.json` success、cleanupErrors=[]。公开 CLI 驱动 Codex/Claude Code 各两轮，自动基线与新附件、工程指令/skill、其他 MCP、Runweft 工具禁用及 Claude 内置 Agent 保留均有记录；每种 runtime 复用原 session，四次执行进程均停止。分别注入 index lock、签名、hook、index lock 四次 Git 收尾失败，修复后只重试收尾；代码/输出/LFS 发布完成，目标 Runner 停止后公开 fetch 与显式 merge 恢复两份最终成果，原 index/config 保持不变。
+- 实际回归：C9 `.dev-smoke/workspace-preparation-z1PqFB/evidence.json` success、cleanupErrors=[]。最终 T3 回归 `.dev-smoke/task-result-delivery-9xFdGR/evidence.json` 同样成功，中心重启、执行端目录离线、两轮清单复用、CLI/MCP handler 取回与显式合入均通过，零 native sessions。正式远端启用后，插入无模型 fixture 改为停服期间操作；首次回归发现 Hub ready 早于 Runner RPC 注册，脚本补上查询既有回执的就绪检查，未重发未知写操作。
+- 边界：真实原生和故障测试均为同机不同 Runner 身份/数据根，不作为物理跨机验收。两宿主 MCP 完整矩阵、四平台候选及 npm 实装仍在 T6；成果释放与目标缓存联合清理在 T5。
+- Commit：`remote-result-delivery T4: automate remote worktree delegation and recovery`

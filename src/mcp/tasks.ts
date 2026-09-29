@@ -24,7 +24,7 @@ export function taskTools(): McpTool[] {
     return [
         tool('list_agent_definitions', '查看当前工作区有效的 Agent 定义及各自 runtime 可选状态。不会启动任务；派生用返回的定义 id 作为 agent_type。', z.strictObject({}), true,
             async (_, c) => new AgentClient(c.config, c.identity.cwd).list(c.signal)),
-        tool('spawn_agent', `在当前工作目录派生 Agent，立即返回 agent_id、round_id、request_id 和 revision。支持本机 shared 或 worktree；shared 写入由主 agent 协调。worktree 要求主工作区受 Git 管理，base_ref 默认 HEAD，接受时冻结为 commit；不包含主目录未提交内容，准备完成后才启动，每轮停止后封存成果。base_ref 仅用于 worktree。${fileHelp}${recovery}`,
+        tool('spawn_agent', `在当前工作目录派生 Agent，立即返回 agent_id、round_id、request_id 和 revision。支持本机 shared 和本机/远端 worktree；shared 写入由主 agent 协调。worktree 要求主工作区受 Git 管理；本机 base_ref 默认 HEAD，远端必须明确指定，接受时冻结为 commit；不包含主目录未提交内容，准备完成后才启动，每轮停止后封存成果。base_ref 仅用于 worktree。${fileHelp}${recovery}`,
             z.strictObject({ agent_type: z.string().min(1), message, request_id: id.optional(), workspace_mode: z.string().default('shared'), base_ref: z.string().trim().min(1).optional(), ...files }), false,
             async (args, c) => client(c).spawn(args.agent_type, args.message, args.request_id ?? taskRequestId(c.identity, 'spawn'), args.workspace_mode, c.signal, args.base_ref, args.inputs, args.outputs)),
         tool('list_agents', '列出当前原生父会话的子任务、状态、报告和最近接受的 request_id/round_id。用于恢复不明确的接受响应；不列出其他父会话的任务。', z.strictObject({}), true,
@@ -32,7 +32,7 @@ export function taskTools(): McpTool[] {
         tool('read_agent', '读取子任务的轮次状态、报告、原生引用和待处理审批。独立工作区返回准备状态、base/start/result SHA、成果 ref 和目录留存状态；Git 收尾失败时保留原生报告。input_files 给出实际输入与副本留存，artifacts 给出文件交付状态、清单和待处理操作，成功项的 artifactId 可用 download_artifact 下载；文件交付失败不改写原生结论。默认最新接受轮次；长报告按 offset/limit 分页。同仓库成果可从 ref 审查合入，合码和冲突由主 agent 处理。',
             z.strictObject({ id, round_id: id.optional(), offset: z.number().int().min(0).optional(), limit: z.number().int().min(1).max(64_000).optional() }), true,
             async (args, c) => client(c).read(args.id, { roundId: args.round_id, offset: args.offset, limit: args.limit }, c.signal)),
-        tool('wait', '等待任一子任务完成或需要处理，返回状态及有界报告。worktree 在原生执行停止且 Git 封存后才完成；workspace attention 要先处理，不能当作已交付。默认观察最新接受轮次；after_revision 按任务 ID 传上次 revision 以消费新结果。代码补交与取回通过 code_revision 通知；文件交付或补交通过 artifacts_revision 通知；artifacts attention 使用 retry_artifacts/collect_artifacts 处理。超时返回 timed_out=true；取消等待不会中断任务。',
+        tool('wait', '等待任一子任务完成或需要处理，返回状态及有界报告。worktree 在原生执行停止、Git 封存及首次代码交付确定后才完成；workspace attention 要先处理，不能当作已交付。默认观察最新接受轮次；after_revision 按任务 ID 传上次 revision 以消费新结果。代码补交与取回通过 code_revision 通知；文件交付或补交通过 artifacts_revision 通知；artifacts attention 使用 retry_artifacts/collect_artifacts 处理。超时返回 timed_out=true；取消等待不会中断任务。',
             z.strictObject({ ids: z.array(id).min(1).max(8), timeout_ms: z.number().int().min(0).max(540_000).default(30_000),
                 after_revision: z.record(id, z.number().int().min(0)).optional() }), true,
             async (args, c) => client(c).wait(args.ids, args.timeout_ms, args.after_revision, c.signal), 570_000),

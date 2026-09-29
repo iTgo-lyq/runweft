@@ -137,7 +137,16 @@ try {
     assert(materialized.files.every(file => !existsSync(file.path))); assert(!existsSync(imported.directory));
     const targetSource = { ...imported.imported.source, relativePath: source.relativePath };
     if (taskResults) {
-        await taskResultsProbe({ root, center, sourceHome, targetHome, repo, binary, env, hapi, source, targetSource, imported, exported, delivered, note, restartHub: async () => { cli(center, ['stop']); await startHub(url); } });
+        await taskResultsProbe({ root, center, sourceHome, targetHome, repo, binary, env, hapi, source, targetSource, imported, exported, delivered, note, restartHub: async () => { cli(center, ['stop']); await startHub(url); },
+            editTasks: async edit => {
+                cli(center, ['stop']);
+                try { return edit(); } finally {
+                    await startHub(url);
+                    // Hub readiness precedes Runner RPC re-registration; query an existing receipt before the next prepare.
+                    await until(() => call(evidence.targetMachineId, 'repositories', { action: 'inspect', operationId: evidence.importId })
+                        .then(value => value.operation?.status === 'succeeded').catch(() => false), ready => ready);
+                }
+            } });
     } else {
     const [a, b] = await Promise.all([prepare(targetSource), prepare(targetSource)]);
     assert.notEqual(a.workspace.branch, b.workspace.branch); assert.equal(a.workspace.source.commonDir, b.workspace.source.commonDir);

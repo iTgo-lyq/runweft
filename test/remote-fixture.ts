@@ -137,10 +137,15 @@ export async function remoteFixture(cleanups: (() => Promise<void> | void)[], as
             workspace = { version: 1, environmentId: body.environmentId, source: body.source, checkout, cwd, branch: `hapi-task/${body.environmentId}`, status: 'retained', createdAt: Date.now(), results: {}, sessions: {},
                 operations: { [operation.id]: operation }, preparations: faults.prepare ? {} : { [body.preparationId]: { environmentId: body.environmentId, preparationId: body.preparationId, roundId: body.roundId, cwd, startHead: body.expectedHead, inputs: [], readyAt: Date.now() } } };
             workspaces.set(body.environmentId, workspace);
+        } else if (!workspace.operations[`prepare:${body.preparationId}`]) {
+            const key = `prepare:${body.preparationId}`;
+            workspace.operations[key] = { id: key, request: body, status: 'succeeded', createdAt: Date.now(), updatedAt: Date.now() };
+            workspace.preparations[body.preparationId] = { environmentId: body.environmentId, preparationId: body.preparationId,
+                roundId: body.roundId, cwd: workspace.cwd, startHead: body.expectedHead, inputs: [], readyAt: Date.now() };
         }
         return Response.json({ workspace, operation: workspace.operations[`prepare:${body.preparationId}`] });
     } });
-    for (const machine of h.machines) machine.runnerState!.capabilities = { ...machine.runnerState!.capabilities, repositoryExport: 1, repositoryImport: 1, artifactTransfers: 1, artifactOutputs: 1, managedWorkspaces: 1 };
+    for (const machine of h.machines) machine.runnerState!.capabilities = { ...machine.runnerState!.capabilities, repositoryExport: 1, repositoryImport: 1, repositoryResults: 1, mcpToolFilter: true, artifactTransfers: 1, artifactOutputs: 1, managedWorkspaces: 1 };
     const runtime = await h.register('remote');
     const parent = { kind: 'cli' as const, machineId: 'own', cwd: h.home };
     const payload = () => ({ parent, requestId: randomUUID(), intent: { agent: 'reviewer', baseRef: 'HEAD' },
@@ -148,5 +153,5 @@ export async function remoteFixture(cleanups: (() => Promise<void> | void)[], as
     const post = (action: string, value: object) => h.alpha.request(`/api/runweft/workspaces/${action}`, resourceWrite(value));
     const inspect = async (id: string): Promise<PreparationView> => (await post('inspect', { parent, id })).preparation;
     h.preparations!.start();
-    return { ...h, get service() { return h.preparations!; }, parent, payload, post, inspect, faults, requests, objects, refs, repos, transfers, workspaces, setCommit(value: string) { commit = value; } };
+    return { ...h, get tasks() { return h.tasks; }, get service() { return h.preparations!; }, parent, payload, post, inspect, faults, requests, objects, refs, repos, transfers, workspaces, setCommit(value: string) { commit = value; } };
 }

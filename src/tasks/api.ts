@@ -26,7 +26,7 @@ export async function handleTaskRequest(request: IncomingMessage, response: Serv
     const value = await body(request);
     let result: unknown;
     if (path === '/api/runweft/tasks/spawn') {
-        if (value?.intent?.workspaceMode && !['shared', 'worktree'].includes(value.intent.workspaceMode)) throw new TaskError(409, 'capability_unavailable', '当前支持 shared 和本机 worktree 模式；远端模式尚未交付。');
+        if (value?.intent?.workspaceMode && !['shared', 'worktree'].includes(value.intent.workspaceMode)) throw new TaskError(409, 'capability_unavailable', '支持本机 shared 和本机/远端 worktree 模式。');
         result = await coordinator.accept(namespace, value);
     } else if (path === '/api/runweft/tasks/lookup') result = { accepted: coordinator.lookup(namespace, value) };
     else if (path === '/api/runweft/tasks/send') result = await coordinator.send(namespace, value);

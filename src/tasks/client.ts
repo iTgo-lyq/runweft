@@ -6,7 +6,7 @@ import { hapiClient, type HapiClient } from '../hapi';
 import { hostDirectory, type HostIdentity } from '../mcp/identity';
 import { ResourceClient } from '../resources/client';
 import type { TaskCoordinator } from './coordinator';
-import { SpawnIntentSchema, parseTask, type Acceptance, type ArtifactInput, type Parent, type SendIntent } from './types';
+import { SpawnIntentSchema, parseTask, validateWorkspaceTarget, type Acceptance, type ArtifactInput, type Parent, type SendIntent } from './types';
 
 export class TaskClient {
     readonly parent: Parent;
@@ -21,12 +21,12 @@ export class TaskClient {
             body: JSON.stringify({ parent: this.parent, ...value }), signal });
     }
     async spawn(agentType: string, message: string, requestId: string, workspaceMode = 'shared', signal?: AbortSignal, baseRef?: string, inputs?: ArtifactInput[], outputs?: ArtifactOutput[]): Promise<Acceptance> {
-        if (!['shared', 'worktree'].includes(workspaceMode)) throw new RunweftError('capability_unavailable', '当前支持 shared 和本机 worktree 模式；远端模式尚未交付。');
+        if (!['shared', 'worktree'].includes(workspaceMode)) throw new RunweftError('capability_unavailable', '支持本机 shared 和本机/远端 worktree 模式。');
         const intent = parseTask(SpawnIntentSchema, { agentType, message, workspaceMode, ...(inputs?.length ? { inputs } : {}), ...(outputs?.length ? { outputs } : {}), ...(baseRef === undefined ? {} : { baseRef }) });
         const previous = await this.request('lookup', { requestId, intent }, signal);
         if (previous.accepted) return previous.accepted;
         const resolved = await new AgentClient(this.config, this.parent.cwd, this.hapi).resolve(agentType, undefined, signal);
-        if (resolved.target.machineId !== this.parent.machineId) throw new RunweftError(workspaceMode === 'shared' ? 'shared_target_required' : 'remote_workspace_unavailable', '当前任务只能使用发起机的 runtime；跨机准备与结果回收尚未交付。');
+        validateWorkspaceTarget(resolved.target.machineId, this.parent, intent);
         const agent = { id: resolved.id, definition: resolved.definition, source: resolved.source, definitionVersion: resolved.definitionVersion,
             resolvedVersion: resolved.resolvedVersion, runtimeId: resolved.target.runtimeId, machineId: resolved.target.machineId,
             flavor: resolved.target.flavor, namespace: resolved.connection.namespace };

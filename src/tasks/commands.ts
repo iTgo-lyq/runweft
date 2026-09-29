@@ -11,14 +11,15 @@ import { TaskClient } from './client';
 import type { overview } from './views';
 
 type Summary = ReturnType<typeof overview>;
-function taskText(task: Pick<Summary, 'agent_id' | 'round_id' | 'status' | 'attention' | 'report' | 'git'> & { artifacts?: Summary['artifacts']; input_files?: { status: string; count?: number; files?: ArtifactInput[] } | null }) {
+function taskText(task: Pick<Summary, 'agent_id' | 'round_id' | 'status' | 'attention' | 'report' | 'git'> & { code?: Summary['code']; artifacts?: Summary['artifacts']; input_files?: { status: string; count?: number; files?: ArtifactInput[] } | null }) {
     return `${task.agent_id} · ${task.status}\n轮次：${task.round_id}`
         + (task.input_files && task.input_files.status !== 'none' ? `\n输入文件：${task.input_files.count ?? task.input_files.files?.length ?? 0} · ${task.input_files.status}` : '')
         + (task.attention ? `\n需处理：${task.attention.message}${task.attention.hint ? `\n${task.attention.hint}` : ''}` : '')
         + (task.git === 'not_applicable' ? '' : `\nGit：${task.git.status}${task.git.checkout ? ` · ${task.git.checkout}` : ''}`
             + `\n工作区：${task.git.retained}`
             + (task.git.removal?.error ? `\n清理需处理：${task.git.removal.error.message}${task.git.removal.error.hint ? `\n${task.git.removal.error.hint}` : ''}` : '')
-            + (task.git.result_ref ? `\n成果引用：${task.git.result_ref}\n查看修改：git diff ${task.git.start_head} ${task.git.result_head}\n在主仓库目标分支审查并选择 merge 或 cherry-pick。` : ''))
+            + (task.git.result_ref && !task.git.remote ? `\n成果引用：${task.git.result_ref}\n查看修改：git diff ${task.git.start_head} ${task.git.result_head}\n在主仓库目标分支审查并选择 merge 或 cherry-pick。` : ''))
+        + (task.code && task.git !== 'not_applicable' && task.git.remote ? `\n代码成果：${task.code.status}${task.code.next ? `\n下一步：${task.code.next.command}` : ''}` : '')
         + (task.artifacts && task.artifacts.status !== 'none' ? `\n成果文件：${task.artifacts.status}${task.artifacts.manifest ? ` · 版本 ${task.artifacts.manifest.version}` : ''}\n查看清单：runweft task artifacts show ${task.agent_id} --round ${task.round_id}` : '')
         + (task.artifacts?.retention.state !== undefined && task.artifacts.retention.state !== 'retained' ? `\n附件留存：${task.artifacts.retention.state}；历史清单不保证文件仍可下载。` : '')
         + (task.report.text ? `\n${task.report.text}` : '')
@@ -55,7 +56,7 @@ export function announceRequest(program: Command, requested?: string) {
 }
 export function addTaskCommands(program: Command, context: () => ResolvedConfig, output: (value: unknown, human: string) => void) {
     const client = () => new TaskClient(context(), process.cwd());
-    const task = program.command('task').description('派生、续接与控制本机 shared/worktree 任务');
+    const task = program.command('task').description('派生、续接与控制本机共享或本机/远端独立任务');
     task.command('workspace').description('管理保留的独立工作区').command('remove <id>').description('显式删除已结束任务的工作区；保留报告和 Git 成果引用')
         .option('--discard-ignored', '明确丢弃 ignored 依赖和文件；默认存在时拒绝删除')
         .action(async (id, options) => {
@@ -119,7 +120,7 @@ export function addTaskCommands(program: Command, context: () => ResolvedConfig,
     task.command('spawn <agent>').description('接受新任务后立即返回；执行由服务继续推进')
         .option('--message <text>', '任务描述').option('--message-file <path>', '从文件读取任务；- 读取 stdin')
         .option('--request-id <uuid>', '相同请求重试时复用 ID').option('--workspace-mode <shared|worktree>', '共享当前目录或准备独立 Git worktree', 'shared')
-        .option('--base <ref>', 'worktree 的已提交 Git 基线，默认 HEAD；不包含主目录未提交内容')
+        .option('--base <ref>', 'worktree 的已提交基线；本机默认 HEAD，远端必填；不包含未提交内容')
         .option('--input <name=id|id>', '使用已上传文件；可重复，默认采用对象文件名', addInput, [])
         .option('--output <name=path|path>', '声明工作区内成果文件；可重复，结束后自动交付', addInput, [])
         .action(async (agent, options) => {

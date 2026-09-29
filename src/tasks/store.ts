@@ -7,12 +7,12 @@ import { contentVersion } from '../agents/definitions';
 import type { WorkspaceSource } from '../../hapi/shared/src/workspaces';
 import type { ExecutionTarget } from '../resources/types';
 import { pendingOutputs, type OutputItem, type OutputJob, type OutputManifest } from './output-types';
-import { parentKey, pendingPreparation, TaskError, type ArtifactAction, type ArtifactIntent, type InputFiles, type Acceptance, type AgentSnapshot, type Input, type Parent, type Round, type SendIntent, type SpawnIntent, type Task, type TaskBundle } from './types';
+import { parentKey, pendingPreparation, validateWorkspaceTarget, TaskError, type ArtifactAction, type ArtifactIntent, type InputFiles, type Acceptance, type AgentSnapshot, type Input, type Parent, type Round, type SendIntent, type SpawnIntent, type Task, type TaskBundle } from './types';
 
 type TaskRow = { data: string; revision: number; updatedAt: number };
 const read = <T>(row: { data: string }): T => JSON.parse(row.data);
 const semantic = (parent: Parent, intent: SpawnIntent | SendIntent) => {
-    const normalized = { ...intent }; if (!normalized.inputs?.length) delete normalized.inputs; if (!normalized.outputs?.length) delete normalized.outputs;
+    const normalized = { ...intent }; if ('workspaceMode' in normalized && normalized.workspaceMode === 'worktree') normalized.baseRef ??= 'HEAD'; if (!normalized.inputs?.length) delete normalized.inputs; if (!normalized.outputs?.length) delete normalized.outputs;
     return contentVersion({ parentKey: parentKey(parent), machineId: parent.machineId, cwd: parent.cwd, intent: normalized });
 };
 
@@ -57,7 +57,8 @@ export class TaskStore {
         }
         if (row.fingerprint !== semantic(parent, intent)) throw new TaskError(409, 'task_request_conflict', '同一 request ID 已用于不同任务意图。', '重试原请求请保持参数；新任务使用新的 request ID。');
         const accepted: Acceptance = JSON.parse(row.accepted);
-        this.require(namespace, accepted.agent_id, parent);
+        const task = this.require(namespace, accepted.agent_id, parent).task;
+        if ('workspaceMode' in intent) validateWorkspaceTarget(task.target.machineId, parent, intent);
         return accepted;
     }
     requests(namespace: string, taskId: string) {
@@ -109,11 +110,13 @@ export class TaskStore {
             this.assertCanDelegate(namespace, parent);
             const previous = this.lookup(namespace, parent, requestId, intent);
             if (previous) return previous;
+            validateWorkspaceTarget(target.machineId, parent, intent);
             const now = Date.now(), id = randomUUID(), roundId = randomUUID();
             if (intent.workspaceMode === 'worktree' && !source) throw new TaskError(409, 'workspace_source_missing', '独立任务缺少已解析的 Git 基线。');
             const task: Task = { version: 2, id, namespace, parent, agent, target,
                 environment: intent.workspaceMode === 'shared' ? { mode: 'shared', machineId: parent.machineId, cwd: parent.cwd }
-                    : { mode: 'worktree', machineId: parent.machineId, environmentId: id, source: source!, cwd: source!.sourcePath, status: 'retained' },
+                    : { mode: 'worktree', machineId: target.machineId, environmentId: id, source: source!, cwd: source!.sourcePath, status: 'retained',
+                        ...(target.machineId === parent.machineId ? {} : { remote: { origin: source! } }) },
                 createdAt: now, updatedAt: now, revision: 1 };
             const round: Round = { id: roundId, taskId: id, ordinal: 1, requestId, message: intent.message, phase: 'queued',
                 preparation: pendingPreparation(task.environment), inputFiles: this.inputFiles(namespace, requestId, intent), outputFiles: pendingOutputs(intent.outputs, requestId), ...(task.environment.mode === 'worktree' ? { git: { status: 'pending' as const, attempted: false } } : {}),
@@ -302,6 +305,7 @@ export class TaskStore {
         return this.db.transaction(() => {
             const { task, rounds } = this.require(namespace, id, parent), environment = task.environment;
             if (environment.mode !== 'worktree') throw new TaskError(409, 'workspace_shared', '共享目录不由 Runweft 删除。');
+            if (environment.remote) throw new TaskError(409, 'remote_workspace_retention_unavailable', '远端成果与缓存的联合释放尚未接入；工作区保持保留。');
             if (environment.status === 'removed') return task;
             if (environment.status === 'deleting') {
                 if (environment.removal?.discardIgnored !== discardIgnored) throw new TaskError(409, 'workspace_remove_pending', '原删除操作仍在对账，不能变更 ignored 文件处理选项。');

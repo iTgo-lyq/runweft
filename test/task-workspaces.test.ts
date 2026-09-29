@@ -229,3 +229,12 @@ test('shared paths and MCP cleanup are rejected without issuing Git operations',
         .rejects.toMatchObject({ code: 'workspace_remove_cli_only' });
     expect(git.calls).toHaveLength(0);
 });
+
+test('local omitted HEAD and explicit HEAD keep the existing accepted request fingerprint', async () => {
+    const git = workspaces(), h = await taskFixture(cleanups, 'codex', git.handler); git.control.holdPrepare = true;
+    const request = { ...h.payload(), intent: { ...h.intent, workspaceMode: 'worktree' } };
+    const accepted = await h.post('spawn', request);
+    expect(await h.post('spawn', { ...request, intent: { ...request.intent, baseRef: 'HEAD' } })).toEqual(accepted);
+    expect(git.calls.filter(call => call.action === 'resolve')).toHaveLength(1);
+    expect(h.calls.spawn).toBe(0);
+});

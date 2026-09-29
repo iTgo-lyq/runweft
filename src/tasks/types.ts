@@ -27,7 +27,7 @@ const fileInputs = z.array(ArtifactInputSchema).max(100).optional();
 const spawnFields = { agentType: AgentIdSchema, message: z.string().trim().min(1).max(200_000), inputs: fileInputs, outputs: ArtifactOutputsSchema.optional() };
 export const SpawnIntentSchema = z.discriminatedUnion('workspaceMode', [
     z.strictObject({ ...spawnFields, workspaceMode: z.literal('shared') }),
-    z.strictObject({ ...spawnFields, workspaceMode: z.literal('worktree'), baseRef: z.string().trim().min(1).default('HEAD') }),
+    z.strictObject({ ...spawnFields, workspaceMode: z.literal('worktree'), baseRef: z.string().trim().min(1).optional() }),
 ]);
 export type SpawnIntent = z.infer<typeof SpawnIntentSchema>;
 export const SendIntentSchema = z.strictObject({ id: z.uuid(), message: z.string().trim().min(1).max(200_000), mode: z.enum(['next', 'steer']), roundId: z.uuid().optional(), inputs: fileInputs, outputs: ArtifactOutputsSchema.optional() })
@@ -60,7 +60,7 @@ export type WorkspaceRemoval = { attemptId: string; expectedHead: string; discar
     status: 'pending' | 'running' | 'succeeded' | 'failed' | 'unknown'; error?: Problem };
 export type TaskEnvironment = { mode: 'shared'; machineId: string; cwd: string }
     | { mode: 'worktree'; machineId: string; environmentId: string; source: WorkspaceSource; cwd: string;
-        remote?: { origin: WorkspaceSource; snapshotId: string; consumerId: string };
+        remote?: { origin: WorkspaceSource; snapshotId?: string; consumerId?: string };
         checkout?: string; branch?: string; status: 'retained' | 'deleting' | 'removed'; removal?: WorkspaceRemoval };
 export type Task = { version: 2; id: string; namespace: string; parent: Parent; agent: AgentSnapshot; target: ExecutionTarget;
     environment: TaskEnvironment; createdAt: number; revision: number; updatedAt: number };
@@ -109,4 +109,10 @@ export function parentKey(parent: Parent) {
 }
 export function nativeTerminal(observation?: ExecutionObservation) {
     return !!observation && observation.source !== 'transport' && ['completed', 'failed', 'interrupted'].includes(observation.phase);
+}
+
+export function validateWorkspaceTarget(machineId: string, parent: Parent, intent: SpawnIntent) {
+    if (machineId === parent.machineId) return;
+    if (intent.workspaceMode !== 'worktree') throw new TaskError(409, 'shared_target_required', '远端任务必须使用独立 worktree。', '指定 --workspace-mode worktree 和明确的 --base。');
+    if (!intent.baseRef) throw new TaskError(409, 'remote_base_required', '远端 worktree 需要明确已提交的 Git 基线。', '指定 --base <ref或SHA>；接受时固定为 commit，不包含未提交内容。');
 }

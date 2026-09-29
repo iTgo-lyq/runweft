@@ -180,7 +180,7 @@ export class WorkspacePreparations {
                 : record.release?.status === 'failed' ? record.release.error?.code === 'workspace_ignored_files'
                     ? `确认可丢弃 ignored 依赖和文件后运行 runweft workspace release ${record.id} --discard-ignored；否则保留环境。`
                     : `释放未完成，恢复对象仍保留；处理错误后再次运行 runweft workspace release ${record.id}。`
-                : phase === 'ready' ? '诊断工作区已就绪；尚未启动任务。正式远端委派将在结果回收能力接通后开放。'
+                : phase === 'ready' ? '诊断工作区已就绪；业务任务请直接使用 task spawn --workspace-mode worktree --base <ref或SHA>，它会准备独立环境。'
                 : phase === 'failed' ? `修复错误后用新的 request ID 准备，固定基线为 ${record.origin.baseCommit}；原记录保留。`
                 : `用 runweft workspace inspect ${record.id} 查询；响应丢失时复用原 request ID，不要重新发起。` };
     }

@@ -1,3 +1,4 @@
+import { remoteTaskProbe } from './remote-task-probe';
 import assert from 'node:assert/strict';
 import { randomUUID, createHash } from 'node:crypto';
 import { spawn, spawnSync, type ChildProcess } from 'node:child_process';
@@ -16,9 +17,10 @@ import type { ManagedWorkspace, WorkspaceMutation } from '../hapi/shared/src/wor
 import pkg from '../package.json';
 
 // Explicit native acceptance in private homes. No business remote task or model configuration changes.
-const binary = resolve(process.argv[2] ?? 'dist/runweft'), hapiBinary = resolve(process.argv[3] ?? 'dist/hapi');
-const selected = process.argv[4]; assert(!selected || ['codex', 'claude'].includes(selected));
-mkdirSync('.dev-smoke', { recursive: true }); const root = mkdtempSync(resolve('.dev-smoke/remote-native-'));
+const tasksMode = process.argv.includes('--tasks'), args = process.argv.slice(2).filter(arg => arg !== '--tasks');
+const binary = resolve(args[0] ?? 'dist/runweft'), hapiBinary = resolve(args[1] ?? 'dist/hapi');
+const selected = args[2]; assert(!selected || ['codex', 'claude'].includes(selected));
+mkdirSync('.dev-smoke', { recursive: true }); const root = mkdtempSync(resolve(tasksMode ? '.dev-smoke/remote-tasks-native-' : '.dev-smoke/remote-native-'));
 const center = join(root, 'center'), sourceHome = join(root, 'source-runner'), targetHome = join(root, 'target-runner');
 const source = join(root, 'source'), project = join(source, 'project'), codexHome = join(root, 'codex'), claudeHome = join(root, 'claude');
 const env = { ...process.env }; for (const key of Object.keys(env)) if (key.startsWith('RUNWEFT_')) delete env[key];
@@ -77,13 +79,17 @@ try {
     cli(sourceHome, ['mcp', 'install', '--client', 'all']);
     const context = `PROJECT_${randomUUID()}`, skill = `SKILL_${randomUUID()}`, memory = `MEMORY_${randomUUID()}`;
     init(project); mkdirSync(join(project, 'app')); writeFileSync(join(project, 'app/note'), 'committed baseline');
-    for (const name of ['AGENTS.md', 'CLAUDE.md']) writeFileSync(join(project, name), `这是专用只读准备验收工程。报告附带 ${context}，只执行明确请求，不修改工程文件，不委派，不创建工作流文档。\n`);
-    for (const directory of ['.agents/skills/remote-probe', '.claude/skills/remote-probe']) { mkdirSync(join(project, directory), { recursive: true }); writeFileSync(join(project, directory, 'SKILL.md'), `---\nname: remote-probe\ndescription: 用户要求 remote-probe 时读取验证指令。\n---\n最终报告附带 ${skill}；不编辑、不委派。\n`); }
+    for (const name of ['AGENTS.md', 'CLAUDE.md']) writeFileSync(join(project, name), `这是专用${tasksMode ? '远端任务' : '只读准备'}验收工程。报告附带 ${context}，只执行明确请求，${tasksMode ? '允许按任务要求生成指定文件，不运行 Git 写命令' : '不修改工程文件'}，不委派，不创建工作流文档。\n`);
+    for (const directory of ['.agents/skills/remote-probe', '.claude/skills/remote-probe']) { mkdirSync(join(project, directory), { recursive: true }); writeFileSync(join(project, directory, 'SKILL.md'), `---\nname: remote-probe\ndescription: 用户要求 remote-probe 时读取验证指令。\n---\n最终报告附带 ${skill}；${tasksMode ? '按明确任务编辑指定文件' : '不编辑'}、不委派。\n`); }
     commit(project); git(project, 'lfs', 'install', '--local'); writeFileSync(join(project, '.gitattributes'), '*.bin filter=lfs diff=lfs merge=lfs -text\n');
     const bytes = Buffer.from('REMOTE_BINARY\0'.repeat(1024)); writeFileSync(join(project, 'asset.bin'), bytes); commit(project);
     const child = join(source, 'module'); init(child); writeFileSync(join(child, 'note'), 'module baseline'); commit(child); writeFileSync(join(child, 'second'), 'module second'); commit(child);
     git(project, '-c', 'protocol.file.allow=always', 'submodule', 'add', child, 'vendor/module'); commit(project);
     const base = git(project, 'rev-parse', 'HEAD'), expectedHash = digest(join(project, 'asset.bin'));
+    if (tasksMode) {
+        await remoteTaskProbe({ root, center, sourceHome, targetHome, project, target, hapi, env, base, selected, context, skill, memory,
+            claudeLog, probeLog, pids, cases: evidence.cases, note, cli, git });
+    } else {
     const flavors = (['codex', 'claude'] as const).filter(flavor => !selected || selected === flavor), prepared: any[] = [];
     for (const flavor of flavors) {
         const runtime = cli(targetHome, ['runtime', 'register', flavor]).runtime; cli(sourceHome, ['agent', 'init', flavor, '--runtime', runtime.id], join(project, 'app'));
@@ -162,6 +168,7 @@ try {
     const db = new Database(join(center, 'server/runweft/state.sqlite'), { readonly: true });
     try { for (const { data } of db.query('SELECT data FROM repository_snapshots').all() as { data: string }[]) { const snapshot = JSON.parse(data); for (const file of snapshot.files) { const downloaded = await artifacts.download(file.artifactId, join(root, 'recovered', file.name)); assert.equal(digest(downloaded.path), file.sha256); } } } finally { db.close(); }
     note('source and target Runners are both stopped; center Git/LFS recovery objects remain downloadable and match their hashes');
+    }
     for (const [path, hash] of originalConfigs) assert.equal(digest(path), hash, 'Original native configuration changed');
     evidence.success = true;
 } catch (error) { evidence.error = error instanceof Error ? error.stack ?? error.message : String(error); process.exitCode = 1; }

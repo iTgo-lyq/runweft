@@ -1,6 +1,6 @@
 # 代码成果与取回契约
 
-> 来源：[Technical](technical.md)；状态：T1/T2 已实现机器导出与取回，T3 已实现中心清单与 CLI/MCP 入口；正式远端委派与释放分别由 T4/T5 接入。
+> 来源：[Technical](technical.md)；状态：T1–T4 已实现机器导出/取回、中心清单、CLI/MCP 及正式远端委派；显式释放由 T5 接入。
 
 ## 身份与不变事实
 
@@ -51,4 +51,12 @@ state v6 新增 `delegation_code_manifests`、`delegation_code_fetches`；可变
 
 read/wait 的 `code` 包含 status、round_id、result、ref、fetch、bytes 和 next；取回进行中 next 指向读取状态，成功后给出 diff，失败则保留可操作错误。`code_revision` 让原完成轮次的补交与取回结果沿既有 wait 游标可见。CLI show 返回清单和取回历史；MCP fetch_result/retry_result 只返回操作摘要，不复制整份文件映射和下载副本路径到模型上下文。
 
-T3 尚不开放远端 spawn。实际成果编排验收使用无模型 fixture：TaskStore 接受记录后保持非运行状态，将真实 HAPI prepare/finalize 返回的 facts 接入既有任务，而不是手工编造 sealed SHA；随后由编译服务的协调器完成中心交付和公开取回。
+## T4 远端委派
+
+远端 spawn 必须使用 worktree 并显式提供 base；本机省略 base 仍等价于 HEAD，相同 request ID 的旧指纹保持兼容。接受时在 parent.machineId 上解析 origin 并冻结 SHA，目标 Runner 的 source 只能来自该基线的导入回执。
+
+environment.remote 保存 origin、snapshotId 和 consumerId。基线消费者按任务身份幂等查找，插入后崩溃不会重复创建；任务与诊断共享基线服务，停服先等待任务推进，再关闭基线依赖。准备完成才进入原有工作区、输入和模型启动流程。
+
+首次收尾按 Git 封存、代码发布、附件发布、轮次完成顺序推进。捕获失败保留 finishing，retry_result 可修复；已经 sealed 的 Git facts 不因代码错误降为 unknown。下一轮沿原 worktree 和原生 session 续接。T5 完成前远端 workspace remove 明确拒绝，保留现场和成果。
+
+无模型成果回归只使用真实 HAPI prepare/finalize facts；插入 fixture 时停止服务，避免 queued 行启动模型。正式委派另由公开 CLI 驱动 Codex/Claude Code 各两轮，验证工具过滤、进程停止、收尾修复及执行端离线后的取回合入；证据见 Execution。

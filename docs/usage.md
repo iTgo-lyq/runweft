@@ -1,6 +1,6 @@
 # Runweft 基础入口使用说明
 
-当前实现包含配置、HAPI 服务管理、机器/runtime 登记、Agent 定义，以及 Codex/Claude Code 经 MCP 或 CLI 进行本机共享目录、独立 worktree 协作。已支持 CLI/MCP 文件上传、任务输入、成果交付、补交、留存清理及远端 Git 诊断准备。正式远端任务和看板仍按后续任务推进；当前候选包不是完整项目的最终发布。
+当前实现包含配置、HAPI 服务管理、机器/runtime 登记、Agent 定义，以及 Codex/Claude Code 经 MCP 或 CLI 进行本机共享目录、独立 worktree 和远端 worktree 协作。已支持文件输入/输出、代码成果发布及取回、补交和远端 Git 诊断准备。远端成果释放、看板及完整集成仍在推进；当前候选包不是完整项目的最终发布。
 
 ## 安装与首次使用
 
@@ -186,13 +186,13 @@ runweft task show <任务ID>
 runweft --json task show <任务ID>
 ```
 
-`developer` 是已绑定本机 runtime 的 Agent 定义。`--base` 可省略，默认 HEAD，也可指定已有 commit、分支或 tag；接受任务时冻结为 commit。主目录未提交、未跟踪及 ignored 内容不会自动复制，后续主分支移动也不改变子任务的基线。共享模式不接受 `--base`。两种部署模式当前都只执行本机任务。
+`developer` 是已绑定 runtime 的 Agent 定义。本机任务的 `--base` 可省略，默认 HEAD；远端任务必须显式提供。可指定已有 commit、分支或 tag，接受任务时冻结为 commit。主目录未提交、未跟踪及 ignored 内容不会自动复制，后续主分支移动也不改变子任务的基线。共享模式仅支持本机，且不接受 `--base`。
 
 HAPI 先创建并核对独立工作树，再在对应目录启动 agent。版本化的工程指令、skill 和项目 MCP 来自所选基线，原生全局配置及路径信任策略继续生效；没有进入基线的工程配置不会凭空出现。项目依赖由 agent 按需安装。Git 需 2.31+；基线含 LFS 时需要 Git LFS 及可读实体对象，含子模块时需能初始化相应 commit。缺少工具、对象或访问权限会阻止启动并显示原因。
 
 每轮结束先停止子执行，再保留 agent 已有提交，并把剩余非 ignored 改动补为 checkpoint；没有改动不创建空提交。机器补交使用 `HAPI Checkpoint <checkpoint@hapi.local>` 身份，沿用 Git hooks、签名与过滤器，不修改用户 Git 全局配置。主目录不被自动提交。子模块内部脏内容或 gitlink 改变不能自动封存，应先由主 agent 处理。
 
-`wait` 只有在执行停止且成果已封存后才返回完成。JSON 的 `git` 提供 `base_commit`、本轮 `start_head`、`result_head`、`result_ref`、checkout 路径及留存状态，原生执行事实与 Git 交付状态分开。成果对象已在同一仓库，不需 push；主 agent 或操作者在目标分支审查后自行合入，例如：
+`wait` 在执行停止且成果已封存后返回完成；远端还会先尝试发布代码和附件，交付失败单独显示，不能把原生成功当作代码已取回。JSON 的 `git` 提供 `base_commit`、本轮 `start_head`、`result_head`、`result_ref`、checkout 路径及留存状态。本机成果对象已在同一仓库，不需 push；主 agent 或操作者在目标分支审查后自行合入，例如：
 
 ```sh
 git diff <start_head> <result_head>
@@ -222,6 +222,22 @@ runweft task workspace remove <任务ID> --discard-ignored
 
 删除命令返回受理后，用 `show` 确认 `git.retained=removed`。存在排队/活跃任务、停止未知、未封存或脏改动时会拒绝；删除进行中拒绝追加任务。成功删除移除自有 checkout 和任务分支，保留报告、原生历史与 base/round 成果引用，之后不能再续接该环境。未启动的失败准备也只有在确认归属和没有唯一改动后才可清理；不要用直接删除目录代替此命令。
 
+### 远端任务与代码取回
+
+源、目标 Runner 连接同一 Hub/namespace，Agent 绑定目标 runtime。主工作区必须是 Git 仓库；使用上面的 `task spawn --workspace-mode worktree --base HEAD` 即会自动传输固定基线、准备工作区和输入，然后启动目标 agent，无需先运行诊断 prepare。中心无需 Runner 或 Git。续接沿原任务基线与前轮成果，不重新同步主分支。
+
+```sh
+runweft task result show <任务ID>
+runweft task result fetch <任务ID> --round <轮次ID>
+runweft task result show <任务ID> --round <轮次ID>
+# 代码发布确定失败，修复原因后补交；不会重跑模型：
+runweft task result retry <任务ID> --round <轮次ID>
+```
+
+show/fetch 省略 `--round` 时选最新接受轮次，其成果未就绪就显示等待，不退回旧结果。fetch 从中心恢复 Git、未改变的子模块和基线/成果 LFS 到原主仓库，完成后给出专用 ref；不改变主目录、index 或分支，也不自动合入。根据状态确认取回完成，再审查和显式 merge。成果已发布后执行机可以离线，发起机 Runner 仍需在线。MCP 使用 `fetch_result`、`retry_result`，普通附件补交仍用 `retry_artifacts`。
+
+worktree 默认保留，取回也不删除。当前远端 `task workspace remove` 暂不开放，待成果与缓存联合释放接入；本机删除继续可用。
+
 ### 远端 Git 诊断准备
 
 在主 Git 工作区使用已绑定另一台机器 runtime 的 Agent：
@@ -237,7 +253,7 @@ runweft workspace preparations --all
 
 命令输出准备 ID、请求 ID、固定 SHA、阶段、预计上传/复用字节与错误。响应丢失时用原参数和 `--request-id <原请求ID>` 查询同一次准备；未知状态先 inspect，不盲目新建。明确失败后按提示修复，用新请求和原固定 SHA 再准备，旧记录保留。同 namespace、源仓库及 SHA 复用基线和目标缓存，不重复打包或上传；另一提交使用新的完整 bundle，相同 LFS 实体只增加引用。目标导入失败与中心基线可用性分别展示。
 
-准备完成时可看到独立 worktree 的目录和分支，不启动模型。诊断不接收任务消息或附件，也不会在以后被业务任务接管。当前尚未开放正式远端委派；输入与上下文仍属于任务生命周期。准备记录、中心恢复对象和目标缓存默认保留；不再需要该诊断环境时显式释放：
+准备完成时可看到独立 worktree 的目录和分支，不启动模型。诊断不接收任务消息或附件，也不会在以后被业务任务接管；正式任务直接使用 task spawn。准备记录、中心恢复对象和目标缓存默认保留；不再需要该诊断环境时显式释放：
 
 ```sh
 runweft workspace release <准备ID>
