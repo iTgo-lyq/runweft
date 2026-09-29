@@ -10,6 +10,8 @@ HAPI 的 HTTP 状态、code 与错误被保留。只有 native_session_missing �
 
 独立 Git 操作与 preparedWorkspace 启动需要 Runner `capabilities.managedWorkspaces:1`。不满足时明确拒绝并提示配套版本，不能回退到默认 HEAD 的快捷 worktree 创建；shared 与不使用准备引用的原有 HAPI 执行保持原行为。
 
+远端 Git 诊断要求源 Runner repositoryExport:1、artifactTransfers:1、artifactOutputs:1，目标 Runner repositoryImport:1、artifactTransfers:1、managedWorkspaces:1；沿现有中心 artifacts 与机器库存能力。缺少能力时要求更新配套组件，不通过 agent 自行 clone 或传文件补做环境。
+
 中心文件声明 artifacts:1，Runner 输入与 preparedFiles 声明 artifactTransfers:1，输出另声明 artifactOutputs:1；旧输入能力不能冒充输出支持。文件接口沿现有机器 RPC，缺少所需能力明确拒绝，不通过模型补做准备。无附件的既有执行不增加文件能力要求。
 
 资源查询要求 Hub 的 machineInventory:1 完整库存能力。原生版本详情使用 Runner 可选 agentAvailabilityDetails:true，缺少时提示升级；不将该能力加入普通 Runner 的强制要求。资源解析与实际执行的区别见 [Runtime 登记](../../resources/runtimes/spec.md)。

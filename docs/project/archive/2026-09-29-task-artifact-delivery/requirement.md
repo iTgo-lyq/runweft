@@ -18,7 +18,7 @@
 | 前置 | [统一 CLI](../2026-09-29-unified-cli-and-deployment/requirement.md) | local/Hub、认证、统一配置和数据根 |
 | 前置 | [委派生命周期](../2026-09-29-delegation-lifecycle/requirement.md) | parent/任务/轮次归属、准备/停止/结果事实、CLI/MCP |
 | 组合 | [独立工作区](../2026-09-29-local-workspace-execution/requirement.md) | 已落地输入与 Git 准备、独立 cwd 和收尾；对象上传不依赖 worktree |
-| 下游 | [远端准备](../../changes/remote-workspace-preparation/requirement.md)、[远端回收](../../changes/remote-result-delivery/requirement.md) | 复用文件传输和引用；Git bundle 的对象闭包、祖先关系和合入语义由下游负责 |
+| 下游 | [远端准备](../2026-09-30-remote-workspace-preparation/requirement.md)、[远端回收](../../changes/remote-result-delivery/requirement.md) | 复用文件传输和引用；Git bundle 的对象闭包、祖先关系和合入语义由下游负责 |
 
 通用持久文件和机器传输补在 HAPI；Runweft 只维护任务关联和交付清单，不另建对象服务、权限体系或 runtime。对象 CRUD 必须接通真实共享任务，不能代替组合验收。普通纯文本任务保持原有使用方式。
 

@@ -1,6 +1,6 @@
 # 远端任务启动前的工作区准备
 
-> 状态：进行中
+> 状态：已完成
 > 规模：大型
 > 更新：2026-09-30
 > 确认依据：远端任务必须继承 Git 主工作区；各 subagent 独立 worktree，后续轮次复用；启动前完成 Git、目录、输入和上下文，依赖由 agent 按需安装。2026-09-29 用户确认通过 bundle 传输已提交基线，支持未 push 或没有 remote 的仓库。
@@ -15,10 +15,10 @@
 
 | 关系 | Change | 依赖内容与满足条件 |
 | --- | --- | --- |
-| 前置 | [HAPI 执行契约](../../archive/2026-09-29-hapi-subagent-foundation/requirement.md) | 目标机器与稳定启动关联；本 Change 在 HAPI 内补准备与启动校验，不另建执行器 |
-| 前置 | [本地工作区执行](../../archive/2026-09-29-local-workspace-execution/requirement.md) | 公共 Git 环境身份、确定基线、worktree 准备及启动检查已验收；远端消费同一能力 |
-| 前置 | [任务附件](../../archive/2026-09-29-task-artifact-delivery/requirement.md) | 会话创建前可取回、校验并保留输入；bundle 作为输入时也沿此路径 |
-| 下游 | [远端代码回收](../remote-result-delivery/requirement.md) | 消费环境身份、固定基线和可恢复基线对象 |
+| 前置 | [HAPI 执行契约](../2026-09-29-hapi-subagent-foundation/requirement.md) | 目标机器与稳定启动关联；本 Change 在 HAPI 内补准备与启动校验，不另建执行器 |
+| 前置 | [本地工作区执行](../2026-09-29-local-workspace-execution/requirement.md) | 公共 Git 环境身份、确定基线、worktree 准备及启动检查已验收；远端消费同一能力 |
+| 前置 | [任务附件](../2026-09-29-task-artifact-delivery/requirement.md) | 会话创建前可取回、校验并保留输入；bundle 作为输入时也沿此路径 |
+| 下游 | [远端代码回收](../../changes/remote-result-delivery/requirement.md) | 消费环境身份、固定基线和可恢复基线对象 |
 
 ## 独立验收与交付边界
 
@@ -48,13 +48,15 @@ Git 基线、目录、输入附件和上下文准备并校验完成后，才允�
 
 ## 验收标准
 
-- [ ] 非 Git、无 commit、ref 歧义或未指定基线的请求被拒绝，没有远端 agent 进程。
-- [ ] 主分支移动后实际远端 HEAD 仍等于冻结 SHA；未提交内容明确排除。
-- [ ] 无 remote 或基线尚未 push 时，可通过 bundle 完成准备；不自动推送主仓库。
-- [ ] 两个 subagent 可在同仓库独立 worktree 运行；续接复用原环境，不重置已有改动。
-- [ ] 缺少必需附件、错误 hash 或上下文不可用时拒绝启动；旧准备回执不能放行被改变的环境。
-- [ ] LFS、子模块、浅克隆或对象格式所需能力不具备时明确拒绝，不静默提供残缺目录。
-- [ ] 准备回执丢失可查询原操作，未知 spawn 不导致重复 agent。
+- [x] 非 Git、无 commit、ref 歧义或未指定基线的请求被拒绝，没有远端 agent 进程。
+- [x] 主分支移动后实际远端 HEAD 仍等于冻结 SHA；未提交内容明确排除。
+- [x] 无 remote 或基线尚未 push 时，可通过 bundle 完成准备；不自动推送主仓库。
+- [x] 两个 subagent 可在同仓库独立 worktree 运行；续接复用原环境，不重置已有改动。
+- [x] 缺少必需附件、错误 hash 或上下文不可用时拒绝启动；旧准备回执不能放行被改变的环境。
+- [x] LFS、子模块、浅克隆或对象格式所需能力不具备时明确拒绝，不静默提供残缺目录。
+- [x] 准备回执丢失可查询原操作，未知 spawn 不导致重复 agent。
+
+逐项实现、验证与未实测范围见[验收记录](acceptance.md)。
 
 ## 准备操作的产品边界
 

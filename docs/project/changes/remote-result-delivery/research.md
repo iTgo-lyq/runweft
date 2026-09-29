@@ -13,7 +13,7 @@
 
 ## Multica 回收边界
 
-[Multica 源码调查](../remote-workspace-preparation/research.md#multica-的任务准备与成果交付)区分了程序回传运行终态、prompt 引导成果工具和本地 worktree 的程序化提交。后者不能被当成远端已推送或主工作区可取回的证据。
+[Multica 源码调查](../../archive/2026-09-30-remote-workspace-preparation/research.md#multica-的任务准备与成果交付)区分了程序回传运行终态、prompt 引导成果工具和本地 worktree 的程序化提交。后者不能被当成远端已推送或主工作区可取回的证据。
 
 以下核对提交 `67d61a2073bad0fbb7140fd2000f1ab7ec0a4f25`，只确认源码行为，未实际运行 Multica。工作区策略由资源模式决定，不能仅按执行机器在本地还是远端分类。
 

@@ -49,7 +49,7 @@ Git bundle 只提供 Git 对象，不自动包含 LFS 实体、子模块仓库�
 
 ## 4. 复用公共 Git 工作区
 
-HAPI Runner 在已明确的受控数据根中维护仓库对象缓存；跨机取得精确基线后，调用[公共 Git 准备](../../archive/2026-09-29-local-workspace-execution/design.md#准备与启动)创建或复用 worktree。repository/environment/preparation 身份及 Git 收尾由公共工作区 Change 唯一定义。
+HAPI Runner 在已明确的受控数据根中维护仓库对象缓存；跨机取得精确基线后，调用[公共 Git 准备](../2026-09-29-local-workspace-execution/design.md#准备与启动)创建或复用 worktree。repository/environment/preparation 身份及 Git 收尾由公共工作区 Change 唯一定义。
 
 本 Change 负责远端机器选择、Git 对象来源、缓存同步和输入落地。缓存中的 Git 修改沿公共并发保护，不重复实现分支、worktree 或归属检查，也不创建另一个执行器。
 
@@ -65,11 +65,11 @@ HAPI Runner 在已明确的受控数据根中维护仓库对象缓存；跨机�
 
 runtime 对仓库外输入/上下文目录的访问规则必须实测；若只能读取 cwd 内资源，则在专用保留目录挂载/复制并验证排除规则，存在路径冲突时拒绝启动。
 
-沿原生全局配置和已准备 cwd 发现工程 skill/MCP，不创建空白配置 home，也不集中同步它们。工程配置随所选 Git 基线到达，ignored 或未提交 skill 不因设置 cwd 就自动出现在远端；细节归[Agent 定义](../../archive/2026-09-29-agent-definition/requirement.md)。
+沿原生全局配置和已准备 cwd 发现工程 skill/MCP，不创建空白配置 home，也不集中同步它们。工程配置随所选 Git 基线到达，ignored 或未提交 skill 不因设置 cwd 就自动出现在远端；细节归[Agent 定义](../2026-09-29-agent-definition/requirement.md)。
 
 ## 6. 远端准备完成与启动条件
 
-远端回执组合公共准备证据、执行机器/runtime 引用、Git 来源、输入摘要和上下文版本。基础 Git、目录归属、HEAD 与版本的实际启动检查沿[公共工作区能力](../../archive/2026-09-29-local-workspace-execution/design.md#准备与启动)执行；远端额外核对目标机器、已到达输入和对象完整性。
+远端回执组合公共准备证据、执行机器/runtime 引用、Git 来源、输入摘要和上下文版本。基础 Git、目录归属、HEAD 与版本的实际启动检查沿[公共工作区能力](../2026-09-29-local-workspace-execution/design.md#准备与启动)执行；远端额外核对目标机器、已到达输入和对象完整性。
 
 任一必需准备失败不启动 agent。Hub 可提前保存关联，但不能让子 agent 通过 prompt 补做任务根仓库初始化；启动已准备路径时也不再创建默认 HEAD 的 worktree。
 
@@ -77,7 +77,7 @@ runtime 对仓库外输入/上下文目录的访问规则必须实测；若只�
 
 ## 7. 续接与基线变化
 
-同一 delegation 复用 worktree、分支、依赖目录，原生 session 优先续接，但每轮结束都关闭子执行进程。第二轮通过 HAPI 重新启动/续接，从上一轮成果继续；session 缺失时按[委派设计](../../archive/2026-09-29-delegation-lifecycle/design.md#7-一轮结束与下一轮续接)构造历史。初始 `baseCommit` 仍保留，每轮另外记录开始 HEAD。
+同一 delegation 复用 worktree、分支、依赖目录，原生 session 优先续接，但每轮结束都关闭子执行进程。第二轮通过 HAPI 重新启动/续接，从上一轮成果继续；session 缺失时按[委派设计](../2026-09-29-delegation-lifecycle/design.md#7-一轮结束与下一轮续接)构造历史。初始 `baseCommit` 仍保留，每轮另外记录开始 HEAD。
 
 主工作区的新提交不会自动同步到活跃 subagent。建议基线变化创建新 delegation；显式同步旧环境可作为后续能力，不能偷偷 reset 或 rebase 正在协作的分支。
 

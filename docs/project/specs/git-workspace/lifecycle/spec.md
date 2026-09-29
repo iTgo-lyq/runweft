@@ -11,7 +11,7 @@ repositoryId 由 machineId、真实 Git common directory 和对象格式确定�
 | resolve | cwd、baseRef 解析为准确 commit、仓库根/commonDir、相对 cwd、对象格式和主目录脏状态；拒绝歧义 ref、非 commit、未提交子目录和越界 |
 | prepare | environmentId、preparationId、roundId、固定 source、expectedHead 与可选本地 inputs；持久准备并返回 cwd/startHead/输入证据 |
 | inspect | environmentId 查询环境、准备、成果和操作回执；对中断操作核对现场，不创建 checkout |
-| finalize | environmentId、preparationId、roundId、attemptId、sessionId 与 partial；核实停止后封存成果 |
+| finalize | environmentId、preparationId、roundId、attemptId、sessionId、partial 与可选 unchangedHead；核实停止后封存成果 |
 | remove | environmentId、attemptId、expectedHead、discardIgnored；仅删除符合公共检查的自有环境 |
 
 prepare/finalize/remove 快速持久受理，副作用异步执行，通过 inspect 读取 accepted/running/succeeded/failed/unknown。同一操作身份和参数返回原回执，参数冲突拒绝；已有 unknown/pending 操作阻止新操作。Git 元数据动作在进程内按 commonDir 串行，最终仍依赖 Git 原生锁。
@@ -20,11 +20,15 @@ prepare/finalize/remove 快速持久受理，副作用异步执行，通过 insp
 
 Git 需 2.31+，对象格式接受 sha1/sha256。有子模块时初始化对应 commit 并核对递归状态，有 LFS 时验证真实实体 oid/size，不能用指针文件代替内容。沿已有执行账户凭据取得缺少对象；同仓库本地对象优先复用。原生子模块初始化可能登记共享 Git config 中缺失的 URL/active，不改已有设置或全局配置，不把源 Git 元数据绝对不变作为承诺。
 
+以上对象取得规则适用于普通本机来源。带 source.snapshot 的已导入来源核对自有 import/manifest，模块及 LFS 仅用目标缓存、不回退源 URL；模块 URL/active 为各 worktree 单独保存，见[远端基线](../../remote-workspace/baseline/spec.md)。
+
 ## 封存与副作用对账
 
 启动消费当前准备引用；旧准备、丢失目录或漂移不自动修复成新工作区。finalize/remove 先检查 checkout 范围的活跃/未决会话，再核对 Runner 停止记录和进程身份；共享 Codex root 不用公共 PID 代替单会话退出。省略 finalize.sessionId 仅限该准备没有执行关联，或所有关联明确 childStarted=false；不能绕过已有/未知执行的停止证明。
 
 封存核对实际归属、分支、HEAD 与 startHead 祖先关系，拒绝冲突、未结束 Git 操作和索引锁。保留 agent 已有提交后，为遗留非 ignored 修改执行 add/commit；无修改不创建空提交。补交使用本次命令的 `HAPI Checkpoint <checkpoint@hapi.local>` 身份，保留 hooks、签名与过滤器策略。
+
+显式 unchangedHead 在任何 staging/checkpoint 前要求 HEAD 精确相等且工作树干净，用于只允许无改动封存的调用；省略该字段保留上述通常行为。它不绕过已有执行的停止证明。
 
 子模块脏状态或相对 startHead 改变的 gitlink 拒绝封存，包括候选 index 中新增的嵌套仓库。封存再次核对 HEAD、干净状态及 LFS 实体后固定结果 ref，返回 baseCommit、startHead、resultHead、resultRef、可选 checkpoint、partial、fileCount 和最多 100 个变更路径。
 
@@ -35,3 +39,5 @@ Git 需 2.31+，对象格式接受 sha1/sha256。有子模块时初始化对应 
 基线引用为 `refs/hapi/workspaces/<id>/base`，成果引用为 `refs/hapi/workspaces/<id>/rounds/<roundId>`，使用 compare-and-set 防止覆盖不同成果。实际清理检查最新 resultHead，没有成果时检查 base；所有保留引用必须仍指向记录的对象。
 
 清理拒绝未封存/脏改动，ignored 默认拒绝，明确 discardIgnored 后才允许移除；子模块和已初始化目录同样检查。成功只删除自有 checkout、树外输入与指向预期成果的任务分支，base/round refs 和回执继续保留。部分删除或丢响应按原操作对账，不清空成果记录。业务层的轮次、权限和留存规则见[独立收尾](../../local-workspace/finish/spec.md)。
+
+导入 cache 的最终释放另检查全部 imports、环境、保留引用和 Git worktree；只有已移除且无变化环境的 refs 可回收，未知/新成果仍保护 cache，见[基线留存](../../remote-workspace/isolation/spec.md)。普通源仓库的 refs 不由该缓存操作清理。
