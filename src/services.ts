@@ -5,9 +5,10 @@ import { createServer } from 'node:net';
 import { spawn, type ChildProcess } from 'node:child_process';
 import { atomicWrite, dataPaths, ensureDirectory, localUrl, targetUrl, type ResolvedConfig } from './config';
 import { RunweftError, errorDetails } from './errors';
-import { BUILD, deploymentKeys, fetchJson, hapiClient, hapiEnvironment, hapiExecutable, readSettings, runHapi, serverToken, stopChild } from './hapi';
+import { BUILD, deploymentKeys, fetchJson, HapiClient, hapiClient, hapiEnvironment, hapiExecutable, readSettings, runHapi, serverToken, stopChild } from './hapi';
 import { createGateway } from './proxy';
 import { createRunweftHandler } from './api';
+import { TaskCoordinator } from './tasks/coordinator';
 
 export type ServiceState = {
     pid: number; instanceId: string; version: string; hapiRevision: string;
@@ -112,6 +113,7 @@ export async function serve(c: ResolvedConfig, publicly = false): Promise<void> 
     for (const directory of [paths.logs, paths.runweftServer, paths.cache, paths.temporary]) ensureDirectory(directory);
     const children: ChildProcess[] = [];
     let gateway: Awaited<ReturnType<typeof createGateway>> | undefined;
+    let tasks: TaskCoordinator | undefined;
     let stopping = false, ready = false;
     let failure: Error | undefined;
     let complete!: () => void;
@@ -123,6 +125,8 @@ export async function serve(c: ResolvedConfig, publicly = false): Promise<void> 
         stopping = true; failure = error;
         for (const signal of ['SIGINT', 'SIGTERM', 'SIGHUP'] as const) process.off(signal, onSignal);
         try {
+            try { await tasks?.close(); }
+            catch (error) { failure ??= error instanceof Error ? error : new Error(String(error)); }
             try { await gateway?.close(); }
             catch (error) { failure ??= error instanceof Error ? error : new Error(String(error)); }
             for (const child of [...children].reverse()) await stopChild(child);
@@ -158,8 +162,9 @@ export async function serve(c: ResolvedConfig, publicly = false): Promise<void> 
         }, 'HAPI 启动超时。');
         const secret = JSON.parse(readFileSync(join(paths.hapiServer, 'jwt-secret.json'), 'utf8'));
         const key = Buffer.from(secret.secretBase64, 'base64');
+        tasks = new TaskCoordinator(paths.state, namespace => new HapiClient(privateUrl, namespace === 'default' ? token : `${token}:${namespace}`));
         gateway = await createGateway({ host, port: c.config.server.port, target: privateUrl,
-            handle: createRunweftHandler({ key, hapiUrl: privateUrl, statePath: paths.state,
+            handle: createRunweftHandler({ key, hapiUrl: privateUrl, statePath: paths.state, tasks,
                 health: () => ({ service: 'runweft', protocolVersion: 1, ready, version: BUILD.version,
                     hapiRevision: BUILD.hapi.revision, instanceId: state.instanceId, role: publicly ? 'hub-server' : 'local' }),
             }),
@@ -175,6 +180,7 @@ export async function serve(c: ResolvedConfig, publicly = false): Promise<void> 
                 return runnerOnline(local);
             }, 'Runner 未能在 Hub 注册。');
         }
+        tasks.start();
         ready = true;
         atomicWrite(paths.process, JSON.stringify(state, null, 2));
         console.error(`Runweft ${BUILD.version} 已就绪：${publicUrl}\n数据目录：${c.home}`);

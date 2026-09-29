@@ -9,6 +9,7 @@ import { dataPaths, loadConfig } from '../src/config';
 import type { Flavor, Inspection, RuntimeView } from '../src/resources/types';
 import type { Machine } from '../hapi/shared/src/schemas';
 import { fixture } from './helpers';
+import { TaskCoordinator } from '../src/tasks/coordinator';
 
 export const resourcePrefix = '/api/runweft/resources';
 export const resourceWrite = (value: unknown, method = 'POST'): RequestInit => ({ method, headers: { 'content-type': 'application/json' }, body: JSON.stringify(value) });
@@ -21,7 +22,9 @@ function machine(id: string, namespace = 'alpha', active = true): Machine {
         runnerState: { status: 'running', capabilities: { agentAvailabilityDetails: true } }, runnerStateVersion: 1 };
 }
 
-export async function resourceFixture(cleanups: (() => Promise<void> | void)[]) {
+export async function resourceFixture(cleanups: (() => Promise<void> | void)[], extra?: {
+    capabilities?: object; fetch: (request: Request, namespace: string) => Promise<Response | undefined> | Response | undefined;
+}) {
     const home = fixture('resources');
     cleanups.push(() => rmSync(home, { recursive: true, force: true }));
     const key = randomBytes(32);
@@ -45,7 +48,9 @@ export async function resourceFixture(cleanups: (() => Promise<void> | void)[]) 
         try { namespace = (await jwtVerify(authorization.slice(7), key)).payload.ns as string; }
         catch { return Response.json({ error: 'unauthorized' }, { status: 401 }); }
         calls.push({ path: url.pathname, method: request.method, namespace, authorization });
-        if (url.pathname === '/health') return Response.json({ capabilities: { machineInventory: inventorySupported ? 1 : undefined } });
+        if (url.pathname === '/health') return Response.json({ capabilities: { machineInventory: inventorySupported ? 1 : undefined, ...extra?.capabilities } });
+        const custom = await extra?.fetch(request, namespace);
+        if (custom) return custom;
         if (url.pathname === '/api/machines') {
             expect(url.searchParams.get('includeOffline')).toBe('true');
             return Response.json({ machines: machines.filter(machine => machine.namespace === namespace) });
@@ -70,8 +75,10 @@ export async function resourceFixture(cleanups: (() => Promise<void> | void)[]) 
     cleanups.push(() => native.stop(true));
     const config = loadConfig(home, {});
     const statePath = dataPaths(config).state;
+    const tasks = extra ? new TaskCoordinator(statePath, namespace => new HapiClient(native.url.origin, `test-${namespace}`), 20) : undefined;
+    if (tasks) cleanups.push(() => tasks.close());
     const gateway = await createGateway({ host: '127.0.0.1', port: 0, target: native.url.origin,
-        handle: createRunweftHandler({ key, hapiUrl: native.url.origin, statePath,
+        handle: createRunweftHandler({ key, hapiUrl: native.url.origin, statePath, tasks,
             health: () => ({ service: 'runweft', role: 'hub-server', ready: true, protocolVersion: 1 }) }),
     });
     cleanups.push(() => gateway.close());
@@ -82,6 +89,6 @@ export async function resourceFixture(cleanups: (() => Promise<void> | void)[]) 
         await client.request(`${resourcePrefix}/machines`, resourceWrite({ machineId }));
         return (await client.request(`${resourcePrefix}/runtimes`, resourceWrite({ machineId, flavor }))).runtime;
     };
-    return { home, config, statePath, url, alpha, beta, machines, inspections, calls, tokens, failures, hooks, register,
+    return { home, config, statePath, url, alpha, beta, machines, inspections, calls, tokens, failures, hooks, register, tasks, nativeUrl: native.url.origin,
         setInventorySupported(value: boolean) { inventorySupported = value; } };
 }

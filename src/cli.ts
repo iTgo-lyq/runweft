@@ -9,6 +9,7 @@ import { addServiceCommands } from './service-commands';
 import { addMcpCommands } from './mcp/commands';
 import { addResourceCommands } from './resources/commands';
 import { addAgentCommands } from './agents/commands';
+import { addTaskCommands } from './tasks/commands';
 
 export const VERSION = pkg.version;
 
@@ -76,6 +77,7 @@ export function createProgram() {
     addMcpCommands(program, context, output);
     addResourceCommands(program, context, output);
     addAgentCommands(program, context, output);
+    addTaskCommands(program, context, output);
     program.addHelpText('after', '\n开始使用：\n  runweft start\n  runweft open\n\n编辑配置：runweft init，然后 runweft config show。\n持久数据默认位于 ~/.runweft；使用 --home 可选择其他位置。');
     return program;
 }

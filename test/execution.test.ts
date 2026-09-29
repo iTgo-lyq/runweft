@@ -215,3 +215,45 @@ test('MCP filtering fails before dispatch to a Hub that would drop the new optio
         expect(dispatched).toBe(false);
     } finally { await server.stop(true); }
 });
+
+test('long-lived HAPI client renews expired JWT before a mutation and never replays a failed POST', async () => {
+    let auth = 0, mutations = 0;
+    const token = (exp: number) => `e30.${Buffer.from(JSON.stringify({ uid: 1, ns: 'default', exp })).toString('base64url')}.test`;
+    let latest = '';
+    const server = Bun.serve({ port: 0, hostname: '127.0.0.1', fetch: request => {
+        if (new URL(request.url).pathname === '/api/auth') {
+            auth++; latest = token(Math.floor(Date.now() / 1000) + (auth === 1 ? -1 : 3600)); return Response.json({ token: latest });
+        }
+        mutations++; expect(request.headers.get('authorization')).toBe(`Bearer ${latest}`);
+        return new Response('', { status: 502 });
+    }});
+    try {
+        const client = new HapiClient(server.url.origin, 'test');
+        await client.authenticate();
+        await expect(client.request('/operation', { method: 'POST' })).rejects.toMatchObject({ status: 502 });
+        expect(auth).toBe(2); expect(mutations).toBe(1);
+        await expect(client.request('/operation', { method: 'POST' })).rejects.toMatchObject({ status: 502 });
+        expect(auth).toBe(2); expect(mutations).toBe(2);
+    } finally { await server.stop(true); }
+});
+
+test('round cursor uses bounded forward pages and rejects structural history reset', async () => {
+    let pages = 0, reset = false;
+    const { server, client } = serverFor(request => {
+        const url = new URL(request.url);
+        if (url.pathname === '/api/sessions/session') return Response.json({ session: { id: 'session', metadata: { capabilities: { execution: 1 } } } });
+        if (url.pathname.endsWith('/queued-state')) return Response.json({ queuedLocalIds: [], invokedLocalMessages: [] });
+        if (url.searchParams.get('limit') === '1') return Response.json({ messages: [], page: { snapshotHeadAt: 10, snapshotHeadSeq: 2, epoch: 3 } });
+        pages++;
+        expect(url.searchParams.get('epoch')).toBe('3'); expect(url.searchParams.has('beforeSeq')).toBe(false);
+        const first = url.searchParams.get('afterSeq') === '2';
+        if (!first) { expect(url.searchParams.get('afterAt')).toBe('12'); expect(url.searchParams.get('untilAt')).toBe('20'); expect(url.searchParams.get('untilSeq')).toBe('5'); }
+        return Response.json({ messages: [], page: { hasMore: first, reset, nextAfterAt: 12, nextAfterSeq: 3, snapshotHeadAt: 20, snapshotHeadSeq: 5 } });
+    });
+    try {
+        const cursor = await client.historyHead('session'); expect(cursor).toEqual({ at: 10, seq: 2, epoch: 3 });
+        await client.query('session', 'input', cursor); expect(pages).toBe(2);
+        reset = true;
+        await expect(client.query('session', 'input', cursor)).rejects.toMatchObject({ code: 'execution_history_changed' });
+    } finally { await server.stop(true); }
+});

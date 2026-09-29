@@ -14,6 +14,8 @@ export type StartResult =
     | { outcome: 'recorded'; receipt: SpawnReceipt }
     | { outcome: 'unknown'; requestId: string; machineId: string; error: ReturnType<typeof errorDetails> };
 
+export type HistoryCursor = { at: number; seq: number; epoch: number };
+
 /** Native execution calls only. The delegation layer owns durable business IDs. */
 export class ExecutionClient {
     constructor(private readonly hapi: HapiClient) {}
@@ -59,7 +61,13 @@ export class ExecutionClient {
         }
     }
 
-    async query(sessionId: string, localId: string) {
+    async historyHead(sessionId: string): Promise<HistoryCursor> {
+        const { page } = await this.hapi.request(`/api/sessions/${encodeURIComponent(sessionId)}/messages?limit=1`) as MessagesResponse;
+        // HAPI accepts seq >= 1. Epoch-zero time precedes all stored messages.
+        return { at: page.snapshotHeadAt ?? 0, seq: page.snapshotHeadSeq ?? 1, epoch: page.epoch };
+    }
+
+    async query(sessionId: string, localId: string, after?: HistoryCursor) {
         const session = await this.session(sessionId);
         const base = `/api/sessions/${encodeURIComponent(session.id)}/messages`;
         const delivery = await this.hapi.request(`${base}/queued-state`, {
@@ -69,12 +77,28 @@ export class ExecutionClient {
         // facts separately from delivery acknowledgements and UI readiness.
         const messages: MessagesResponse['messages'] = [];
         let before: { at: number; seq: number } | undefined;
+        let forward = after;
+        let until: { at: number; seq: number } | undefined;
         do {
             const params = new URLSearchParams({ limit: '200' });
             if (before) { params.set('beforeAt', String(before.at)); params.set('beforeSeq', String(before.seq)); }
+            if (forward) {
+                params.set('afterAt', String(forward.at)); params.set('afterSeq', String(forward.seq)); params.set('epoch', String(forward.epoch));
+                if (until) { params.set('untilAt', String(until.at)); params.set('untilSeq', String(until.seq)); }
+            }
             const page = await this.hapi.request(`${base}?${params}`) as MessagesResponse;
+            if (after && page.page.reset) throw new RunweftError('execution_history_changed', '原生历史已被重写，无法按本轮起点确认完整结果。', '检查 HAPI 原生会话；不会重发本轮输入。');
             messages.push(...page.messages);
             if (!page.page.hasMore) break;
+            if (forward) {
+                const { nextAfterAt: at, nextAfterSeq: seq, snapshotHeadAt, snapshotHeadSeq } = page.page;
+                if (at == null || seq == null || at < forward.at || (at === forward.at && seq <= forward.seq)) {
+                    throw new RunweftError('invalid_hapi_response', 'HAPI 本轮历史分页没有继续向后移动。');
+                }
+                if (!until && snapshotHeadAt != null && snapshotHeadSeq != null) until = { at: snapshotHeadAt, seq: snapshotHeadSeq };
+                forward = { at, seq, epoch: after!.epoch };
+                continue;
+            }
             if (page.page.nextBeforeAt === null || page.page.nextBeforeSeq === null
                 || (before?.at === page.page.nextBeforeAt && before?.seq === page.page.nextBeforeSeq)) {
                 throw new RunweftError('invalid_hapi_response', 'HAPI 历史分页没有继续向前移动。');

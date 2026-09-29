@@ -7,8 +7,11 @@ import { ResourceStore } from './resources/store';
 import { ResourceService } from './resources/service';
 import { ResourceError } from './resources/types';
 import { handleResourceRequest } from './resources/api';
+import { TaskCoordinator } from './tasks/coordinator';
+import { handleTaskRequest } from './tasks/api';
+import { TaskError } from './tasks/types';
 
-export function createRunweftHandler(options: { key: Uint8Array; hapiUrl: string; statePath: string; health: () => object }) {
+export function createRunweftHandler(options: { key: Uint8Array; hapiUrl: string; statePath: string; health: () => object; tasks?: TaskCoordinator }) {
     return async (request: IncomingMessage, response: ServerResponse): Promise<boolean> => {
         const path = new URL(request.url ?? '/', 'http://localhost').pathname;
         if (path === '/api/runweft/health' && request.method === 'GET') {
@@ -26,6 +29,15 @@ export function createRunweftHandler(options: { key: Uint8Array; hapiUrl: string
         }
         if (path === '/api/runweft/identity' && request.method === 'GET') {
             jsonResponse(response, 200, { userId: identity.uid, namespace: identity.ns }); return true;
+        }
+        if (path.startsWith('/api/runweft/tasks/')) {
+            try {
+                if (!options.tasks) throw new TaskError(503, 'task_service_unavailable', '当前服务没有启用委派协调器。', '更新配套 Runweft 并重新启动服务。');
+                await handleTaskRequest(request, response, identity.ns, options.tasks);
+            } catch (error) {
+                if (!response.destroyed) jsonResponse(response, error instanceof TaskError || error instanceof ResourceError || error instanceof HapiRequestError ? error.status : 500, { error: errorDetails(error) });
+            }
+            return true;
         }
         if (path.startsWith('/api/runweft/resources/')) {
             const abort = new AbortController();

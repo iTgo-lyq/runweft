@@ -128,6 +128,7 @@ export async function fetchJson(url: string, options: RequestInit = {}): Promise
 
 export class HapiClient {
     private jwt?: string;
+    private expiresAt = 0;
     constructor(readonly url: string, private readonly token: string) {}
     async authenticate(signal?: AbortSignal) {
         const result = await fetchJson(`${this.url}/api/auth`, {
@@ -137,10 +138,12 @@ export class HapiClient {
         this.jwt = result.token;
         // The token came from the authenticated HAPI exchange; the server remains authoritative.
         const claims = decodeJwt(result.token);
+        this.expiresAt = typeof claims.exp === 'number' ? claims.exp * 1000 : Infinity;
         return { userId: claims.uid, namespace: claims.ns };
     }
     async request(path: string, options: RequestInit = {}) {
-        if (!this.jwt) await this.authenticate(options.signal ?? undefined);
+        // Refresh before sending, never replay a business POST after an uncertain response.
+        if (!this.jwt || Date.now() >= this.expiresAt - 30_000) await this.authenticate(options.signal ?? undefined);
         return fetchJson(`${this.url}${path}`, { ...options, headers: { ...Object.fromEntries(new Headers(options.headers)), authorization: `Bearer ${this.jwt}` } });
     }
 }

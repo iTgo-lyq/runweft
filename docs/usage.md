@@ -126,7 +126,7 @@ model: null
 reasoningEffort: null
 ```
 
-`description` 供主 agent 发现和选择，`instructions` 由后续委派作为每轮任务指令传入；二者不自动互相混用。模型和推理参数留空继承执行工具的默认值。设置非空 `model` 或 `reasoningEffort` 时必须填写 `flavor: codex` 或 `flavor: claude`；指定 flavor 的定义只能绑定同类型 runtime。Runweft 不维护模型清单，`check` 验证资源与参数映射，不证明模型登录或模型/推理参数组合已执行成功。
+`description` 供主 agent 发现和选择，`instructions` 由委派作为任务指令传入；二者不自动互相混用。模型和推理参数留空继承执行工具的默认值。设置非空 `model` 或 `reasoningEffort` 时必须填写 `flavor: codex` 或 `flavor: claude`；指定 flavor 的定义只能绑定同类型 runtime。Runweft 不维护模型清单，`check` 验证资源与参数映射，不证明模型登录或模型/推理参数组合已执行成功。
 
 项目同 id 定义整体覆盖全局项，包括空值；`show` 显示两处来源。用 `show/check/bind/unbind <id> --scope global` 可维护被遮蔽的全局项。坏的项目定义不会退回全局；`list` 和 `validate` 列出有效项及错误，有错误时非零退出；无关坏文件不阻止检查指定 id。
 
@@ -144,7 +144,23 @@ runweft --json agent check reviewer
 
 已知离线或取消登记的 runtime 可以保存绑定，命令会提示当前不可选；`check` 和 `list --check` 在目标不可选时返回非零，不自动切换目标。`unbind` 只移除当前身份的个人选择，随后使用 YAML 引用；YAML 也为空则保持未绑定。离线 `validate` 允许 runtime 为空。
 
-定义解析提供带版本、连接及 namespace 的内容快照，供后续委派消费；它不创建会话。执行工具继续加载执行账户已有的原生全局配置，并从主 cwd 或准备完成的 worktree cwd 加载工程配置。远端接收解析后的定义和项目基线，不会自动同步发起机器的全局 skills、其他 MCP 或凭据。受控执行只禁用 Runweft MCP，其他 MCP 和原生子代理能力保留。
+定义解析提供带版本、连接及 namespace 的内容快照，供委派消费；单独解析不创建会话。执行工具继续加载执行账户已有的原生全局配置，并从主 cwd 或准备完成的 worktree cwd 加载工程配置。远端接收解析后的定义和项目基线，不会自动同步发起机器的全局 skills、其他 MCP 或凭据。受控执行只禁用 Runweft MCP，其他 MCP 和原生子代理能力保留。
+
+## 本机共享任务
+
+当前 CLI 提供单轮派生、查看和等待；多轮续接与 MCP 协作工具仍在当前 Change 中推进。进入实际工作目录，先用 `agent check` 确认定义绑定本机 runtime：
+
+```sh
+runweft agent check reviewer
+runweft task spawn reviewer --message "检查当前改动并报告问题"
+runweft task wait <任务ID>
+runweft task show <任务ID>
+runweft task list
+```
+
+可用 `--message-file <文件>` 读取较长任务，`-` 表示 stdin。派生先在 stderr 输出 request ID，再返回接受结果；若响应丢失，保持任务参数并传 `--request-id <原ID>` 重试，或用 `task list` 查已接受记录。中心持续观察并收尾，CLI 退出或等待超时不取消任务。只有原生结果可靠、执行确认停止及共享收尾完成后，才显示完成。
+
+目录可以没有 Git；共享模式在同一 cwd 执行，不自动提交或清理。Hub 模式也必须选择发起机的 runtime。`task list` 默认当前发起机和目录（包含 MCP 来源），`--all` 查看当前 namespace；长报告用 `task show --offset <字符偏移> --limit <字符数>` 分页。遇到原生权限请求，当前在 HAPI 会话中处理，不改默认权限。
 
 ## 配置
 
@@ -231,7 +247,7 @@ Hub 客户端 `stop` 只停止该机器在当前连接上的 Runner，不关闭�
 | `config.yaml` | 可编辑配置；升级保留 |
 | `agents/` | 可编辑全局 Agent YAML；项目定义留在项目 `.runweft/agents/` |
 | `server/hapi/` | 托管 Hub 的原有数据库、令牌、JWT 密钥及状态；备份保留 |
-| `server/runweft/state.sqlite` | 中心的全局机器/runtime 登记、稳定 ID 和最后一次工具观察；不保存模型凭据或原生会话 |
+| `server/runweft/state.sqlite` | 中心机器/runtime 登记、任务/轮次/请求关联及报告；原生完整历史仍归 HAPI，不保存模型凭据 |
 | `connections/<连接>/hapi/` | 本机 Runner 的连接配置、机器身份和原生日志；各连接分开 |
 | `client.sqlite` | 本机工作目录与 Agent 个人 runtime 绑定；Claude MCP hook 的逐调用身份用后删除，未消费记录保留 24 小时 |
 | `logs/` | 托管服务日志；当前由部署方按磁盘需要归档或轮转 |
@@ -280,6 +296,9 @@ bun run test:install
 ```sh
 bun run test:mcp
 bun run test:execution
+bun run test:tasks
 ```
 
 `test:mcp` 复制原生配置及认证到 `.dev-smoke/` 专用目录，用编译产物验证 local/hub 两种连接下的真实全局安装、身份和 HAPI 子执行启动/续接的工具禁用，并记录证据和进程清理结果。默认 Claude 命令优先使用 `iclaude`，可通过 `RUNWEFT_SMOKE_CLAUDE` 指定。`test:execution` 使用当前原生模型配置和专用服务/工作目录，验证执行事实、审批、中断、续接与结果不确定时的查询。二者会实际调用模型，不属于常规单元测试。
+
+`test:tasks` 使用专用 Codex 配置副本、非 Git 工作目录和编译 CLI，验证任务接受/去重、原生完成、自动关闭进程、等待游标及服务重启后读取。它会实际调用模型，证据保存在 `.dev-smoke/tasks-*`，结束后关闭自建服务。

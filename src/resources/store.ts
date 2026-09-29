@@ -1,8 +1,6 @@
 import { Database } from 'bun:sqlite';
 import { randomUUID } from 'node:crypto';
-import { chmodSync } from 'node:fs';
-import { dirname } from 'node:path';
-import { ensureDirectory } from '../config';
+import { openState } from '../state';
 import { ResourceError, InspectionSchema, type Flavor, type Inspection, type MachineRegistration, type RuntimeRegistration } from './types';
 
 type MachineRow = Omit<MachineRegistration, 'registered'> & { registered: number };
@@ -11,33 +9,7 @@ type RuntimeRow = Omit<RuntimeRegistration, 'registered' | 'inspection'> & { reg
 /** Authoritative server database. Native machines, heartbeats and sessions stay in HAPI. */
 export class ResourceStore {
     private readonly db: Database;
-    constructor(path: string) {
-        ensureDirectory(dirname(path));
-        this.db = new Database(path, { create: true });
-        try {
-            chmodSync(path, 0o600);
-            this.db.exec('PRAGMA busy_timeout=5000; PRAGMA journal_mode=WAL;');
-            this.db.transaction(() => {
-                const { user_version: version } = this.db.query('PRAGMA user_version').get() as { user_version: number };
-                if (version > 1) throw new ResourceError(503, 'state_version_newer', '业务数据版本高于当前程序。', '使用创建该数据的新版 Runweft；不要删除数据库。');
-                if (version === 1) return;
-                this.db.exec(`
-                    CREATE TABLE machine_registrations (
-                        namespace TEXT NOT NULL, machineId TEXT NOT NULL, registered INTEGER NOT NULL,
-                        createdAt INTEGER NOT NULL, updatedAt INTEGER NOT NULL, PRIMARY KEY(namespace, machineId)
-                    );
-                    CREATE TABLE runtime_registrations (
-                        id TEXT PRIMARY KEY, namespace TEXT NOT NULL, machineId TEXT NOT NULL,
-                        flavor TEXT NOT NULL CHECK(flavor IN ('codex', 'claude')), name TEXT NOT NULL,
-                        registered INTEGER NOT NULL, createdAt INTEGER NOT NULL, updatedAt INTEGER NOT NULL,
-                        inspection TEXT, inspectedAt INTEGER,
-                        UNIQUE(namespace, machineId, flavor)
-                    );
-                    PRAGMA user_version=1;
-                `);
-            }).immediate();
-        } catch (error) { this.db.close(); throw error; }
-    }
+    constructor(path: string) { this.db = openState(path); }
     close() { this.db.close(); }
 
     machine(namespace: string, machineId: string): MachineRegistration | null {
