@@ -6,6 +6,7 @@ import { configPath, dataPaths, initializeConfig, loadConfig, setConfig, type Re
 import { errorDetails } from './errors';
 import { bindWorkspace, listWorkspaces } from './workspaces';
 import { addServiceCommands } from './service-commands';
+import { addMcpCommands } from './mcp/commands';
 
 export const VERSION = pkg.version;
 
@@ -68,6 +69,7 @@ export function createProgram() {
         output({ workspaces: items }, items.length ? items.map(w => `${w.id}  ${w.path}`).join('\n') : '尚未绑定工作区。进入项目目录后运行 runweft workspace bind。');
     });
     addServiceCommands(program, context, output);
+    addMcpCommands(program, context);
     program.addHelpText('after', '\n开始使用：\n  runweft start\n  runweft open\n\n编辑配置：runweft init，然后 runweft config show。\n持久数据默认位于 ~/.runweft；使用 --home 可选择其他位置。');
     return program;
 }

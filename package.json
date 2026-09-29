@@ -21,6 +21,7 @@
     "package": "bun scripts/package.ts"
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "1.25.1",
     "commander": "15.0.0",
     "http-proxy": "1.18.1",
     "jose": "6.2.12",

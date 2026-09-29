@@ -3,6 +3,8 @@
 > 调查日期：2026-09-29
 > 证据区分官方资料、源码、历史记录与以下本机协议实验；后续实验已执行真实模型任务，未修改用户全局配置。
 
+本文按调查时序保留当时结论；当前实现与验收状态以 [Execution](execution.md) 和 [Plan](plan.md) 为准。
+
 ## Claude Code
 
 [官方环境变量](https://code.claude.com/docs/en/env-vars)说明 `CLAUDE_CODE_SESSION_ID` 提供给 stdio MCP 子进程；显式 `--resume <id>` 使用恢复的 ID。MCP 进程保留启动时的值，`--continue`、无 ID 的 resume 可能先给初始 ID，不能据此断言后续会话身份永远不变。
@@ -34,7 +36,7 @@
 
 ## 当前 HAPI 可复用入口
 
-本节是基于 `86c88df93baf5d1f738dd4b202078bdf6dec376e` 的初次调查；当前固定版本为 `cb2810dc09b0eeb831f4ed81930a506397992967`，后续核对见下文：
+本节是基于 `86c88df93baf5d1f738dd4b202078bdf6dec376e` 的初次调查；方案调查时固定版本为 `cb2810dc09b0eeb831f4ed81930a506397992967`，T1 已另行提交工具禁用并更新固定 revision，后续调查见下文：
 
 | 入口 | 已见行为 | 本项目处理 |
 | --- | --- | --- |

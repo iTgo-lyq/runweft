@@ -109,7 +109,10 @@ export class HapiRequestError extends RunweftError {
 export async function fetchJson(url: string, options: RequestInit = {}): Promise<any> {
     let response: Response;
     try { response = await fetch(url, { ...options, signal: options.signal ?? AbortSignal.timeout(10_000) }); }
-    catch { throw new RunweftError('connection_failed', '无法连接服务。', '检查目标地址，或运行 runweft status / runweft doctor。'); }
+    catch {
+        options.signal?.throwIfAborted();
+        throw new RunweftError('connection_failed', '无法连接服务。', '检查目标地址，或运行 runweft status / runweft doctor。');
+    }
     if (!response.ok) {
         const body = await response.json().catch(() => null) as { code?: unknown; error?: unknown; message?: unknown } | null;
         const code = typeof body?.code === 'string' ? body.code
@@ -124,9 +127,9 @@ export async function fetchJson(url: string, options: RequestInit = {}): Promise
 export class HapiClient {
     private jwt?: string;
     constructor(readonly url: string, private readonly token: string) {}
-    async authenticate() {
+    async authenticate(signal?: AbortSignal) {
         const result = await fetchJson(`${this.url}/api/auth`, {
-            method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ accessToken: this.token }),
+            method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ accessToken: this.token }), signal,
         });
         if (typeof result.token !== 'string') throw new RunweftError('invalid_hapi_response', 'HAPI 未返回认证凭据。');
         this.jwt = result.token;
@@ -135,7 +138,7 @@ export class HapiClient {
         return { userId: claims.uid, namespace: claims.ns };
     }
     async request(path: string, options: RequestInit = {}) {
-        if (!this.jwt) await this.authenticate();
+        if (!this.jwt) await this.authenticate(options.signal ?? undefined);
         return fetchJson(`${this.url}${path}`, { ...options, headers: { ...Object.fromEntries(new Headers(options.headers)), authorization: `Bearer ${this.jwt}` } });
     }
 }

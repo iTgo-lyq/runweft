@@ -25,3 +25,13 @@
 - 修正：首次全量测试暴露旧 launcher mock 缺少 metadata getter 和 OpenCode 精确位置参数断言缺少新增可选位，均补齐。CLI 首次运行另有 worker 意外退出，限制 4 个 worker 的完整重跑通过。首轮真实 Codex 实验等待只读 MCP 审批而超时；按原生请求批准专用探针后完整重跑通过，未放宽默认权限。Bun `--tsconfig-override` 源码入口退出时打印其 directory mismatch 诊断；最终进程退出 0，未据此忽略执行状态或清理验证。
 - 提交：HAPI 独立 Commit `feat: preserve per-session MCP tool filtering across spawn and resume`，随后固定 Runweft revision。
 - Commit：`host-mcp-adapter T1: preserve MCP filtering across managed execution`
+
+## T2 真实宿主身份与 MCP 调用承载
+
+- 结果：使用固定 MCP SDK 1.25.1 提供 stdio 入口及静态工具注册，产品列表仅有 `runweft_status` 诊断。Codex 逐调用核对当前 threadId/callId 与可用根身份；Claude hook 仅保存 toolUseId、session、cwd、可用 agent ID 和时间，以精确调用消费，保留 24 小时覆盖审批等待。initialize/tools/list 不写数据或访问服务，有效调用才绑定实际工作区；测试工具不进产品列表。
+- 取消：合并请求与连接 AbortSignal，处理 stdio EOF/进程终止；诊断有明确超时，HTTP 认证阶段也接收取消。等待取消、连接关闭均不触发原生 interrupt/archive，不重放工具调用，不声明后台唤醒。
+- 真实 Codex：0.156.1，同一个 app-server 中并发启动两个相同 cwd 的线程及一个不同 cwd 的线程，各完成实际诊断调用并核对返回 identity/workspace。证据 `.dev-smoke/host-mcp-t2/codex-9Cp4vy/evidence.json`，成功、无进程残留；源码实验仍出现已记录的 Bun tsconfig-override 退出诊断。
+- 真实 Claude：iclaude/Claude Code 2.1.283，同 cwd 并发、5 秒真实审批延迟、退出后显式 resume 均核对 toolUseId 和原生 session。证据 `.dev-smoke/host-mcp-t2/claude-sym1qoka/evidence.json`。交互式同进程 `/clear` 前后各实际调用一次，返回两个不同且正确的 session ID，证据 `.dev-smoke/host-mcp-t2/clear-5tqp7e3q/evidence.json`。两组均无残留 MCP 进程。
+- 验证修正：交互式首次探测停在专用空目录的信任界面，未进入模型调用；终端脚本误读 ANSI 增量画面及选择，未据此判断产品失败。关闭这些未启动任务的实验后，在专用 Claude 配置副本中仅信任该实验目录，完成上述真实 clear 验证。没有用模拟 session 切换替代该证据。
+- 回归：`bun run typecheck`、`bun test ./test` 全部通过（32 项、143 断言），覆盖缺失/冲突身份、fork 根身份差异、hook 一次消费/并发/过期、静态发现无副作用、取消/断开/超时、认证中止以及真实 stdio CLI。`bun run build` 成功编译 MCP 入口；此处不声明配套 HAPI 编译验收，T4 重新构建并验证完整组合。
+- Commit：`host-mcp-adapter T2: bind MCP calls to native host identities`

@@ -111,7 +111,7 @@ Hub 客户端 `stop` 只停止该机器在当前连接上的 Runner，不关闭�
 | `server/hapi/` | 托管 Hub 的原有数据库、令牌、JWT 密钥及状态；备份保留 |
 | `server/runweft/` | 上层服务数据位置；当前不预建任务表 |
 | `connections/<连接>/hapi/` | 本机 Runner 的连接配置、机器身份和原生日志；各连接分开 |
-| `client.sqlite` | 本机真实工作目录绑定；重启和包升级保留 |
+| `client.sqlite` | 本机真实工作目录绑定；Claude MCP hook 的逐调用身份用后删除，未消费记录保留 24 小时 |
 | `logs/` | 托管服务日志；当前由部署方按磁盘需要归档或轮转 |
 | `cache/`、`tmp/` | 可再生缓存与临时文件；服务停止后可清理，不保存唯一成果 |
 | `server/process.json` | 当前托管服务定位信息；正常停止会移除 |
