@@ -1,7 +1,7 @@
 # 远端代码回收实施计划
 
 > 来源：[Requirement](requirement.md)、[Technical](technical.md)、[结果契约](result-contract.md)
-> 状态：待执行
+> 状态：执行中
 > 执行模式：主 agent 逐任务本地提交
 > 评审：当前工作区 iclaude 唯一一次评审已完成，主 agent 已复核并简化留存及补齐流程；见 [Execution](execution.md)。用户已持续授权自主落实、执行与本地验收，不重复申请门禁。
 
@@ -11,7 +11,7 @@
 
 ### T1 HAPI 已封存成果的验证与导出
 
-- 状态：待开始
+- 状态：已完成
 - 依赖：C7/C9 公共 Git、仓库与文件能力已验收。
 - 交付：repositoryResults capability 与 export-result/inspect/release；读取受管环境的确定成果，从 checkout 根导出完整 Git/模块/LFS，回执绑定封存 facts。提取并复用现有独立快照验证器，不修改原生 adapter 或 checkpoint。
 - 验收：普通/无改动/失败执行的部分成果、新增二进制 LFS、源路径与 URL 不可用、原任务子目录删除、两轮固定成果；缺 Git/LFS/模块或身份/ref/祖先关系不符明确失败。候选固定前保护后续写入，丢回执/重启沿原 ID，绝不创建第二个提交。

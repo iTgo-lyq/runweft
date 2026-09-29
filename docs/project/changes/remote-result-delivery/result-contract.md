@@ -1,6 +1,6 @@
 # 代码成果与取回契约
 
-> 来源：[Technical](technical.md)；状态：待实现，字段在各切片以协议类型和验收结果落实。
+> 来源：[Technical](technical.md)；状态：T1 已实现机器成果导出；其余字段在各切片以协议类型和验收结果落实。
 
 ## 身份与不变事实
 
@@ -12,7 +12,7 @@
 
 | 操作 | 输入与返回 |
 | --- | --- |
-| export-result | operationId、environmentId、roundId；返回匹配的封存 facts、已独立验证的完整 snapshot 和自有候选目录 |
+| export-result | operationId、environmentId、roundId；返回 `sealed: { source, result, verifiedAt }`、已独立验证的完整 snapshot 和自有候选 directory；source 是准确 checkout 根/resultHead 的机器来源，result 保留原 base/start/head |
 | fetch-result | operationId、原仓库目标身份/实际 cwd、environmentId/roundId、固定 Git facts、基线与成果 snapshot/本地验证材料；返回已导入 ref/head、各仓库对象/LFS 恢复事实 |
 | inspect/release | 沿 repositories 原操作身份查询或释放自有候选/下载验证中间副本；不以 release 自动删除用户仓库对象 |
 | workspaces.remove 可选 ref 释放 | 精确 roundId/resultHead 名单，持久核对本环境成果后才能释放自有 refs；默认省略保持原行为 |

@@ -5,7 +5,7 @@
   "type": "module",
   "packageManager": "bun@1.4.2",
   "hapi": {
-    "revision": "0d7618c3fe7d20ac10be2954e57a00d59431bba9",
+    "revision": "0cfc6452b97631c5ac34eeed61c93cd785d40ac1",
     "version": "0.30.7",
     "protocolVersion": 1
   },
@@ -38,6 +38,7 @@
     "test:task-retention": "bun scripts/smoke-task-retention.ts",
     "test:artifact-mcp": "bun scripts/smoke-artifact-mcp.ts",
     "test:repository-export": "bun scripts/smoke-repository-export.ts",
+    "test:result-export": "bun scripts/smoke-result-export.ts",
     "test:repository-import": "bun scripts/smoke-repository-import.ts",
     "test:workspace-preparation": "bun scripts/smoke-workspace-preparation.ts",
     "test:remote-native": "bun scripts/smoke-remote-native.ts"
