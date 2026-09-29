@@ -8,3 +8,10 @@
 - 保留：validate 作为离线检查入口；description 允许空值，由 list 明示“未填写职责说明”，不因缺少展示说明阻断手动选择。schemaVersion 默认 1。不引入模型清单或统一配置平台。
 - 下游：委派生命周期补充两种 flavor 非空模型/推理参数的真实启动验收；本 Change 只验证原生映射且不启动任务。
 - 确认：按用户自主推进授权采用修订后的 Requirement/Technical/Plan，三个任务依次独立提交。
+
+## T1 可解释的全局与项目定义
+
+- 结果：全局/项目 YAML、完整覆盖、来源与被遮蔽项、稳定内容版本、显式 cwd/Git worktree/非 Git 定位和 init/list/show/validate 已实现。坏文件逐项报告，指定 id 不受无关错误影响；符号链接只读，创建不覆盖。
+- 验证：`bun run typecheck` 通过；`bun test ./test/agents.test.ts ./test/cli.test.ts` 6 项、60 个断言通过，包含真实 Git worktree/clone、配置错误和 CLI 子进程；Change 结构校验通过。读取未创建数据库或服务目录。
+- 边界：个人绑定和在线目标检查按计划由 T2 加入；当前不创建任务。
+- Commit：`agent-definition T1: add scoped YAML definitions and offline agent commands`
