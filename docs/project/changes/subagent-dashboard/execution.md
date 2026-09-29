@@ -22,3 +22,12 @@
 - 验证：`bun test ./test/tasks-overview.test.ts` 8 pass / 0 fail、117 assertions；真实 SQLite/HTTP 覆盖 namespace、筛选分页、unknown/未执行/停止、代码交付/取回/释放、附件失败、受限响应、超时、PRAGMA data_version 无变化及无原生执行调用。1000 任务返回 100 条用时 72.0ms；这是当前开发机测量，不作为吞吐承诺。
 - 验证：`bun test ./test/tasks.test.ts ./test/task-results.test.ts ./test/task-workspaces.test.ts ./test/task-outputs.test.ts ./test/resources.test.ts` 53 pass / 0 fail；`bun run typecheck`、`git diff --check` 通过。日志 `.dev-smoke/c11-t1-{overview,regression,types}.log`。页面/浏览器/安装在后续任务验证。
 - Commit：`subagent-dashboard T1: add authenticated read-only task overview`
+
+## T2 内置看板与统一打开入口
+
+- 结果：CLI 内嵌同源 `/runweft/` 页面、样式及脚本，新增 dashboard:1 能力。`open` 默认打开看板，缺少能力明确提示更新或 `--hapi`；原生入口及详情链接固定当前 Hub，CLI 输出不携带 token。Bun 内置转译首次提供脚本后缓存，不需要源码目录或外部前端依赖。
+- 结果：HAPI 登录复用同一 access-token key，URL token 立即移除，JWT 只保留于内存；过期单次重新认证并只重试读取。列表按主工作区/会话/状态筛选分页，5 秒可见页刷新，过期请求不覆盖新结果。展开查看阶段/停止事实/摘要/成果下一步，未知及刷新失败保留真实含义。所有用户文本经 textContent；同源 CSP、no-store、no-referrer 限制资源与凭据传播。
+- 验证：`bun test ./test/dashboard.test.ts` 7 pass / 0 fail，覆盖 HTTP 资源及精确路径、认证刷新上限、存储及 URL、请求竞争、停止与成果标签、实际 CLI open 参数与无凭据输出；HTTP 返回的脚本实际加载成功。`bun run typecheck`、`bun run build`、`git diff --check` 通过。
+- 验证：`bun test ./test` 173 pass / 0 fail、3693 assertions；`bun run test:service` 成功，`.dev-smoke/service-Vp9Fgf/evidence.json` success=true，独立二进制提供页面/脚本/样式、原生认证及总览，既有 HAPI Web/SSE/WebSocket、local/Hub/无 Runner 服务生命周期通过。日志 `.dev-smoke/c11-t2-{dashboard,all,types-final,build,service}.log`。
+- 边界：上述不是实际浏览器布局/交互验收；T3 继续验证真实历史记录、浏览器与候选安装，尚未同步 Specs/归档。
+- Commit：`subagent-dashboard T2: embed dashboard and unify browser entry`

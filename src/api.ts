@@ -13,9 +13,11 @@ import { TaskError } from './tasks/types';
 import { WorkspacePreparations } from './remote/service';
 import { PreparationError } from './remote/types';
 import { handlePreparationRequest } from './remote/api';
+import { dashboard } from './dashboard/server';
 
 export function createRunweftHandler(options: { key: Uint8Array; hapiUrl: string; statePath: string; health: () => object; tasks?: TaskCoordinator; preparations?: WorkspacePreparations }) {
     return async (request: IncomingMessage, response: ServerResponse): Promise<boolean> => {
+        if (dashboard(request, response)) return true;
         const path = new URL(request.url ?? '/', 'http://localhost').pathname;
         if (path === '/api/runweft/health' && request.method === 'GET') {
             jsonResponse(response, 200, options.health()); return true;

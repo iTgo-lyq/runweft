@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>协作总览 · Runweft</title>
+  <link rel="stylesheet" href="/runweft/style.css">
+  <script type="module" src="/runweft/app.js"></script>
+</head>
+<body>
+  <a class="skip" href="#tasks">跳到任务列表</a>
+  <header class="masthead">
+    <a class="brand" href="/runweft/" aria-label="Runweft 协作总览">Runweft<span class="brand-mark" aria-hidden="true">↗</span></a>
+    <nav aria-label="HAPI"><a id="hapi-link" href="/">会话</a><a id="machines-link" href="/settings/machines">机器</a></nav>
+  </header>
+  <main>
+    <div class="heading">
+      <div><p class="eyebrow">SUBAGENTS</p><h1>协作总览</h1><p class="intro">查看各工作区的执行进度与成果交付。</p></div>
+      <div class="connection"><span id="connection">尚未连接</span><span id="updated">等待首次刷新</span></div>
+    </div>
+    <section id="login" class="login" aria-labelledby="login-title" hidden>
+      <div><h2 id="login-title">连接当前 Hub</h2><p>使用同一 HAPI 访问令牌。可在终端运行 <code>runweft auth token</code> 查看。</p></div>
+      <form id="login-form"><label for="access-token">访问令牌</label><div class="login-fields"><input id="access-token" type="password" required autocomplete="off" spellcheck="false"><button type="submit">连接</button></div></form>
+    </section>
+    <p id="notice" class="notice" role="status" hidden></p>
+    <section aria-label="任务筛选">
+      <form id="filters" class="filters">
+        <label>主工作区<input id="workspace" type="search" placeholder="搜索工作区路径" maxlength="4096"></label>
+        <label>主会话<input id="parent" type="search" placeholder="会话 ID 或发起机器" maxlength="512"></label>
+        <label>执行状态<select id="status"><option value="">全部状态</option><option value="running">进行中</option><option value="needs_attention">待处理</option><option value="unknown">未知</option><option value="completed">已完成</option><option value="failed">失败</option><option value="interrupted">已中断</option></select></label>
+        <button type="submit" class="secondary">筛选</button><button id="refresh" type="button" class="secondary">刷新</button>
+      </form>
+    </section>
+    <section id="tasks" aria-labelledby="tasks-title" tabindex="-1">
+      <div class="list-heading"><h2 id="tasks-title">全部任务 <span id="count">—</span></h2><span class="muted">每 5 秒刷新 · 待处理优先</span></div>
+      <div id="list" aria-live="polite" aria-relevant="additions text"><div class="empty"><h3>等待连接</h3><p>连接后可查看当前访问范围内的协作记录。</p></div></div>
+      <div class="pagination"><span id="page-info">第 1 页</span><div><button id="previous" type="button" class="secondary" disabled>上一页</button><button id="next" type="button" class="secondary" disabled>下一页</button></div></div>
+    </section>
+    <footer>此处只查看状态。打开会话处理审批和对话；成果合入由主 agent 决定。</footer>
+  </main>
+  <noscript>协作总览需要浏览器启用 JavaScript。</noscript>
+</body>
+</html>

@@ -174,7 +174,7 @@ export async function serve(c: ResolvedConfig, publicly = false): Promise<void> 
         gateway = await createGateway({ host, port: c.config.server.port, target: privateUrl,
             handle: createRunweftHandler({ key, hapiUrl: privateUrl, statePath: paths.state, tasks, preparations,
                 health: () => ({ service: 'runweft', protocolVersion: 1, ready, version: BUILD.version,
-                    hapiRevision: BUILD.hapi.revision, instanceId: state.instanceId, role: publicly ? 'hub-server' : 'local' }),
+                    hapiRevision: BUILD.hapi.revision, instanceId: state.instanceId, role: publicly ? 'hub-server' : 'local', capabilities: { dashboard: 1 } }),
             }),
         });
         // Hosting a Hub is independent of the CLI's selected remote connection.

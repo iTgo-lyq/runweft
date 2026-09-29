@@ -4,9 +4,20 @@ import { join } from 'node:path';
 import { atomicWrite, dataPaths, targetUrl, type ResolvedConfig } from './config';
 import { accessToken, HapiClient, hapiClient, readSettings, runHapi } from './hapi';
 import { RunweftError } from './errors';
-import { doctor, serve, serviceState, start, status, stop } from './services';
+import { doctor, requireRunweft, serve, serviceState, start, status, stop } from './services';
 
 type Output = (value: unknown, human: string) => void;
+
+export async function browserAddress(target: string, token: string, native = false) {
+    if (!native && (await requireRunweft(target)).capabilities?.dashboard !== 1) {
+        throw new RunweftError('dashboard_unavailable', '当前 Hub 尚未提供 Runweft 看板。', '更新 Hub 端并运行 runweft restart；也可使用 runweft open --hapi 打开原有界面。');
+    }
+    await new HapiClient(target, token).authenticate();
+    const url = new URL(native ? '/' : '/runweft/', target);
+    if (native) url.searchParams.set('hub', new URL(target).origin);
+    const publicUrl = url.toString(); url.searchParams.set('token', token);
+    return { url: url.toString(), publicUrl };
+}
 
 function summary(value: Awaited<ReturnType<typeof status>>) {
     return `${value.role} · ${value.running ? '已运行' : '未运行'} · ${value.url}\n`
@@ -66,19 +77,18 @@ export function addServiceCommands(program: Command, context: () => ResolvedConf
         if (!process.stdout.isTTY || program.opts().json) throw new RunweftError('terminal_required', '访问令牌只在交互终端中显示，不写入 JSON 或管道。');
         console.log(accessToken(context()));
     });
-    program.command('open').description('使用当前 HAPI 登录打开浏览器界面').action(async () => {
+    program.command('open').description('使用当前登录打开协作看板').option('--hapi', '直接打开 HAPI 会话界面').action(async options => {
         const c = context();
         if (c.config.mode === 'local') await start(c);
-        await hapiClient(c).authenticate();
-        const url = new URL(targetUrl(c.config)); url.searchParams.set('token', accessToken(c));
+        const address = await browserAddress(targetUrl(c.config), accessToken(c), Boolean(options.hapi));
         const command = process.platform === 'darwin' ? 'open' : 'xdg-open';
         const code = await new Promise<number>((resolve, reject) => {
-            const child = spawn(command, [url.toString()], { stdio: 'ignore' });
+            const child = spawn(command, [address.url], { stdio: 'ignore' });
             child.once('error', () => reject(new RunweftError('browser_unavailable', '无法打开本机浏览器。', '在本机终端运行 runweft auth token，再手动登录服务地址。')));
             child.once('exit', code => resolve(code ?? 1));
         });
         if (code) throw new RunweftError('browser_unavailable', '浏览器未能打开。', '可在本机终端运行 runweft auth token，再手动登录服务地址。');
-        output({ opened: true, url: targetUrl(c.config) }, `已打开 ${targetUrl(c.config)}`);
+        output({ opened: true, url: address.publicUrl }, `已打开 ${address.publicUrl}`);
     });
     program.command('hapi [args...]').description('通过 Runweft 使用原有 HAPI 命令')
         .helpOption(false).allowUnknownOption().passThroughOptions().action(async (args: string[]) => {
