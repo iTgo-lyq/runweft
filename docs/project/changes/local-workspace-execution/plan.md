@@ -2,7 +2,7 @@
 
 > 来源：[Requirement](requirement.md)
 > 技术方案：[Technical](technical.md)、[工作区契约](workspace-contract.md)
-> 状态：执行中
+> 状态：已完成
 > 执行模式：逐任务提交
 > 评审：当前工作区 iclaude 一次已完成；会话与主审采纳见 [Execution](execution.md)，不重复评审。
 
@@ -54,7 +54,7 @@ CLI/MCP 可从主仓库准确 commit 派生本地独立任务，准备完成后�
 
 ### T5 候选安装、使用说明与整体验收
 
-- 状态：待开始
+- 状态：已完成
 - 交付：清晰的模式/基线/收尾修复/结果合入/环境清理说明，paths/doctor 实际位置和可取得的保留数量；说明 linked worktree 对源 Git 目录的依赖、备份/迁移限制、留存 refs/分支及卸载保留数据。候选包包含配套 HAPI，完整需求验收映射。
 - 依赖：T4。
 - 验收：安装产物的 CLI/MCP/服务和数据留存通过，当前模块无需手工开发命令才能运行；真实证据与 Git fixture/跨平台构建范围分别记录。

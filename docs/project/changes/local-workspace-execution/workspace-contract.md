@@ -1,6 +1,6 @@
 # 工作区与 Git 成果契约
 
-本文件补充 [Technical](technical.md)，定义本地/远端共用的机器侧 Git 操作；以下是待实现契约。
+本文件补充 [Technical](technical.md)，定义本 Change 采用的机器侧 Git 操作，后续远端能力继续复用。
 
 ## 身份与存储
 
@@ -16,7 +16,7 @@ environmentId 为一个 delegation 的 UUID，preparationId 为一次轮次准�
 | --- | --- |
 | resolve | source cwd、baseRef；只读返回准确 SHA、仓库根/commonDir、对象格式、仓库内相对 cwd、主目录脏状态摘要 |
 | prepare | 固定环境描述、preparationId、roundId、expectedHead、可选已解析输入清单；创建/复核环境，返回目录、准备版本和 startHead |
-| inspect | environmentId 与可选 preparationId/roundId；返回已保存回执及实际现场/归属，不创建目录 |
+| inspect | environmentId；返回环境内的准备/成果/操作回执，并对中断操作核对现场，不创建目录 |
 | finalize | environmentId、preparationId、roundId、停止依据；确认归属和停止后 checkpoint/固定引用，返回 base/start/resultHead、ref、checkpoint 与部分结果标记 |
 | remove | environmentId、预期最终成果、显式 discardIgnored；只移除符合条件的自有目录/分支，保留结果引用和回执 |
 
@@ -49,7 +49,7 @@ HAPI 的工作区变更与关联执行启动按环境串行；finalize/remove �
 
 Git/hook/签名等待超过进程期限后，先停止本次进程树并核对是否已提交；已退出且未产生提交为明确失败，存在匹配且干净的提交则可以完成固定，进程退出未知仍阻塞。错误提示 checkout 路径以及修复/手工提交后重试命令。retry-finish 允许操作者用自己的配置手工提交，或明确处理/丢弃遗留改动；HEAD 是 startHead 的后代且目录干净时直接固定，不强迫再次使用机器身份签名，不更改用户签名策略。prompt 可提示 agent 自行提交已完成改动，程序 checkpoint 仍负责遗留部分。
 
-结果包含 baseCommit、startHead、resultHead、resultRef、checkpoint（若有）、变更数量/有界路径、dirty/partial、environmentId、roundId 和实际路径。CLI/MCP 显示可执行的 `git diff <start> <result>` 与合入参考；程序不自行 merge、cherry-pick、push 或创建 PR。只有封存成功才放行后续轮次。
+结果包含 baseCommit、startHead、resultHead、resultRef、checkpoint（若有）、变更数量/有界路径、partial、environmentId、roundId，任务视图另展示实际路径。CLI 显示可执行的 `git diff <start> <result>` 与合入参考，MCP 返回对应结构化字段；程序不自行 merge、cherry-pick、push 或创建 PR。只有封存成功才放行后续轮次。
 
 ## 留存与清理
 

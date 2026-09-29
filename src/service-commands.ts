@@ -33,7 +33,7 @@ export function addServiceCommands(program: Command, context: () => ResolvedConf
         .action(async options => { await serve(context(), Boolean(options.public)); });
     program.command('doctor').description('检查配置、服务、HAPI 兼容性和认证；不运行模型').action(async () => {
         const value = await doctor(context());
-        output(value, `${value.mode} · ${value.url}\n${value.checks.map(check => `${check.ok ? '✓' : '✗'} ${check.name}: ${typeof check.detail === 'string' ? check.detail : JSON.stringify(check.detail)}`).join('\n')}\n数据目录：${value.dataRoot}\n模型登录与执行：尚未检查`
+        output(value, `${value.mode} · ${value.url}\n${value.checks.map(check => `${check.ok ? '✓' : '✗'} ${check.name}: ${typeof check.detail === 'string' ? check.detail : JSON.stringify(check.detail)}`).join('\n')}\n数据目录：${value.dataRoot}\n任务工作区数量仅统计当前连接在本机保留的 checkout 目录，详情用 task list / show 查看。\n模型登录与执行：尚未检查`
             + (value.ignoredEnvironment.length ? `\n连接设置由 Runweft 管理，未沿用：${value.ignoredEnvironment.join(', ')}` : ''));
         if (!value.ok) process.exitCode = 1;
     });

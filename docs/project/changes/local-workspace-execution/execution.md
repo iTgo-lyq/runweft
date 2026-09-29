@@ -74,3 +74,13 @@
 
 - 交付边界：八组均在同一台 Linux 主机，Hub 使用独立数据目录与 Runner 身份，不称为跨机器验证；本任务未改变 HAPI pin/runtime adapter。候选包、数据留存说明与完整 Change 验收继续由 T5 完成。
 - Commit：`local-workspace-execution T4: expose and verify MCP worktree collaboration`。
+
+## T5 候选安装、使用说明与整体验收
+
+- 结果：paths 显示当前连接的本机环境根，doctor 只读统计实际 checkout 目录；离线可取得数量，读取失败明确报错。文档补齐 shared/worktree、固定基线、原生配置继承、Git 收尾修复、成果合入、显式清理和源仓库/数据联合备份。主包附完整使用说明，不新增必填配置或状态库。
+- 构建与回归：`bun run typecheck`、`bun test ./test` 100 项通过；固定版本 HAPI 四平台重建、`package --all --reuse-hapi` 和 CLI 构建通过，主包/四平台索引位于 `dist/packages/index.json`。日志 `.dev-smoke/workspace-t5-{types-final,tests,build-hapi,package,build}.log`。
+- 安装：`RUNWEFT_SMOKE_WORKTREE_EVIDENCE` 指定两个已完成 T4 专用 fixture，`node scripts/smoke-install.mjs` 通过。实际 npm optional dependency、十工具 MCP 目录、task 的 worktree/base/repair/remove 入口、local/Hub 服务/信号、缺平台诊断和卸载留存验证成功。证据 `.dev-smoke/install-2j1oqH/evidence.json`；运行平台 Linux x64，不把四平台构建称为四平台模型执行。
+- 安装后的 Git 闭环：新增可选 `smoke-worktree-package.mjs`，使用安装后的 CLI 读取 local Codex、Hub Claude 的真实已完成任务，显式删除 checkout 后原生报告/轮次数/成果 refs 保留，父 HEAD/index/脏状态不变；在线/离线诊断从 1 个 checkout 变为 0，保留环境记录。未启动模型或重发任务；证据 `.dev-smoke/worktree-package-vC8aSV/evidence.json` success=true、cleanupErrors 为空。原 T4 两个 fixture 的 checkout 已删除，后续不得重放该清理或当作保留现场使用。
+- 诊断失败：专用路径被普通文件占用时 doctor 返回带原因的失败，不显示零目录；`.dev-smoke/workspace-diagnosis-7t4xidsg/evidence.json` 通过。安装服务诊断未创建工作区；数据根/原生配置与用户环境分离。
+- 整体验收：[逐项映射](acceptance.md)核对全部需求和能力，区分真实模型、真实 Git、HTTP/SQLite fixture、构建与平台范围。T3 的 HAPI 非 Git skills 环境失败仍如实保留；没有新增 HAPI 修改或未清理执行进程。沿用户本地自主验收授权通过本 Change，Specs/归档另作提交。
+- Commit：`local-workspace-execution T5: ship workspace diagnostics and verified candidate packages`。

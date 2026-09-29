@@ -166,11 +166,12 @@ export function targetUrl(config: Config): string { return config.mode === 'loca
 export function dataPaths(resolved: ResolvedConfig) {
     const { home, config } = resolved;
     const server = join(home, 'server');
+    const hapiClient = join(home, 'connections', connectionName(config), 'hapi');
     return {
         home, config: resolved.file, agents: join(home, 'agents'),
         server, hapiServer: join(server, 'hapi'), runweftServer: join(server, 'runweft'),
         state: join(server, 'runweft', 'state.sqlite'),
-        hapiClient: join(home, 'connections', connectionName(config), 'hapi'),
+        hapiClient, taskWorkspaces: join(hapiClient, 'workspaces', 'environments'),
         bindings: join(home, 'client.sqlite'), process: join(server, 'process.json'),
         logs: join(home, 'logs'), backups: join(home, 'backups'), cache: join(home, 'cache'), temporary: join(home, 'tmp'),
         nativeCodex: resolved.env.CODEX_HOME || join(homedir(), '.codex'),

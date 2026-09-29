@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { closeSync, existsSync, openSync, readFileSync, unlinkSync } from 'node:fs';
+import { closeSync, existsSync, openSync, readFileSync, readdirSync, statSync, unlinkSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { createServer } from 'node:net';
 import { spawn, type ChildProcess } from 'node:child_process';
@@ -259,6 +259,13 @@ export async function stop(c: ResolvedConfig) {
 export async function doctor(c: ResolvedConfig) {
     const checks: { name: string; ok: boolean; detail: unknown }[] = [];
     checks.push({ name: 'config', ok: true, detail: c.file });
+    const root = dataPaths(c).taskWorkspaces;
+    try {
+        const directories = statSync(root, { throwIfNoEntry: false }) ? readdirSync(root, { withFileTypes: true }) : [];
+        const checkoutCount = directories.filter(entry => entry.isDirectory()
+            && statSync(join(root, entry.name, 'checkout'), { throwIfNoEntry: false })?.isDirectory()).length;
+        checks.push({ name: 'task_workspaces', ok: true, detail: { root, checkoutCount, scope: 'current_connection_on_this_machine' } });
+    } catch (error) { checks.push({ name: 'task_workspaces', ok: false, detail: { root, error: errorDetails(error) } }); }
     try {
         const result = await runHapi(c, ['--version'], true);
         checks.push({ name: 'hapi', ok: result.code === 0 && result.stdout.includes(BUILD.hapi.version), detail: result.stdout.trim() });

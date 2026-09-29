@@ -64,6 +64,11 @@ try {
     assert.equal(run(local, ['auth', 'status']).authenticated, true);
     const diagnosis = run(local, ['doctor']);
     assert.equal(diagnosis.ok, true); assert.equal(diagnosis.modelAuthentication, 'not_checked');
+    assert.equal(paths.taskWorkspaces, join(paths.hapiClient, 'workspaces', 'environments'));
+    assert.deepEqual(diagnosis.checks.find(check => check.name === 'task_workspaces'), {
+        name: 'task_workspaces', ok: true, detail: { root: paths.taskWorkspaces, checkoutCount: 0, scope: 'current_connection_on_this_machine' },
+    });
+    assert(!existsSync(paths.taskWorkspaces), 'Diagnostics created a task workspace');
     assert(diagnosis.ignoredEnvironment.includes('HAPI_HOME'));
     assert(!existsSync(sentinel));
     record('local startup, authentication, Runner registration, idempotence and managed environment');
@@ -104,6 +109,7 @@ try {
     const client = run(remote, ['start']);
     assert.equal(client.role, 'hub-client'); assert.equal(client.runner, true);
     const remotePaths = run(remote, ['paths']);
+    assert.notEqual(remotePaths.taskWorkspaces, paths.taskWorkspaces);
     assert.notEqual(JSON.parse(readFileSync(join(remotePaths.hapiClient, 'settings.json'), 'utf8')).machineId, machineId);
     assert.equal(run(remote, ['doctor']).ok, true);
     const privatePort = JSON.parse(readFileSync(statePath, 'utf8')).hapiPort;

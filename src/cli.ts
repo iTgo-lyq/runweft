@@ -59,9 +59,11 @@ export function createProgram() {
             `数据根：${paths.home}`, `配置：${paths.config}`, `Hub 数据：${paths.server}`,
             `本机中心业务库：${paths.state}${c.config.mode === 'hub' ? '（当前为 Hub 客户端，权威资源库位于所连中心）' : ''}`,
             `当前连接 HAPI 数据：${paths.hapiClient}`, `本机工作区/Agent 绑定与身份数据：${paths.bindings}`, `全局 Agent 定义：${paths.agents}`,
+            `当前连接的本机任务工作区：${paths.taskWorkspaces}`,
             `日志：${paths.logs}`, `配置备份：${paths.backups}`, `可再生缓存：${paths.cache}`, `临时目录：${paths.temporary}`,
             `原生 Codex：${paths.nativeCodex}`, `原生 Claude Code：${paths.nativeClaude}`,
             '备份：停止托管服务后备份配置、agents、server、connections 和 client.sqlite；原生目录按各工具规则备份。',
+            '独立 worktree 还依赖源仓库的 Git 目录与对象；一并备份并保留原路径，不能只搬运数据根。',
         ].join('\n'));
     });
     const workspace = program.command('workspace').description('绑定本机真实工作目录');

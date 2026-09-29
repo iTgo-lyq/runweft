@@ -43,6 +43,8 @@ prepare/finalize/remove 在机器侧持久受理后立即返回操作回执，Ru
 
 数据沿既有 home 和执行账户，业务配置不新增必填项；paths/doctor 和任务详情显示实际工作区根。Git 2.31+ 用于真实路径/对象格式查询，存在 LFS 文件时另需 Git LFS；继承执行机已有 Git 凭据，不复制或打印秘密。使用本机全局原生配置，版本化项目指令/skills 来自所选基线。
 
+paths 的 taskWorkspaces 指向当前连接的本机环境根；doctor 只读统计其中实际存在的 checkout 目录，不启动服务、不遍历源码或解析第二套 HAPI 状态库。统计包括失败准备留下的目录，不作为任务成功/可删除的证明；读取失败显示错误。其他连接/机器的任务状态继续通过中心 list/show 查询。
+
 上下文由既有 prompt 输入附上程序确认的 cwd、基线、分支、未包含的主目录改动与成果规则，不覆盖 AGENTS.md/CLAUDE.md。已解析外部输入可在受控环境目录的源码树外就位；本 Change 不增加附件上传 API。依赖安装继续交给子 agent。
 
 Git 操作错误保留标准 code/message/hint；普通日志不记录源码、完整 prompt 或 Git 凭据。准备/收尾的丢响应使用同一操作身份查询，重复参数冲突明确拒绝；已完成操作可返回原回执，未知 commit/hook 不自动重跑。调用剔除会重定向仓库/index 的继承 Git 环境变量，保留普通凭据和 Git 策略；副作用 Git 命令关闭 stdin、GIT_TERMINAL_PROMPT=0、每个子进程默认最长 15 分钟，超时停止本次受控进程树并核对是否已经产生提交。停止未知不释放写入条件，不删除 Git lock 文件。失败保留现场，禁止 reset/clean 来掩盖偏差。

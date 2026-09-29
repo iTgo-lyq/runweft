@@ -1,6 +1,6 @@
 # Runweft 基础入口使用说明
 
-当前实现包含配置、HAPI 服务管理、机器/runtime 登记、Agent 定义，以及 Codex/Claude Code 经 MCP 或 CLI 进行本机共享目录协作。独立 worktree、附件、远端任务和看板仍按后续 Change 推进；当前候选包不是完整项目的最终发布。
+当前实现包含配置、HAPI 服务管理、机器/runtime 登记、Agent 定义，以及 Codex/Claude Code 经 MCP 或 CLI 进行本机共享目录、独立 worktree 协作。附件、远端任务和看板仍按后续 Change 推进；当前候选包不是完整项目的最终发布。
 
 ## 安装与首次使用
 
@@ -148,7 +148,7 @@ runweft --json agent check reviewer
 
 定义解析提供带版本、连接及 namespace 的内容快照，供委派消费；单独解析不创建会话。执行工具继续加载执行账户已有的原生全局配置，并从主 cwd 或准备完成的 worktree cwd 加载工程配置。远端接收解析后的定义和项目基线，不会自动同步发起机器的全局 skills、其他 MCP 或凭据。受控执行只禁用 Runweft MCP，其他 MCP 和原生子代理能力保留。
 
-## 本机共享任务
+## 本机任务
 
 CLI 和 MCP 提供同一组派生、查看、等待、多轮续接和定向控制能力。进入实际工作目录，先用 `agent check` 确认定义绑定本机 runtime：
 
@@ -175,6 +175,53 @@ runweft task permission <任务ID> --round <轮次ID> --request <原生审批ID>
 
 `interrupt` 只针对指定轮次；迟到请求不影响后轮。取消未知执行也需要停止证明，保留原生未知与报告不完整标记。`show` 显示当前待审批内容与 HAPI 详情地址；`permission` 可选 approved、denied、abort，问答可附 `--answers <JSON>`，仅响应当前请求，不改变默认权限策略。等待超时可再次等待；自动化调用可将返回的 revision 用于 `--after-revision '{"任务ID":版本}'`，按序读取新结果。
 
+### 独立 Git worktree
+
+需要隔离代码改动时，在受 Git 管理的主工作区派生：
+
+```sh
+runweft task spawn developer --workspace-mode worktree --base HEAD --message "实现任务并运行相关检查"
+runweft task wait <任务ID>
+runweft task show <任务ID>
+runweft --json task show <任务ID>
+```
+
+`developer` 是已绑定本机 runtime 的 Agent 定义。`--base` 可省略，默认 HEAD，也可指定已有 commit、分支或 tag；接受任务时冻结为 commit。主目录未提交、未跟踪及 ignored 内容不会自动复制，后续主分支移动也不改变子任务的基线。共享模式不接受 `--base`。两种部署模式当前都只执行本机任务。
+
+HAPI 先创建并核对独立工作树，再在对应目录启动 agent。版本化的工程指令、skill 和项目 MCP 来自所选基线，原生全局配置及路径信任策略继续生效；没有进入基线的工程配置不会凭空出现。项目依赖由 agent 按需安装。Git 需 2.31+；基线含 LFS 时需要 Git LFS 及可读实体对象，含子模块时需能初始化相应 commit。缺少工具、对象或访问权限会阻止启动并显示原因。
+
+每轮结束先停止子执行，再保留 agent 已有提交，并把剩余非 ignored 改动补为 checkpoint；没有改动不创建空提交。机器补交使用 `HAPI Checkpoint <checkpoint@hapi.local>` 身份，沿用 Git hooks、签名与过滤器，不修改用户 Git 全局配置。主目录不被自动提交。子模块内部脏内容或 gitlink 改变不能自动封存，应先由主 agent 处理。
+
+`wait` 只有在执行停止且成果已封存后才返回完成。JSON 的 `git` 提供 `base_commit`、本轮 `start_head`、`result_head`、`result_ref`、checkout 路径及留存状态，原生执行事实与 Git 交付状态分开。成果对象已在同一仓库，不需 push；主 agent 或操作者在目标分支审查后自行合入，例如：
+
+```sh
+git diff <start_head> <result_head>
+git log --oneline <base_commit>..<result_head>
+git merge <result_ref>
+```
+
+也可审查后选择具体提交 cherry-pick。成果可能包含多次 agent 提交，不能假设只取最后一个 checkpoint 就包含全部变更。冲突和推送由主 agent 处理，Runweft 不自动合码。
+
+`needs_attention` 且 `git.status=needs_attention` 表示工作区收尾需要修复，例如 hook、签名、索引锁或目录改动不满足条件；原生报告仍可读取。根据 `show` 的原因处理现场或手动完成提交后，显式重试：
+
+```sh
+runweft task retry-finish <任务ID> --round <轮次ID>
+runweft task wait <任务ID>
+```
+
+这只重试 Git 收尾，不重新发任务或启动模型。未知操作先查询同一任务，不盲目重跑。封存未成功时，已排队的下一轮不会开始。准备时取消的任务在准备结果明确后收尾，不为收尾启动模型；已经启动但停止未知的执行仍需确认停止。
+
+后续 `task send` 复用原 worktree、依赖和原生 session，以前轮成果为起点，不自动跟进主分支。默认无限期保留 worktree，合入代码也不删除。需要回收时显式执行：
+
+```sh
+runweft task workspace remove <任务ID>
+runweft task show <任务ID>
+# 若清理因 ignored 依赖或文件被拒绝，确认这些内容可丢弃后：
+runweft task workspace remove <任务ID> --discard-ignored
+```
+
+删除命令返回受理后，用 `show` 确认 `git.retained=removed`。存在排队/活跃任务、停止未知、未封存或脏改动时会拒绝；删除进行中拒绝追加任务。成功删除移除自有 checkout 和任务分支，保留报告、原生历史与 base/round 成果引用，之后不能再续接该环境。未启动的失败准备也只有在确认归属和没有唯一改动后才可清理；不要用直接删除目录代替此命令。
+
 ### 主 agent 的 MCP 流程
 
 例如让主 agent：“用 reviewer 检查当前改动，等待结果，并总结需要处理的问题。”它可以先发现定义，再按下表操作；Codex 宿主可以选 Claude runtime，Claude 宿主也可以选 Codex runtime。
@@ -182,17 +229,18 @@ runweft task permission <任务ID> --round <轮次ID> --request <原生审批ID>
 | 工具 | 用途 |
 | --- | --- |
 | `list_agent_definitions` | 查看当前项目有效定义和各自 runtime 可选状态 |
-| `spawn_agent` | 传 `agent_type`、`message`，立即返回 `agent_id`、`round_id`、`request_id` 和接受状态；当前 `workspace_mode` 仅 `shared` |
+| `spawn_agent` | 传 `agent_type`、`message`，立即返回 `agent_id`、`round_id`、`request_id` 和接受状态；`workspace_mode` 默认 `shared`，可选 `worktree`，其 `base_ref` 默认 HEAD |
 | `list_agents` | 查看当前原生父会话的任务、状态及最近接受记录 |
 | `wait` | 传 `ids`，等待任一任务完成或需要处理；`timeout_ms` 默认 30000，最大 540000，超时返回 `timed_out=true` |
 | `read_agent` | 传 `id`，读取最新接受轮次的完整事实、审批与报告；可指定 `round_id`、`offset`、`limit` |
 | `send_input` | 传 `id`、`message`，默认 `mode=next`；Codex 的 `mode=steer` 还须传活跃 `round_id` |
 | `interrupt_agent` | 传 `id`、`round_id`，请求取消该轮次，再通过读取/等待确认停止 |
+| `retry_finish` | 修复 Git 收尾错误后，传 `id`、`round_id` 重试成果封存；不重跑模型 |
 | `respond_to_permission` | 传 `id`、`round_id`、原生 `request_id`、`decision`，显式响应当前审批；可带原生 `answers` |
 
 `spawn_agent`/`send_input` 的接受结果不等于任务完成。省略 `request_id` 时，同一次原生调用有稳定请求 ID；重新发起另一次调用会生成新 ID。遇到模糊接受响应，先 `list_agents` 查已接受记录，再用原 `request_id` 和相同参数重试，避免重复派生。审批工具的 `request_id` 则是原生审批 ID，两者用途不同。
 
-概览提供 `status`、需处理原因、轮次和有界报告。`needs_attention` 通常需要响应原生审批；`unknown` 表示现有证据不能确认某个步骤，不应盲目重跑。`completed` 表示本轮执行及关闭已确认，不表示成果已合并或验收。缺少结构化报告时仍保留原生文本。
+概览提供 `status`、需处理原因、轮次和有界报告。`needs_attention` 可能是原生审批或工作区收尾错误，应根据 `attention` 和 `git` 区分；`unknown` 表示现有证据不能确认某个步骤，不应盲目重跑。`completed` 表示本轮执行及关闭已确认，worktree 还要求成果封存成功，不表示成果已合并或验收。缺少结构化报告时仍保留原生文本。
 
 等待默认观察调用开始时最新接受轮次；想消费新通知时，传 `after_revision: {"任务ID": 上次返回的revision}`。新轮次排队时不会被旧轮次的完成提前满足；前轮审批阻塞后轮时会返回 `blocking_round_id`，应处理该轮次。长报告按 `next_offset` 分页，历史报告用固定 `round_id` 读取。
 
@@ -287,6 +335,7 @@ Hub 客户端 `stop` 只停止该机器在当前连接上的 Runner，不关闭�
 | `server/hapi/` | 托管 Hub 的原有数据库、令牌、JWT 密钥及状态；备份保留 |
 | `server/runweft/state.sqlite` | 中心机器/runtime 登记、任务/轮次/请求关联及报告；原生完整历史仍归 HAPI，不保存模型凭据 |
 | `connections/<连接>/hapi/` | 本机 Runner 的连接配置、机器身份和原生日志；各连接分开 |
+| `connections/<连接>/hapi/workspaces/environments/<任务ID>/` | 独立任务的 checkout、准备/收尾回执及树外输入；持久保存，不能当缓存清理 |
 | `client.sqlite` | 本机工作目录与 Agent 个人 runtime 绑定；Claude MCP hook 的逐调用身份用后删除，未消费记录保留 24 小时 |
 | `logs/` | 托管服务日志；当前由部署方按磁盘需要归档或轮转 |
 | `backups/mcp/` | MCP 安装、更新、卸载及恢复前的原生配置快照；可能包含原配置中的秘密，权限仅限当前用户 |
@@ -295,11 +344,17 @@ Hub 客户端 `stop` 只停止该机器在当前连接上的 Runner，不关闭�
 
 Codex/Claude Code 的配置和会话历史仍在各自原生目录，工作区源码仍在原处。不要删除整个数据根来修复安装问题。
 
+`paths.taskWorkspaces` 给出当前连接的本机环境根，`doctor` 的 `task_workspaces.checkoutCount` 统计其中实际保留的 checkout 目录，包括可能尚未准备成功的现场；不代表成功任务数，也不统计其他连接或机器。读取失败会显示诊断错误；离线仍能查看本机目录数量。任务状态和具体路径用 `task list --all` / `task show` 查询，运行这两个命令需要连上中心。
+
 local 模式的资源库位于本机中心；hub 模式只读写所连中心的资源库，客户端不保留第二份权威登记。`paths` 显示本机可能托管中心的库路径，并在 hub 模式标明资源归属；备份资源登记须在中心停止服务后备份 `server/runweft/`（包括尚存的 SQLite WAL 文件），不能只备份客户端连接目录。
 
 升级时安装同一批次的主包与平台包，再按角色重启相应服务。`status` 区分已安装与正在运行的服务版本；`doctor` 检查固定 HAPI 兼容版本。更换二进制不自动删除旧数据，也不主动迁移用户已有 `~/.hapi`。有活跃模型任务时先收尾再更新执行组件。
 
 备份前停止对应服务；备份 `config.yaml`、`agents/`、`server/`、`connections/` 和 `client.sqlite`。SQLite 使用 WAL，整个停止后的数据根一起备份最直接。恢复时使用匹配的 Runweft/HAPI 版本；未来数据升级由所属 Change 定义，当前不承诺跨任意版本回退。npm 卸载只删除软件包，数据根需另行管理。
+
+有独立 worktree 时，先等待所有轮次停止并完成收尾，再停止服务，同时备份源仓库及其 Git common directory、Runweft 数据和需要续接的原生历史。checkout 的 `.git` 指向源仓库，Git 对象/refs 不在 Runweft 数据根；只备份其中一侧不完整。按原路径恢复后检查 `git worktree list` 和任务状态；迁移路径涉及 Git 注册及持久环境记录，当前没有自动迁移命令，不能仅移动目录后直接续接。子模块对象和 LFS 实体也应一起保存。
+
+任务分支为 `hapi-task/<任务ID>`，基线与每轮成果引用为 `refs/hapi/workspaces/<任务ID>/base`、`refs/hapi/workspaces/<任务ID>/rounds/<轮次ID>`。显式清理 checkout 会删除自有任务分支，保留这些成果引用，因此普通 Git GC 仍会保留被引用的对象。当前不提供成果引用的自动清理；只有确认所有报告引用都不再需要、成果已另有备份后，才由操作者按 Git 规则手动维护，Runweft 不把“已合入”当成可以丢弃历史的证明。
 
 常见排查顺序是 `config check` → `status` → `doctor` → `paths` 所列日志。端口占用先修正 `server.port`；纯 HAPI 地址改为 Runweft 中心；认证失败核对当前连接与令牌来源。错误不会静默切回本地或其他执行目标。
 
@@ -338,7 +393,11 @@ bun run test:tasks
 bun run test:task-controls
 bun run test:task-mcp
 bun run test:collaboration
+bun run test:workspaces
+bun run test:worktree-tasks
 ```
+
+独立工作区的两宿主 × 两 runtime × local/同机 Hub 矩阵使用 `RUNWEFT_SMOKE_WORKSPACE=worktree bun run test:collaboration`；可用 `RUNWEFT_SMOKE_CASE=local-codex-claude` 选择单组。`test:workspaces` 验证机器 Git/准备入口；`test:worktree-tasks` 运行实际模型。测试证据和专用数据都保存在 `.dev-smoke/`，不能把跨平台编译或同机 Hub 当作跨机器执行验证。
 
 `test:mcp` 复制原生配置及认证到 `.dev-smoke/` 专用目录，用编译产物验证 local/hub 两种连接下的真实全局安装、身份和 HAPI 子执行启动/续接的工具禁用，并记录证据和进程清理结果。默认 Claude 命令优先使用 `iclaude`，可通过 `RUNWEFT_SMOKE_CLAUDE` 指定。`test:execution` 使用当前原生模型配置和专用服务/工作目录，验证执行事实、审批、中断、续接与结果不确定时的查询。二者会实际调用模型，不属于常规单元测试。
 

@@ -52,7 +52,7 @@ const main = join(output, 'runweft');
 mkdirSync(join(main, 'bin'), { recursive: true });
 copyFileSync('scripts/npm-launcher.cjs', join(main, 'bin', 'runweft.cjs'));
 chmodSync(join(main, 'bin', 'runweft.cjs'), 0o755);
-writeFileSync(join(main, 'README.md'), '# Runweft candidate package\n\nInstall through the supplied package registry, then run `runweft start` and `runweft open`.\n\nThis candidate is not a public release. HAPI license, notices and matching source are included in each platform package.\n');
+copyFileSync('docs/usage.md', join(main, 'README.md'));
 writeFileSync(join(main, 'package.json'), JSON.stringify({ name: 'runweft', version: pkg.version, private: true,
     description: 'One CLI for HAPI execution and Runweft collaboration', bin: { runweft: 'bin/runweft.cjs' },
     files: ['bin', 'README.md'], engines: { node: '>=20' },
