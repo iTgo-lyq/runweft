@@ -20,7 +20,7 @@
 | 任务附件交付 | [Requirement](project/changes/task-artifact-delivery/requirement.md) | [Design](project/changes/task-artifact-delivery/design.md) |
 | 远端工作区准备 | [Requirement](project/changes/remote-workspace-preparation/requirement.md) | [Design](project/changes/remote-workspace-preparation/design.md)、[Research](project/changes/remote-workspace-preparation/research.md) |
 | 远端代码回收 | [Requirement](project/changes/remote-result-delivery/requirement.md) | [Design](project/changes/remote-result-delivery/design.md)、[Research](project/changes/remote-result-delivery/research.md) |
-| 宿主身份与 MCP 适配 | [Requirement](project/changes/host-mcp-adapter/requirement.md) | [Design](project/changes/host-mcp-adapter/design.md)、[Research](project/changes/host-mcp-adapter/research.md) |
+| 宿主身份与 MCP 适配 | [Requirement](project/changes/host-mcp-adapter/requirement.md) | [Technical](project/changes/host-mcp-adapter/technical.md)、[Plan](project/changes/host-mcp-adapter/plan.md)、[Research](project/changes/host-mcp-adapter/research.md) |
 | 本地独立工作区与公共 Git 能力 | [Requirement](project/changes/local-workspace-execution/requirement.md) | [Design](project/changes/local-workspace-execution/design.md) |
 | 全局机器与 Runtime 注册 | [Requirement](project/changes/execution-resource-registry/requirement.md) | [Research](project/changes/execution-resource-registry/research.md) |
 | Agent 定义 | [Requirement](project/changes/agent-definition/requirement.md) | 轻量定义；暂不集中管理 skill/MCP |

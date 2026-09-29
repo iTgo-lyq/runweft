@@ -31,7 +31,7 @@
 | --- | --- | --- |
 | [统一 CLI 与部署（已完成）](archive/2026-09-29-unified-cli-and-deployment/requirement.md) | 可安装的基础入口、公共配置/数据位置、HAPI 管理与诊断 | 无；固定现有 HAPI 构建 |
 | [HAPI 内置能力验证与调用封装（已完成）](archive/2026-09-29-hapi-subagent-foundation/requirement.md) | 验证并封装已有启动、输入、原生结果、停止与续接入口 | 统一 CLI |
-| [宿主适配](changes/host-mcp-adapter/requirement.md) | 两宿主可信身份、工具分流与结果传递机制 | 统一 CLI、HAPI 执行契约 |
+| [宿主适配](changes/host-mcp-adapter/requirement.md) | 两宿主可信身份、受控子执行的 MCP 禁用与结果传递机制 | 统一 CLI、HAPI 执行契约 |
 | [全局资源注册](changes/execution-resource-registry/requirement.md) | 分别注册机器和 runtime，查询真实可用性 | 统一 CLI |
 | [Agent 定义](changes/agent-definition/requirement.md) | 可发现、校验及解析的全局/项目定义，引用 runtime | 统一 CLI、全局资源注册 |
 | [委派生命周期](changes/delegation-lifecycle/requirement.md) | CLI/MCP 本地共享目录的完整协作与统一查询 | 统一 CLI、HAPI 执行契约、宿主适配、Agent 定义、全局资源注册 |
@@ -155,7 +155,7 @@ Runweft 只补必要协作与交付关联，原生会话/执行事实优先读�
 
 正式方案从[阶段 1](delivery-structure.md#阶段与可验收结果)的双模式安装与数据承载、全局资源注册、HAPI 执行和宿主接入开始。先固定跨 Change 的职责及必要契约，当前阶段落实其直接前置，不要求一次写完所有下游内部细节。后续能力仍在完整版本承诺内，按阶段逐项实现和验收；各领域不能把自己的核心功能留给最后的集成 Change。
 
-统一 CLI 与 HAPI 执行契约均完成正式 Technical/Plan、各一次 iclaude 评审、实现与验收，并同步 Specs 归档。基础安装通过四平台运行验证，执行契约在本机完成两种 runtime 的编译版本真实验收；宿主工具分流、业务委派和最终发行仍按后续 Change 推进，不能据此宣布完整产品完成。
+统一 CLI 与 HAPI 执行契约均完成正式 Technical/Plan、各一次 iclaude 评审、实现与验收，并同步 Specs 归档。基础安装通过四平台运行验证，执行契约在本机完成两种 runtime 的编译版本真实验收；宿主身份与 MCP 禁用、业务委派和最终发行仍按后续 Change 推进，不能据此宣布完整产品完成。
 
 ## 调查与验证状态
 

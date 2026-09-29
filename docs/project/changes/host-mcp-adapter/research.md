@@ -34,7 +34,7 @@
 
 ## 当前 HAPI 可复用入口
 
-源码基于 `86c88df93baf5d1f738dd4b202078bdf6dec376e`：
+本节是基于 `86c88df93baf5d1f738dd4b202078bdf6dec376e` 的初次调查；当前固定版本为 `cb2810dc09b0eeb831f4ed81930a506397992967`，后续核对见下文：
 
 | 入口 | 已见行为 | 本项目处理 |
 | --- | --- | --- |
@@ -123,3 +123,13 @@
 Claude 仍会连接被过滤工具的 MCP server；验证的是模型不可见、不可调用这些工具，不宣称 server 进程未启动。上述实验没有限制内置 agent 工具；也没有测试或管控原生子 agent 的后续行为。
 
 四次验证均退出 0，工具进程均已退出；两次 Codex 探测仍有上节记录的 Bun tsconfig-override 内部诊断。没有修改用户全局配置。原生入口的可行性已确认，HAPI spawn/resume 的持久参数传递尚未实现，不能把原型证据描述成完整产品验收。
+
+实施前再核对固定 HAPI 源码：`claudeRemote.ts` 的 additionalArgs 经过 metadataExtractor 的 catalog 白名单，当前不保留 `--disallowedTools`；SDK 同时已有逐轮 EnhancedMode.disallowedTools。实现必须在 launcher 的现有 SDK 选项中合并持久禁用项，覆盖首次、原生重启和扫描，不能仅追加 claudeArgs。Codex 的 shared runtime 已把初始创建与 native `/new` 分开，禁用表应只交给对应 root 的 bootstrap，不写共享 launch.serverArgs。
+
+## Plan 评审后的配置形态核对
+
+iclaude 指出先前 Codex 探测传入完整定义，不能证明缺少原条目时只写 enabled=false 有效。`.dev-smoke/host-probe/disabled-definition-bgpy3F/definition-evidence.json` 已在真实 Codex 0.156.1 复现：缺条目时叶字段禁用报 invalid transport；已有 stdio 或 HTTP 条目时可用。改为整个 server 的 `{command:'hapi-disabled-mcp-placeholder', enabled:false}` 配置后，三种情况均成功启动，不需要读取用户配置来猜 transport。
+
+冷续接第一次探测试图用空 gitInfo 物化无输入线程，被原生明确拒绝；第二次填写 gitInfo 后仍未产生可恢复 rollout。没有把这两次当成功或重复提交任务；后续用真实的无工具简短 turn 生成历史，再验证冷续接。HAPI 已有执行验收覆盖有输入历史的续接，不能由此次空历史探测推断该能力失效。
+
+最终 `.dev-smoke/host-probe/disabled-definition-resume-OZDQDF/definition-evidence.json` 为 success=true：三种完整禁用定义各完成真实 turn，关闭 app-server 后重启，逐一恢复相同 thread ID 成功。命令退出 0，仍附带已记录的 Bun tsconfig-override 内部诊断。原生可行性缺口关闭；HAPI 产品承载仍由 T1 验收。
