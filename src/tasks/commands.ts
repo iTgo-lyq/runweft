@@ -20,6 +20,7 @@ function taskText(task: Pick<Summary, 'agent_id' | 'round_id' | 'status' | 'atte
             + (task.git.removal?.error ? `\n清理需处理：${task.git.removal.error.message}${task.git.removal.error.hint ? `\n${task.git.removal.error.hint}` : ''}` : '')
             + (task.git.result_ref ? `\n成果引用：${task.git.result_ref}\n查看修改：git diff ${task.git.start_head} ${task.git.result_head}\n在主仓库目标分支审查并选择 merge 或 cherry-pick。` : ''))
         + (task.artifacts && task.artifacts.status !== 'none' ? `\n成果文件：${task.artifacts.status}${task.artifacts.manifest ? ` · 版本 ${task.artifacts.manifest.version}` : ''}\n查看清单：runweft task artifacts show ${task.agent_id} --round ${task.round_id}` : '')
+        + (task.artifacts?.retention.state !== undefined && task.artifacts.retention.state !== 'retained' ? `\n附件留存：${task.artifacts.retention.state}；历史清单不保证文件仍可下载。` : '')
         + (task.report.text ? `\n${task.report.text}` : '')
         + (task.report.next_offset !== null ? `\n后续内容：runweft task show ${task.agent_id} --round ${task.round_id} --offset ${task.report.next_offset}` : '');
 }
@@ -68,7 +69,18 @@ export function addTaskCommands(program: Command, context: () => ResolvedConfig,
             const result = await client().artifacts(id, options.round);
             const versions = options.version === undefined ? result.manifests : result.manifests.filter(item => item.version === Number(options.version));
             if (options.version !== undefined && !versions.length) throw new RunweftError('artifact_version_unknown', '没有指定清单版本。');
-            output({ ...result, manifests: versions }, versions.map(manifestText).join('\n\n') + (result.pending.length ? `\n文件操作：${result.pending.map(job => job.phase).join(', ')}` : '') || '本轮尚无成果清单。');
+            output({ ...result, manifests: versions }, `附件留存：${result.retention.state}${result.retention.state === 'retained' ? '' : '（历史发布状态不保证当前仍可下载）'}\n`
+                + (versions.map(manifestText).join('\n\n') || '本轮尚无成果清单。') + (result.pending.length ? `\n文件操作：${result.pending.map(job => job.phase).join(', ')}` : ''));
+        });
+    artifacts.command('release <id>').description('预览已结束轮次的附件留存；--apply 才释放，不删除报告或工作区')
+        .option('--round <id>', '只释放指定轮次；省略时选择全部已结束轮次').option('--apply', '保存并执行释放意图')
+        .option('--discard-pending', '明确放弃已确认停止但未交付的捕获候选')
+        .action(async (id, options) => {
+            const result = await client().releaseArtifacts(id, { roundId: options.round, apply: !!options.apply, discardPending: !!options.discardPending });
+            output(result, `${result.applied ? '释放已受理' : '附件留存预览，尚未释放'}\n`
+                + result.rounds.map(round => `${round.round_id} · ${round.state}\n  本轮引用 ${round.references.filter(item => !item.done).length} 个，本机副本操作 ${round.transfers.filter(item => !item.done).length} 个`
+                    + (round.pendingCandidates.length ? `\n  未交付候选：${round.pendingCandidates.map(item => item.name).join('、')}${round.discardPending ? '（将显式放弃）' : '（先 retry，或明确 --discard-pending）'}` : '')).join('\n')
+                + (result.applied ? `\n查询：runweft task show ${id}${options.round ? ` --round ${options.round}` : ''}` : '\n确认后以相同参数加 --apply 执行。中心文件还需 remove 或到期 prune 才删除字节；其他来源的引用保留。'));
         });
     for (const action of ['retry', 'collect'] as const) {
         const command = artifacts.command(`${action} <id>`).description(action === 'retry' ? '重传失败候选；不重读工作目录或执行模型' : '任务静止时捕获指定文件，发布新的成果版本')

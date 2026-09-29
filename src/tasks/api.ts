@@ -33,6 +33,7 @@ export async function handleTaskRequest(request: IncomingMessage, response: Serv
     else if (path === '/api/runweft/tasks/interrupt') result = await coordinator.interrupt(namespace, value);
     else if (path === '/api/runweft/tasks/retry-finish') result = await coordinator.retryFinish(namespace, value);
     else if (path === '/api/runweft/tasks/artifacts/action') result = await coordinator.artifactAction(namespace, value);
+    else if (path === '/api/runweft/tasks/artifacts/release') result = await coordinator.releaseArtifacts(namespace, value);
     else if (path === '/api/runweft/tasks/artifacts/show') {
         const input = parseTask(InterruptSchema, value); result = coordinator.artifactManifests(namespace, input.parent, input.id, input.roundId);
     }

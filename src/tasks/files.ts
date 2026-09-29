@@ -1,6 +1,7 @@
 import { isAbsolute } from 'node:path';
 import { ArtifactNameSchema } from '../../hapi/shared/src/artifacts';
 import type { ArtifactTransfer, ArtifactTransferRequest, PreparedFiles } from '../../hapi/shared/src/artifactTransfers';
+import { outputAttention } from './outputs';
 import { ArtifactClient } from '../artifacts/client';
 import { errorDetails, RunweftError } from '../errors';
 import { HapiClient, HapiRequestError } from '../hapi';
@@ -98,6 +99,21 @@ export class TaskFiles {
             if (error instanceof HapiRequestError && ['runner_upgrade_required', 'outside_workspace_roots', 'artifact_request_invalid', 'artifact_request_conflict', 'artifact_inputs_released', 'artifact_ownership_changed', 'artifact_receipt_invalid'].includes(error.code)) inputs.status = 'failed';
             if (inputs.status !== 'failed') inputs.status = 'unknown';
             inputs.error = problem; round.attention = { ...problem, scope: 'artifacts', stage: 'preparing' }; save(); throw error;
+        }
+    }
+    async releaseAfterStop(task: Task, round: Round, save: () => void) {
+        const inputs = round.inputFiles;
+        if (!inputs?.attempted || inputs.intermediateReleased || (round.stop !== 'stopped' && !round.executionAbsent)) return;
+        try {
+            const current = await this.machine(task, { action: 'inspect', operationId: inputs.operationId });
+            if (current.retention !== 'released' && !['succeeded', 'failed'].includes(current.status)) throw new TaskError(409, 'artifact_operation_pending', '输入下载尚未确认停止，保留本机副本。');
+            const result = current.retention === 'released' ? current : await this.machine(task, { action: 'release', operationId: inputs.operationId });
+            if (result.retention !== 'released') throw new RunweftError('invalid_hapi_response', '机器尚未确认输入副本释放。');
+            inputs.intermediateReleased = true; delete inputs.cleanupError;
+            if (round.attention?.stage === 'input_cleanup') round.attention = outputAttention(task, round);
+            save();
+        } catch (error) {
+            inputs.cleanupError = errorDetails(error); round.attention = { ...inputs.cleanupError, scope: 'artifacts', stage: 'input_cleanup' }; save();
         }
     }
     async releaseIntermediate(task: Task, round: Round, save: () => void) {

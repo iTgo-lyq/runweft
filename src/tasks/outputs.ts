@@ -5,8 +5,16 @@ import { ArtifactClient } from '../artifacts/client';
 import { errorDetails, RunweftError } from '../errors';
 import { HapiClient, HapiRequestError } from '../hapi';
 import type { TaskStore } from './store';
-import { TaskError, type Round, type Task } from './types';
+import { TaskError, type Attention, type Round, type Task } from './types';
 import type { OutputItem, OutputJob, OutputStep } from './output-types';
+
+export function outputAttention(task: Task, round: Round): Attention | null {
+    if (round.outputFiles?.latest?.status !== 'incomplete') return null;
+    const released = round.artifactRetention?.state === 'released' || round.artifactRetention?.state === 'discarded';
+    return { scope: 'artifacts', stage: 'delivery', code: 'artifacts_incomplete', message: released ? '部分成果文件当时未交付；附件留存已释放，历史清单保留。' : '部分成果文件未交付；原生执行结果和已交付文件保留。',
+        hint: released ? '本轮附件留存已释放，历史未交付项不能重传；新的成果请通过 next 新建轮次。'
+            : `查看 task artifacts show ${task.id} --round ${round.id}；传输失败用 retry，缺失文件用 collect。` };
+}
 
 export class TaskOutputs {
     private readonly artifacts: ArtifactClient;
@@ -86,10 +94,7 @@ export class TaskOutputs {
         return items;
     }
     private attention(task: Task, round: Round) {
-        if (round.outputFiles?.latest?.status === 'incomplete') {
-            round.attention = { scope: 'artifacts', stage: 'delivery', code: 'artifacts_incomplete', message: '部分成果文件未交付；原生执行结果和已交付文件保留。',
-                hint: `查看 task artifacts show ${task.id} --round ${round.id}；传输失败用 retry，缺失文件用 collect。` };
-        } else if (round.attention?.scope === 'artifacts') round.attention = null;
+        if (round.outputFiles?.latest?.status === 'incomplete' || round.attention?.scope === 'artifacts') round.attention = outputAttention(task, round);
     }
     /** Operates on persisted file steps only. Never starts a native session or seals Git. */
     async advance(task: Task, round: Round, save: () => void) {

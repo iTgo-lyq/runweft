@@ -8,6 +8,7 @@ import type { HistoryCursor } from '../execution';
 import type { ExecutionTarget, Problem } from '../resources/types';
 import { ArtifactNameSchema } from '../../hapi/shared/src/artifacts';
 import { ArtifactOutputsSchema, type MaterializedInput, type MaterializeRequest } from '../../hapi/shared/src/artifactTransfers';
+import type { ArtifactRetention } from './retention';
 import type { OutputFiles } from './output-types';
 import { RunweftError } from '../errors';
 
@@ -48,6 +49,7 @@ export const ArtifactActionSchema = z.discriminatedUnion('action', [
     z.strictObject({ parent: ParentSchema, id: z.uuid(), roundId: z.uuid(), requestId: z.uuid(), action: z.literal('retry') }),
     z.strictObject({ parent: ParentSchema, id: z.uuid(), roundId: z.uuid(), requestId: z.uuid(), action: z.literal('collect'), files: ArtifactOutputsSchema }),
 ]);
+export const ArtifactReleaseSchema = z.strictObject({ parent: ParentSchema, id: z.uuid(), roundId: z.uuid().optional(), apply: z.boolean().default(false), discardPending: z.boolean().default(false) });
 export type ArtifactAction = z.infer<typeof ArtifactActionSchema>;
 export type Attention = Problem & { stage: string; scope?: 'workspace' | 'artifacts'; permissionIds?: string[] };
 export type Status = 'running' | 'needs_attention' | 'completed' | 'failed' | 'interrupted' | 'unknown';
@@ -72,11 +74,11 @@ export function pendingPreparation(environment: TaskEnvironment): Preparation {
 export type FrozenInput = MaterializeRequest['files'][number];
 export type InputFiles = { reference: string; files: FrozenInput[]; operationId: string; attempted: boolean;
     status: 'pending' | 'accepted' | 'ready' | 'failed' | 'unknown'; downloaded: MaterializedInput[]; paths: MaterializedInput[];
-    intermediateReleased: boolean; error?: Problem };
+    intermediateReleased: boolean; error?: Problem; cleanupError?: Problem };
 export type ArtifactIntent = { namespace: string; requestId: string; reference: string; requests: ArtifactInput[]; files?: FrozenInput[] };
 export type Round = { id: string; taskId: string; ordinal: number; requestId: string; message: string;
     phase: 'queued' | 'preparing' | 'starting' | 'resuming' | 'running' | 'stopping' | 'finishing' | 'finished' | 'failed';
-    preparation: Preparation; git?: GitDelivery; inputFiles?: InputFiles; outputFiles?: OutputFiles; artifactsRevision?: number;
+    preparation: Preparation; git?: GitDelivery; inputFiles?: InputFiles; outputFiles?: OutputFiles; artifactRetention?: ArtifactRetention; artifactsRevision?: number;
     spawnRequestId: string; spawnAttempted: boolean; sessionId?: string; nativeSessionId?: string;
     cursor?: HistoryCursor; report: string; structuredMissing: boolean;
     stop: 'not_started' | 'stopping' | 'stopped'; finish: 'pending' | 'complete';

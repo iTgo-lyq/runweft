@@ -6,12 +6,13 @@ import { ResourceStore } from '../resources/store';
 import { ResourceService } from '../resources/service';
 import type { ExecutionTarget } from '../resources/types';
 import { TaskStore } from './store';
-import { AcceptSchema, ArtifactActionSchema, LookupSchema, SendSchema, InterruptSchema, PermissionSchema, RemoveWorkspaceSchema, nativeTerminal, parseTask, TaskError, type Input, type Parent, type Round, type Task } from './types';
+import { AcceptSchema, ArtifactActionSchema, ArtifactReleaseSchema, LookupSchema, SendSchema, InterruptSchema, PermissionSchema, RemoveWorkspaceSchema, nativeTerminal, parseTask, TaskError, type Input, type Parent, type Round, type Task } from './types';
 import { detail, overview } from './views';
 import { historyContext, parseReport } from './reports';
 import { TaskWorkspaces, preparedReference } from './workspaces';
 import { TaskFiles, preparedFiles } from './files';
 import { TaskOutputs } from './outputs';
+import { TaskRetention } from './retention';
 
 export class TaskCoordinator {
     readonly store: TaskStore;
@@ -159,12 +160,34 @@ export class TaskCoordinator {
         const result = await this.serial(input.id, () => this.store.artifactAction(namespace, input));
         this.kick(namespace, input.id); return result;
     }
+    async releaseArtifacts(namespace: string, value: unknown) {
+        const { parent, id, roundId, apply, discardPending } = parseTask(ArtifactReleaseSchema, value);
+        const result = await this.serial(id, async () => {
+            this.store.assertCanDelegate(namespace, parent);
+            const bundle = this.store.require(namespace, id, parent);
+            if (roundId && !bundle.rounds.some(round => round.id === roundId)) throw new TaskError(404, 'round_unknown', '此任务中没有指定轮次。');
+            if (bundle.rounds.some(round => !['finished', 'failed'].includes(round.phase) || round.outputFiles?.jobs.some(job => job.phase !== 'complete'))) {
+                throw new TaskError(409, 'artifact_release_active', '释放需要本任务所有轮次和文件操作结束。');
+            }
+            const retention = new TaskRetention(this.client(namespace)), plans = [];
+            for (const round of bundle.rounds.filter(round => !roundId || round.id === roundId)) {
+                plans.push({ roundId: round.id, retention: await retention.plan(bundle.task, round, this.store.manifests(id, round.id), discardPending) });
+            }
+            const blocked = plans.some(plan => plan.retention.pendingCandidates.length && !plan.retention.discardPending);
+            if (apply && blocked) throw new TaskError(409, 'artifact_undelivered_candidates', '仍有未交付候选，普通释放会丢失重传来源。', '先 retry；明确放弃时使用 task artifacts release --discard-pending --apply。');
+            const saved = apply ? this.store.beginArtifactRelease(namespace, parent, id, plans) : bundle;
+            return { agent_id: id, applied: apply, revision: saved.task.revision, can_release: !blocked,
+                rounds: plans.map(plan => ({ round_id: plan.roundId, ...plan.retention, state: saved.rounds.find(round => round.id === plan.roundId)!.artifactRetention?.state ?? 'retained' })) };
+        });
+        if (apply) this.kick(namespace, id);
+        return result;
+    }
     artifactManifests(namespace: string, parent: Parent, id: string, roundId: string) {
         const bundle = this.store.require(namespace, id, parent);
         const round = bundle.rounds.find(round => round.id === roundId);
         if (!round) throw new TaskError(404, 'round_unknown', '此任务中没有指定轮次。');
         return { agent_id: id, round_id: roundId, artifacts_revision: round.artifactsRevision,
-            manifests: this.store.manifests(id, roundId), pending: round.outputFiles?.jobs.filter(job => job.phase !== 'complete').map(job => ({ id: job.id, kind: job.kind, phase: job.phase, error: job.error })) ?? [] };
+            retention: round.artifactRetention ?? { state: 'retained' }, manifests: this.store.manifests(id, roundId), pending: round.outputFiles?.jobs.filter(job => job.phase !== 'complete').map(job => ({ id: job.id, kind: job.kind, phase: job.phase, error: job.error })) ?? [] };
     }
     async permission(namespace: string, value: unknown) {
         const { parent, id, roundId, requestId, decision, answers } = parseTask(PermissionSchema, value);
@@ -218,8 +241,13 @@ export class TaskCoordinator {
         const workspaces = new TaskWorkspaces(this.client(namespace), task.target.machineId);
         const files = new TaskFiles(this.client(namespace));
         const outputs = new TaskOutputs(this.client(namespace), this.store);
-        for (const previous of rounds.filter(item => ['finished', 'failed'].includes(item.phase) && item.outputFiles?.jobs.some(job => job.phase !== 'complete'))) {
-            await outputs.advance(task, previous, () => this.store.save(task, previous, []));
+        for (const previous of rounds.filter(item => ['finished', 'failed'].includes(item.phase))) {
+            const savePrevious = () => this.store.save(task, previous, []);
+            await outputs.advance(task, previous, savePrevious);
+            await files.releaseAfterStop(task, previous, savePrevious);
+            await new TaskRetention(this.client(namespace)).advance(task, previous, savePrevious, () => {
+                previous.artifactsRevision = this.store.require(namespace, id).task.revision + 1; savePrevious();
+            });
         }
         if (task.environment.mode === 'worktree' && task.environment.status === 'deleting') {
             try { await workspaces.remove(task, () => this.store.saveEnvironment(task)); }
@@ -427,6 +455,7 @@ export class TaskCoordinator {
             if (round.phase === 'finishing' && !this.closing) {
                 if (task.environment.mode === 'worktree' && round.git?.status !== 'sealed' && !await workspaces.finish(task, round, inputs, save)) return;
                 if (!await outputs.advance(task, round, save)) return;
+                await files.releaseAfterStop(task, round, save);
                 round.finish = 'complete'; round.phase = 'finished'; round.completedAt = Date.now();
                 if (round.attention?.scope !== 'artifacts') round.attention = round.startupFailure ? { ...round.startupFailure, stage: 'starting' } : null; save();
             }

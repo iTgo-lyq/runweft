@@ -68,6 +68,9 @@ Runweft 在发布清单前核对每个 available 项的 HAPI 元数据与 pin；
 
 留存是轮次级的独立可变状态 retained/releasing/released/discarded，清单版本只存内容事实；展示时组合当前留存与清单，下载以对象实时状态为准。release 默认预览、--apply 才执行；省略 round 则预览全部已结束轮次。已结束轮次的 release 先记录业务释放意图，逐项 unpin/release 后标记完成；中断可沿原意图重试。未完成输出传输、仍有 queued/running 轮次、未确定 capture 结果均拒绝普通 release。缺失输出没有可传候选时可以释放留存，原 incomplete 错误仍保存。
 
-为避免永久配额占用，提供显式放弃已确认失败传输的选项：`task artifacts release --discard-pending --apply`，只适用于原生与相关机器操作均确认停止。先记录 discarded，再释放候选及其 pin；未知操作必须先查询，不强删。原清单的未交付事实不改，留存状态另标 discarded，不变为 delivered。
+为避免永久配额占用，提供显式放弃已确认失败传输的选项：`task artifacts release --discard-pending --apply`，只适用于原生与相关机器操作均确认停止。先记录 releasing 与 discardPending 放弃决定，再释放候选及其 pin，确认完成后标为 discarded；未知操作必须先查询，不强删。原清单的未交付事实不改，留存状态另标 discarded，不变为 delivered。
 
 已 available 对象的普通 remove/prune 由 HAPI 引用事务保护。Runner spool 在中心发布及清单引用确认前保持，重试候选不会因删除 worktree 丢失；回收候选只清本模块管理根。已释放后的历史清单配合当前留存状态表明字节不再保证可取回，下载对真实对象状态仍返回明确错误。
+
+
+轮次释放后不能再对该轮 retry/collect，以免重新 pin 已释放历史；新成果通过 next 的新轮次建立独立约定。释放进行中不接受本任务新的轮次或文件操作，重试 release 继续已保存的同一意图；受理释放、首次或变化的失败、最终完成均更新 artifactsRevision，相同失败轮询不重复通知。普通预览展示尚未交付的候选；只有明确 --discard-pending 才允许放弃它们，决定先持久记录，再回收机器副本和本轮 input/output pin。成功或失败的原生执行确认停止后自动回收 shared 输入下载副本，中心输入对象仍由轮次引用保护；worktree 输入复制与工作区共同留存，不因附件释放删除工作区。

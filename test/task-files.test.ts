@@ -24,7 +24,7 @@ async function harness(worktree = false) {
     cleanup.push(() => { store.close(); rmSync(root, { recursive: true, force: true }); });
     const service = new ArtifactService(store.artifacts, join(root, 'artifacts'), ARTIFACT_DEFAULT_LIMITS);
     const operations = new Map<string, ArtifactTransfer>(), requests: string[] = [], git = workspaces();
-    const faults = { pinResponse: false, hold: false, transferFailure: false, transferResponse: false, inspectUnknown: false };
+    const faults = { pinResponse: false, hold: false, transferFailure: false, transferResponse: false, inspectUnknown: false, releaseLost: false };
     const h = await taskFixture(cleanup, 'codex', worktree ? git.handler : undefined, async (request, namespace) => {
         const path = new URL(request.url).pathname;
         if (path.startsWith('/api/artifacts')) {
@@ -45,7 +45,11 @@ async function harness(worktree = false) {
                 operations.set(body.operationId, operation);
             }
             if (faults.transferResponse) { faults.transferResponse = false; return new Response('', { status: 502 }); }
-        } else if (body.action === 'release') operation!.retention = 'released';
+        } else if (body.action === 'release') {
+            expect([...h.sessions.values()].filter(native => native.session.metadata?.preparedFiles?.operationId === body.operationId).every(native => !native.session.active)).toBe(true);
+            operation!.retention = 'released';
+            if (faults.releaseLost) { faults.releaseLost = false; return new Response('', { status: 502 }); }
+        }
         else if (body.action === 'inspect') {
             if (faults.inspectUnknown) { faults.inspectUnknown = false; operation!.status = 'unknown'; }
             else if (!faults.hold) {
@@ -156,4 +160,31 @@ test('duplicate names, unpublished objects, unauthorized parents and steer input
     expect((await h.artifacts.refs(file.id)).references).toEqual([]);
     expect(taskInputs([`设计 = 说明.txt=${file.id}`, file.id])).toEqual([{ name: '设计 = 说明.txt', artifactId: file.id }, { artifactId: file.id }]);
     expect(() => taskInputs([`../escape=${file.id}`])).toThrow('参数无效');
+});
+
+
+test('stopped shared rounds automatically release only the input copy, then explicit release removes only their own pins', async () => {
+    const h = await harness(), file = await h.upload();
+    const first = await h.post('spawn', { ...h.payload(), intent: { ...h.intent, inputs: [{ artifactId: file.id }] } });
+    const running = await until(() => h.post('read', { id: first.agent_id }), value => value.inputs[0]?.observation?.phase === 'accepted');
+    expect(h.operations.get(running.input_files.operation_id)?.retention).toBe('retained');
+    h.faultsFiles.releaseLost = true; h.complete(running.session_id);
+    const done = await until(() => h.post('read', { id: first.agent_id }), value => value.status === 'completed' && value.input_files.download_retention === 'released');
+    expect(h.operations.get(running.input_files.operation_id)?.retention).toBe('released');
+    expect(h.requests.filter(action => action === 'release')).toHaveLength(1);
+    expect((await h.artifacts.refs(file.id)).references).toHaveLength(1);
+    await h.artifacts.pin(file.id, 'external:recovery', 'recovery');
+    const second = await h.post('send', { requestId: randomUUID(), intent: { id: first.agent_id, message: 'next', mode: 'next', inputs: [{ artifactId: file.id }] } });
+    const next = await until(() => h.post('read', { id: first.agent_id, roundId: second.round_id }), value => value.inputs[0]?.observation?.phase === 'accepted');
+    await expect(h.post('artifacts/release', { id: first.agent_id, roundId: first.round_id, apply: true })).rejects.toMatchObject({ code: 'artifact_release_active' });
+    h.complete(next.session_id); await until(() => h.post('read', { id: first.agent_id }), value => value.status === 'completed');
+    expect((await h.post('artifacts/release', { id: first.agent_id })).rounds).toHaveLength(2);
+    await h.post('artifacts/release', { id: first.agent_id, roundId: first.round_id, apply: true });
+    await until(() => h.post('read', { id: first.agent_id, roundId: first.round_id }), value => value.artifacts.retention.state === 'released');
+    expect((await h.artifacts.refs(file.id)).references).toHaveLength(2); // Later round + external recovery.
+    await h.post('artifacts/release', { id: first.agent_id, apply: true });
+    await until(() => h.post('read', { id: first.agent_id }), value => value.artifacts.retention.state === 'released');
+    expect((await h.artifacts.refs(file.id)).references.map(item => item.purpose)).toEqual(['recovery']);
+    expect((await h.post('read', { id: first.agent_id, roundId: first.round_id })).completed_revision).toBe(done.completed_revision);
+    expect(h.calls.spawn).toBe(1); expect(h.calls.resume).toBe(1); expect(h.calls.send).toBe(2);
 });

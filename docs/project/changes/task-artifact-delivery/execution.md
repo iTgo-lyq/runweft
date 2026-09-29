@@ -80,3 +80,14 @@
 - 探针修正：首轮代理探针将 fetch 已解压的响应仍标为 gzip，预览解析失败；清理完整结束，未运行模型。移除测试代理的失真编码/长度 header 后重新验证成功，产品网关无此改动。Nginx/Caddy 等未安装；Nginx 示例已核对官方缓冲、体积和空闲超时文档，未冒称通过 Nginx 实测。四平台候选包仍留至 T6。
 - HAPI：独立 Commit `Add explicit expiry cleanup and retained file usage diagnostics`（`c4c432ab0b376d254bf21571f4aaf51cbe3251f4`），root pin 与配套产物已同步。
 - Commit：`task-artifact-delivery T5: expose expiry cleanup and storage diagnostics`
+
+
+## T5b 轮次留存释放与本机副本回收
+
+- 结果：task artifacts release 默认预览，apply 先保存轮次释放意图，再回收确认停止的输入/捕获副本和该轮各历史版本的 input/output 引用；外部及 recovery 引用保留。未交付候选需明确 --discard-pending，未知文件操作拒绝释放。释放/失败恢复参与已结束轮次扫描；同一释放重复调用继续原意图，不重放模型。受理、变化的失败和完成通过 artifactsRevision 通知，原完成版本与原生结论不变。释放期间阻止该任务新轮次/文件操作，完成后可 next；原轮次不再 retry/collect。
+- 输入与展示：shared 下载副本在确认原生停止后自动回收，中心原件继续 pin；worktree 仍在准备时释放下载中间副本，其最终输入与工作区共同保留。download_retention 与中央留存状态、历史清单分别展示，release 不删除报告/Git/worktree，也不伪称解除引用后仍保证下载。输入回收错误恢复时保留同时存在的 incomplete 输出提示；全部捕获失败的操作也显式清理其受管临时目录。
+- 自动验证：root 全量 126 pass / 2436 assertions；补齐释放失败的 wait 通知后，最终聚焦输入/输出测试 20 pass / 480 assertions，最终 typecheck 与 Linux x64 编译通过。覆盖所有历史版本引用、晚轮共享输入、未知/活跃拒绝、持久释放重启、丢失 unpin/副本释放响应、恢复 pin、缺失候选、原生续接与状态通知。日志 `.dev-smoke/artifact-t5b-*.log`。HAPI 保持 `c4c432ab0b376d254bf21571f4aaf51cbe3251f4`，复用 T5 的检查，不重复未变化的底座矩阵。
+- 真实留存：`bun run test:task-retention .dev-smoke/task-outputs-u3MJua/evidence.json` 消费 T4b 的专用已结束任务，核对 Codex/Claude × shared/worktree 共 8 轮的实际输入目录、中心引用和候选回收。额外 collect 因 1 MiB 限额失败的 2 MiB 文件，普通 release 拒绝，显式放弃才删除实际 spool；全部历史轮次的本模块 pin 解除，外部 recovery pin 保留，原报告/清单/Git ref/worktree 不变。核对 HAPI session 和任务输入数不增加，删除释放后的中心对象释放配额，服务重启保留墓碑与释放状态。证据 `.dev-smoke/task-retention-LByxN9/evidence.json`，success=true、cleanupErrors=[]。该源 fixture 的附件现已按本次验证显式释放，不再假设其历史对象仍被保留。
+- 原生续接：`bun run test:task-inputs dist/runweft --shared-only` 另开专用环境，实际通过 Codex/Claude 各两轮，共 4 轮。确认首轮输入目录已消失、中心输入仍受保护，重启服务后第二轮读取新随机输入并保持同一 native session；工程指令与 Runweft 子工具禁用保持。证据 `.dev-smoke/task-inputs-uLpknW/evidence.json`，success=true、cleanupErrors=[]，记录的 4 个 PID 均已退出。未改全局配置或权限模式，worktree 原生组合沿用 T4b。
+- 最后修正的验证范围：整轮 capture 释放（含无成功候选）用上述真实输入任务追加一次缺失文件 collect，再通过编译 CLI 普通 release；真实 Runner receipt 变 released、spool 目录移除、清单/完成版本/原生 session 数保持，证据 `.dev-smoke/artifact-t5b-empty-capture.json`。之后提示恢复和 wait 通知的修正由最终聚焦测试覆盖并进入最终构建，没有重复运行未受影响的模型轮次。MCP 附件与四平台安装仍在 T6，不提前验收完整 Change。
+- Commit：`task-artifact-delivery T5b: release round retention and reclaim stopped input copies`

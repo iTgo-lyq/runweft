@@ -44,6 +44,9 @@ export class TaskClient {
     async artifacts(id: string, roundId: string, signal?: AbortSignal): Promise<ReturnType<TaskCoordinator['artifactManifests']>> {
         return this.request('artifacts/show', { id, roundId }, signal);
     }
+    async releaseArtifacts(id: string, options: { roundId?: string; apply?: boolean; discardPending?: boolean } = {}, signal?: AbortSignal): Promise<Awaited<ReturnType<TaskCoordinator['releaseArtifacts']>>> {
+        return this.request('artifacts/release', { id, ...options }, signal);
+    }
     async interrupt(id: string, roundId: string, signal?: AbortSignal): Promise<Awaited<ReturnType<TaskCoordinator['interrupt']>>> {
         return this.request('interrupt', { id, roundId }, signal);
     }

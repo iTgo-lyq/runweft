@@ -1,3 +1,4 @@
+import type { ArtifactRetention } from './retention';
 import { randomUUID } from 'node:crypto';
 import { openState } from '../state';
 import { contentVersion } from '../agents/definitions';
@@ -37,6 +38,8 @@ export class TaskStore {
     pending(): { namespace: string; id: string }[] {
         return this.db.query(`SELECT DISTINCT t.namespace, t.id FROM delegation_tasks t JOIN delegation_rounds r ON t.id=r.taskId
             WHERE r.phase NOT IN ('finished', 'failed') OR json_extract(t.data, '$.environment.status')='deleting'
+            OR json_extract(r.data, '$.artifactRetention.state')='releasing'
+            OR (json_extract(r.data, '$.inputFiles.attempted')=1 AND json_extract(r.data, '$.inputFiles.intermediateReleased')=0)
             OR EXISTS (SELECT 1 FROM json_each(r.data, '$.outputFiles.jobs') WHERE json_extract(value, '$.phase') <> 'complete')`).all() as { namespace: string; id: string }[];
     }
     lookup(namespace: string, parent: Parent, requestId: string, intent: SpawnIntent | SendIntent): Acceptance | null {
@@ -126,6 +129,7 @@ export class TaskStore {
             const previous = this.lookup(namespace, parent, requestId, intent);
             if (previous) return previous;
             const bundle = this.require(namespace, intent.id, parent), now = Date.now();
+            if (bundle.rounds.some(round => round.artifactRetention?.state === 'releasing')) throw new TaskError(409, 'artifact_release_pending', '附件释放尚未完成，请查询任务后再继续委派。');
             let round: Round;
             if (bundle.task.environment.mode === 'worktree' && bundle.task.environment.status !== 'retained') throw new TaskError(409, 'workspace_not_retained', '工作区正在删除或已删除，无法继续委派。');
             if (intent.mode === 'next') {
@@ -167,6 +171,8 @@ export class TaskStore {
             const round = bundle.rounds.find(item => item.id === intent.roundId);
             if (!round) throw new TaskError(404, 'round_unknown', '此任务中没有指定轮次。');
             if (!['finished', 'failed'].includes(round.phase)) throw new TaskError(409, 'artifact_round_pending', '轮次尚未结束，请先等待执行与收尾。');
+            if (round.artifactRetention) throw new TaskError(409, 'artifact_retention_released', '该轮已请求释放留存，不能再补交或重传。', '新的成果通过 next 新建轮次。');
+            if (bundle.rounds.some(item => item.artifactRetention?.state === 'releasing')) throw new TaskError(409, 'artifact_release_pending', '本任务仍有附件释放操作。');
             if (round.outputFiles?.jobs.some(job => job.phase !== 'complete')) throw new TaskError(409, 'artifact_operation_pending', '该轮已有文件操作，先查询其结果。');
             if (intent.action === 'collect' && (bundle.rounds.some(item => !['finished', 'failed'].includes(item.phase))
                 || bundle.rounds.some(item => item.outputFiles?.jobs.some(job => job.phase !== 'complete')))) throw new TaskError(409, 'artifact_collect_active', '补收需要本任务所有轮次及文件操作静止。');
@@ -183,6 +189,22 @@ export class TaskStore {
             const accepted = { agent_id: intent.id, round_id: round.id, request_id: requestId, artifact_operation_id: job.id, revision: bundle.task.revision, accepted: true as const };
             this.db.query('INSERT INTO delegation_requests VALUES (?, ?, ?, ?, ?, ?, ?)').run(namespace, requestId, fingerprint, intent.id, round.id, JSON.stringify(accepted), Date.now());
             return accepted;
+        }).immediate();
+    }
+    beginArtifactRelease(namespace: string, parent: Parent, id: string, plans: { roundId: string; retention: ArtifactRetention }[]) {
+        return this.db.transaction(() => {
+            const bundle = this.require(namespace, id, parent);
+            this.assertCanDelegate(namespace, parent);
+            if (bundle.rounds.some(round => !['finished', 'failed'].includes(round.phase) || round.outputFiles?.jobs.some(job => job.phase !== 'complete'))) {
+                throw new TaskError(409, 'artifact_release_active', '释放需要本任务所有轮次和文件操作结束。');
+            }
+            for (const plan of plans) {
+                const round = bundle.rounds.find(round => round.id === plan.roundId)!;
+                if (round.artifactRetention) continue; // Resume the already persisted release, never invent a second owner.
+                round.artifactRetention = plan.retention; round.artifactsRevision = bundle.task.revision + 1;
+                this.save(bundle.task, round, []);
+            }
+            return this.require(namespace, id, parent);
         }).immediate();
     }
     manifests(taskId: string, roundId: string): OutputManifest[] {

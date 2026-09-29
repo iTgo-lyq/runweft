@@ -34,7 +34,8 @@
     "test:task-inputs": "bun scripts/smoke-task-inputs.ts",
     "test:outputs": "bun scripts/smoke-outputs.ts",
     "test:task-outputs": "bun scripts/smoke-task-outputs.ts",
-    "test:artifact-prune": "bun scripts/smoke-artifact-prune.ts"
+    "test:artifact-prune": "bun scripts/smoke-artifact-prune.ts",
+    "test:task-retention": "bun scripts/smoke-task-retention.ts"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.25.1",

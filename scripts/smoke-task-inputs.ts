@@ -11,7 +11,8 @@ import { ExecutionClient } from '../src/execution';
 import pkg from '../package.json';
 
 // Compiled CLI + real models in dedicated homes and repositories. Never part of ordinary unit tests.
-const binary = resolve(process.argv[2] ?? 'dist/runweft');
+const binary = resolve(process.argv.slice(2).find(value => !value.startsWith('--')) ?? 'dist/runweft');
+const modes = process.argv.includes('--shared-only') ? ['shared'] as const : ['shared', 'worktree'] as const;
 mkdirSync('.dev-smoke', { recursive: true }); const root = mkdtempSync(resolve('.dev-smoke/task-inputs-'));
 const home = join(root, 'home'), codexHome = join(root, 'codex-home'), claudeHome = join(root, 'claude-home');
 const env: NodeJS.ProcessEnv = { ...process.env }; for (const key of Object.keys(env)) if (key.startsWith('RUNWEFT_')) delete env[key];
@@ -53,7 +54,7 @@ try {
     for (const agent of ['codex', 'claude'] as const) {
         const runtime = cli(['runtime', 'register', agent]).value.runtime, agentType = `input-${agent}`;
         cli(['agent', 'init', agentType, '--runtime', runtime.id]);
-        for (const mode of ['shared', 'worktree'] as const) {
+        for (const mode of modes) {
             const project = join(root, `${agent}-${mode}`); mkdirSync(project); const projectMarker = `PROJECT_${randomUUID()}`;
             for (const name of ['AGENTS.md', 'CLAUDE.md']) writeFileSync(join(project, name), `这是专用输入验收工程。最终报告包含工程标记 ${projectMarker}。只读取请求中的输入，不修改文件，不委派。\n`);
             git(project, 'init', '-q'); git(project, 'config', 'user.name', 'Input Task Smoke'); git(project, 'config', 'user.email', 'smoke@example.invalid'); git(project, 'config', 'commit.gpgsign', 'false'); git(project, 'add', '.'); git(project, 'commit', '-qm', 'fixture');
@@ -71,7 +72,9 @@ try {
                 evidence.cases.push(item); const done = await completed(id, accepted.round_id, project, item);
                 assert(done.report.text.includes(marker)); assert(done.report.text.includes(projectMarker));
                 assert.equal(done.input_files.files[0].name, name); assert.equal(done.input_files.files[0].sha256, object.sha256);
-                assert.equal(readFileSync(done.input_files.paths[0].path, 'utf8'), marker);
+                assert.equal(done.input_files.download_retention, 'released');
+                if (mode === 'worktree') assert.equal(readFileSync(done.input_files.paths[0].path, 'utf8'), marker);
+                else assert.equal(existsSync(done.input_files.paths[0].path), false);
                 assert(!done.input_files.paths[0].path.startsWith(project));
                 assert.equal(done.stop, 'stopped'); assert.equal(done.finish, 'complete');
                 if (round) assert.equal(done.native_session_id, nativeSessionId); else nativeSessionId = done.native_session_id;

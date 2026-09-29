@@ -283,7 +283,7 @@ export async function doctor(c: ResolvedConfig) {
             checks.push({ name: 'artifacts', ok: true, detail: { authority: targetUrl(c.config), ...usage,
                 hostedStorage: c.config.mode === 'local' ? dataPaths(c).artifacts : 'on_connected_hub',
                 localTransfers: dataPaths(c).artifactTransfers,
-                cleanup: 'runweft artifact prune（默认预览）；artifact refs <id> 查看引用；artifact remove <id> 删除无引用文件。',
+                cleanup: 'runweft artifact prune（默认预览）；artifact refs <id> 查看引用；task artifacts release <task> 预览轮次释放；artifact remove <id> 删除无引用文件。',
                 recovery: '备份和恢复应同时包含中心 HAPI 数据库、artifacts 字节、Runweft state.sqlite；未交付候选另存于执行机 artifact-transfers。' } });
         } catch (error) { checks.push({ name: 'artifacts', ok: false, detail: errorDetails(error) }); }
         const runnerEnabled = c.config.mode === 'hub' || c.config.server.runner;
