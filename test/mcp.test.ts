@@ -19,7 +19,7 @@ function setup() {
     return { root, cwd, c: loadConfig(join(root, 'home'), {}) };
 }
 const meta = (threadId: string) => ({ threadId, sessionId: 'root', callId: `call-${threadId}` });
-const toolNames = ['runweft_status', 'list_agent_definitions', 'spawn_agent', 'list_agents', 'read_agent', 'wait', 'send_input', 'interrupt_agent', 'respond_to_permission'];
+const toolNames = ['runweft_status', 'list_agent_definitions', 'spawn_agent', 'list_agents', 'read_agent', 'wait', 'send_input', 'interrupt_agent', 'retry_finish', 'respond_to_permission'];
 const hook = (call: string, session: string, cwd: string) => ({ hook_event_name: 'PreToolUse', tool_name: 'mcp__runweft__runweft_status',
     tool_use_id: call, session_id: session, cwd, tool_input: { secret: 'do-not-store' }, transcript_path: '/private/history.jsonl' });
 

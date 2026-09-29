@@ -10,11 +10,12 @@ import { HapiClient } from '../src/hapi';
 import { createMcpServer } from '../src/mcp/server';
 import { recordClaudeCall } from '../src/mcp/claude-hook';
 import { taskFixture, until } from './tasks-fixture';
+import { workspaces } from './workspaces-fixture';
 
 const cleanups: (() => void | Promise<void>)[] = [];
 afterEach(async () => { for (const fn of cleanups.splice(0).reverse()) await fn(); });
-async function fixture(host: 'codex' | 'claude' = 'codex') {
-    const h = await taskFixture(cleanups, host);
+async function fixture(host: 'codex' | 'claude' = 'codex', workspaceApi?: (request: Request) => Promise<Response>) {
+    const h = await taskFixture(cleanups, host, workspaceApi);
     const config = loadConfig(h.home, { ...process.env, GIT_CEILING_DIRECTORIES: h.home, HAPI_SESSION_ID: undefined });
     config.config.server.port = Number(new URL(h.url).port);
     atomicWrite(join(dataPaths(config).hapiClient, 'settings.json'), JSON.stringify({ machineId: 'own' }));
@@ -92,9 +93,9 @@ test('MCP controls use exact rounds and native approval IDs; child associations 
 });
 
 test('cancelled and disconnected MCP waits leave accepted work running and center finishes it once', async () => {
-    for (const mode of ['cancel', 'disconnect']) {
-        const h = await fixture();
-        const first = await h.call('spawn_agent', { agent_type: 'review', message: 'Accepted once' });
+    for (const workspace_mode of ['shared', 'worktree']) for (const mode of ['cancel', 'disconnect']) {
+        const git = workspaces(), h = await fixture('codex', git.handler);
+        const first = await h.call('spawn_agent', { agent_type: 'review', message: 'Accepted once', workspace_mode });
         const active = await until(() => h.call('read_agent', { id: first.agent_id }), v => v.inputs?.[0]?.observation?.phase === 'accepted');
         const controller = new AbortController();
         const waiting = h.call('wait', { ids: [first.agent_id], timeout_ms: 5000 }, { signal: controller.signal }).catch(error => error);
@@ -103,8 +104,41 @@ test('cancelled and disconnected MCP waits leave accepted work running and cente
         await waiting;
         expect(h.calls.stop).toBe(0); expect(h.calls.interrupt).toBe(0); expect(h.calls.send).toBe(1);
         h.complete(active.session_id);
-        await until(() => h.post('read', { id: first.agent_id }), v => v.status === 'completed');
+        const done = await until(() => h.post('read', { id: first.agent_id }), v => v.status === 'completed');
+        if (workspace_mode === 'worktree') expect(done.git.status).toBe('sealed');
         expect(h.calls.spawn).toBe(1); expect(h.calls.stop).toBe(1);
+    }
+});
+
+test('both MCP hosts pin explicit Git bases, repair only finishing and resume with sealed result facts', async () => {
+    for (const host of ['codex', 'claude'] as const) {
+        const git = workspaces(); git.control.failFinish = true;
+        const h = await fixture(host, git.handler);
+        const tools = (await h.client.listTools()).tools;
+        expect(tools.some(tool => tool.name === 'retry_finish')).toBe(true);
+        expect(tools.some(tool => tool.name.includes('remove'))).toBe(false);
+        const args = { agent_type: 'review', message: 'Independent task', workspace_mode: 'worktree', base_ref: 'refs/heads/review-base' };
+        const accepted = await h.call('spawn_agent', args, { callId: 'worktree-call' }), id = accepted.agent_id;
+        expect(await h.call('spawn_agent', args, { callId: 'worktree-call' })).toEqual(accepted);
+        expect(git.calls.find(call => call.action === 'resolve')).toMatchObject({ baseRef: args.base_ref });
+        expect((await h.call('spawn_agent', { ...args, request_id: accepted.request_id, base_ref: 'HEAD' })).error.code).toBe('task_request_conflict');
+        expect((await h.call('spawn_agent', { ...args, workspace_mode: 'shared' })).error.code).toBe('invalid_task_request');
+        const active = await until(() => h.call('read_agent', { id }), value => value.inputs?.[0]?.observation?.phase === 'accepted');
+        h.complete(active.session_id, 'NATIVE_REPORT');
+        const attention = await h.call('wait', { ids: [id], timeout_ms: 2000 });
+        expect(attention.agents[0]).toMatchObject({ status: 'needs_attention', git: { status: 'needs_attention' }, native_status: [{ phase: 'completed' }] });
+        expect((await h.call('retry_finish', { id, round_id: accepted.round_id }, { parent: 'other-parent' })).error.code).toBe('task_parent_mismatch');
+        git.control.failFinish = false;
+        expect((await h.call('retry_finish', { id, round_id: accepted.round_id })).status).toBe('retry_requested');
+        const sealed = await until(() => h.call('read_agent', { id }), value => value.status === 'completed');
+        expect(sealed.report.text).toBe('NATIVE_REPORT'); expect(sealed.git.status).toBe('sealed');
+        expect(h.calls.spawn).toBe(1); expect(h.calls.send).toBe(1);
+        const next = await h.call('send_input', { id, message: 'Continue' });
+        const running = await until(() => h.call('read_agent', { id }), value => value.round_id === next.round_id && value.inputs?.[0]?.observation?.phase === 'accepted');
+        expect(running.preparation.startHead).toBe(sealed.git.result_head); expect(running.cwd).toBe(sealed.cwd);
+        h.complete(running.session_id, 'SECOND_REPORT');
+        const done = await h.call('wait', { ids: [id], timeout_ms: 2000 });
+        expect(done.agents[0].git.status).toBe('sealed'); expect(h.calls.resume).toBe(1); expect(h.calls.spawn).toBe(1);
     }
 });
 

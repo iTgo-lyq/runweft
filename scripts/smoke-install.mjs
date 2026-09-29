@@ -84,7 +84,7 @@ try {
     const client = new Client({ name: 'installed-runweft-probe', version: '1' });
     try {
         await client.connect(transport, { timeout: 5000 });
-        assert.deepEqual((await client.listTools()).tools.map(tool => tool.name), ['runweft_status', 'list_agent_definitions', 'spawn_agent', 'list_agents', 'read_agent', 'wait', 'send_input', 'interrupt_agent', 'respond_to_permission']);
+        assert.deepEqual((await client.listTools()).tools.map(tool => tool.name), ['runweft_status', 'list_agent_definitions', 'spawn_agent', 'list_agents', 'read_agent', 'wait', 'send_input', 'interrupt_agent', 'retry_finish', 'respond_to_permission']);
         assert(!existsSync(mcpHome), 'MCP discovery created runtime data');
     } finally { await client.close(); }
     evidence.checks.push('installed task commands and side-effect-free MCP catalog without Bun or source checkout on PATH');

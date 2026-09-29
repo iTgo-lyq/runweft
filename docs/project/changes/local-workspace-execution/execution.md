@@ -49,3 +49,28 @@
 - 偏差：T3 补充了 T1 缺失的“已准备但未启动”封存路径，否则取消会永久挡住环境复用；已同步 Technical/工作区契约，沿既有自主细化授权实施，不重复 Plan 评审。无新增 runtime adapter、清理服务或全局配置。
 - 交付边界：本地 CLI 的多轮与显式清理闭环已完成；MCP base/retry_finish、两宿主完整矩阵和候选包交付继续由 T4/T5 承担，尚未归档整个 Change。
 - Commit：`local-workspace-execution T3: seal prepared rounds with no execution`（HAPI）；`local-workspace-execution T3: retain and safely remove task workspaces`（Runweft）。
+
+## T4 两宿主 MCP 独立协作与原生配置验收
+
+- 结果：MCP `spawn_agent` 支持 `base_ref`，与 CLI 共用固定基线和准备流程；shared 拒绝附加基线。`read_agent`/`wait` 描述明确区分原生执行与 Git 封存；新增 `retry_finish` 只显式重试指定轮次的 Git 收尾，沿既有父身份校验，不发送模型输入。环境删除仍由操作者 CLI 发起。
+- 回归：抽取公共工作区协议夹具，新增两宿主固定基线、请求冲突、父权限、原生报告保留、失败修复与续接测试；共享/独立模式均覆盖取消等待和 stdio 断线后中心只收尾一次。MCP/工作区专项 19 项、564 断言通过；完整 `bun test ./test` 100 项、1896 断言通过，`bun run typecheck` 与编译 CLI 构建通过。首次全量检查发现两处工具列表预期遗漏 `retry_finish`，已同步回归与安装脚本目录；最终日志 `.dev-smoke/workspace-t4-{full-tests-final,types-final,build}.log`。
+- 真实验收方法：扩展 `scripts/smoke-collaboration.ts` 的可选 worktree 模式，使用配套编译 CLI/HAPI、原生宿主及实际模型。每组从版本化工程指令、skill 和项目 MCP 的旧 tag 派生，主分支已有更新及未提交内容；首轮写文件，停止后补 checkpoint，第二轮只凭原生历史回忆标记。实际核对文件、目录、基线/成果引用、父 HEAD/index/脏状态、MCP 调用及执行 PID；原生父 MCP 调用必须原样传入测试任务，不能替子端注入工程/记忆标记。
+- 真实修复：local 的 Codex→Codex、Claude→Claude 首轮分别触发一次失败 pre-commit hook；原生父会话看到 completed 报告与 Git needs_attention 后各调用一次 MCP `retry_finish`。只出现失败/重试两次 hook，报告和输入不变，封存后原 session 正常续接。
+- 原生继承：专用 home 复制已有原生配置/登录，仅调整测试副本的 MCP；未修改用户配置或额外批准项目信任。子端实际调用保留的全局及项目探针，报告包含仅在版本化工程指令/skill 中的独立标记。Codex 原生 MCP 目录在启动/续接均无 Runweft 工具；Claude init 目录同时证明其他 MCP 和 Agent/Task 保留。Codex 原生内置递归配置未改变，此验收不声称实际调用过内置子代理。
+- Git 合入：测试操作者检查父目录保持原样及本地对象可读后，显式 cherry-pick 返回的成果 ref；无需 push，合入后子 worktree 仍保留。程序收尾不自动合码。
+- 真实断线：Hub 的 Codex→Claude、Claude→Codex 在第三轮已接受后主动关闭正在 wait 的原生 MCP 连接；独立操作者仅响应 sleep 审批，中心完成原任务、停止执行并封存。每组只有一次 spawn、三轮各一次输入，无重复派生或取消；断线发生在完成之前。
+- 矩阵结果：下列八组全部通过，18 个真实子任务轮次均停止并封存，专用服务/宿主/探针进程退出，cleanupErrors 均为空。汇总 `.dev-smoke/workspace-t4-evidence.json`；各行目录下的 `evidence.json` 保存原生会话、实际调用、Git 与进程事实。
+
+| 模式 | 宿主 → runtime | `.dev-smoke/` 证据目录 | 额外覆盖 |
+| --- | --- | --- | --- |
+| local | Codex → Codex | `worktree-mcp-E5Ydih` | MCP 收尾失败后重试 |
+| local | Codex → Claude | `worktree-mcp-EH3rnv` | 交叉宿主审批与续接 |
+| local | Claude → Codex | `worktree-mcp-l5N9on` | 交叉宿主审批与续接 |
+| local | Claude → Claude | `worktree-mcp-rmKAmW` | MCP 收尾失败后重试 |
+| Hub | Codex → Codex | `worktree-mcp-78FixU` | 独立客户端/中心 |
+| Hub | Codex → Claude | `worktree-mcp-CfQmxJ` | 真实等待连接断开 |
+| Hub | Claude → Codex | `worktree-mcp-dyaKcg` | 真实等待连接断开 |
+| Hub | Claude → Claude | `worktree-mcp-yuUQ3c` | 独立客户端/中心 |
+
+- 交付边界：八组均在同一台 Linux 主机，Hub 使用独立数据目录与 Runner 身份，不称为跨机器验证；本任务未改变 HAPI pin/runtime adapter。候选包、数据留存说明与完整 Change 验收继续由 T5 完成。
+- Commit：`local-workspace-execution T4: expose and verify MCP worktree collaboration`。

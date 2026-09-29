@@ -46,7 +46,7 @@ CLI/MCP 可从主仓库准确 commit 派生本地独立任务，准备完成后�
 
 ### T4 两宿主 MCP 独立协作与原生配置验收
 
-- 状态：待开始
+- 状态：已完成
 - 交付：MCP 派生 worktree/base、结果事实和 retry_finish；两原生宿主完整调用，与 CLI 共用业务能力。
 - 依赖：T3。
 - 验收：Codex/Claude 宿主 × Codex/Claude runtime 在 local/同机 Hub 的真实工作树准备、编辑、收尾和续接；工程指令/skill 与其他 MCP 可用，子执行仍无 Runweft MCP，原生内置 subagent 能力保留。Git 合入由测试中的主 agent/操作者执行。
