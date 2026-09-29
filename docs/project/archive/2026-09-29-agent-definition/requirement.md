@@ -1,6 +1,6 @@
 # 轻量 Agent 定义与原生配置继承
 
-> 状态：待验收
+> 状态：已完成
 > 规模：大型
 > 更新：2026-09-29
 > 确认依据：参考 Multica 定义 agent，暂不集中管理 skill/MCP；继承 runtime 的全局与工程配置；启动策略由业务 skill 决定。按用户逐 Change 自主落实授权收敛配置细节，Plan 经一次 iclaude 评审后执行。
@@ -9,9 +9,9 @@
 
 | 关系 | Change | 依赖内容与满足条件 |
 | --- | --- | --- |
-| 前置 | [统一 CLI 与部署](../../archive/2026-09-29-unified-cli-and-deployment/requirement.md) | 读取全局/项目定义并解析 HAPI 目标，不建立新的 runtime 注册平台 |
-| 前置 | [全局资源注册](../../archive/2026-09-29-execution-resource-registry/requirement.md) | 解析 runtime 引用及所属机器，agent 文件不承担资源注册 |
-| 下游 | [委派生命周期](../delegation-lifecycle/requirement.md) | 消费解析后的定义，通过 CLI/MCP 向主 agent 提供描述和可用目标 |
+| 前置 | [统一 CLI 与部署](../2026-09-29-unified-cli-and-deployment/requirement.md) | 读取全局/项目定义并解析 HAPI 目标，不建立新的 runtime 注册平台 |
+| 前置 | [全局资源注册](../2026-09-29-execution-resource-registry/requirement.md) | 解析 runtime 引用及所属机器，agent 文件不承担资源注册 |
+| 下游 | [委派生命周期](../../changes/delegation-lifecycle/requirement.md) | 消费解析后的定义，通过 CLI/MCP 向主 agent 提供描述和可用目标 |
 
 ## 独立验收与交付边界
 

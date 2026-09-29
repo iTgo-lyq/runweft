@@ -65,7 +65,7 @@ HAPI Runner 在已明确的受控数据根中维护仓库对象缓存；跨机�
 
 runtime 对仓库外输入/上下文目录的访问规则必须实测；若只能读取 cwd 内资源，则在专用保留目录挂载/复制并验证排除规则，存在路径冲突时拒绝启动。
 
-沿原生全局配置和已准备 cwd 发现工程 skill/MCP，不创建空白配置 home，也不集中同步它们。工程配置随所选 Git 基线到达，ignored 或未提交 skill 不因设置 cwd 就自动出现在远端；细节归[Agent 定义](../agent-definition/requirement.md)。
+沿原生全局配置和已准备 cwd 发现工程 skill/MCP，不创建空白配置 home，也不集中同步它们。工程配置随所选 Git 基线到达，ignored 或未提交 skill 不因设置 cwd 就自动出现在远端；细节归[Agent 定义](../../archive/2026-09-29-agent-definition/requirement.md)。
 
 ## 6. 远端准备完成与启动条件
 

@@ -37,10 +37,11 @@ HAPI Hub 只监听本机私有端口，省略端口配置时自动选择。Runwe
 | 位置 | 用途 |
 | --- | --- |
 | `config.yaml` | 可编辑全局配置 |
+| `agents/` | 全局 Agent YAML；项目定义保留于对应项目目录 |
 | `server/hapi/` | 托管 Hub 的原有数据库、令牌和状态 |
 | `server/runweft/state.sqlite` | 中心机器/runtime 登记与原生工具的最后观察；WAL、事务化 schema version，不保存模型凭据 |
 | `connections/local/hapi/` 或 `connections/<主机名>-<URL hash>/hapi/` | 当前机器 Runner 的连接身份、配置与原生日志 |
-| `client.sqlite` | 本机真实工作区绑定及 Claude MCP hook 的短期调用身份 |
+| `client.sqlite` | 本机工作区与 Agent 个人 runtime 绑定及 Claude MCP hook 的短期调用身份 |
 | `logs/` | 服务日志，由部署方管理保留和轮转 |
 | `backups/mcp/` | 显式 MCP 配置修改前的快照，可能含原配置秘密，仅当前用户可读写 |
 | `cache/`、`tmp/` | 可再生内容，不能保存唯一成果 |

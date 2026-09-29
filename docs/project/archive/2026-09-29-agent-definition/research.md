@@ -4,11 +4,11 @@
 
 ## 现有能力
 
-- 全局资源已[验收归档](../../archive/2026-09-29-execution-resource-registry/execution.md)。ResourceClient 可查询登记与解析新目标，包含 local 本机限制；Runtime ID 属于所连中心 namespace。Agent 定义不需要新增资源注册或改 HAPI。
+- 全局资源已[验收归档](../2026-09-29-execution-resource-registry/execution.md)。ResourceClient 可查询登记与解析新目标，包含 local 本机限制；Runtime ID 属于所连中心 namespace。Agent 定义不需要新增资源注册或改 HAPI。
 - 全局 YAML、注释保留、Zod 严格校验、原子写入及集中 client.sqlite 已存在。工作区绑定保存 realpath 与 Git 根，但创建 agent 不能隐式绑定工作区；可复用同一只读 Git 查询方式，保留调用 cwd 与项目根两个事实。
 - [HAPI spawn schema](../../../../hapi/shared/src/apiTypes.ts) 接受 model、effort、modelReasoningEffort，字段均可省略。[Runner](../../../../hapi/cli/src/runner/run.ts) 向 Claude 传 --effort，向 Codex 传 --model-reasoning-effort；共享 Codex launcher 及 Claude 原生参数路径已经存在。
 - Codex 的 reasoningEffort 解析器和 Claude effort 规范化均接受非空字符串；HAPI 没有可用于静态证明所有模型/推理组合有效的固定清单。不建立第二份模型目录，保留原生最终校验。空值不发覆盖，定义层不能把未测试的字符串称为已支持。
-- 两种 runtime 的真实 cwd、项目说明/skill、原生模型配置继承已经由[执行基础](../../archive/2026-09-29-hapi-subagent-foundation/execution.md)验证。逐执行禁用 Runweft MCP 及停止后续接见[宿主规格](../../specs/host-mcp/spec.md)。本 Change 不改 launcher、不重跑模型来验证纯定义读取。
+- 两种 runtime 的真实 cwd、项目说明/skill、原生模型配置继承已经由[执行基础](../2026-09-29-hapi-subagent-foundation/execution.md)验证。逐执行禁用 Runweft MCP 及停止后续接见[宿主规格](../../specs/host-mcp/spec.md)。本 Change 不改 launcher、不重跑模型来验证纯定义读取。
 
 ## Multica 参考
 

@@ -19,7 +19,7 @@
 | 前置 | [全局资源注册](../../archive/2026-09-29-execution-resource-registry/requirement.md) | 机器/runtime 全局注册与 agent 引用语义已验收 |
 | 前置 | [HAPI 执行契约](../../archive/2026-09-29-hapi-subagent-foundation/requirement.md) | 两种内置 runtime 的真实执行证据与兼容构建可用 |
 | 前置 | [宿主适配](../../archive/2026-09-29-host-mcp-adapter/requirement.md) | 两种宿主身份、工具分流与结果传递边界已验证 |
-| 前置 | [Agent 定义](../agent-definition/requirement.md) | 定义解析、默认参数与配置继承规则可用 |
+| 前置 | [Agent 定义](../../archive/2026-09-29-agent-definition/requirement.md) | 定义解析、默认参数与配置继承规则可用 |
 | 前置 | [委派生命周期](../delegation-lifecycle/requirement.md) | 本地共享模式 CLI/MCP 完整协作已验收 |
 | 前置 | [本地独立工作区](../local-workspace-execution/requirement.md) | 公共 Git 生命周期、本地独立执行与续接已验收 |
 | 前置 | [任务附件](../task-artifact-delivery/requirement.md) | 独立文件交付和任务输入/输出集成已验收 |

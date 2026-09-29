@@ -14,7 +14,7 @@
 | 关系 | Change | 依赖内容与满足条件 |
 | --- | --- | --- |
 | 前置 | [统一 CLI 与部署](../2026-09-29-unified-cli-and-deployment/requirement.md) | 本地/Hub 模式、全局配置与数据位置、HAPI 连接及命令承载已明确 |
-| 下游 | [Agent 定义](../../changes/agent-definition/requirement.md) | 按 runtime 引用解析执行目标，不嵌入机器或 runtime 注册配置 |
+| 下游 | [Agent 定义](../2026-09-29-agent-definition/requirement.md) | 按 runtime 引用解析执行目标，不嵌入机器或 runtime 注册配置 |
 | 下游 | [委派生命周期](../../changes/delegation-lifecycle/requirement.md) | 启动时核对目标机器和 runtime，不靠 agent 名称推断 |
 
 ## 独立验收与交付边界
