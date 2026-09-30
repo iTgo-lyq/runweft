@@ -8,7 +8,7 @@ import type { AccessAuthority } from './auth';
 import type { AccessStore } from './store';
 import type { NativeSessions } from './sessions';
 import { record, unavailable, type NativeTransport } from './transport';
-import type { Principal } from './types';
+import type { Principal, ExecutionObject } from './types';
 
 const sessionEvents = new Set(['message', 'session-alive', 'session-ready', 'session-end', 'messages-consumed',
     'messages-indeterminate', 'native-queue-message', 'messages-steer-state', 'update-metadata', 'update-state']);
@@ -23,10 +23,19 @@ const rpcMethods = new Set<string>(Object.values(RPC_METHODS));
 const deniedRpc = JSON.stringify({ type: 'error', errorMessage: 'Runweft denied the assigned execution target.', childStarted: false });
 const deniedAck = { result: 'error', reason: 'access-denied', ok: false };
 type Scope = { kind: 'session' | 'machine'; id: string };
+type SessionPolicy = (binding: ExecutionObject, method: string, suffix: string) => void;
+
+export function authorizeTerminal(store: AccessStore, actor: Principal, sessionId: string, policy?: SessionPolicy, agentInput = false) {
+    const binding = store.require(actor, 'session', sessionId, 'write');
+    if (actor.kind !== 'user' || !binding.machineId) throw hubNotFound();
+    store.require(actor, 'machine', binding.machineId, 'write');
+    policy?.(binding, 'POST', agentInput ? 'messages' : 'terminal');
+    return binding;
+}
 
 /** One native socket per external connection. No native execution, PTY, or reconnection state is reimplemented. */
 export function attachAccessSockets(server: HttpServer, store: AccessStore, authority: AccessAuthority,
-    native: NativeTransport, sessions: NativeSessions) {
+    native: NativeTransport, sessions: NativeSessions, sessionPolicy?: SessionPolicy) {
     const bridge = new Server(server, { maxHttpBufferSize: SOCKET_MAX_HTTP_BUFFER_SIZE, serveClient: false });
     bridge.of('/').use((_socket, next) => next(new Error('Runweft socket namespace unavailable.')));
     const closeConnections = new Set<() => void>();
@@ -72,7 +81,7 @@ export function attachAccessSockets(server: HttpServer, store: AccessStore, auth
             if (closed) throw hubUnauthorized();
             store.refresh(actor);
             if (scope) store.require(actor, scope.kind, scope.id, 'report');
-            for (const sid of terminals.values()) store.require(actor, 'session', sid);
+            for (const sid of terminals.values()) authorizeTerminal(store, actor, sid, sessionPolicy);
             for (const sid of subscriptions) store.require(actor, 'session', sid);
         };
         const session = (id: unknown) => {
@@ -115,12 +124,17 @@ export function attachAccessSockets(server: HttpServer, store: AccessStore, auth
                 data = record(data);
                 if (event === 'terminal:create') {
                     session(data.sessionId);
+                    authorizeTerminal(store, actor, data.sessionId, sessionPolicy);
                     if (typeof data.terminalId !== 'string' || !data.terminalId || data.terminalId.length > 256) throw unavailable();
                     if (terminals.has(data.terminalId) && terminals.get(data.terminalId) !== data.sessionId) throw hubNotFound();
                     terminals.set(data.terminalId, data.sessionId);
-                } else if (['terminal:write', 'terminal:resize', 'terminal:close'].includes(event)) session(terminals.get(data.terminalId));
+                } else if (['terminal:write', 'terminal:resize', 'terminal:close'].includes(event)) {
+                    const binding = session(terminals.get(data.terminalId));
+                    authorizeTerminal(store, actor, binding.id, sessionPolicy);
+                }
                 else if (viewerAgentIn.has(event)) {
                     session(data.sessionId);
+                    if (event === 'agent-terminal:input' || event === 'agent-terminal:resize') authorizeTerminal(store, actor, data.sessionId, sessionPolicy, true);
                     if (event === 'agent-terminal:subscribe') subscriptions.add(data.sessionId);
                     else if (event === 'agent-terminal:unsubscribe') subscriptions.delete(data.sessionId);
                 } else throw unavailable();

@@ -58,7 +58,7 @@ export async function createAccessGateway(options: AccessGatewayOptions) {
         });
     });
     server.requestTimeout = 0;
-    const realtime = attachAccessSockets(server, store, authority, native, sessions);
+    const realtime = attachAccessSockets(server, store, authority, native, sessions, options.sessionPolicy);
     server.on('connection', socket => { sockets.add(socket); socket.once('close', () => sockets.delete(socket)); });
 
     async function handle(request: IncomingMessage, response: ServerResponse) {
@@ -73,13 +73,20 @@ export async function createAccessGateway(options: AccessGatewayOptions) {
         if (path === '/api/auth' && method === 'POST') {
             const parsed = z.object({ accessToken: z.string().min(1), spaceId: z.uuid().optional() }).strict().safeParse(await readJson(request, 16_384));
             if (!parsed.success) throw inputError();
-            jsonResponse(response, 200, await authority.exchange(parsed.data.accessToken, parsed.data.spaceId)); return;
+            jsonResponse(response, 200, await authority.exchangeBrowser(parsed.data.accessToken, parsed.data.spaceId)); return;
         }
-        if (method === 'GET' && (path === '/' || /^\/sessions(?:\/[^/]+)?$/.test(path) || path.startsWith('/assets/')
+        const nativePage = path === '/' || /^\/sessions(?:\/[A-Za-z0-9_-]+(?:\/(?:files|file))?)?$/.test(path);
+        if (method === 'GET' && (nativePage || path.startsWith('/assets/')
             || ['/manifest.webmanifest', '/favicon.ico', '/icon-192.png', '/icon-512.png'].includes(path))) {
+            if (nativePage && ['hub', 'server', 'initData', 'tgWebAppData'].some(key => url.searchParams.has(key))) throw inputError();
             const upstream = await native.response(path);
-            response.writeHead(upstream.status, { 'content-type': upstream.headers.get('content-type') ?? 'application/octet-stream', 'cache-control': 'no-store' });
-            response.end(Buffer.from(await upstream.arrayBuffer())); return;
+            const contentType = upstream.headers.get('content-type') ?? 'application/octet-stream';
+            response.writeHead(upstream.status, { 'content-type': contentType, 'cache-control': 'no-store', 'referrer-policy': 'no-referrer' });
+            if (nativePage && contentType.includes('text/html')) {
+                const html = await upstream.text();
+                response.end(html.replace('<head>', '<head><script type="module" src="/hub/native.js"></script>'));
+            } else response.end(Buffer.from(await upstream.arrayBuffer()));
+            return;
         }
         if (!['api', 'cli'].includes(parts[0])) throw unavailable();
         const token = request.headers.authorization?.startsWith('Bearer ') ? request.headers.authorization.slice(7)

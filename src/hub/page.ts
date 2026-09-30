@@ -2,8 +2,10 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import html from './page.html' with { type: 'text' };
 import css from './style.css' with { type: 'text' };
 import browser from './app' with { type: 'text' };
+import nativeBrowser from './native-page' with { type: 'text' };
 
 let javascript: string | undefined;
+let nativeJavascript: string | undefined;
 export function hubPage(request: IncomingMessage, response: ServerResponse): boolean {
     const path = new URL(request.url ?? '/', 'http://localhost').pathname;
     if (path !== '/hub' && !path.startsWith('/hub/')) return false;
@@ -15,6 +17,9 @@ export function hubPage(request: IncomingMessage, response: ServerResponse): boo
     if (path === '/hub/app.js') {
         javascript ??= new Bun.Transpiler({ loader: 'ts', target: 'browser' }).transformSync(browser as unknown as string);
         content = javascript; type = 'text/javascript';
+    } else if (path === '/hub/native.js') {
+        nativeJavascript ??= new Bun.Transpiler({ loader: 'ts', target: 'browser' }).transformSync(nativeBrowser as unknown as string);
+        content = nativeJavascript; type = 'text/javascript';
     } else if (path === '/hub/style.css') { content = css; type = 'text/css'; }
     else if (path === '/hub' || path === '/hub/') { content = html as unknown as string; type = 'text/html'; }
     else { response.writeHead(404); response.end(); return true; }

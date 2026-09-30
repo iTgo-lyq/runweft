@@ -82,6 +82,9 @@ export async function handleHubRequest(request: IncomingMessage, response: Serve
                     if (method === 'GET') return { space: store.space(identity.id, id) };
                     if (method === 'PATCH') return { space: store.renameSpace(identity.id, id, hubInput(named, body).name) };
                 }
+                if (id && section === 'permissions' && parts.length === 3 && method === 'GET') {
+                    return { permissions: store.permissions(identity.id, id) };
+                }
                 if (id && section === 'members') {
                     if (parts.length === 3 && method === 'GET') return { members: store.members(identity.id, id) };
                     if (targetId && parts.length === 4) {

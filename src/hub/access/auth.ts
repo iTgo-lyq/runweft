@@ -12,6 +12,14 @@ export class AccessAuthority {
     constructor(readonly store: AccessStore, deploymentSecret: Uint8Array) {
         this.key = createHmac('sha256', deploymentSecret).update('runweft/access-jwt/v1').digest();
     }
+    async exchangeBrowser(token: string, spaceId?: string) {
+        if (!token.includes('.')) return this.exchange(token, spaceId);
+        if (spaceId !== undefined) throw hubUnauthorized();
+        const actor = await this.verify(token);
+        if (actor.kind !== 'user' || !actor.spaceId) throw hubUnauthorized();
+        this.store.refresh(actor);
+        return { token, user: { id: actor.userNumber, firstName: actor.name } };
+    }
     async exchange(token: string, spaceId: string | null = null) {
         const actor = this.store.authenticate(token, spaceId);
         const jwt = await new SignJWT({ ref: actor.digest, kind: actor.kind, space: actor.kind === 'user' ? spaceId : null,

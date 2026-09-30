@@ -52,6 +52,26 @@ export class HubStore {
         return this.db.query(`SELECT s.id, s.name, s.createdAt, m.role FROM hub_spaces s
             JOIN hub_memberships m ON m.spaceId=s.id WHERE m.userId=? ORDER BY s.createdAt, s.id`).all(userId) as Space[];
     }
+    permissions(userId: string, spaceId: string) {
+        const actor = this.space(userId, spaceId), members = this.members(userId, spaceId);
+        const lastOwner = members.filter(member => member.role === 'owner').length === 1;
+        return {
+            rename: canAssign(actor.role, 'member'),
+            inviteRoles: actor.role === 'owner' ? ['member', 'admin'] : actor.role === 'admin' ? ['member'] : [],
+            manageInvitations: canAssign(actor.role, 'member'),
+            leave: actor.role !== 'owner' || !lastOwner,
+            members: Object.fromEntries(members.map(member => {
+                const protectedOwner = member.role === 'owner' && lastOwner;
+                return [member.userId, {
+                    roles: canAssign(actor.role, member.role)
+                        ? (['member', 'admin', 'owner'] as Role[]).filter(role => canAssign(actor.role, role) && (!protectedOwner || role === 'owner')) : [],
+                    remove: !protectedOwner && (member.userId === userId || canAssign(actor.role, member.role)),
+                }];
+            })),
+            invitations: canAssign(actor.role, 'member') ? Object.fromEntries(this.invitations(userId, spaceId)
+                .map(invitation => [invitation.id, { revoke: canAssign(actor.role, invitation.role) }])) : {},
+        };
+    }
     space(userId: string, spaceId: string): Space {
         const space = this.db.query(`SELECT s.id, s.name, s.createdAt, m.role FROM hub_spaces s
             JOIN hub_memberships m ON m.spaceId=s.id WHERE m.userId=? AND s.id=?`).get(userId, spaceId) as Space | null;

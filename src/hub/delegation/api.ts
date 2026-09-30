@@ -4,6 +4,7 @@ import { jsonResponse } from '../../proxy';
 import { ListSchema, ReadSchema, WaitSchema } from '../../tasks/api';
 import { ParentSchema, InterruptSchema, parseTask, TaskError } from '../../tasks/types';
 import { OverviewQuerySchema, taskOverview } from '../../tasks/query';
+import { detail } from '../../tasks/views';
 import { readJson, type RequestLease } from '../access/transport';
 import { HubDelegationService } from './service';
 import type { TaskInventory } from '../../tasks/query';
@@ -25,6 +26,19 @@ export async function handleDelegationRequest(request: IncomingMessage, response
         try { inventory = { machines: await service.config.resources.machines(lease), error: null }; }
         catch { lease.check(); inventory = { machines: [], error: { code: 'inventory_unavailable', message: '机器状态暂不可用，以下保留已记录的任务事实。' } }; }
         result = taskOverview(coordinator.store.listNamespace(namespace), service.config.resources.store.runtimes(lease.actor), inventory, query);
+    } else if (domain === 'tasks' && action.startsWith('details/')) {
+        if (request.method !== 'GET') throw new TaskError(405, 'method_not_allowed', '任务详情只接受 GET。');
+        if (new Set(url.searchParams.keys()).size !== [...url.searchParams].length) throw new TaskError(400, 'invalid_task_request', '详情参数不能重复。');
+        const id = parseTask(z.uuid(), action.slice('details/'.length));
+        const options = parseTask(z.object({ roundId: z.uuid().optional(),
+            offset: z.string().regex(/^\d+$/).transform(Number).pipe(z.number().int().min(0)).optional(),
+            limit: z.string().regex(/^[1-9]\d*$/).transform(Number).pipe(z.number().int().max(64_000)).optional(),
+        }).strict(), Object.fromEntries(url.searchParams));
+        const bundle = coordinator.store.require(namespace, id);
+        const view = detail(bundle, options);
+        if (!view) throw new TaskError(404, 'round_unknown', '此任务中没有指定轮次。');
+        result = { ...view, ownerId: bundle.task.hub!.ownerId, spaceId: bundle.task.hub!.spaceId,
+            hubRepositoryId: bundle.task.hub!.hubRepositoryId, actions: { read: true, native: !!view.session_id, manageViaAgent: true } };
     } else {
         if (request.method !== 'POST') throw new TaskError(405, 'method_not_allowed', '此接口需要 POST。');
         const value = await readJson(request, 1_048_576, lease.signal); lease.check();
