@@ -1,6 +1,6 @@
 {
   "name": "runweft-workspace",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
   "type": "module",
   "packageManager": "bun@1.4.2",
@@ -29,6 +29,9 @@
     "test:worktree-lifecycle": "bun scripts/smoke-worktree-lifecycle.ts",
     "test:install": "node scripts/smoke-install.mjs",
     "test:packages": "node scripts/verify-packages.mjs",
+    "test:arm64": "node scripts/smoke-arm64.mjs",
+    "test:hub-upgrade": "node scripts/smoke-hub-upgrade.mjs",
+    "release:assemble": "node scripts/assemble-release.mjs",
     "build": "bun scripts/build.ts",
     "build:hapi": "bun scripts/build-hapi.ts",
     "package": "bun scripts/package.ts",

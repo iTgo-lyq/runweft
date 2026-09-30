@@ -33,13 +33,13 @@ bun run build
 模型验收须已有授权和专用认证副本：
 
 ```sh
-bun run test:hub-native-mcp
-bun run test:hub-consumers
+bun run test:hub-native-mcp <已安装平台bin/runweft>
+bun run test:hub-consumers <已安装平台bin/runweft>
 ```
 
-`test:hub-native-mcp` 先通过真实浏览器 begin/complete 连接，再用 Codex/Claude 两个原生主宿主 × 两种 runtime 执行 spawn/wait/read；每组实际等待超过 60 秒、核对报告、子 CLI 递归拒绝与进程退出。可用 RUNWEFT_SMOKE_HOST=codex|claude 选择宿主。仅专用 helper 的预期审批由脚本自动处理，不改变产品权限。
+`test:hub-native-mcp` 先通过真实浏览器 begin/complete 连接，再用 Codex/Claude 两个原生主宿主 × 两种 runtime × shared/本地worktree/同机远端执行十二组 spawn/wait/read；四组 shared 实际等待65秒，全部核对报告、模式、子 CLI 递归拒绝与进程退出。RUNWEFT_SMOKE_HOST=codex|claude、RUNWEFT_SMOKE_RUNTIME=codex|claude、RUNWEFT_SMOKE_MODE=shared|worktree|remote 可聚焦。仅专用 helper、proof读取和精确只读Git命令获批，其他命令返回原生拒绝，不改变产品权限。
 
-`test:hub-consumers` 使用两个独立 Runner，验证共享两轮、原生确认历史缺失后重建、本地 worktree、同机远端 Claude 附件/代码回收和显式清理。历史缺失以专用空原生 home 和相同认证/机器验证，不能删除部分文件就把 unknown 当 missing。
+`test:hub-consumers` 使用已安装 CLI 默认 Hub/相邻 HAPI 和两个 CLI-managed Runner，验证共享两轮、原生确认历史缺失后重建、本地 worktree、同机远端 Claude 附件/代码回收、显式清理、两 runtime 停止续接及 Hub 重启只读查询。历史缺失以专用空原生 home 和相同认证/机器验证，不能删除部分文件就把 unknown 当 missing。RUNWEFT_SMOKE_CONSUMER_CASE=codex|remote|prepare|controls 可聚焦。
 
 脚本默认复制已有 Codex/Claude 配置与认证到 `.dev-smoke/`。Claude 优先 iclaude，可用 RUNWEFT_SMOKE_CLAUDE 指定；Codex 可用 RUNWEFT_SMOKE_CODEX_MODEL/EFFORT 覆盖专用副本中的可用模型。不要打印复制凭据、完整原生输出或 prompt。所有成功与失败保留真实证据，同机两个 Runner 不称物理远端。
 
@@ -62,4 +62,21 @@ bun run package --all
 
 或 `--platform darwin-arm64` 选单平台；已核对的 HAPI 构建可加 `--reuse-hapi`。完整 `dist/packages/` 含主包、四平台 tarball、独立产品 Skill、index.json 和 SHA256SUMS。主包和平台包内使用说明/Skill一致，包含 HAPI 许可/NOTICE/源码。索引绑定源码 revision/dirty、HAPI pin、二进制与 tarball hash；全部成功才替换旧发行目录，不自动 publish。
 
-最终集成必须从同一候选执行真实安装、当前 Hub smoke 与四平台校验，不能用旧产物验收外推；发行包检查/registry 安装脚本中的旧服务路径由最终集成阶段更新后才作为入口。Mac 必须构建双架构但保留实机边界，Linux arm64 QEMU 与原生协作分开记录。使用说明见 [usage.md](usage.md)，实际交付和验证状态见[项目入口](README.md)。
+从已提交干净源码构建正式候选。`test:packages` 强制 source.dirty=false，并按 `scripts/fixtures/release-inputs.mjs` 固定输入检查后续差异；源码、包内说明、Skill或指定构建脚本改变就重建。验收脚本/项目记录变化可保留同候选，但源码归档仍取索引revision。
+
+```sh
+bun run test:packages
+RUNWEFT_SMOKE_NATIVE_INSTALL=1 RUNWEFT_SMOKE_KEEP_INSTALL=1 bun run test:install
+bun run test:hub-upgrade <已保存的Hub基线bin/runweft> <已安装候选bin/runweft>
+RUNWEFT_SMOKE_QEMU=<qemu-aarch64-static> RUNWEFT_SMOKE_SYSROOT=<aarch64-linux-gnu目录> bun run test:arm64
+```
+
+registry 安装只服务本批包、使用专用 npm prefix/cache；evidence.json 的 installedBinary 是后续模型/网页参数，不用 npm launcher 或另编译的 dist/runweft 替代。`test:service` 为无需Bun/模型PATH的Node默认Hub测试。connect/console同样接受已安装程序参数并记录相邻hash。QEMU入口解包当前arm64包，只验证版本、配置、路径、缺Hub诊断及显式reset，不修改全局binfmt，也不声称原生服务/模型验证。
+
+全量成功后准备经人工筛选的本地验收说明和无秘密证据索引，索引必须含 version、sourceRevision、success=true。不复制原生日志、凭据或完整prompt：
+
+```sh
+bun run release:assemble dist/packages dist/website <验收说明.md> <脱敏证据索引.json>
+```
+
+输出 `dist/runweft-<版本>-release/`、`.tar.gz` 及 `.sha256`，含包/Skill、静态官网、逐文件校验、对应两仓库源码归档及离线Git bundle；bundle保留固定revision，源码重建不依赖远端Git，但安装依赖仍需网络。已有输出拒绝覆盖，先明确备份旧生成物。不公开发布或修改在线部署。Mac双架构必须构建但保留实机边界，同机多Runner不当作物理远端。实际结果见[项目入口](README.md)。

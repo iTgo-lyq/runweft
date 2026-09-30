@@ -1,12 +1,12 @@
 # Runweft
 
-将 HAPI 的执行能力适配为 Codex 和 Claude Code 可调用的 MCP subagent 工具。
+让 Codex 和 Claude Code 通过 MCP 委派任务，以 HAPI 内置执行能力运行子会话。
 
-1.0.0 已完成十二个 Change 的实现与集成验收：统一 CLI、本地/Hub 部署、全局 MCP 安装、机器/runtime 登记、全局/项目 Agent 定义、本机共享目录或独立 worktree、远端独立 worktree、任务附件、代码取回与全局协作看板。每轮结束关闭子进程，保留 session 与工作区供后续委派；合入与冲突处理由主 agent 决定。
+1.1.0 使用明确 Hub、独立用户身份、空间成员权限和中心 Agent 配置。用户通过对话与产品 Skill 完成安装、连接和维护，在 `/hub` 管理机器、runtime、Agent、仓库、个人选择及本人任务；不在项目里维护 Runweft YAML，也不向模型提供身份 token。
 
-从[使用说明](docs/usage.md)安装、接入 MCP 和配置本地/Hub 模式。macOS/Linux arm64/x64 产物已一并构建，尚未上传公共 npm，可直接解包对应平台产物；产物位置、校验和及完整证据见[交付验收](docs/project/archive/2026-09-30-integrated-release/acceptance.md)。
+支持本机共享目录、本机或远端独立 worktree、附件、代码 bundle 取回、停止和续接。每轮关闭子进程，保留 session 与工作区；只有原生确认历史缺失才重建上下文，未知执行不盲目重发。代码接纳与冲突处理由主 Agent 决定，不自动 push 或合入。
 
-Linux x64 已完成真实安装、两宿主 × 两 runtime 的完整协作、Playwright 和升级回退验证。Mac 实机由用户验证；Linux arm64 当前为 QEMU CLI/配置验证；物理远端延期，已通过同机独立 Hub/多 Runner 链路。具体限制与模型环境见交付验收。
+从[产品 Skill](skills/runweft/SKILL.md)和[使用说明](docs/usage.md)接入。发行提供 macOS/Linux arm64/x64 平台包、相邻 HAPI、Skill、说明和校验索引，无需全局 Bun、Node 或另装 HAPI。尚未公开 npm 发布；真实产物及验收状态见[项目入口](docs/README.md)，不要用旧 1.0.0 的验证代替新候选。Mac 实机与物理跨机、Linux arm64 QEMU 与原生协作分别记录。
 
 从[项目文档](docs/README.md)阅读架构决策、当前 Specs 和全部归档；后续开发沿 [project-workflow](.agents/skills/project-workflow/SKILL.md)。旧实现保留在 [runweft-archive](https://github.com/iTgo-lyq/runweft-archive)，本仓库使用新的 Git 历史。
 

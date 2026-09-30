@@ -3,6 +3,7 @@ import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, statSync, symlinkSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
+import { assertFrozenCandidate } from './fixtures/release-inputs.mjs';
 
 const source = resolve(process.argv[2] ?? 'dist/packages');
 const index = JSON.parse(readFileSync(join(source, 'index.json'), 'utf8'));
@@ -16,8 +17,7 @@ function command(bin, args, options = {}) {
     return result.stdout;
 }
 try {
-    assert.match(index.source.revision, /^[a-f0-9]{40}$/);
-    assert.equal(typeof index.source.dirty, 'boolean');
+    assertFrozenCandidate(index);
     assert.deepEqual(index.packages.map(item => item.name).sort(), ['runweft', 'runweft-darwin-arm64', 'runweft-darwin-x64', 'runweft-linux-arm64', 'runweft-linux-x64']);
     assert.deepEqual(readdirSync(join(source, 'tarballs')).sort(), index.packages.map(item => item.tarball.split('/').at(-1)).sort());
     const checksums = readFileSync(join(source, 'SHA256SUMS'), 'utf8').trim().split('\n');

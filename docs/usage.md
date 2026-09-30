@@ -2,7 +2,7 @@
 
 Runweft 为 Codex 和 Claude Code 提供 Hub 集中配置、任务委派、本地共享/独立 worktree、远端独立 worktree，以及附件和 Git 成果回收。执行基于配套 HAPI 内置适配。用户通过对话交给 Agent 安装和操作，在 Web 维护有权使用的资源、查看本人任务。
 
-本文描述当前源码与按该源码新构建的发行包。旧 1.0.0 下载不会自动获得新 Hub 行为；核对发行 `index.json` / 官网 `release.json` 的源码版本和校验和，不把版本号相同视为同一程序。
+本文配套 Runweft 1.1.0。旧 1.0.0 下载不会自动获得新 Hub 行为；核对发行 `index.json` / 官网 `release.json` 的源码版本和校验和，不把版本号相同视为同一程序。
 
 ## 交给 Agent 接入
 
@@ -21,7 +21,7 @@ Runweft 为 Codex 和 Claude Code 提供 Hub 集中配置、任务委派、本�
 ```sh
 shasum -a 256 -c SHA256SUMS &&
 runweft_platform=darwin-arm64 &&
-runweft_version=1.0.0 &&
+runweft_version=1.1.0 &&
 runweft_install="$HOME/.local/share/runweft/$runweft_version-$runweft_platform" &&
 mkdir -p "$runweft_install" "$HOME/.local/bin" &&
 tar -xzf "tarballs/runweft-$runweft_platform-$runweft_version.tgz" -C "$runweft_install" --strip-components=1 &&

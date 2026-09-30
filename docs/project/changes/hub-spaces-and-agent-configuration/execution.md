@@ -32,3 +32,11 @@ iclaude 首次进程因变长 `--mcp-config` 参数吞入末尾 prompt，在模�
 - 验证：远端Codex已在 `hub-native-mcp-MQcEkf` 完成真实spawn/wait/read；远端Claude最终 `.dev-smoke/hub-native-mcp-Utj7i0/evidence.json` success=true、cleanupErrors=[]。T2仍使用安装版1.0.0入口预演，不代替T4正式1.1.0十二组。
 - 返修：`hub-native-mcp-Hhc9Ki`、`hub-native-mcp-ncc2IL`、`hub-native-mcp-MQcEkf`、`hub-native-mcp-LNlROL` 的整组均失败且清理成功，原因是测试遇到模型额外只读Git及echo组合时直接终止。没有未知执行重发：每次已清理专用现场后创建新测试；改为明确限制提示及非预期命令返回denied，保留精确允许集合。最终聚焦没有非预期请求。此前对已清理现场的两次人工批准尝试均因cwd/连接失败未生效。
 - Commit：`hub-spaces-and-agent-configuration T2: exercise installed Hub collaboration and native matrix`。
+
+## T3 同版发行内容与候选冻结
+
+- 结果：版本及包内使用说明更新1.1.0，README改为Agent/Skill、明确Hub和中心配置，不再把旧1.0.0升级回退当当前结果。CI补Skill触发/上传，开发说明给出当前安装程序参数、十二组合、QEMU与完整交付入口。Skill内容不变。
+- 结果：新增固定包输入核对，拒绝dirty候选、追踪/未追踪产品变动；包校验强制执行。新增当前arm64 QEMU命令入口，不注册binfmt、不跑旧agent init。装配器生成平台/主包/Skill、静态网站、逐文件校验、筛选后的验收、对应两仓库源码及离线Git bundle，拒绝覆盖已有交付。
+- 验证：frozen install、typecheck、build、Node语法及diff-check通过。全套255 pass / 0 fail / 5219断言（40文件）；随后新增装配fixture，与冻结fixture合计2 pass / 39断言，验证离线克隆、HAPI子模块固定revision及拒绝覆写。四平台1.1.0预构建成功，证据 `.dev-smoke/reviews/hub-final-release/t3-{tests,focused,typecheck,build,package-preview}.log`；该预览dirty=true，明确不用于正式验收。
+- 冻结顺序：本任务先提交已验证包内容，紧接从干净提交执行 `bun run package --all --reuse-hapi`。成功后才进入T4，实际index.source/hash与构建结果随T4证据记录；失败继续T3修正，不用预构建冒充正式候选。
+- Commit：`hub-spaces-and-agent-configuration T3: prepare 1.1.0 packages and reproducible delivery`。

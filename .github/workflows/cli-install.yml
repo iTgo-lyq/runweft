@@ -3,7 +3,7 @@ name: CLI installation
 on:
   push:
     branches: [main, 'codex/**']
-    paths: ['src/**', 'scripts/**', 'test/**', 'docs/usage.md', 'package.json', 'bun.lock', '.npmrc', 'tsconfig.json', 'hapi', '.github/workflows/cli-install.yml']
+    paths: ['src/**', 'scripts/**', 'skills/**', 'test/**', 'docs/usage.md', 'package.json', 'bun.lock', '.npmrc', 'tsconfig.json', 'hapi', '.github/workflows/cli-install.yml']
   workflow_dispatch:
 
 permissions:
@@ -40,6 +40,7 @@ jobs:
           path: |
             dist/packages/index.json
             dist/packages/SHA256SUMS
+            dist/packages/runweft-skill-*.tgz
             dist/packages/*/package.json
             dist/packages/tarballs/*.tgz
           compression-level: 0
