@@ -25,3 +25,12 @@
 - 验证：typecheck；全仓 205 pass、0 fail、4180 expectations（30 文件）；补充治理展示字段后的聚焦复核 14 pass、0 fail、292 expectations。覆盖两空间/多角色、并发注册、v11 迁移、配置留存、路径裁剪、单机失败及探测期间撤销；真实双跳 Socket.IO 协议 fixture 证明预检后禁用也不会把启动字节交给 Runner。原始日志 `t2-tests.log` / `t2-final-focused.log`。
 - 回归：真实 HAPI HTTP/文件 12 组通过（`.dev-smoke/hub-access-hGHSA4`），实时/Runner 10 组通过（`.dev-smoke/hub-realtime-Vi8Fkm`）。结构与 diff 检查通过。新领域组合下真实 enrollment/Runner 探测在 T4 验收，未把协议 fixture 称为真实模型执行。
 - Commit：`hub-resource-ownership T2: govern runtime sharing and native dispatch`
+
+## T3 Hub CLI 与持久接入恢复
+
+- 结果：同一 CLI 的 `hub machine/runtime` 命令和 typed client 完成资源管理；显式 URL、身份文件或 RUNWEFT_IDENTITY_TOKEN，不走旧 root/HAPI 认证或本地回退。Web 备份同时核对 origin/身份 ID；能力检查先于发送凭据，跨地址重定向拒绝。
+- 持久化：规范化 Hub 对应 0600 machine.json，网络请求前保存 request/token 与 pending；复用 client.sqlite 短写事务串行文件更新，不保存第二份凭据或遗留锁文件。并发首次接入共享同一请求，确认后的迟到回执不覆盖轮换状态。旧 pending 明确失败，显式替换才生成新请求。
+- 恢复：模拟服务端提交后丢响应，原 enrollment/轮换均可恢复；原机器凭据被撤销且首次回执尚未保存时，显式 rotate 可查询原 requestId 找回机器，无需修改文件或创建第二台。
+- 验证：typecheck；资源/CLI 聚焦 18 pass、384 expectations；最终 CLI/config/旧 CLI 复核 11 pass、127 expectations。测试实际编译 Runweft 可执行文件后运行，覆盖并发接入、分享/禁用/check、轮换、双 Hub、身份不匹配、Web 备份、JSON/人类输出无 token、0600 及不生成原生配置。原始日志 `t3-tests.log` / `t3-final-tests.log`；结构与 diff 检查通过。
+- 边界：此任务使用组合资源服务及原生协议 fixture；真实 Runner 使用新持久接入文件由 T4 验证。操作接口见 [CLI 契约](cli-contract.md)。
+- Commit：`hub-resource-ownership T3: add hub resource CLI and durable machine enrollment`

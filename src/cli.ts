@@ -12,6 +12,7 @@ import { addAgentCommands } from './agents/commands';
 import { addTaskCommands } from './tasks/commands';
 import { addPreparationCommands } from './remote/commands';
 import { addArtifactCommands } from './artifacts/commands';
+import { addHubCommands } from './hub/resources/commands';
 
 export const VERSION = pkg.version;
 
@@ -61,6 +62,7 @@ export function createProgram() {
             `数据根：${paths.home}`, `配置：${paths.config}`, `Hub 数据：${paths.server}`,
             `本机中心业务库：${paths.state}${c.config.mode === 'hub' ? '（当前为 Hub 客户端，权威资源库位于所连中心）' : ''}`,
             `当前连接 HAPI 数据：${paths.hapiClient}`, `本机工作区/Agent 绑定与身份数据：${paths.bindings}`, `全局 Agent 定义：${paths.agents}`,
+            `当前连接的机器接入记录：${paths.machineConnection}`,
             `当前连接的本机任务工作区：${paths.taskWorkspaces}`,
             `当前连接的仓库缓存：${paths.repositoryCaches}`, `基线/成果导出候选与回执：${paths.repositoryExports}`, `基线导入回执：${paths.repositoryImports}`, `成果取回回执与中间副本：${paths.repositoryFetches}`,
             `本机托管 Hub 的文件：${paths.artifacts}${c.config.mode === 'hub' ? '（当前文件权威在所连 Hub）' : ''}`,
@@ -85,6 +87,7 @@ export function createProgram() {
     addServiceCommands(program, context, output);
     addMcpCommands(program, context, output);
     addResourceCommands(program, context, output);
+    addHubCommands(program, output);
     addAgentCommands(program, context, output);
     addTaskCommands(program, context, output);
     addArtifactCommands(program, context, output);

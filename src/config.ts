@@ -6,13 +6,14 @@ import { parseDocument, stringify } from 'yaml';
 import { z } from 'zod';
 import { RunweftError } from './errors';
 
-const origin = z.string().refine(value => {
+export const hubOrigin = z.string().refine(value => {
     try {
         const url = new URL(value);
         return ['http:', 'https:'].includes(url.protocol) && !url.username && !url.password
             && !url.search && !url.hash && url.pathname === '/';
     } catch { return false; }
 }, '使用 HTTP(S) 根地址，不包含路径、凭据或查询参数').transform(value => new URL(value).origin);
+const origin = hubOrigin;
 const port = z.number().int().min(1).max(65535);
 const artifactDefaults = { maxFileMiB: 512, namespaceQuotaGiB: 10, unreferencedDays: 7, pendingHours: 24 };
 const artifactSettings = z.strictObject({
@@ -162,7 +163,7 @@ export function setConfig(resolved: ResolvedConfig, key: string, value: string) 
     return loadConfig(resolved.home, resolved.env);
 }
 
-export function connectionName(config: Config): string {
+export function connectionName(config: Pick<Config, 'mode' | 'hub'>): string {
     if (config.mode === 'local') return 'local';
     const url = config.hub.url!;
     const label = new URL(url).hostname.replace(/[^a-zA-Z0-9.-]/g, '-');
@@ -181,6 +182,7 @@ export function dataPaths(resolved: ResolvedConfig) {
         server, hapiServer: join(server, 'hapi'), runweftServer: join(server, 'runweft'),
         state: join(server, 'runweft', 'state.sqlite'),
         hapiClient, taskWorkspaces: join(hapiClient, 'workspaces', 'environments'),
+        machineConnection: join(home, 'connections', connectionName(config), 'machine.json'),
         repositoryCaches: join(hapiClient, 'workspaces', 'repositories'), repositoryExports: join(hapiClient, 'workspaces', 'exports'), repositoryImports: join(hapiClient, 'workspaces', 'imports'),
         repositoryFetches: join(hapiClient, 'workspaces', 'fetches'),
         artifacts: join(server, 'hapi', 'artifacts'), artifactTransfers: join(hapiClient, 'artifact-transfers'),

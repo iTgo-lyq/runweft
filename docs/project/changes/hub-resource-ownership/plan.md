@@ -29,7 +29,7 @@
 
 ### T3 Hub 管理 CLI 与持久机器接入记录
 
-- 状态：待开始
+- 状态：已完成
 - 交付：typed client 与同一 Runweft CLI 下的 Hub 机器/runtime 管理命令；按既有 connections 分区保存的 machine 接入记录；并发初次创建、active/pending 轮换与 Web 备份 Hub 核对。
 - 依赖：T1、T2。
 - 验收：显式身份/空间，无旧认证或本地服务回退；可完成 enrollment、分享、治理和 check；丢响应用原凭据恢复；stdout/错误不含秘密，所有持久数据在明确的数据根内。

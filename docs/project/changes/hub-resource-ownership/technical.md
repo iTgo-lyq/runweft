@@ -63,9 +63,13 @@ CLI 使用规范化 Hub origin 与既有 connectionName，将 requestId/随机 t
 
 ## CLI 与兼容
 
+命令、输出与接入恢复细节见 [CLI 契约](cli-contract.md)。
+
 新增 `runweft hub machine ...` / `runweft hub runtime ...` 管理入口及 typed HubResourceClient；这是同一 CLI 的 Hub 域，不要求用户使用第二个程序。显式 Hub URL 与身份文件/受支持环境变量建立连接，空间可显式选择；不隐式启动本地服务或回退旧认证。机器接入记录放统一数据根按 Hub 分区，权限 0600，不写仓库或系统临时目录。不自动修改当前用户的原生配置。
 
 身份输入使用独立 RUNWEFT_IDENTITY_TOKEN 或身份文件，不复用旧 RUNWEFT_HUB_TOKEN；可读取现有 Web 下载备份，必须核对文件内 Hub origin 与目标一致。data paths 显示机器记录的位置。身份文件和浏览器到 CLI 的长期接入体验在阶段 5/6 收口；本阶段管理命令可在专用配置完整执行。原有 root resource 命令保持现有行为，默认路由与最终命令收敛在阶段 5 迁移，不临时让新身份通过旧入口。
+
+本机 machine.json 的短时读改写复用既有 client.sqlite 写事务互斥，不在 SQLite 保存凭据副本，也不另建锁文件或临时数据库。网络请求位于事务之外，进程退出会自动释放锁；并发首次接入读取同一已保存请求，响应丢失保留 active/pending。显式 `rotate-credential --replace-pending` 才放弃已失效的 pending 请求，普通重跑继续确认原请求。
 
 ## 验证与就绪性
 
