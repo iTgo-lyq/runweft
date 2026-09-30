@@ -25,7 +25,7 @@
 | 前置 | [任务附件](../../archive/2026-09-29-task-artifact-delivery/requirement.md) | 独立文件交付和任务输入/输出集成已验收 |
 | 前置 | [远端准备](../../archive/2026-09-30-remote-workspace-preparation/requirement.md) | 跨机准备、固定基线及准备失败禁止启动已验收 |
 | 前置 | [远端结果](../../archive/2026-09-30-remote-result-delivery/requirement.md) | 主仓库实际取回成果、失败重试与保留已验收 |
-| 前置 | [Subagent 看板](../subagent-dashboard/requirement.md) | 全局查询与 HAPI 详情链接已验收 |
+| 前置 | [Subagent 看板](../../archive/2026-09-30-subagent-dashboard/requirement.md) | 全局查询与 HAPI 详情链接已验收 |
 
 依赖表示进入本 Change 正式集成验收前的条件，不限制各领域提前维护包、文档和集成测试。发现领域缺陷回到其原 Change 修复，不复制一份实现。
 

@@ -28,7 +28,7 @@
 | 2. 本地共享协作 | [委派生命周期](archive/2026-09-29-delegation-lifecycle/requirement.md) | 从原生宿主通过 MCP 派生本地任务，等待、收回报告、中断和追加；每轮结束关闭执行，保留 cwd/session；CLI 调用同一能力 | 独立 worktree、中心附件和远端环境 |
 | 3. 工作区与文件交付 | [本地独立工作区](archive/2026-09-29-local-workspace-execution/requirement.md)、[任务附件](archive/2026-09-29-task-artifact-delivery/requirement.md) | 前者在本机独立 worktree 完成协作、封存与续接；后者在无 agent 会话时完成文件上传、下载与保留；阶段组合验收启动前输入和任务输出附件 | 远端 Runner 上的仓库传输、远端成果回收、看板 |
 | 4. 远端完整协作 | [远端准备](archive/2026-09-30-remote-workspace-preparation/requirement.md) → [远端结果](archive/2026-09-30-remote-result-delivery/requirement.md) | 精确基线与附件先到达，远端执行后主仓库取得可合入成果；失败重试与续接可验证 | 看板和最终发行整合 |
-| 5. 全局可见性 | [Subagent 看板](changes/subagent-dashboard/requirement.md) | 使用已有查询事实展示跨工作区、机器与父任务状态，链接 HAPI 详情 | 看板基础验收只需阶段 2；完整交付状态组合在阶段 4 后验证 |
+| 5. 全局可见性 | [Subagent 看板](archive/2026-09-30-subagent-dashboard/requirement.md) | 使用已有查询事实展示跨工作区、机器与父任务状态，链接 HAPI 详情 | 看板基础验收只需阶段 2；完整交付状态组合在阶段 4 后验证 |
 | 6. 完整版本交付 | [集成与发布](changes/integrated-release/requirement.md) | 同一候选发行版本安装、配置、完整协作和诊断可运行；两宿主、两 runtime、本地/远端及 macOS 证据齐全 | 不以任何后续功能补齐本次承诺 |
 
 阶段 1 在 CLI 基础安装可用后可分别推进执行与资源注册的证据核对；宿主消费执行契约，agent 定义消费资源注册；图中依赖仍约束对应实现。主宿主身份或受控子执行的 Runweft MCP 禁用未验证时，先解决该缺口，不带着假设进入阶段 2。

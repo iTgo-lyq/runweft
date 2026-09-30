@@ -26,7 +26,7 @@ HAPI Hub 只监听本机私有端口，省略端口配置时自动选择。Runwe
 
 身份和登录沿 HAPI；Runweft 自有认证路由验证同一 HAPI JWT 的用户和 namespace，不另建账号。Hub 令牌优先取指定环境变量，再取当前连接保存的 HAPI settings。本地令牌来自托管 Hub 配置。
 
-`auth login/status` 配置和核对当前连接，`auth login --token-stdin` 接受标准输入。`auth token` 只在交互终端显式展示；普通状态、配置、JSON 和日志不包含令牌。`open` 使用现有 HAPI 登录入口。
+`auth login/status` 配置和核对当前连接，`auth login --token-stdin` 接受标准输入。`auth token` 只在交互终端显式展示；普通状态、配置、JSON 和日志不包含令牌。`open` 默认打开[协作看板](../dashboard/subagents/spec.md)，`--hapi` 打开原生 HAPI；两者共用 HAPI 登录。
 
 托管 HAPI 的部署目录、数据库、地址、令牌、CORS 与 Runner handoff 环境由 Runweft 设置，忽略冲突的外部部署值；托管 Runner 禁用版本 handoff。其他环境和原生模型 home 继续继承，不自动改变模型凭据、默认权限或添加审批绕过参数。
 

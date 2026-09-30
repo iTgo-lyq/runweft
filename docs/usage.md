@@ -1,6 +1,6 @@
 # Runweft 基础入口使用说明
 
-当前实现包含配置、HAPI 服务管理、机器/runtime 登记、Agent 定义，以及 Codex/Claude Code 经 MCP 或 CLI 进行本机共享目录、独立 worktree 和远端 worktree 协作。已支持文件输入/输出、代码成果发布及取回、补交、显式释放和远端 Git 诊断准备。协作看板已实现、正在整体验收，完整集成仍在推进；当前候选包不是完整项目的最终发布。
+当前实现包含配置、HAPI 服务管理、机器/runtime 登记、Agent 定义，以及 Codex/Claude Code 经 MCP 或 CLI 进行本机共享目录、独立 worktree 和远端 worktree 协作。已支持文件输入/输出、代码成果发布及取回、补交、显式释放和远端 Git 诊断准备。协作看板已通过自动验收，完整发行集成仍在推进；当前候选包不是完整项目的最终发布。
 
 ## 安装与首次使用
 
