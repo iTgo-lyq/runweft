@@ -1,22 +1,21 @@
 import assert from 'node:assert/strict';
-import { randomBytes, randomUUID } from 'node:crypto';
+import { randomUUID } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { chmodSync, copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { homedir } from 'node:os';
 import { atomicWrite } from '../src/config';
 import { freePort } from '../src/services';
-import { HubStore } from '../src/hub/store';
 import { HubClient } from '../src/hub/client';
-import { createDelegationGateway } from '../src/hub/delegation/gateway';
 import { hubConnectionPaths } from '../src/hub/resources/connection';
 import { configureSmokeCodexModel } from './fixtures/codex-model';
+import { installedBinaries } from './fixtures/installed-binaries.mjs';
 
 mkdirSync('.dev-smoke', { recursive: true });
-const root = mkdtempSync(resolve('.dev-smoke/hub-consumers-')), statePath = join(root, 'state.sqlite');
-const binary = resolve(process.argv[2] ?? 'dist/runweft'), nativeBinary = resolve(process.argv[3] ?? 'dist/hapi');
+const root = mkdtempSync(resolve('.dev-smoke/hub-consumers-')), serverHome = join(root, 'server');
+const binary = resolve(process.argv[2] ?? 'dist/runweft'), binaries = installedBinaries(binary);
 const selected = process.env.RUNWEFT_SMOKE_CONSUMER_CASE;
-assert(!selected || ['codex', 'remote', 'prepare'].includes(selected), 'Unknown consumer smoke case');
+assert(!selected || ['codex', 'remote', 'prepare', 'controls'].includes(selected), 'Unknown consumer smoke case');
 const env: NodeJS.ProcessEnv = { ...process.env };
 for (const key of Object.keys(env)) if (key.startsWith('HAPI_') || key.startsWith('RUNWEFT_') || ['CLI_API_TOKEN', 'DB_PATH', 'TELEGRAM_BOT_TOKEN'].includes(key)) delete env[key];
 const codexHome = join(root, 'codex'), claudeHome = join(root, 'claude');
@@ -38,24 +37,26 @@ for (const name of Object.keys((Bun.TOML.parse(readFileSync(join(codexHome, 'con
 }
 const prefsPath = join(claudeHome, '.claude.json'), prefs = existsSync(prefsPath) ? JSON.parse(readFileSync(prefsPath, 'utf8')) : {};
 prefs.mcpServers = {}; writeFileSync(prefsPath, JSON.stringify(prefs), { mode: 0o600 });
-const port = await freePort(), target = `http://127.0.0.1:${port}`, rootToken = randomBytes(32).toString('base64url'), key = randomBytes(32);
-const secrets: string[] = [rootToken], nativeHome = join(root, 'hapi');
-const hapi = Bun.spawn([nativeBinary, 'hub'], { env: { ...env, HAPI_HOME: nativeHome, DB_PATH: join(nativeHome, 'hapi.db'), CLI_API_TOKEN: rootToken,
-    HAPI_LISTEN_HOST: '127.0.0.1', HAPI_LISTEN_PORT: String(port), HAPI_PUBLIC_URL: target, TELEGRAM_BOT_TOKEN: '' },
-    stdout: Bun.file(join(root, 'hapi-out.log')), stderr: Bun.file(join(root, 'hapi-err.log')) });
-let gateway: Awaited<ReturnType<typeof createDelegationGateway>> | undefined, hub: HubStore | undefined, base = '';
-const runnerEnvironments: NodeJS.ProcessEnv[] = [];
-const runners: ReturnType<typeof Bun.spawn>[] = [], evidence: any = { root, binary, nativeBinary, codexModel, selected, success: false, checks: [], tasks: [], cleanupErrors: [],
-    scope: 'compiled Hub consumers, unchanged HAPI, real Codex/Claude runtimes and two Runners on one physical Linux machine; host MCP metadata covered by separate tests' };
+const port = await freePort(), base = `http://127.0.0.1:${port}`, secrets: string[] = [];
+const homes = [join(root, 'source-client'), join(root, 'target-client')];
+const homeEnvironments = new Map<string, NodeJS.ProcessEnv>();
+let ownerClient: HubClient | undefined;
+const evidence: any = { root, binary, binaries, codexModel, selected, success: false, checks: [], tasks: [], cleanupErrors: [],
+    scope: 'installed default Hub and adjacent unchanged HAPI, real Codex/Claude runtimes and two CLI-managed Runners on one physical Linux machine' };
 const project = join(root, 'project'); mkdirSync(project);
 function git(...args: string[]) { return execFileSync('git', ['-C', project, ...args], { env, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim(); }
 async function cli(home: string, args: string[]) {
-    const child = Bun.spawn([binary, '--home', home, '--json', ...args], { cwd: project, env, stdout: 'pipe', stderr: 'pipe' });
+    const child = Bun.spawn([binary, '--home', home, '--json', ...args], { cwd: project, env: homeEnvironments.get(home) ?? env, stdout: 'pipe', stderr: 'pipe' });
     const [exit, stdout, stderr] = await Promise.all([child.exited, new Response(child.stdout).text(), new Response(child.stderr).text()]);
     for (const secret of secrets) assert(!(stdout + stderr).includes(secret), 'Credential in CLI output');
     assert.equal(exit, 0, `${args[0]}: ${stderr}`); return JSON.parse(stdout);
 }
 function check(name: string) { evidence.checks.push(name); console.log('PASS ' + name); }
+async function hubApi(path: string, body: object, token?: string) {
+    const response = await fetch(base + '/api/runweft/hub' + path, { method: 'POST', headers: {
+        'content-type': 'application/json', ...(token ? { authorization: `Bearer ${token}` } : {}) }, body: JSON.stringify(body) });
+    assert(response.ok, `Hub setup ${path}: ${response.status}`); return response.json() as any;
+}
 async function until<T>(fn: () => Promise<T>, good: (value: T) => boolean, label: string, timeoutMs = 40_000) {
     const deadline = Date.now() + timeoutMs;
     while (Date.now() < deadline) { const value = await fn(); if (good(value)) return value; await Bun.sleep(300); }
@@ -71,25 +72,22 @@ async function finish(home: string, id: string, timeoutMs = 240_000): Promise<an
 }
 console.log('Evidence directory: ' + root);
 try {
-    await until(async () => { try { return (await fetch(target + '/health', { signal: AbortSignal.timeout(500) })).ok; } catch { return false; } }, Boolean, 'HAPI');
-    gateway = await createDelegationGateway({ host: '127.0.0.1', port: 0, target, rootToken, key, statePath, pollMs: 50 });
-    base = `http://127.0.0.1:${(gateway.server.address() as { port: number }).port}`;
-    hub = new HubStore(statePath); const owner = hub.createIdentity('Task owner'), remote = hub.createIdentity('Runner owner'), space = owner.personalSpace.id;
-    hub.acceptInvitation(remote.identity.id, hub.invite(owner.identity.id, space, 'member').token); secrets.push(owner.token, remote.token);
-    const homes = [join(root, 'source-client'), join(root, 'target-client')], machineIds: string[] = [];
+    await cli(serverHome, ['init']); await cli(serverHome, ['config', 'set', 'server.port', String(port)]); await cli(serverHome, ['start']);
+    const owner = await hubApi('/identities', { name: 'Task owner' }), remote = await hubApi('/identities', { name: 'Runner owner' }), space = owner.personalSpace.id;
+    const invitation = await hubApi(`/spaces/${space}/invitations`, { role: 'member' }, owner.token);
+    await hubApi('/invitations/accept', { token: invitation.token }, remote.token); secrets.push(owner.token, remote.token, invitation.token);
+    const machineIds: string[] = [];
     for (const [index, user] of [owner, remote].entries()) {
         const home = homes[index], paths = hubConnectionPaths(home, base);
-        atomicWrite(join(home, 'config.yaml'), `mode: ${index ? 'hub' : 'local'}\nhub:\n  url: ${base}\n`);
+        await cli(home, ['init', '--url', base]);
         atomicWrite(paths.identityConnection, JSON.stringify({ schemaVersion: 1, hub: base, ownerId: user.identity.id, spaceId: space, token: user.token, requestId: randomUUID(), createdAt: Date.now() }));
         const enrollment = await cli(home, ['machine', 'enroll', '--name', `consumer-runner-${index}`]); machineIds.push(enrollment.machineId);
         await cli(home, ['machine', 'associate', enrollment.machineId, space]);
-        const record = JSON.parse(readFileSync(paths.machineConnection, 'utf8')), runnerHome = join(paths.connection, 'hapi'); secrets.push(record.active.token);
-        atomicWrite(join(runnerHome, 'settings.json'), JSON.stringify({ machineId: record.machineId, cliApiToken: record.active.token }));
-        const runnerEnv = { ...env, HAPI_HOME: runnerHome, HAPI_API_URL: base, CLI_API_TOKEN: record.active.token, HAPI_DISABLE_VERSION_HANDOFF: '1' }; runnerEnvironments.push(runnerEnv);
-        runners.push(Bun.spawn([nativeBinary, 'runner', 'start-sync'], { env: runnerEnv,
-            stdout: Bun.file(join(root, `runner-${index}-out.log`)), stderr: Bun.file(join(root, `runner-${index}-err.log`)) }));
+        const record = JSON.parse(readFileSync(paths.machineConnection, 'utf8')); secrets.push(record.active.token);
+        await cli(home, ['runner', 'start']);
     }
-    for (const [index, home] of homes.entries()) await until(async () => { assert.equal(runners[index].exitCode, null); const result = await cli(home, ['machine', 'list']); return result.machines.some((m: any) => m.id === machineIds[index] && m.online); }, Boolean, 'Runner online');
+    ownerClient = new HubClient({ url: base, home: homes[0], env }, 'hubDelegation', 'unavailable');
+    for (const [index, home] of homes.entries()) await until(async () => { const result = await cli(home, ['machine', 'list']); return result.machines.some((machine: any) => machine.id === machineIds[index] && machine.online); }, Boolean, 'Runner online');
     const localCodex = (await cli(homes[0], ['runtime', 'register', 'codex', '--machine', machineIds[0]])).runtime;
     const remoteClaude = (await cli(homes[1], ['runtime', 'register', 'claude', '--machine', machineIds[1]])).runtime;
     await cli(homes[1], ['runtime', 'share', remoteClaude.id, space]);
@@ -126,16 +124,12 @@ try {
     assert.equal(second.native_session_id, first.native_session_id); assert.equal(second.stop, 'stopped');
     evidence.tasks.push({ mode: 'shared', runtime: 'codex', id: accepted.agent_id, firstRound: first.round_id, secondRound: second.round_id, nativeSessionId: second.native_session_id });
     check('real Codex shared execution stops each round and resumes the same native session through the saved Hub identity');
-    // A removed rollout with an intact native index is corruption, not confirmed absence.
-    // Restart only this dedicated Runner with a clean native history store and the same model configuration/authentication.
     const emptyCodex = join(root, 'codex-without-history'); mkdirSync(emptyCodex, { mode: 0o700 });
     for (const file of ['config.toml', 'auth.json']) copy(join(codexHome, file), join(emptyCodex, file));
-    runners[0].kill(); await runners[0].exited;
-    runners[0] = Bun.spawn([nativeBinary, 'runner', 'start-sync'], { env: { ...runnerEnvironments[0], CODEX_HOME: emptyCodex },
-        stdout: Bun.file(join(root, 'runner-restarted-out.log')), stderr: Bun.file(join(root, 'runner-restarted-err.log')) });
+    await cli(homes[0], ['runner', 'stop']);
+    homeEnvironments.set(homes[0], { ...env, CODEX_HOME: emptyCodex });
+    await cli(homes[0], ['runner', 'start']);
     await until(async () => {
-        const state = join(runnerEnvironments[0].HAPI_HOME!, 'runner.state.json');
-        if (!existsSync(state) || JSON.parse(readFileSync(state, 'utf8')).pid !== runners[0].pid) return false;
         return (await cli(homes[0], ['machine', 'list'])).machines.some((machine: any) => machine.id === machineIds[0] && machine.online);
     }, Boolean, 'Runner with missing native history');
     const rebuilt = await cli(homes[0], ['task', 'send', accepted.agent_id, '--message', '原生历史可能已缺失。只根据系统提供的业务历史，回复前两轮的最终回复原文，再加 CENTRAL_HISTORY_DONE。不要调用工具。']);
@@ -182,15 +176,51 @@ try {
     check('explicit release removes remote environment and central references while preserving the fetched parent result ref');
 
     }
-    const logs = ['hapi-out.log', 'hapi-err.log', 'runner-0-out.log', 'runner-0-err.log', 'runner-1-out.log', 'runner-1-err.log'];
-    for (const file of logs) for (const secret of secrets) assert(!readFileSync(join(root, file), 'utf8').includes(secret), 'Credential in native service log');
+    if (!selected || selected === 'controls') {
+        for (const flavor of ['codex', 'claude']) {
+            const runtime = (await cli(homes[0], ['runtime', 'register', flavor, '--machine', machineIds[0]])).runtime;
+            const definition = join(root, `control-${flavor}.json`);
+            writeFileSync(definition, JSON.stringify({ name: `Control ${flavor}`, runtimeId: runtime.id }));
+            const agent = (await cli(homes[0], ['agent', 'create', '--file', definition, '--request-id', randomUUID()])).agent;
+            const marker = `CONTROL_${randomUUID().slice(0, 8)}`;
+            const task = await cli(homes[0], ['task', 'spawn', agent.id, '--message', `不要调用工具。记住 ${marker}，只回复该标记。`]);
+            const first = await finish(homes[0], task.agent_id); assert(first.report.text.includes(marker));
+            const slow = await cli(homes[0], ['task', 'send', task.agent_id, '--message', '只运行 sleep 60，之后回复 SLOW_DONE。不修改文件，不委派。']);
+            const active = await until(() => cli(homes[0], ['task', 'show', task.agent_id]),
+                value => value.round_id === slow.round_id && value.inputs[0]?.observation?.phase === 'accepted', 'running interrupt target', 120_000);
+            assert.equal((await cli(homes[0], ['task', 'interrupt', task.agent_id, '--round', first.round_id])).status, 'already_finished');
+            await cli(homes[0], ['task', 'interrupt', task.agent_id, '--round', slow.round_id]);
+            const stopped = await until(() => cli(homes[0], ['task', 'show', task.agent_id]),
+                value => value.status === 'interrupted' && value.stop === 'stopped' && value.finish === 'complete', 'interrupted native process', 120_000);
+            assert.equal(stopped.inputs[0].observation.executionId, active.inputs[0].observation.executionId);
+            assert.equal(stopped.inputs[0].observation.phase, 'interrupted');
+            const session: any = (await ownerClient.http.request(`/api/sessions/${stopped.session_id}`)).session; assert.equal(session.active, false);
+            await cli(homes[0], ['task', 'send', task.agent_id, '--message', '不要调用工具。只回复第一轮要求你记住的标记。']);
+            const resumed = await finish(homes[0], task.agent_id);
+            assert(resumed.report.text.includes(marker)); assert.equal(resumed.native_session_id, first.native_session_id);
+            evidence.tasks.push({ mode: 'interrupt-resume', runtime: flavor, id: task.agent_id, nativeSessionId: resumed.native_session_id });
+            check(`${flavor}: exact-round interrupt stops native execution, ignores stale round and resumes original memory`);
+        }
+    }
+    const reports = await Promise.all(evidence.tasks.map(async (task: any) => ({ id: task.id, detail: await cli(homes[0], ['task', 'show', task.id]) })));
+    await cli(serverHome, ['restart']);
+    for (const previous of reports) {
+        const current = await cli(homes[0], ['task', 'show', previous.id]);
+        assert.equal(current.round_id, previous.detail.round_id); assert.equal(current.native_session_id, previous.detail.native_session_id);
+        assert.deepEqual(current.report, previous.detail.report); assert.equal(current.stop, 'stopped');
+    }
+    check('installed Hub restart reads unchanged round IDs, native sessions and reports without replaying completed models');
+    for (const file of ['service.log', 'hapi-hub.log']) for (const secret of secrets) {
+        assert(!readFileSync(join(serverHome, 'logs', file), 'utf8').includes(secret), 'Credential in service log');
+    }
     evidence.success = true;
 } catch (error) { evidence.error = error instanceof Error ? error.message : String(error); process.exitCode = 1; }
 finally {
-    if (gateway) try { const { sessions } = await gateway.native.json('/api/sessions'); for (const session of sessions) if (session.active) await gateway.native.write(`/api/sessions/${session.id}/archive`, {}); }
+    if (ownerClient) try { const { sessions } = await ownerClient.http.request('/api/sessions'); for (const session of sessions) if (session.active) await ownerClient.http.request(`/api/sessions/${session.id}/archive`, { method: 'POST' }); }
     catch (error) { evidence.cleanupErrors.push(String(error)); }
-    for (const runner of runners) { runner.kill(); await runner.exited; }
-    await gateway?.close(); hub?.close(); hapi.kill(); await hapi.exited;
+    for (const home of [...homes, serverHome]) if (existsSync(join(home, 'config.yaml'))) {
+        try { await cli(home, ['stop']); } catch (error) { evidence.cleanupErrors.push(String(error)); }
+    }
     if (evidence.cleanupErrors.length) { evidence.success = false; process.exitCode = 1; }
     writeFileSync(join(root, 'evidence.json'), JSON.stringify(evidence, null, 2), { mode: 0o600 });
     console.log('Evidence: ' + join(root, 'evidence.json')); if (evidence.error) console.error(evidence.error);

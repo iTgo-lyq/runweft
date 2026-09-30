@@ -4,6 +4,7 @@ import { join, resolve } from 'node:path';
 import { chromium, type Page } from 'playwright';
 import { freePort } from '../src/services';
 import { consoleTasks } from './fixtures/hub-console-tasks';
+import { installedBinaries } from './fixtures/installed-binaries.mjs';
 
 mkdirSync('.dev-smoke', { recursive: true });
 const root = mkdtempSync(resolve('.dev-smoke/hub-console-')), home = join(root, 'home');
@@ -11,7 +12,7 @@ const binary = resolve(process.argv[2] ?? 'dist/runweft');
 const env = { ...process.env };
 for (const key of Object.keys(env)) if (key.startsWith('HAPI_') || key.startsWith('RUNWEFT_') || ['CLI_API_TOKEN', 'DB_PATH', 'TELEGRAM_BOT_TOKEN'].includes(key)) delete env[key];
 const port = await freePort(), origin = `http://127.0.0.1:${port}`;
-const evidence: any = { root, binary, origin, checks: [], screenshots: [], success: false, cleanupErrors: [],
+const evidence: any = { root, binary, binaries: installedBinaries(binary), origin, checks: [], screenshots: [], success: false, cleanupErrors: [],
     scope: 'compiled CLI, real HAPI/Runner and Chromium; task history and session RPC are explicit browser fixtures, no model execution or OS terminal' };
 const secrets: string[] = [], pageErrors: string[] = [], output: string[] = [];
 async function cli(args: string[]) {

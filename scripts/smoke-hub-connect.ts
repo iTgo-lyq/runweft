@@ -3,16 +3,17 @@ import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { chromium, type Page } from 'playwright';
-import { createResourceGateway } from '../src/hub/resources/gateway';
+import { Database } from 'bun:sqlite';
+import { freePort } from '../src/services';
 import { hubConnectionPaths } from '../src/hub/resources/connection';
+import { installedBinaries } from './fixtures/installed-binaries.mjs';
 
 const binary = resolve(process.argv[2] ?? 'dist/runweft');
 mkdirSync('.dev-smoke', { recursive: true });
-const root = mkdtempSync(resolve('.dev-smoke/hub-connect-')), home = join(root, 'client');
-const gateway = await createResourceGateway({ host: '127.0.0.1', port: 0, target: 'http://127.0.0.1:1', rootToken: 'unused-native-root',
-    key: randomBytes(32), statePath: join(root, 'hub.sqlite') });
-const url = `http://127.0.0.1:${(gateway.server.address() as { port: number }).port}`;
-const evidence: any = { root, binary, success: false, checks: [], screenshots: [], scope: 'real Hub identity/access API, SQLite, RSA/WebCrypto, compiled CLI and Chromium; no model execution' };
+const root = mkdtempSync(resolve('.dev-smoke/hub-connect-')), home = join(root, 'client'), serverHome = join(root, 'server');
+const port = await freePort(), url = `http://127.0.0.1:${port}`;
+const evidence: any = { root, binary, binaries: installedBinaries(binary), success: false, checks: [], screenshots: [], cleanupErrors: [],
+    scope: 'installed default Hub and adjacent HAPI, public identity API, readonly SQLite assertions, RSA/WebCrypto and Chromium; no models' };
 const secretValues: string[] = [], outputTexts: string[] = [], pageErrors: string[] = [], requestUrls: string[] = [], consoleMessages: string[] = [];
 const env = { ...process.env }; for (const key of Object.keys(env)) if (key.startsWith('RUNWEFT_') || key.startsWith('HAPI_')) delete env[key];
 const check = (name: string) => { evidence.checks.push(name); console.log(`PASS ${name}`); };
@@ -27,7 +28,15 @@ async function api(path: string, body: object, token = '') {
 }
 async function ready(page: Page) { await page.waitForFunction(() => !document.querySelector<HTMLButtonElement>('#logout')?.disabled); }
 let browser: Awaited<ReturnType<typeof chromium.launch>> | undefined;
+let database: Database | undefined;
+async function service(args: string[]) {
+    const child = Bun.spawn([binary, '--home', serverHome, '--json', ...args], { env, stdout: 'pipe', stderr: 'pipe' });
+    const [code, stdout, stderr] = await Promise.all([child.exited, new Response(child.stdout).text(), new Response(child.stderr).text()]);
+    outputTexts.push(stdout, stderr); assert.equal(code, 0, stderr); return JSON.parse(stdout);
+}
 try {
+    await service(['init']); await service(['config', 'set', 'server.port', String(port)]); await service(['start']);
+    database = new Database((await service(['paths'])).state, { readonly: true });
     browser = await chromium.launch({ headless: true, executablePath: process.env.RUNWEFT_SMOKE_CHROMIUM });
     const context = await browser.newContext({ viewport: { width: 1280, height: 960 } }), page = await context.newPage();
     page.on('pageerror', error => pageErrors.push(error.message)); page.on('console', msg => consoleMessages.push(msg.text()));
@@ -56,7 +65,7 @@ try {
     await page.locator('#confirm-connection').click(); await ready(page);
     assert.match(await page.locator('#connect-status').innerText(), /连接已确认/);
     assert(await page.locator('#confirm-connection').isHidden());
-    const row = gateway.store.db.query('SELECT * FROM hub_connection_requests WHERE id=?').get(first.requestId) as any;
+    const row = database.query('SELECT * FROM hub_connection_requests WHERE id=?').get(first.requestId) as any;
     assert.equal(row.ownerId, ownerId); assert.equal(row.spaceId, spaceId); assert.equal(row.pollingDigest, createHash('sha256').update(pending.secret).digest('hex'));
     assert(row.ciphertext && !JSON.stringify(row).includes(token)); secretValues.push(row.ciphertext);
     await page.screenshot({ path: join(root, 'confirmed-desktop.png'), fullPage: true }); evidence.screenshots.push(join(root, 'confirmed-desktop.png'));
@@ -68,7 +77,7 @@ try {
     assert.equal(statSync(paths.identityConnection).mode & 0o777, 0o600); assert(!existsSync(paths.pendingConnection));
     assert.equal((await cli(['identity'])).identity.id, ownerId);
     assert.equal((await cli(['connect', 'complete'])).status, 'connected');
-    const consumed = gateway.store.db.query('SELECT status,ciphertext FROM hub_connection_requests WHERE id=?').get(first.requestId) as any;
+    const consumed = database.query('SELECT status,ciphertext FROM hub_connection_requests WHERE id=?').get(first.requestId) as any;
     assert.equal(consumed.status, 'consumed'); assert.equal(consumed.ciphertext, null);
     await page.reload(); await ready(page); assert(await page.locator('#confirm-connection').isHidden());
     check('compiled CLI decrypts and validates identity/membership, saves atomically, consumes once and survives concurrent completion');
@@ -94,7 +103,9 @@ try {
     check('origin mismatch cannot confirm; CLI output, browser URLs and console contain no identity token, private key or polling secret');
     evidence.success = true;
 } finally {
-    await browser?.close(); await gateway.close();
+    await browser?.close(); database?.close();
+    if (existsSync(join(serverHome, 'config.yaml'))) try { await service(['stop']); } catch (error) { evidence.cleanupErrors.push(String(error)); }
+    if (evidence.cleanupErrors.length) { evidence.success = false; process.exitCode = 1; }
     writeFileSync(join(root, 'evidence.json'), JSON.stringify(evidence, null, 2) + '\n', { mode: 0o600 });
     console.log(`Evidence: ${join(root, 'evidence.json')}`);
 }

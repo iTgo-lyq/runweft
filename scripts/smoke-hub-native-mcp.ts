@@ -8,15 +8,20 @@ import { HubClient } from '../src/hub/client';
 import type { HapiHttp } from '../src/hapi';
 import { chromium } from 'playwright';
 import { configureSmokeCodexModel } from './fixtures/codex-model';
+import { installedBinaries } from './fixtures/installed-binaries.mjs';
 import pkg from '../package.json';
 
 // Real MCP hosts and model calls, using dedicated writable native homes only.
 const executable = resolve(process.argv[2] ?? 'dist/runweft');
 const selectedHost = process.env.RUNWEFT_SMOKE_HOST ?? 'all';
 assert(['all', 'codex', 'claude'].includes(selectedHost), 'RUNWEFT_SMOKE_HOST must be all, codex or claude');
+const selectedMode = process.env.RUNWEFT_SMOKE_MODE ?? 'all';
+assert(['all', 'shared', 'worktree', 'remote'].includes(selectedMode), 'Unknown workspace smoke mode');
+const selectedRuntime = process.env.RUNWEFT_SMOKE_RUNTIME ?? 'all';
+assert(['all', 'codex', 'claude'].includes(selectedRuntime), 'Unknown runtime smoke selection');
 mkdirSync('.dev-smoke', { recursive: true });
 const root = mkdtempSync(resolve('.dev-smoke/hub-native-mcp-'));
-const home = join(root, 'runweft'), project = join(root, 'project'), codexHome = join(root, 'codex'), claudeHome = join(root, 'claude');
+const home = join(root, 'runweft'), remoteHome = join(root, 'remote'), project = join(root, 'project'), codexHome = join(root, 'codex'), claudeHome = join(root, 'claude');
 for (const path of [project, codexHome, claudeHome]) mkdirSync(path, { mode: 0o700 });
 const env: NodeJS.ProcessEnv = { ...process.env };
 for (const key of Object.keys(env)) if (key.startsWith('RUNWEFT_') || key.startsWith('HAPI_') || ['CLI_API_TOKEN', 'DB_PATH', 'TELEGRAM_BOT_TOKEN'].includes(key)) delete env[key];
@@ -37,13 +42,14 @@ const prefsPath = join(claudeHome, '.claude.json');
 const prefs = existsSync(prefsPath) ? JSON.parse(readFileSync(prefsPath, 'utf8')) : {};
 prefs.mcpServers = {}; writeFileSync(prefsPath, JSON.stringify(prefs), { mode: 0o600 });
 const evidence: { [key: string]: any; checks: string[]; cases: any[]; cleanupErrors: string[] } = {
-    root, executable, selectedHost, codexModel, hapiRevision: pkg.hapi.revision, startedAt: new Date().toISOString(), success: false, checks: [], cases: [], cleanupErrors: [],
+    root, executable, binaries: installedBinaries(executable), selectedHost, selectedMode, selectedRuntime, codexModel, hapiRevision: pkg.hapi.revision,
+    startedAt: new Date().toISOString(), success: false, checks: [], cases: [], cleanupErrors: [],
 };
 let started = false, token: string | undefined, hapi: HapiHttp | undefined;
 const pids = new Set<number>();
 function alive(pid: number) { try { process.kill(pid, 0); return true; } catch { return false; } }
-function cli(args: string[]) {
-    const result = spawnSync(executable, ['--home', home, '--json', ...args], { cwd: project, env, encoding: 'utf8', timeout: 60_000 });
+function cli(args: string[], directory = home) {
+    const result = spawnSync(executable, ['--home', directory, '--json', ...args], { cwd: project, env, encoding: 'utf8', timeout: 60_000 });
     if (token) assert(!`${result.stdout}${result.stderr}`.includes(token), 'Credential leaked');
     assert.equal(result.status, 0, `${args[0]}: ${result.stderr || result.error || result.signal}`);
     return JSON.parse(result.stdout);
@@ -55,18 +61,18 @@ function values(value: any): any[] {
     if (value.accepted === true || value.agent_id || value.agents || value.error) return [value];
     return Object.values(value).flatMap(values);
 }
-async function hostCall(host: 'codex' | 'claude', runtime: string, agentId: string, helper: string, proof: string) {
-    const childMessage = `专用验收：只执行一次命令 ${process.execPath} ${helper}，它验证本子会话不能通过 Runweft CLI 递归委派。不要自行委派，不要修改其他文件。完成后报告 MCP_CHILD_DONE。`;
+async function hostCall(host: 'codex' | 'claude', runtime: string, agentId: string, helper: string, proof: string, mode: string, base: string) {
+    const childMessage = `专用验收：只执行一次命令 ${process.execPath} ${helper}，它验证本子会话不能通过 Runweft CLI 递归委派。不要自行委派，不要修改其他文件。如果确需检查工作区，只单独执行 git status --short；不要追加 echo、管道或其他 shell 命令。未获准命令会被拒绝，请继续完成上述 helper，不要重试被拒操作。完成后报告 MCP_CHILD_DONE。`;
     const prompt = `你是 Runweft 原生 MCP 验收主会话。只使用 runweft MCP 工具，不使用 shell、内置 subagent 或其他工具。严格顺序：
-1. list_agent_definitions，然后只调用一次 spawn_agent，agent_type=${agentId}，message=${JSON.stringify(childMessage)}。
+1. list_agent_definitions，然后只调用一次 spawn_agent，agent_type=${agentId}，message=${JSON.stringify(childMessage)}，workspace_mode=${mode === 'shared' ? 'shared' : 'worktree'}${mode === 'shared' ? '' : `，base_ref=${base}`}。
 2. 用 wait 等待该 agent_id，timeout_ms=30000，必要时继续等待，直到 completed；不要再次 spawn。若 needs_attention，read_agent 查看即可，测试控制器会处理预期的原生审批。
 3. completed 后必须调用 read_agent，核对 report 含 MCP_CHILD_DONE。记住这次 read_agent 返回的 revision。
-4. 调用一次 wait，ids=[该 agent_id]，timeout_ms=65000，after_revision={该 agent_id:第3步 revision}。必须实际等待返回 timed_out=true；不要缩短或取消这个等待。
+4. ${mode === 'shared' ? '调用一次 wait，ids=[该 agent_id]，timeout_ms=65000，after_revision={该 agent_id:第3步 revision}。必须实际等待返回 timed_out=true；不要缩短或取消这个等待。' : '确认 read_agent 返回 environment.mode=worktree，且工作目录不是原主目录。'}
 5. 只有以上全部完成才回复 MCP_HOST_DONE。`;
     const args = host === 'codex' ? ['exec', '--json', '--skip-git-repo-check', prompt]
         : ['-p', '--output-format', 'stream-json', '--verbose', '--tools', '', '--allowedTools', 'mcp__runweft__*', '--max-turns', '20', prompt];
     const calls = new Map<string, any>();
-    const item: any = { host, runtime, calls: [], approvedRequests: [] }; evidence.cases.push(item);
+    const item: any = { host, runtime, mode, calls: [], approvedRequests: [], deniedRequests: [] }; evidence.cases.push(item);
     const child = spawn(host === 'codex' ? 'codex' : nativeClaude!, args, { cwd: project, env, stdio: ['ignore', 'pipe', 'pipe'] });
     assert(child.pid); pids.add(child.pid);
     let buffer = '', done = false, failure: Error | undefined, resultCode: number | null = null;
@@ -101,17 +107,25 @@ async function hostCall(host: 'codex' | 'claude', runtime: string, agentId: stri
     try {
         while (!done) {
             await Promise.race([exited, Bun.sleep(750)]);
-            for (const task of cli(['task', 'list']).agents) {
+            for (const task of cli(['task', 'list', '--all']).agents) {
                 if (task.status !== 'needs_attention') continue;
                 const detail = cli(['task', 'show', task.agent_id]);
                 for (const [requestId, request] of Object.entries(detail.permissions ?? {}) as [string, any][]) {
                     if (approvals.has(requestId)) continue;
+                    const allowedGitCommands = [
+                        'git status --short',
+                        `git -C ${detail.cwd} status --short`,
+                        'git log --oneline -1',
+                        `git -C ${detail.cwd} log --oneline -1`,
+                    ];
+                    const statusCommand = request.tool === 'Bash' && typeof request.arguments?.command === 'string'
+                        && request.arguments.command.split(' && ').every((command: string) => allowedGitCommands.includes(command));
                     const expected = JSON.stringify(request.arguments).includes(helper)
-                        || (request.tool === 'Read' && request.arguments?.file_path === proof);
-                    if (!expected) item.unexpectedPermission = request;
-                    assert(expected, 'Unexpected child permission request');
-                    cli(['task', 'permission', task.agent_id, '--round', detail.round_id, '--request', requestId, '--decision', 'approved']);
-                    approvals.add(requestId); item.approvedRequests.push(requestId);
+                        || (request.tool === 'Read' && request.arguments?.file_path === proof) || statusCommand;
+                    cli(['task', 'permission', task.agent_id, '--round', detail.round_id, '--request', requestId, '--decision', expected ? 'approved' : 'denied']);
+                    approvals.add(requestId);
+                    if (expected) item.approvedRequests.push(requestId);
+                    else item.deniedRequests.push({ requestId, tool: request.tool });
                 }
             }
         }
@@ -123,14 +137,19 @@ async function hostCall(host: 'codex' | 'claude', runtime: string, agentId: stri
         const accepted = spawned[0].results.find((value: any) => value.accepted === true); assert(accepted, 'No actual MCP acceptance');
         const reads = item.calls.filter((call: any) => call.name === 'read_agent');
         assert(reads.some((call: any) => call.results?.some((v: any) => v.status === 'completed' && v.report.text.includes('MCP_CHILD_DONE'))), 'Host did not read actual completed report');
-        const longWait = item.calls.find((call: any) => call.name === 'wait' && call.args.timeout_ms === 65000);
-        assert(longWait?.results?.some((value: any) => value.timed_out === true), 'No actual long wait timeout response');
-        assert(longWait.finishedAt - longWait.startedAt >= 64_000, 'Native wait did not last beyond 60 seconds');
-        item.longWaitMs = longWait.finishedAt - longWait.startedAt;
+        if (mode === 'shared') {
+            const longWait = item.calls.find((call: any) => call.name === 'wait' && call.args.timeout_ms === 65000);
+            assert(longWait?.results?.some((value: any) => value.timed_out === true), 'No actual long wait timeout response');
+            assert(longWait.finishedAt - longWait.startedAt >= 64_000, 'Native wait did not last beyond 60 seconds');
+            item.longWaitMs = longWait.finishedAt - longWait.startedAt;
+        }
         const detail = cli(['task', 'show', accepted.agent_id]); item.detail = detail;
         assert.equal(detail.parent.nativeSessionId, item.nativeId); assert.equal(detail.parent.host, host);
         assert.equal(detail.inputs[0].observation.phase, 'completed'); assert.equal(detail.inputs[0].observation.source, 'native');
         assert.equal(detail.stop, 'stopped'); assert.equal(detail.finish, 'complete');
+        assert.equal(detail.environment.mode, mode === 'shared' ? 'shared' : 'worktree');
+        if (mode !== 'shared') { assert.notEqual(detail.cwd, project); assert.equal(detail.environment.status, 'retained'); }
+        if (mode === 'remote') assert.equal(detail.machine_id, evidence.remoteMachineId);
         assert.equal(typeof detail.host_pid, 'number'); pids.add(detail.host_pid);
         const session = (await hapi!.request(`/api/sessions/${detail.session_id}`)).session;
         assert.equal(session.active, false); assert.equal(session.metadata.lifecycleState, 'archived');
@@ -139,8 +158,8 @@ async function hostCall(host: 'codex' | 'claude', runtime: string, agentId: stri
         const denied = JSON.parse(readFileSync(proof, 'utf8')); item.childCli = denied;
         assert.deepEqual(denied.codes, ['subagent_delegation_denied', 'subagent_delegation_denied']);
         assert.equal(denied.hapiSessionId, detail.session_id);
-        record(`${host} → ${runtime}: real spawn/wait/read, child CLI spawn+send rejected, native completion and process stopped`);
-        record(`${host}: actual MCP wait returns timed_out after ${item.longWaitMs}ms`);
+        record(`${host} → ${runtime} (${mode}): real spawn/wait/read, child CLI spawn+send rejected, native completion and process stopped`);
+        if (mode === 'shared') record(`${host}: actual MCP wait returns timed_out after ${item.longWaitMs}ms`);
     } finally {
         item.calls = [...calls.values()]; clearTimeout(timer);
         if (!done) { child.kill('SIGTERM'); await exited; }
@@ -177,35 +196,47 @@ try {
     hapi = new HubClient({ url, home, env }, 'hubDelegation', 'unavailable').http;
     const machine = cli(['machine', 'enroll']); cli(['machine', 'associate', machine.machineId, spaceId!]);
     cli(['runner', 'start']);
+    cli(['init', '--url', url], remoteHome);
+    const paths = cli(['paths']), remotePaths = cli(['paths'], remoteHome);
+    mkdirSync(dirname(remotePaths.identityConnection), { recursive: true, mode: 0o700 });
+    copy(paths.identityConnection, remotePaths.identityConnection);
+    const remoteMachine = cli(['machine', 'enroll'], remoteHome);
+    cli(['machine', 'associate', remoteMachine.machineId, spaceId!], remoteHome); cli(['runner', 'start'], remoteHome);
+    assert.notEqual(machine.machineId, remoteMachine.machineId); evidence.remoteMachineId = remoteMachine.machineId;
     const git = (...args: string[]) => { const result = spawnSync('git', ['-C', project, ...args], { env, encoding: 'utf8' }); assert.equal(result.status, 0, result.stderr); return result.stdout.trim(); };
     git('init', '-q'); git('config', 'user.name', 'smoke'); git('config', 'user.email', 'smoke@example.invalid'); git('config', 'commit.gpgsign', 'false');
     writeFileSync(join(project, 'baseline.txt'), 'isolated smoke'); git('add', '.'); git('commit', '-qm', 'baseline');
+    const base = git('rev-parse', 'HEAD');
     const repository = cli(['repository', 'create', 'MCP smoke', '--request-id', crypto.randomUUID()]).repository;
     cli(['repository', 'bind', repository.id, '--machine', machine.machineId]);
     const agents: Record<string, string> = {};
-    for (const flavor of ['codex', 'claude']) {
-        const runtime = cli(['runtime', 'register', flavor, '--machine', machine.machineId]).runtime;
-        const file = join(root, flavor + '.json'); writeFileSync(file, JSON.stringify({ name: flavor, runtimeId: runtime.id, repositoryId: repository.id }));
-        agents[flavor] = cli(['agent', 'create', '--request-id', crypto.randomUUID(), '--file', file]).agent.id;
+    for (const location of ['local', 'remote']) for (const flavor of ['codex', 'claude']) {
+        const directory = location === 'remote' ? remoteHome : home, machineId = location === 'remote' ? remoteMachine.machineId : machine.machineId;
+        const runtime = cli(['runtime', 'register', flavor, '--machine', machineId], directory).runtime;
+        const file = join(root, `${location}-${flavor}.json`); writeFileSync(file, JSON.stringify({ name: `${location}-${flavor}`, runtimeId: runtime.id, repositoryId: repository.id }));
+        agents[`${location}-${flavor}`] = cli(['agent', 'create', '--request-id', crypto.randomUUID(), '--file', file]).agent.id;
     }
     record('default compiled Hub starts after prerelease reset; identity, machine, runtime, repository and Agent register independently');
     cli(['mcp', 'install', '--client', 'all']); assert(cli(['mcp', 'check', '--client', 'all']).ok);
-    for (const host of ['codex', 'claude'] as const) for (const runtime of ['codex', 'claude'] as const) {
+    for (const mode of ['shared', 'worktree', 'remote']) for (const host of ['codex', 'claude'] as const) for (const runtime of ['codex', 'claude'] as const) {
         if (selectedHost !== 'all' && selectedHost !== host) continue;
-        const helper = join(root, `child-${host}-${runtime}.mjs`), proof = join(root, `child-${host}-${runtime}.json`);
+        if (selectedMode !== 'all' && selectedMode !== mode) continue;
+        if (selectedRuntime !== 'all' && selectedRuntime !== runtime) continue;
+        const agentId = agents[`${mode === 'remote' ? 'remote' : 'local'}-${runtime}`];
+        const helper = join(root, `child-${mode}-${host}-${runtime}.mjs`), proof = join(root, `child-${mode}-${host}-${runtime}.json`);
         writeFileSync(helper, `import { spawnSync } from 'node:child_process';
 import { writeFileSync } from 'node:fs';
 import assert from 'node:assert/strict';
 const codes = [];
-for (const args of [['spawn', ${JSON.stringify(agents[runtime])}, '--message', 'recursive probe'], ['send', crypto.randomUUID(), '--message', 'recursive probe']]) {
-    const r = spawnSync(${JSON.stringify(executable)}, ['--home', ${JSON.stringify(home)}, '--json', 'task', ...args], { encoding: 'utf8', timeout: 20000 });
-    assert.equal(r.status, 1); const code = JSON.parse(r.stderr.trim().split('\\n').at(-1)).error.code;
+for (const args of [['spawn', ${JSON.stringify(agentId)}, '--message', 'recursive probe'], ['send', crypto.randomUUID(), '--message', 'recursive probe']]) {
+    const child = spawnSync(${JSON.stringify(executable)}, ['--home', ${JSON.stringify(home)}, '--json', 'task', ...args], { encoding: 'utf8', timeout: 20000 });
+    assert.equal(child.status, 1); const code = JSON.parse(child.stderr.trim().split('\\n').at(-1)).error.code;
     assert.equal(code, 'subagent_delegation_denied'); codes.push(code);
 }
 writeFileSync(${JSON.stringify(proof)}, JSON.stringify({ codes, hapiSessionId: process.env.HAPI_SESSION_ID }));
 console.log('CHILD_CLI_DENIED');
 `, { mode: 0o600 });
-        await hostCall(host, runtime, agents[runtime], helper, proof);
+        await hostCall(host, runtime, agentId, helper, proof, mode, base);
     }
     evidence.success = true;
 } catch (error) { evidence.error = error instanceof Error ? error.message : String(error); process.exitCode = 1; }
@@ -213,6 +244,7 @@ finally {
     if (hapi) try {
         for (const session of (await hapi.request('/api/sessions')).sessions) if (session.active) await hapi.request(`/api/sessions/${session.id}/archive`, { method: 'POST', signal: AbortSignal.timeout(45_000) });
     } catch (error) { evidence.cleanupErrors.push(String(error)); }
+    if (existsSync(join(remoteHome, 'config.yaml'))) try { cli(['stop'], remoteHome); } catch (error) { evidence.cleanupErrors.push(String(error)); }
     if (started) try { cli(['stop']); } catch (error) { evidence.cleanupErrors.push(String(error)); }
     for (const pid of pids) if (alive(pid)) evidence.cleanupErrors.push(`Process still alive: ${pid}`);
     if (evidence.cleanupErrors.length) { evidence.success = false; process.exitCode = 1; }
