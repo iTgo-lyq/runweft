@@ -40,3 +40,12 @@ iclaude 首次进程因变长 `--mcp-config` 参数吞入末尾 prompt，在模�
 - 验证：frozen install、typecheck、build、Node语法及diff-check通过。全套255 pass / 0 fail / 5219断言（40文件）；随后新增装配fixture，与冻结fixture合计2 pass / 39断言，验证离线克隆、HAPI子模块固定revision及拒绝覆写。四平台1.1.0预构建成功，证据 `.dev-smoke/reviews/hub-final-release/t3-{tests,focused,typecheck,build,package-preview}.log`；该预览dirty=true，明确不用于正式验收。
 - 冻结顺序：本任务先提交已验证包内容，紧接从干净提交执行 `bun run package --all --reuse-hapi`。成功后才进入T4，实际index.source/hash与构建结果随T4证据记录；失败继续T3修正，不用预构建冒充正式候选。
 - Commit：`hub-spaces-and-agent-configuration T3: prepare 1.1.0 packages and reproducible delivery`。
+
+## T4 同候选自动验收
+
+- 候选：T3提交 `657550f20d44d1a65a48b232ef13f3ca5160e8cd` 后干净构建1.1.0全部平台，source.dirty=false；正式构建日志 `reviews/hub-final-release/t3-package-frozen.log`。Linux x64 registry安装 `install-0iuvhf`，Runweft SHA256 `45294f01f79f76bee545d1aba9a91051db97f51293e12bb68758f46d0195307f`，相邻HAPI `bdf706d7966ae4818b09029991a2bb03e70b10b0555763fc41430afd977b4fec`。
+- 结果：同一已安装程序通过首次Web接入、后台/多用户权限、服务/凭据轮换、真正1.0.0→1.1.0停服升级、真实十二组MCP及十组消费者。两宿主×两runtime×shared/worktree/同机远端全部实际spawn/wait/read，四次longwait为65010/65039/65195/65176ms，子CLI递归拒绝与进程退出均通过。附件/bundle、确切missing重建、两runtime停止续接、重启报告不重放均通过。
+- 结果：五包/Skill/README/HAPI许可源码/架构/hash、独立Linux平台服务、registry安装/重装/卸载/MCP保留；arm64 QEMU9条当前命令；官网十一组真实下载/校验/DOM安装；后台十二组及连接五组。所有成功证据与清理核对见[Acceptance](acceptance.md)，未把历史1.0.0证据外推。真实Mac/物理跨机边界保留。
+- 验证：同源码typecheck/build，256 pass / 0 fail / 5244断言 / 41文件；服务smoke移除最后的开发HAPI override并增加hash/清理失败标记后typecheck及五组实际服务再次通过。无产品输入修改，冻结核对通过。根/Skill/源码对象路径扫描未发现凭据或原生数据文件入Git；不据此宣称全历史安全审计。
+- 证据：`.dev-smoke/final-release/evidence.json` 筛选运行结果、版本/hash、任务/原生ID和现场摘要，不复制prompt、原生日志、密钥或浏览器storage。全部本批真实链路success=true、cleanupErrors=[]；最终矩阵没有非预期审批。对应原始路径与夹具边界见Acceptance。
+- Commit：`hub-spaces-and-agent-configuration T4: accept the frozen 1.1.0 integration candidate`。

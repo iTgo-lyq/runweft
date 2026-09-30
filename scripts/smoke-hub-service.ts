@@ -5,14 +5,14 @@ import { join, resolve } from 'node:path';
 import { atomicWrite } from '../src/config';
 import { freePort } from '../src/services';
 import { hubConnectionPaths } from '../src/hub/resources/connection';
+import { installedBinaries } from './fixtures/installed-binaries.mjs';
 
 mkdirSync('.dev-smoke', { recursive: true });
 const root = mkdtempSync(resolve('.dev-smoke/hub-service-')), home = join(root, 'host'), remote = join(root, 'client');
-const binary = resolve(process.argv[2] ?? 'dist/runweft'), native = resolve(process.argv[3] ?? 'dist/hapi');
+const binary = resolve(process.argv[2] ?? 'dist/runweft');
 const env = { ...process.env };
 for (const key of Object.keys(env)) if (key.startsWith('HAPI_') || key.startsWith('RUNWEFT_') || ['CLI_API_TOKEN','DB_PATH','TELEGRAM_BOT_TOKEN'].includes(key)) delete env[key];
-env.RUNWEFT_HAPI_EXECUTABLE = native;
-const secrets: string[] = [], evidence: any = { root, checks: [], success: false, cleanupErrors: [] };
+const secrets: string[] = [], evidence: any = { root, binaries: installedBinaries(binary), checks: [], success: false, cleanupErrors: [] };
 const port = await freePort(), url = `http://127.0.0.1:${port}`;
 async function cli(directory: string, args: string[], failure?: string) {
     const child = Bun.spawn([binary, '--home', directory, '--json', ...args], { env, stdout: 'pipe', stderr: 'pipe' });
@@ -95,5 +95,6 @@ finally {
         if (!existsSync(join(directory, 'config.yaml'))) continue;
         try { await cli(directory, ['stop']); } catch (error) { evidence.cleanupErrors.push(String(error)); }
     }
+    if (evidence.cleanupErrors.length) { evidence.success = false; process.exitCode = 1; }
     writeFileSync(join(root, 'evidence.json'), JSON.stringify(evidence, null, 2));
 }
