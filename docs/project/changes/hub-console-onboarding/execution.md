@@ -56,3 +56,10 @@
 - 独立场景：Astra 会话 `01a0f406-be89-7c33-a4fe-f61379220ba6` 初稿 `.dev-smoke/skill-scenario-initial.md`；修订后新会话 `01a0f40a-7273-7402-a6d9-9bb6ee8440da` 的 `.dev-smoke/skill-scenario-final.md` 正确区分原身份交接、个人 override、旧任务和不确定结果。均仅提供真实场景与 Skill，没有传预期答案；结束后关闭 agent。
 - 真实接入/首任务：更新现有 native MCP smoke，改为浏览器主动身份与 begin/complete，不直接写 identity 文件。`.dev-smoke/hub-native-mcp-eZQ9jC/evidence.json`，success=true、cleanupErrors=[]；两宿主 × 两 runtime 四组实际 spawn/wait/read、65 秒等待（65008–65181 ms）、报告、子 CLI 递归拒绝、进程退出。原生权限仅批准专用 helper，未放宽产品默认权限。后续仅新增缺 URL 诊断分支，合法已连接执行路径未改变。
 - Commit：`hub-console-onboarding T5: ship product skill and agent-first onboarding documentation`。
+
+## T6 阶段六自动验收
+
+- 结果：完成全部需求到实现/证据映射，见 [Acceptance](acceptance.md)。用户已授权自动本地验收，不重复人工门禁；未遗漏后台领域功能。
+- 验证：最终 typecheck/build 通过；根测试 254 pass / 0 fail、5206 断言、39 文件。最终后台十二组、连接五组、服务五组均 success=true 且 cleanupErrors=[]，复核 T5 真实两宿主 × 两 runtime、独立 Skill 安装与官网证据。`test:packages` 旧服务入口仍明确由阶段七更新，未宣称通过。
+- 边界：同机多 Runner 不等于物理跨机；Mac 未作实机验证；最终新版四平台必须重新统一构建。未变更在线 Hub/Merlin、用户原生配置，不 push 或发布。
+- Commit：`hub-console-onboarding T6: accept complete console and onboarding workflows`。
