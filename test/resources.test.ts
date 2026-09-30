@@ -212,12 +212,12 @@ describe('central resource registry', () => {
             expect(store.runtime('alpha', runtime.id)?.inspection).toEqual(runtime.inspection);
         } finally { store.close(); }
         const db = new Database(h.statePath);
-        expect(db.query('PRAGMA user_version').get()).toEqual({ user_version: 9 });
+        expect(db.query('PRAGMA user_version').get()).toEqual({ user_version: 10 });
         expect(db.query('PRAGMA journal_mode').get()).toEqual({ journal_mode: 'wal' });
-        db.exec('PRAGMA user_version=10'); db.close();
+        db.exec('PRAGMA user_version=11'); db.close();
         expect(() => new ResourceStore(h.statePath)).toThrow('数据版本');
         const later = new Database(h.statePath);
-        try { expect(later.query('PRAGMA user_version').get()).toEqual({ user_version: 10 }); } finally { later.close(); }
+        try { expect(later.query('PRAGMA user_version').get()).toEqual({ user_version: 11 }); } finally { later.close(); }
     });
 
     test('structured and native errors retain code, message, hint and status without mutation replay', async () => {

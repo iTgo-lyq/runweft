@@ -34,7 +34,7 @@ JWT 只用于外层，向 HAPI 请求时换为内部 JWT；`/cli` 内部使用�
 
 采用明确的路由/方法表，未知 `/api`、`/cli`、upgrade 不透传。会话详情/消息/审批/文件/终端及机器控制，先查对象后发原生请求；相同不存在/越权对象返回 404。列表在可访问对象集合内生成或过滤后分页，不能先使用 HAPI limit 截断；总数、引用、游标和错误不得暴露他人对象。原生库导出、全局设置和未实现归属映射的入口不开放，返回明确错误。
 
-机器登记仅允许凭据绑定 ID；内嵌 machine 也检查。只有没有任务/派生来源的原生新会话属于机器凭据所有者；带 forkedFrom 或已有 ID 的会话不能落入这个默认分支。tag/requestId 使用主体限定，防止客户端碰撞加载他人对象。元数据、parentId、ownerId 和客户端提供的 session ID 都不是归属证明。旧原生对象未映射前不可读、不可认领。
+机器登记仅允许凭据绑定 ID；内嵌 machine 也检查。只有没有任务/派生来源的原生新会话属于机器凭据所有者；带 forkedFrom 或已有 ID 的会话不能落入这个默认分支。tag/requestId 使用主体限定，防止客户端碰撞加载他人对象。元数据、parentId、ownerId 和客户端提供的 session ID 都不是归属证明。旧原生对象未映射前不可读、不可认领。原生去重还会按 Codex/Claude 原生 ID 合并历史，因此 schema v10 增加原生 ID 归属声明：同一个原生 ID 只能属于同一 owner × space × machine；bootstrap 和 Socket metadata 更新在转发前声明，首见 ID 先核对 HAPI 已有清单，未知旧行不能抢占。声明使用原子事务，保留历史声明以拒绝重启后的跨人碰撞；同一归属内部的原生去重继续由 HAPI 执行。
 
 受控启动在发送 HAPI 请求前持久保存派生意图（源会话、类型、有效窗口、owner、space、task、machine）。spawn 意图为客户端 requestId 分配独立的内部 UUID，缺 requestId 时生成；不透传客户端 UUID 碰撞整个执行域。HAPI 已预分配的 session 通过原生 spawn receipt 核对后绑定，再允许 CLI adopt/Socket 连接。响应丢失以同一 requestId 查询，不能盲目重启。执行意图与绑定可重入、不可换所有者。还未绑定的原生事件不对任何用户暴露；失败留下可重查意图。fork/clear/reopen/resume 在调用前记录源会话与执行机器。机器首次提交子会话时核对未决意图：Hub fork 行通过内部读取的 parent/machine 与意图匹配；共享 Codex 的非 adopt bootstrap 要求同一受信机器正在执行该 source 的 fork/clear，才采用 forkedFrom 继承归属。客户端字段单独不足以认领；歧义或过期意图拒绝，不默认为机器所有者。用户侧在绑定前不可见；绑定后 SSE 强制 gap/刷新，避免漏掉此前过滤的 session-added。
 
@@ -48,7 +48,7 @@ JWT 只用于外层，向 HAPI 请求时换为内部 JWT；`/cli` 内部使用�
 
 CLI 事件检查 sessionId/sid、machineId；RPC 注册/注销只能使用已授权对象 ID 前缀。原生 RPC 内容仍由 HAPI 处理，不因共享 runtime 放行任意机器控制。双向 ack 只桥接一次，回调时再次鉴权；断开不重发业务事件。终端以创建/订阅时验证的 session 为准，并记录 terminalId 到 session 的关联；write/resize/close 和输出再次检查。未知事件拒绝，版本升级需重新核对事件表。
 
-SSE 请求上游显式禁用压缩，通过原生流读取事件，按当前 session/machine 归属过滤，包括重放；控制事件只保留无敏感内容的连接状态与心跳。visibility/subscriptionId 绑定外部连接主体。采用增量解析和背压，客户端断开时取消上游；不复制 HAPI 会话状态或另建业务事件总线。
+SSE 请求上游显式禁用压缩，通过原生流读取事件，按当前 session/machine 归属过滤，包括重放；控制事件只保留无敏感内容的连接状态与心跳。visibility/subscriptionId 绑定外部连接主体；SSE cursor 使用用途分离 HMAC 绑定凭据/空间与当前可见对象集合，跨主体或集合变化必须 resync。绑定变化在最长 1 秒内发出 gap，补足此前被过滤的新会话事件。采用增量解析和背压，客户端断开时取消上游；不复制 HAPI 会话状态或另建业务事件总线。
 
 ## 验证与后续集成
 

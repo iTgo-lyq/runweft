@@ -14,6 +14,28 @@ function tagId(machineId: string, tag: string) {
 }
 export class NativeSessions {
     constructor(readonly store: AccessStore, readonly native: NativeTransport) {}
+    async guardMetadata(actor: Principal, id: string, metadata: Record<string, any>, signal?: AbortSignal) {
+        const binding = this.store.require(actor, 'session', id, 'report');
+        if (metadata.machineId !== binding.machineId) throw hubNotFound();
+        if (metadata.flavor && !['codex', 'claude'].includes(metadata.flavor)) throw unavailable();
+        if (['gemini', 'opencode', 'grok', 'cursor', 'pi', 'agy', 'copilot'].some(flavor => metadata[flavor + 'SessionId'])) throw unavailable();
+        if (metadata.codexSessionId && metadata.claudeSessionId) throw inputError();
+        for (const field of ['codexSessionId', 'claudeSessionId'] as const) {
+            const value = metadata[field]; if (!value) continue;
+            if (typeof value !== 'string' || value.length > 1024 || metadata.flavor !== field.replace('SessionId', '')) throw inputError();
+            if (!this.store.nativeClaim(field, value)) {
+                // Do not claim an existing unmigrated HAPI identity. First claims alone require this inventory read.
+                const result = await this.native.json('/api/sessions', { signal });
+                for (const existing of result.sessions) {
+                    if (existing.id === id || existing.metadata?.agentSessionId !== value || existing.metadata?.flavor !== metadata.flavor) continue;
+                    const prior = this.store.object('session', existing.id);
+                    if (!prior || prior.ownerId !== binding.ownerId || prior.spaceId !== binding.spaceId || prior.machineId !== binding.machineId) throw hubNotFound();
+                }
+            }
+            this.store.require(actor, 'session', id, 'report');
+            this.store.claimNative(field, value, id);
+        }
+    }
     private async maybe(path: string, signal?: AbortSignal) {
         try { return await this.native.json(path, { signal }); }
         catch (error) { if (error instanceof HapiRequestError && [403, 404].includes(error.status)) return null; throw error; }
@@ -53,7 +75,11 @@ export class NativeSessions {
         }
         if (metadata.forkedFrom) {
             if (typeof metadata.forkedFrom !== 'string') throw inputError();
-            this.store.require(actor, 'session', metadata.forkedFrom, 'report');
+            const existing = this.store.object('session', id);
+            if (existing) {
+                const parent = this.store.object('session', metadata.forkedFrom);
+                if (!parent || parent.ownerId !== existing.ownerId || parent.spaceId !== existing.spaceId || parent.machineId !== existing.machineId) throw hubNotFound();
+            } else this.store.require(actor, 'session', metadata.forkedFrom, 'report');
             const pending = this.store.pending(actor.machineId!).filter(i => ['fork', 'clear'].includes(i.operation) && i.sourceSessionId === metadata.forkedFrom);
             // An already bound child can reconnect after the dispatch window.
             if (!(id && this.store.object('session', id))) {
@@ -67,6 +93,7 @@ export class NativeSessions {
             else this.store.bind({ kind: 'session', id, ownerId: actor.ownerId, machineId: actor.machineId });
         }
         this.store.require(actor, 'session', id, 'report');
+        await this.guardMetadata(actor, id, { ...metadata, machineId: actor.machineId }, signal);
         const result = await this.native.write('/cli/sessions', { ...body, id,
             tag: `rw:${actor.machineId}:${body.tag}`, metadata: { ...metadata, machineId: actor.machineId } }, signal);
         this.store.require(actor, 'session', result.session.id, 'report');

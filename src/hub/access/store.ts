@@ -15,6 +15,18 @@ export class AccessStore {
     constructor(path: string) { this.db = openState(path); }
     close() { this.db.close(); }
 
+    nativeClaim(field: string, nativeId: string): Pick<ExecutionObject, 'ownerId' | 'spaceId' | 'machineId'> | null {
+        return this.db.query('SELECT ownerId, spaceId, machineId FROM hub_native_session_claims WHERE field=? AND nativeId=?').get(field, nativeId) as any;
+    }
+    claimNative(field: 'codexSessionId' | 'claudeSessionId', nativeId: string, sessionId: string) {
+        return this.db.transaction(() => {
+            const binding = this.live('session', sessionId), prior = this.nativeClaim(field, nativeId);
+            if (prior && (prior.ownerId !== binding.ownerId || prior.spaceId !== binding.spaceId || prior.machineId !== binding.machineId)) throw conflict();
+            this.db.query('INSERT OR IGNORE INTO hub_native_session_claims (field, nativeId, ownerId, spaceId, machineId) VALUES (?, ?, ?, ?, ?)')
+                .run(field, nativeId, binding.ownerId, binding.spaceId, binding.machineId);
+        }).immediate();
+    }
+
     private user(id: string) {
         const row = this.db.query('SELECT id, name, rowid AS userNumber, tokenDigest FROM hub_users WHERE id=?')
             .get(id) as { id: string; name: string; userNumber: number; tokenDigest: string } | null;

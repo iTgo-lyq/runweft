@@ -13,6 +13,8 @@ import { NativeFiles, STREAMED } from './files';
 import { NativeSessions } from './sessions';
 import { NativeTransport, RequestLease, inputError, pathParts, readJson, unavailable } from './transport';
 import type { Principal } from './types';
+import { attachAccessSockets } from './sockets';
+import { NativeEvents } from './events';
 
 // Enumerated native surface. New HAPI routes must be reviewed instead of inheriting the root credential.
 export const SESSION_ROUTES: Record<string, RegExp[]> = {
@@ -34,6 +36,7 @@ export async function createAccessGateway(options: AccessGatewayOptions) {
     const store = new AccessStore(options.statePath), identities = new HubStore(options.statePath);
     const authority = new AccessAuthority(store, options.key), native = new NativeTransport(options.target, options.rootToken);
     const files = new NativeFiles(store, native), sessions = new NativeSessions(store, native);
+    const events = new NativeEvents(store, native, options.key);
     const sockets = new Set<Socket>();
     const leases = new Set<RequestLease>();
     const server = createServer((request, response) => {
@@ -47,8 +50,7 @@ export async function createAccessGateway(options: AccessGatewayOptions) {
         });
     });
     server.requestTimeout = 0;
-    const rejectUpgrade = (_request: IncomingMessage, socket: any) => { socket.end('HTTP/1.1 403 Forbidden\r\nConnection: close\r\n\r\n'); };
-    server.on('upgrade', rejectUpgrade);
+    const realtime = attachAccessSockets(server, store, authority, native, sessions);
     server.on('connection', socket => { sockets.add(socket); socket.once('close', () => sockets.delete(socket)); });
 
     async function handle(request: IncomingMessage, response: ServerResponse) {
@@ -72,7 +74,8 @@ export async function createAccessGateway(options: AccessGatewayOptions) {
             response.end(Buffer.from(await upstream.arrayBuffer())); return;
         }
         if (!['api', 'cli'].includes(parts[0])) throw unavailable();
-        const token = request.headers.authorization?.startsWith('Bearer ') ? request.headers.authorization.slice(7) : '';
+        const token = request.headers.authorization?.startsWith('Bearer ') ? request.headers.authorization.slice(7)
+            : path === '/api/events' ? url.searchParams.get('token') ?? '' : '';
         let actor: Principal;
         if (parts[0] === 'cli') {
             actor = store.authenticate(token);
@@ -85,7 +88,9 @@ export async function createAccessGateway(options: AccessGatewayOptions) {
                 throw unavailable();
             }
             let result: any;
-            if (parts[1] === 'artifacts') result = await files.handle(parts, url, request, lease);
+            if (path === '/api/events' && method === 'GET') { await events.stream(request, response, url, lease); result = STREAMED; }
+            else if (path === '/api/visibility' && method === 'POST' && actor.kind === 'user') result = await events.visibility(actor, await readJson(request, 16_384, lease.signal), lease.signal);
+            else if (parts[1] === 'artifacts') result = await files.handle(parts, url, request, lease);
             else if (parts[0] === 'cli') result = await cli(parts, url, request, lease);
             else if (parts[1] === 'machines') result = await machines(parts, url, request, lease);
             else if (parts[1] === 'sessions') result = await sessionApi(parts, url, request, lease);
@@ -166,8 +171,9 @@ export async function createAccessGateway(options: AccessGatewayOptions) {
         await lease.stream(upstream); return STREAMED;
     }
     await new Promise<void>((resolve, reject) => { server.once('error', reject); server.listen(options.port, options.host, resolve); });
-    return { server, store, authority, native, files, sessions, rejectUpgrade,
+    return { server, store, authority, native, files, sessions,
         async close() {
+            realtime.close();
             for (const lease of leases) lease.close();
             for (const socket of sockets) socket.destroy();
             await new Promise<void>((resolve, reject) => server.close(error => error ? reject(error) : resolve()));

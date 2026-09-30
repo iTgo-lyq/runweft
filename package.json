@@ -49,7 +49,8 @@
     "test:remote-tasks": "bun scripts/smoke-remote-native.ts --tasks",
     "test:result-retention": "bun scripts/smoke-result-retention.ts",
     "test:remote-native": "bun scripts/smoke-remote-native.ts",
-    "test:hub-access": "bun scripts/smoke-hub-access.ts"
+    "test:hub-access": "bun scripts/smoke-hub-access.ts",
+    "test:hub-realtime": "bun scripts/smoke-hub-realtime.ts"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.25.1",

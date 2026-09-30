@@ -156,7 +156,7 @@ test('two processes cannot claim the same native object for different owners; to
 
 test('v7 migration preserves identities and existing resource rows without inferring execution ownership', () => {
     const h = setup(), db = new Database(h.path);
-    db.exec(`DROP TABLE hub_file_reservations; DROP TABLE hub_execution_grants; DROP TABLE hub_execution_intents; DROP TABLE hub_execution_credentials;
+    db.exec(`DROP TABLE hub_native_session_claims; DROP TABLE hub_file_reservations; DROP TABLE hub_execution_grants; DROP TABLE hub_execution_intents; DROP TABLE hub_execution_credentials;
         DROP TABLE hub_execution_objects; INSERT INTO machine_registrations VALUES ('default', 'legacy', 1, 1, 1); PRAGMA user_version=7;`);
     const migrated = new AccessStore(h.path);
     try {
@@ -218,4 +218,19 @@ test('removed members cannot revive output permits; rejoining owners can recover
     files.bind(owner, row.id, 'orphan');
     expect(h.access.can(owner, 'artifact', 'orphan')).toBe(true);
     expect(h.access.can(machine, 'artifact', 'orphan')).toBe(false);
+});
+
+test('native engine IDs cannot cause HAPI history to merge across owner, space or machine, including after restart', () => {
+    const h = setup();
+    h.access.claimNative('claudeSessionId', 'native-b', 'session-b');
+    h.other.claimNative('claudeSessionId', 'native-b', 'session-b');
+    expect(() => h.other.claimNative('claudeSessionId', 'native-b', 'session-a')).toThrow('归属');
+    h.access.bind({ kind: 'session', id: 'b-second-space', ownerId: h.b.identity.id, spaceId: h.b.personalSpace.id, machineId: 'machine-a' });
+    expect(() => h.access.claimNative('claudeSessionId', 'native-b', 'b-second-space')).toThrow('归属');
+    h.access.bind({ kind: 'session', id: 'b-second-machine', ownerId: h.b.identity.id, spaceId: h.sid, machineId: 'machine-c' });
+    expect(() => h.access.claimNative('claudeSessionId', 'native-b', 'b-second-machine')).toThrow('归属');
+    h.access.claimNative('codexSessionId', 'native-b', 'session-a'); // Runtime IDs have separate domains.
+    const reopened = new AccessStore(h.path);
+    try { expect(reopened.nativeClaim('claudeSessionId', 'native-b')).toMatchObject({ ownerId: h.b.identity.id, spaceId: h.sid }); }
+    finally { reopened.close(); }
 });

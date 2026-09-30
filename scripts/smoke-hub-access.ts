@@ -33,7 +33,7 @@ async function api(path: string, token = '', body?: unknown, method = body === u
     return data;
 }
 async function connect(auth: object) {
-    const socket = io(target + '/cli', { auth, transports: ['websocket'], reconnection: false, timeout: 3000 }); sockets.push(socket);
+    const socket = io(base + '/cli', { auth, transports: ['websocket'], reconnection: false, timeout: 3000 }); sockets.push(socket);
     await new Promise<void>((yes, no) => { socket.once('connect', () => yes()); socket.once('connect_error', no); }); return socket;
 }
 async function startGateway() {
@@ -56,7 +56,7 @@ try {
     assert.equal((await api('/api/machines?includeOffline=true', bj)).machines.length, 0);
     check('native machine registration is bound to machine credential; owner sees only own inventory');
 
-    const runner = await connect({ token: gateway!.native.cliToken(), machineId: 'machine-a' });
+    const runner = await connect({ token: ma.token, machineId: 'machine-a' });
     runner.emit('machine-alive', { machineId: 'machine-a', time: Date.now() });
     let fixtureFailure: unknown;
     runner.on('rpc-request', async (data, ack) => {
@@ -102,7 +102,7 @@ try {
     await api('/api/sessions?namespace=runweft', bj, undefined, 'GET', 400);
     check('public spawn generates scoped request IDs and identical retry keeps one native session; forged machine/namespace is rejected');
 
-    const childSocket = await connect({ token: gateway!.native.cliToken(), sessionId: sb });
+    const childSocket = await connect({ token: ma.token, sessionId: sb });
     childSocket.emit('message', { sid: sb, message: { role: 'agent', content: { type: 'text', text: 'owned-report' } }, localId: randomUUID() });
     await new Promise<void>(yes => childSocket.emit('ping', yes));
     assert.equal((await api(`/api/sessions/${sb}/messages`, bj)).messages.length, 1);

@@ -4,7 +4,7 @@ import { dirname } from 'node:path';
 import { ensureDirectory } from './config';
 import { ResourceError } from './resources/types';
 
-export const STATE_SCHEMA_VERSION = 9;
+export const STATE_SCHEMA_VERSION = 10;
 
 /** One additive schema for the central business database; native history stays in HAPI. */
 export function openState(path: string) {
@@ -180,6 +180,14 @@ export function openState(path: string) {
                     UNIQUE(sender, requestId)
                 );
                 PRAGMA user_version=9;
+            `);
+            if (version < 10) db.exec(`
+                CREATE TABLE hub_native_session_claims (
+                    field TEXT NOT NULL, nativeId TEXT NOT NULL,
+                    ownerId TEXT NOT NULL REFERENCES hub_users(id), spaceId TEXT REFERENCES hub_spaces(id), machineId TEXT NOT NULL,
+                    PRIMARY KEY(field, nativeId)
+                );
+                PRAGMA user_version=10;
             `);
         }).immediate();
         return db;

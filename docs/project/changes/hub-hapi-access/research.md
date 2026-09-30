@@ -38,3 +38,7 @@
 - HAPI 原生附件按 namespace 提供列表、用量、配额和原子过期清理。每个 owner × space 采用独立且不可由客户端选择的文件 namespace，即可复用上述能力，不需要重写 prune 或修改 HAPI。会话/机器仍用共同执行 namespace。
 - 真实 smoke `.dev-smoke/hub-access-wsgSKh/evidence.json`：同一 requestId 在两个发布者下得到不同原生对象；A 机器受许可上传 B 的结果但 A 用户不能读取；网关重启仍恢复请求映射；B 的 prune 删除 B 过期文件而保留同龄 A 文件。撤销正在上传/下载的授权均终止流，HAPI 回收上传残片；显式重新授权可对同一对象继续上传。
 - 验证仅使用隔离 HAPI、SQLite 与原生协议 fixture，未调用模型或修改真实用户配置；Socket/终端授权尚待 T3。
+
+## T3 原生去重边界补充
+
+真实协议测试 `.dev-smoke/hub-realtime-h9kJfZ` 在 A/B/C 元数据复用同一 Claude 原生 ID 时，B 会话随后返回 404。核对 `sessionCache.deduplicateByAgentSessionId`：同 namespace 同原生 ID 的非活跃行会合并消息和附件并删除旧行；Codex/Claude 去重未按 machine/user 分隔。HTTP alias 的出站权限检查不足以阻止历史在底座内先合并。因此在 Runweft 可信映射中增加原生 ID 的固定 owner/space/machine 声明，在 bootstrap/metadata 入站处检查；复用 HAPI 自身去重，不改 runtime 或底座状态机。该工程细节按既有授权由主 agent 决定，不增加用户产品门禁。

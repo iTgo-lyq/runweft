@@ -23,3 +23,12 @@
 - 验证：`bun run typecheck` 通过；既有全套 `bun run test` 为 186 pass / 0 fail；新增许可/冲突/成员重入/撤销恢复测试后聚焦 `bun test ./test/hub-access.test.ts` 为 10 pass / 0 fail / 100 expectations。真实编译 HAPI + 源码网关 smoke 共 10 组通过，证据 `.dev-smoke/hub-access-wsgSKh/evidence.json`，包括有/无 requestId 的幂等启动、跨所有者执行、文件字节与配额、重启与丢响应恢复、隔离清理、16 MiB 传输中撤销、原生残片回收和身份轮换。
 - 边界：执行端为协议 fixture，无模型和 PTY；真实 Runner、Socket/SSE、派生及实际 RPC 目标检查在 T3/T4。默认 serve 未切换，未变更在线部署。完整构建在 T4。
 - Commit：`hub-hapi-access T2: authorize native HTTP and file transfers`
+
+## T3 Socket、终端与 SSE
+
+- 结果：Socket.IO 库一对一转接 `/cli` 和 `/terminal`，握手、每个双向事件和 ack 均重新授权；固定对象前缀的 RPC、心跳和 metadata，终端关联本连接的 session。拒绝默认/未知 namespace、未知事件和其他 upgrade。实际 spawn RPC 和返回 ack 都检查分配机器，原生同 host 回退不会把参数发给另一机器。
+- SSE：原生流逐事件过滤，保留原生重放/心跳；cursor 绑定身份/空间和可见对象集合，visibility 绑定订阅所有者。新对象归属出现后发 gap，未绑定的原生事件不外泄。HTTP/Socket/SSE 撤销空闲检查最长 1 秒；文件/SSE 背压保留取消能力。
+- 补充边界：真实 fixture 暴露同原生 ID 导致 HAPI 合并历史的行为，schema v10 保存 Codex/Claude 原生 ID 的 owner/space/machine 声明；CLI bootstrap 和 Socket metadata 转发前核对，未知旧原生行也不能抢占。继续复用 HAPI 去重，不修改 runtime。源会话被删除后，派生会话的历史来源可保留，不能换归属。
+- 验证：`bun run typecheck`、聚焦授权测试 11 pass / 104 expectations 通过；全套仓库测试 190 pass / 0 fail / 3883 expectations，原始记录 `.dev-smoke/reviews/hub-hapi-access/t3-tests.log`。新增默认/未知 namespace 和 upgrade 测试为 1 pass / 9 expectations。最终真实 HAPI smoke：`.dev-smoke/hub-realtime-fXFDM4/evidence.json` 10 组通过；HTTP/文件 smoke 改为使用外部 Socket 网关后 `.dev-smoke/hub-access-YZglPw/evidence.json` 10 组通过。
+- 真实范围：编译且未改造的 Runner 完成登记、心跳和目录 RPC；原生 HAPI 的终端 registry、SSE、Claude fork/bootstrap、Codex 共享 fork/clear 完成协议 fixture 验证；含真实 45 秒心跳失效后的同 host 回退拦截、12.5 MiB SSE 背压撤销、身份轮换与成员移除。未使用真实模型或 PTY；两个 runtime 的模型回归仍在阶段 5。HAPI 子模块无修改。
+- Commit：`hub-hapi-access T3: authorize native sockets and event streams`
