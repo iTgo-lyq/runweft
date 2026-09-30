@@ -51,7 +51,8 @@
     "test:remote-native": "bun scripts/smoke-remote-native.ts",
     "test:hub-access": "bun scripts/smoke-hub-access.ts",
     "test:hub-realtime": "bun scripts/smoke-hub-realtime.ts",
-    "test:hub-resources": "bun scripts/smoke-hub-resources.ts"
+    "test:hub-resources": "bun scripts/smoke-hub-resources.ts",
+    "test:hub-configuration": "bun scripts/smoke-hub-configuration.ts"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.25.1",

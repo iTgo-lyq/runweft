@@ -35,3 +35,10 @@
 - 验证：typecheck/build 通过；全仓 230 pass、0 fail、4724 expectations、34 文件（`t3-tests.log`）。编译 CLI 并发 PUT 空间默认始终一行；覆盖确定选择、失效不回退、类型匹配、两用户选择隔离、私有 runtime/Agent 权限交集与模型未调用。7 种探测期间变更均拒绝过时结果；固定快照和 resolvedVersion 不受探测时间影响。
 - 证据：`.dev-smoke/reviews/hub-repository-agents/t3-*.log`。旧 Agent 原生映射测试保留并通过；真实 Runner/组合 smoke 在 T4。
 - Commit：`hub-repository-agents T3: resolve personal choices with fixed Agent snapshots and current access`
+
+## T4 组合验收与下游交付
+
+- 新增 `test:hub-configuration` 与可编译 smoke，组合完整领域网关、实际 CLI、未改造 HAPI/Runner、原生 Codex/Claude 版本探测和真实 Git clone/worktree。6 组通过，证据 `.dev-smoke/hub-configuration-pF0Xrp/evidence.json`；smoke 编译与执行日志 `t4-native.log`。
+- 交付 [消费者契约](consumer-contract.md) 和 [需求验收矩阵](acceptance.md)。typecheck 与编译 smoke 通过；生产代码沿 T3 已通过 230 项全仓测试及构建，此任务未修改生产代码，不重复无变化检查。结构/差异校验通过。
+- 按既有授权自动验收通过。仍未切换默认服务、发起模型/任务或添加 Web 配置页面；明确归后续领域。未改用户配置或在线 Hub，测试进程正常清理。
+- Commit：`hub-repository-agents T4: verify central configuration against native Runner and real Git`
