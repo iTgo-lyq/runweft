@@ -37,7 +37,7 @@ async function api(path: string, body?: unknown, method = body === undefined ? '
 async function action(fn: () => Promise<void>) {
     if (busy) return;
     busy = true; notice('');
-    const controls = Array.from(document.querySelectorAll<HTMLButtonElement | HTMLInputElement | HTMLSelectElement>('button,input,select'));
+    const controls = Array.from(document.querySelectorAll<HTMLButtonElement | HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>('button,input,select,textarea'));
     const disabled = controls.map(node => node.disabled);
     controls.forEach(node => { node.disabled = true; });
     try { await fn(); }
@@ -128,6 +128,21 @@ async function refresh() {
     }) : [text('p', '没有待使用的邀请。', 'hint')]));
     const currentToken = saved.token, currentSpace = space.id;
     await mountConsole({ userId: identity!.id, spaceId: space.id, members: members.members, spaces, action, confirm, notice,
+        openNative: async (sessionId, files = false) => {
+            if (!/^[A-Za-z0-9_-]+$/.test(sessionId)) throw new Error('无效原生会话 ID。');
+            const tab = window.open('about:blank', '_blank');
+            if (!tab) throw new Error('浏览器阻止了新标签页。允许此 Hub 打开弹窗后重试。');
+            try {
+                tab.sessionStorage.removeItem(storageKey); tab.sessionStorage.removeItem('runweft.native.access'); tab.opener = null;
+                tab.document.title = '正在打开受限会话';
+                tab.document.body.textContent = '正在核对当前空间的会话访问权限…';
+                const auth = await api('/auth', { accessToken: currentToken, spaceId: currentSpace }, 'POST', '', '/api');
+                await api(`/sessions/${sessionId}`, undefined, 'GET', auth.token, '/api');
+                if (saved.token !== currentToken || selected?.id !== currentSpace) throw new Error('身份或空间已变化，请重新打开。');
+                tab.sessionStorage.setItem('runweft.native.access', auth.token);
+                tab.location.replace(`/sessions/${sessionId}${files ? '/files' : ''}`);
+            } catch (error) { tab.close(); throw error; }
+        },
         request: async (path, body, method = body === undefined ? 'GET' : 'POST', global = false) => {
             if (saved.token !== currentToken || selected?.id !== currentSpace) throw new Error('当前身份或空间已变化，请刷新。');
             const key = global ? 'global' : currentSpace;
@@ -273,4 +288,5 @@ void action(async () => {
     if (raw) { try { saved = JSON.parse(raw); } catch { throw new Error('此浏览器保存的身份信息损坏，请重新导入 token。'); } }
     if (!saved || typeof saved.token !== 'string') { saved = { token: '' }; throw new Error('请重新导入已保存的身份 token。'); }
     if (saved.token) { await recover(); await refresh(); } else await refreshConnection();
+    if (location.hash === '#native-expired') notice('原生页面的限时身份已到期或失效。回到仍登录的 Hub 标签重新打开；此标签可导入已保存的身份 token，不会自动创建身份。', true);
 });

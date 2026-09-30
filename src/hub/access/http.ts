@@ -84,7 +84,7 @@ export async function createAccessGateway(options: AccessGatewayOptions) {
             response.writeHead(upstream.status, { 'content-type': contentType, 'cache-control': 'no-store', 'referrer-policy': 'no-referrer' });
             if (nativePage && contentType.includes('text/html')) {
                 const html = await upstream.text();
-                response.end(html.replace('<head>', '<head><script type="module" src="/hub/native.js"></script>'));
+                response.end(html.replace('<head>', '<head><script src="/hub/native.js"></script>'));
             } else response.end(Buffer.from(await upstream.arrayBuffer()));
             return;
         }

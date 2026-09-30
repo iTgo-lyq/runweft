@@ -36,3 +36,12 @@
 - 验证：typecheck、build、diff-check 通过；16 pass / 0 fail、268 断言。扩展现有 compiled CLI + HAPI/Runner Playwright，共 8 组通过，证据 `.dev-smoke/hub-console-urmu1Q/evidence.json`，success=true、cleanupErrors=[]。覆盖创建丢响应、完整编辑、并发版本冲突、历史、私有数据不可见、管理员不能改私有定义、个人选择隔离、真实目标解析、分享撤回、仓库失效不回退及显式恢复。没有模型调用。
 - 视觉与返修：已查看桌面 Agent 与 390px 个人选择截图，无水平溢出。初次 smoke 因 select 的隐含名称包含 option 文本而超时；补显式 aria-label 后重跑通过，失败证据 `.dev-smoke/hub-console-wjvOCu/evidence.json` 保留。
 - Commit：`hub-console-onboarding T3: manage central agents repositories and personal selections`。
+
+## T4 任务详情与原生页面
+
+- 结果：任务成为默认页，按本人空间查询计数/过滤/分页，详情呈现轮次、配置快照、分页报告、附件与代码、恢复和停止观察，并提供 Agent 后续处理说明。HTML 使用 textContent，不渲染报告内标签。
+- 结果：同源新标签先清除复制身份、断开 opener，再交换当前空间短 JWT、检查目标会话并跳转 HAPI 详情/审批/文件。原生脚本同步先加载、存储仅在标签页，不延长 JWT；过期返回 Hub，不自动创建身份。HAPI useSSE 原有 URL token 被窄适配转为 Authorization header fetch 流，保留原生事件/游标/重连处理，不修改 HAPI 源码。
+- 验证：typecheck/build/diff-check、21 pass / 0 fail（249 断言）通过。完整后台 Playwright 12 组通过，`.dev-smoke/hub-console-pelKJK/evidence.json`，success=true、cleanupErrors=[]。覆盖 27/1 个任务的本人隔离、筛选/分页/轮次/报告、原生消息刷新、实时 SSE、审批 RPC、文件内容、同一浏览器两身份多标签、API 越权、受管恢复拒绝、共享机器 terminal 拒绝及虚拟时钟到期；已查看任务窄屏与 HAPI 文件截图。
+- 验证边界：compiled CLI + 真实 HAPI/Runner；任务历史与原生会话 RPC 为明确的浏览器夹具，无模型或 OS PTY，不替代阶段七真实模型组合。原生页面各类失败均保留证据：tWDFU2 为夹具缺任务绑定；oK9Uaw/NRqhHB 为错误的消息封装；v3z6Ei/xLvnTY 为原生中文按钮选择器。最终修正夹具后通过，未放宽授权。
+- 工具偏差：试验 Bun.Transpiler exports.eliminate 在 Bun 1.4.2 触发 panic；没有使用该实验选项，改为移除已知空 default export 后生成同步 IIFE。最终构建与真实浏览器通过。
+- Commit：`hub-console-onboarding T4: deliver private task views and scoped native browser handoff`。

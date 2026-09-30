@@ -60,7 +60,11 @@ test('native browser reauthentication preserves exact JWT scope and lifetime, re
     }
     expect((await fetch(fixture.url + '/sessions/example/terminal')).status).toBe(403);
     const script = await fetch(fixture.url + '/hub/native.js');
-    expect(script.status).toBe(200); expect(await script.text()).toContain('runweft.native.access');
+    expect(script.status).toBe(200);
+    const javascript = await script.text();
+    expect(javascript).toContain('runweft.native.access'); expect(javascript).not.toContain('export default');
+    expect(javascript).toContain('url.searchParams.delete("token")');
+    expect(javascript).toContain('authorization: `Bearer ${credential}`');
 });
 
 test('console task detail and pagination are owner scoped without requiring a live parent', async () => {

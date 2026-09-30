@@ -2,6 +2,7 @@ import { renderResources } from './resources-page.js';
 import { renderAgents } from './agents-page.js';
 import { renderRepositories } from './repositories-page.js';
 import { renderSelections } from './selections-page.js';
+import { renderTasks } from './tasks-page.js';
 
 export default '';
 export type ConsoleContext = {
@@ -10,6 +11,7 @@ export type ConsoleContext = {
     action(operation: () => Promise<void>): Promise<void>;
     confirm(message: string): Promise<boolean>;
     notice(message: string, error?: boolean): void;
+    openNative(sessionId: string, files?: boolean): Promise<void>;
 };
 export const element = <Tag extends keyof HTMLElementTagNameMap>(tag: Tag, value = '', className = '') => {
     const node = document.createElement(tag); node.textContent = value; node.className = className; return node;
@@ -85,7 +87,7 @@ export async function createResource(context: ConsoleContext, path: string, payl
 }
 
 let generation = 0;
-let active = 'machines';
+let active = 'tasks';
 export function clearConsole() {
     generation++;
     document.getElementById('console-content')?.replaceChildren();
@@ -95,7 +97,7 @@ export async function mountConsole(context: ConsoleContext) {
     const epoch = ++generation;
     const content = document.getElementById('console-content')!, navigation = document.getElementById('console-navigation')!;
     const members = document.getElementById('members-panel')!;
-    const modes = [{ id: 'machines', label: '机器' }, { id: 'runtimes', label: 'Runtime' }, { id: 'agents', label: 'Agent' },
+    const modes = [{ id: 'tasks', label: '任务' }, { id: 'machines', label: '机器' }, { id: 'runtimes', label: 'Runtime' }, { id: 'agents', label: 'Agent' },
         { id: 'repositories', label: '仓库' }, { id: 'selections', label: '我的选择' }, { id: 'members', label: '成员' }];
     async function render() {
         if (epoch !== generation) return;
@@ -105,7 +107,8 @@ export async function mountConsole(context: ConsoleContext) {
         content.append(element('p', '正在读取当前权限与资源…', 'muted'));
         const target = element('div');
         try {
-            if (active === 'agents') await renderAgents(target, context, render);
+            if (active === 'tasks') await renderTasks(target, context);
+            else if (active === 'agents') await renderAgents(target, context, render);
             else if (active === 'repositories') await renderRepositories(target, context, render);
             else if (active === 'selections') await renderSelections(target, context, render);
             else await renderResources(target, context, active === 'runtimes' ? 'runtimes' : 'machines', render);

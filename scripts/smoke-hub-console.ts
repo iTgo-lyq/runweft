@@ -3,6 +3,7 @@ import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { chromium, type Page } from 'playwright';
 import { freePort } from '../src/services';
+import { consoleTasks } from './fixtures/hub-console-tasks';
 
 mkdirSync('.dev-smoke', { recursive: true });
 const root = mkdtempSync(resolve('.dev-smoke/hub-console-')), home = join(root, 'home');
@@ -10,7 +11,8 @@ const binary = resolve(process.argv[2] ?? 'dist/runweft');
 const env = { ...process.env };
 for (const key of Object.keys(env)) if (key.startsWith('HAPI_') || key.startsWith('RUNWEFT_') || ['CLI_API_TOKEN', 'DB_PATH', 'TELEGRAM_BOT_TOKEN'].includes(key)) delete env[key];
 const port = await freePort(), origin = `http://127.0.0.1:${port}`;
-const evidence: any = { root, binary, origin, checks: [], screenshots: [], success: false, cleanupErrors: [], scope: 'compiled CLI, real HAPI/Runner and Chromium; no model execution' };
+const evidence: any = { root, binary, origin, checks: [], screenshots: [], success: false, cleanupErrors: [],
+    scope: 'compiled CLI, real HAPI/Runner and Chromium; task history and session RPC are explicit browser fixtures, no model execution or OS terminal' };
 const secrets: string[] = [], pageErrors: string[] = [], output: string[] = [];
 async function cli(args: string[]) {
     const child = Bun.spawn([binary, '--home', home, '--json', ...args], { env, stdout: 'pipe', stderr: 'pipe' });
@@ -63,6 +65,7 @@ try {
     const machine = await cli(['machine', 'enroll', '--name', '验收机器']);
     await cli(['machine', 'associate', machine.machineId, spaceId]); await cli(['runner', 'start']);
     await page.locator('#refresh').click(); await ready(page);
+    await navigate(page, '机器');
     let card = page.locator(`[data-resource-id="${machine.machineId}"]`);
     await card.waitFor(); assert.match(await card.innerText(), /在线/);
     await card.getByText('修改机器名称', { exact: true }).click();
@@ -93,7 +96,7 @@ try {
     secrets.push(invitation.token);
     assert.equal((await request('/api/runweft/hub/invitations/accept', member.token, { token: invitation.token })).status, 200);
     const memberToken = await domain(member.token, spaceId);
-    const memberContext = await browser.newContext({ viewport: { width: 1440, height: 1000 } }), memberPage = await memberContext.newPage();
+    const memberPage = await context.newPage();
     await importIdentity(memberPage, member.token, spaceId);
     await page.locator('#refresh').click(); await ready(page);
     await navigate(page, '仓库');
@@ -207,7 +210,9 @@ try {
     await page.locator(`[data-selection-scope="${repository.id}"]`).getByRole('button', { name: '清除这条选择' }).click(); await confirm(page);
     assert.equal((await request('/api/runweft/agent-selections', ownerToken)).body.selections.length, 1);
     check('repository unregister blocks resolution without fallback; explicit restore and personal selection removal');
-    await memberContext.close();
+    await consoleTasks({ origin, home, root, page, memberPage, context, identityToken, memberToken, memberIdentity: member.token,
+        ownerToken, spaceId, machineId: machine.machineId, agentId: agent.id, memberAgentId: personalAgent.id, ready, navigate, screenshot, check });
+    await memberPage.close();
     await navigate(page, 'Runtime');
     await page.setViewportSize({ width: 390, height: 844 });
     assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
