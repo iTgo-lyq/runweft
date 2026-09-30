@@ -1,6 +1,6 @@
 # 资源归属验收矩阵
 
-> 待实施验证；不代表已通过。使用 A（机器所有者）、B（同空间普通成员）、C（非资源所有者的管理员）和 D（空间外身份），空间 S/T。
+> 已按本地自动验收授权验证；原始证据与边界见 [acceptance.md](acceptance.md)。使用 A（机器所有者）、B（同空间普通成员）、C（非资源所有者的管理员）和 D（空间外身份），空间 S/T。
 
 | 场景 | 预期 |
 | --- | --- |
@@ -24,3 +24,5 @@
 | 真实未改造 Runner | 从可信 ID/opaque token 正常登记、心跳、工具发现；不要求模型调用 |
 | 原生机器 spawn、会话派生、实际 outgoing RPC | 当前空间的资源撤销/禁用同样生效，机器 peer 不能替换任务所有者 |
 | 编译与回归 | typecheck、全仓 test、build；旧资源 API/CLI 与已验收授权通道不回退 |
+
+存储、角色、DTO、并发及异步撤销场景由 `test/hub-resources.test.ts` 覆盖；编译 CLI 与丢响应恢复由 `test/hub-resource-cli.test.ts` 覆盖；实际 outgoing RPC 竞态由 `test/hub-resource-dispatch.test.ts` 的双跳 Socket.IO fixture 验证。`scripts/smoke-hub-resources.ts` 完成真实未改造 Runner 和两种工具的观察；模型执行不属于此资源领域验收。

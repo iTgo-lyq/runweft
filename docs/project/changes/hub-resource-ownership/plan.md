@@ -1,6 +1,6 @@
 # 机器与 Runtime 归属实施计划
 
-> 状态：执行中
+> 状态：已完成
 > 来源：[Requirement](requirement.md)
 > 技术方案：[Technical](technical.md)
 > 执行模式：逐任务提交。方案/Plan 由主 agent 按授权确认，已完成 iclaude 评审并由主 agent 落实修正，见 execution.md。
@@ -37,7 +37,7 @@
 
 ### T4 真实 Runner 验收与接口交付
 
-- 状态：待开始
+- 状态：已完成
 - 交付：真实 HAPI/Runner 注册与探测、共享目标解析、完整需求矩阵和后续委派接口说明。
 - 依赖：T1–T3。
 - 验收：真实 Runner 持机器凭据工作，资源共享者只能使用获准 runtime；配置保留离线历史；本阶段不声称真实模型或默认服务已迁移。

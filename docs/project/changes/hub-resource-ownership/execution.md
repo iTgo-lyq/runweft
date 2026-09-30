@@ -34,3 +34,11 @@
 - 验证：typecheck；资源/CLI 聚焦 18 pass、384 expectations；最终 CLI/config/旧 CLI 复核 11 pass、127 expectations。测试实际编译 Runweft 可执行文件后运行，覆盖并发接入、分享/禁用/check、轮换、双 Hub、身份不匹配、Web 备份、JSON/人类输出无 token、0600 及不生成原生配置。原始日志 `t3-tests.log` / `t3-final-tests.log`；结构与 diff 检查通过。
 - 边界：此任务使用组合资源服务及原生协议 fixture；真实 Runner 使用新持久接入文件由 T4 验证。操作接口见 [CLI 契约](cli-contract.md)。
 - Commit：`hub-resource-ownership T3: add hub resource CLI and durable machine enrollment`
+
+## T4 真实 Runner 与完整接口验证
+
+- 结果：新增 test:hub-resources，实际编译组合网关 smoke 并使用 build 生成的 Runweft CLI、未改造 HAPI Hub/Runner 和本机 Codex/Claude 命令，仅查询版本，不运行模型。7 组真实检查覆盖登记后启动、原生探测、稳定 runtime、分享与治理、轮换断开/重连、网关重启和真实 45 秒离线收敛。
+- 验证：typecheck、build；全仓 209 pass、0 fail、4278 expectations、31 文件（`.dev-smoke/reviews/hub-resource-ownership/t4-tests.log`）。编译后的 smoke 7 组通过，证据 `.dev-smoke/hub-resources-fltFyI/evidence.json`，日志 `t4-resources.log`；原生执行通道回归沿 T2 已通过证据，此后未修改通道实现。
+- 验收：需求映射与自动验收结论见 [acceptance.md](acceptance.md)。本地按用户既有授权完成，不增加人工确认门禁；专用身份/home/服务，未改当前用户配置或线上 Hub，HAPI 子模块保持干净。
+- 边界：默认 serve/Runner 配置尚待阶段 5 切换；Web 后台在阶段 6 接线。此阶段不声称实际模型委派、物理远端或 Mac 实机已重新验证。
+- Commit：`hub-resource-ownership T4: verify compiled CLI with native runner enrollment`
