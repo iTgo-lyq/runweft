@@ -9,3 +9,5 @@ complete 解密后先验证身份和成员资格，再原子保存 0600 identity
 cancel 只取消待确认请求，保留已有身份。connect status 是本机摘要，auth status 才验证远端当前授权。hub paths/root paths 分别显示显式目标和当前连接位置。地址不自动跨 origin 复用 token；机器记录归属另一身份时拒绝覆盖。
 
 CLI/MCP 默认使用保存的身份和空间，也可显式使用身份备份或 RUNWEFT_IDENTITY_TOKEN；指定另一个身份不会继承旧身份的已选空间。业务连接必须具有 hub.url、身份及空间，不回退 HAPI root 或本地 Agent 文件。身份备份由用户自行保管，丢失不由服务端找回。
+
+未选择 Hub 时 begin 报 `hub_connection_required`，提示用 `hub --url … connect begin/complete`，不误报 HTTPS 错误。`/hub` 将身份/空间与资源后台统一呈现，并提供当前 origin 的 Agent 接入说明；刷新、401 或连接错误均不自动领取新身份。原生页面只获得独立标签页短凭据，不继承长期身份，见[执行授权](../../execution/access/spec.md)。

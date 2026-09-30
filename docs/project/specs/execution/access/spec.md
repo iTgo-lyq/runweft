@@ -14,6 +14,8 @@
 
 `/api/auth` 只交换 Runweft 凭据；`/cli` 只接受机器原始 token，`/api` 接受短期 JWT。原生路由和方法显式列举；默认/未知 Socket namespace、其他升级、旧认证旁路、原生库导出和全局管理接口拒绝。健康检查与静态页面不授予数据权限。
 
+原生页面登录可再次交换当前空间用户 JWT，返回原值，不延长期限或改变空间；拒绝附加 spaceId、无空间 JWT、机器/任务 JWT。后台同源空白新标签先清除复制的长期身份、断开 opener，再写短 JWT 并打开已核对的 session 详情/file/files 路由。同步脚本把 HAPI 登录存储键映射到标签页 sessionStorage，固定当前 origin，最长十五分钟到期后返回 Hub。深链接拒绝外部 Hub/server 和凭据参数；原生页面不接受直接输入长期 token。后台退出不宣称撤销其他标签的短 JWT，身份轮换与成员撤销仍即时生效。
+
 机器和会话共用内部执行 namespace。新会话先有可信对象绑定；受控 spawn 为调用者 requestId 分配内部 UUID，在原生 receipt 与执行机器匹配后允许 bootstrap/Socket 接入。无 requestId 的启动也生成内部关联；不确定响应通过原请求查询，不盲目重发。fork/clear/reopen/resume 的派生意图固定源会话、所有者、空间和机器，子会话继承该归属。实际发往 Runner 的 RPC 及其 ack 再检查机器，HAPI 同 host 回退不能将参数送至另一机器。
 
 Codex/Claude 原生 ID 固定归属到 owner × space × machine，metadata 转发前原子声明；首次声明先核对 HAPI 库存。跨归属碰撞和未映射旧行不可认领；同一归属内的原生历史去重仍由 HAPI 执行。客户端 tag 按机器限定，返回的实际 session ID 也须通过权限检查。
@@ -24,7 +26,11 @@ Codex/Claude 原生 ID 固定归属到 owner × space × machine，metadata 转�
 
 每个外部 Socket 对应一个内部连接，握手成功后才接通；内部 root/JWT 不回传。CLI 只注册本连接对象前缀的 RPC，心跳、metadata、消息和双向 ack 都检查当前对象授权。终端 ID 关联本连接已授权的 session；输入、尺寸调整、关闭、输出和原生 agent terminal 订阅均重新校验。
 
+交互 terminal 还要求同时拥有执行机器并通过当前执行策略；共享 runtime 不授予 shell。agent-terminal 输入同样受中心任务控制限制，受管任务不能绕过 CLI/MCP 恢复或输入；只读订阅仍按 session 归属。
+
 SSE 对原生实时与重放事件按当前归属过滤，短期 JWT 可供 EventSource query 认证，长期凭据不接受于 URL。cursor 以 HMAC 绑定凭据、空间及可见对象集合；跨主体或可见集合变化要求刷新。新会话绑定后在最长 1 秒内产生 gap，防止漏掉此前被过滤的原生事件。visibility 只能修改本人现有订阅，流按背压读取并在断开时取消上游。
+
+受限 HAPI 浏览器页同步安装窄 SSE 适配，只将 `/api/events` 的原生 EventSource 请求转为带 Authorization header 的 fetch 流，不把 JWT 送入 URL；保留事件数据和游标，由原生 useSSE 处理重连。接口层的短 JWT query 兼容不等于浏览器继续使用该路径。
 
 凭据轮换/撤销和成员移除使现有授权失效；活动请求逐次检查，空闲 Socket/SSE 最长 1 秒关闭。成员移除同时取消该空间派生/文件许可并撤销任务凭据；重新加入不恢复旧执行许可。原生机器独立凭据不因其所有者更换身份 token 而换号。
 

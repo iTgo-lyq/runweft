@@ -1,9 +1,9 @@
 # 项目能力边界与讨论地图
 
 > 更新：2026-10-01
-> 本文保存产品决策、职责边界和 Change 依赖；原重构已归档，Hub 集中配置已完成前五阶段。当前实现事实以 Specs 为准。
+> 本文保存产品决策、职责边界和 Change 依赖；原重构已归档，Hub 集中配置已完成前六阶段。当前实现事实以 Specs 为准。
 
-2026-09-30 用户同意开始 [Hub 空间、身份与集中 Agent 配置](changes/hub-spaces-and-agent-configuration/requirement.md)：必须连接 Hub 后委派，Git 仓库关联中心配置，补充独立身份 token、空间与资源所有权；访客可领取 token 并自行保存，不建设登录/注册服务。实施按 [七阶段依赖](changes/hub-spaces-and-agent-configuration/delivery.md) 推进；前五阶段已验收，默认服务与 CLI/MCP 已必连 Hub，采用中心配置、独立用户/机器凭据和对象授权。完整后台、Skill、官网及新版四平台发行尚待第六、七阶段，见[第五阶段验收](archive/2026-10-01-hub-delegation-migration/acceptance.md)。
+2026-09-30 用户同意开始 [Hub 空间、身份与集中 Agent 配置](changes/hub-spaces-and-agent-configuration/requirement.md)：必须连接 Hub 后委派，Git 仓库关联中心配置，补充独立身份 token、空间与资源所有权；访客可领取 token 并自行保存，不建设登录/注册服务。实施按 [七阶段依赖](changes/hub-spaces-and-agent-configuration/delivery.md) 推进；前六阶段已验收，默认服务与 CLI/MCP 已必连 Hub，采用中心配置、独立用户/机器凭据和对象授权，完整后台、Skill 和官网已交付。新版同候选四平台发行由第七阶段完成，见[后台与接入验收](archive/2026-10-01-hub-console-onboarding/acceptance.md)。
 
 ## 产品边界
 
