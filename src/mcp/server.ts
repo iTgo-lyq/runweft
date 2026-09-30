@@ -70,9 +70,9 @@ export function createMcpServer(options: {
     server.onerror = () => { if (!connection.signal.aborted) console.error('Runweft MCP 协议错误；检查原生客户端与 Runweft 版本。'); };
     server.setRequestHandler(ListToolsRequestSchema, async () => {
         if (options.hub) {
-            const config = options.config(), hub = hubConnection(config)!;
+            const config = options.config();
             if (config.env.HAPI_SESSION_ID) {
-                try { await new HubTaskClient(hub, options.cwd).context(AbortSignal.timeout(10_000)); }
+                try { await new HubTaskClient(hubConnection(config)!, options.cwd).context(AbortSignal.timeout(10_000)); }
                 catch (error) {
                     if (errorDetails(error).code === 'subagent_delegation_denied') return { tools: [] };
                     // A managed execution without a verifiable connection cannot publish delegation tools.

@@ -1,3 +1,5 @@
+import { atomicWrite } from '../src/config';
+import { hubConnectionPaths } from '../src/hub/resources/connection';
 import { afterEach, describe, expect, test } from 'bun:test';
 import { Database } from 'bun:sqlite';
 import { randomUUID } from 'node:crypto';
@@ -23,9 +25,12 @@ async function fixture() {
     const store = new Store(join(root, 'hapi.db'));
     const service = new ArtifactService(store.artifacts, join(root, 'artifacts'), { ...ARTIFACT_DEFAULT_LIMITS, maxFileBytes: 1024 * 1024 });
     const secret = new TextEncoder().encode('artifact-client-test-signing-only');
-    const token = await new SignJWT({ uid: 1, ns: 'default' }).setProtectedHeader({ alg: 'HS256' }).sign(secret);
+    const owner = randomUUID(), space = randomUUID(), identityToken = 'rw_id_' + 'a'.repeat(43);
+    const token = await new SignJWT({ uid: 1, ns: 'default', kind: 'user', sub: owner, space }).setProtectedHeader({ alg: 'HS256' }).setExpirationTime('1h').sign(secret);
     const app = new Hono<WebAppEnv>();
-    app.post('/api/auth', async c => (await c.req.json()).accessToken === 'test-access' ? c.json({ token }) : c.json({ error: 'Invalid token' }, 401));
+    app.get('/api/runweft/health', c => c.json({ service: 'runweft', capabilities: { hubAccess: 1 } }));
+    app.get('/api/runweft/hub/identity', c => c.json({ identity: { id: owner, name: 'fixture', createdAt: 1 } }));
+    app.post('/api/auth', async c => ['test-access', identityToken].includes((await c.req.json()).accessToken) ? c.json({ token }) : c.json({ error: 'Invalid token' }, 401));
     app.use('/api/*', createAuthMiddleware(secret)); app.route('/api', createArtifactRoutes(service));
     let loseUploadResponse = false, uploads = 0;
     const server = Bun.serve({ port: 0, hostname: '127.0.0.1', async fetch(request) {
@@ -37,7 +42,8 @@ async function fixture() {
         return response;
     } });
     const url = `http://127.0.0.1:${server.port}`;
-    await writeFile(join(home, 'config.yaml'), `mode: hub\nhub:\n  url: ${url}\n  tokenEnv: ARTIFACT_TEST_TOKEN\n`);
+    await writeFile(join(home, 'config.yaml'), `mode: hub\nhub:\n  url: ${url}\n`);
+    atomicWrite(hubConnectionPaths(home, url).identityConnection, JSON.stringify({ schemaVersion: 1, hub: url, ownerId: owner, spaceId: space, token: identityToken, requestId: randomUUID(), createdAt: Date.now() }));
     const env: NodeJS.ProcessEnv = { ...process.env, ARTIFACT_TEST_TOKEN: 'test-access' };
     for (const key of Object.keys(env)) if (key.startsWith('RUNWEFT_')) delete env[key];
     async function cli(args: string[], code = 0) {

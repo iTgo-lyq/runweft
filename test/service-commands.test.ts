@@ -30,7 +30,7 @@ if (process.argv[2] === 'wait') {
     expect(await result.exited).toBe(23);
     const output = JSON.parse(stdout);
     expect(output.args).toEqual(input);
-    expect(output.home).toBe(join(root, 'connections/local/hapi'));
+    expect(output.home).toBe(join(root, 'connections/unconnected/hapi'));
     const child = spawn(process.execPath, [...args, 'wait'], { env, stdio: 'ignore' });
     const ended = new Promise<{ code: number | null; signal: NodeJS.Signals | null }>(resolve => child.once('exit', (code, signal) => resolve({ code, signal })));
     try {

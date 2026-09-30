@@ -3,6 +3,7 @@ import type { ResolvedConfig } from '../config';
 import { RunweftError } from '../errors';
 import { recordClaudeCall } from './claude-hook';
 import { hostClientSchema } from './identity';
+import { hubOptions } from '../hub/delegation/client';
 import { serveMcp } from './server';
 import { checkMcp, configureMcp, listMcpBackups, restoreMcp } from './install';
 
@@ -43,7 +44,7 @@ export function addMcpCommands(program: Command, context: () => ResolvedConfig, 
         .action(async options => {
             const client = hostClientSchema.safeParse(options.client);
             if (!client.success) throw new RunweftError('unsupported_host', 'MCP 接入仅支持 codex 或 claude。');
-            await serveMcp(client.data, context);
+            await serveMcp(client.data, context, () => hubOptions(context()));
         });
     mcp.command('hook', { hidden: true }).description('接收 Claude PreToolUse 身份事件')
         .action(async () => {

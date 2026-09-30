@@ -55,3 +55,12 @@ WorkspacePreparations 的遗漏由主 agent 同步复核发现并已在评审结
 - 真实验证：修正脚本先处理专用验收审批后，仅重跑远端部分，`.dev-smoke/hub-consumers-AENAkD/evidence.json` 全部通过。真实 Claude 独立工作区、启动前输入、输出实际字节、机器 owner 用户不能读任务 owner 文件、Git bundle 取回专用 ref、主 HEAD/工作文件未改变，未 push/合并。额外 `.dev-smoke/hub-consumers-B9eHnL/evidence.json` 全部通过：编译工作区诊断准备/重放/列表/查询/释放，不启动模型。各运行 cleanupErrors 均为空。
 - 边界：MCP 本任务通过真实编译 stdio 协议加原生 HTTP fixture 验证元数据组合；真实模型执行通过编译 CLI 接入。原生宿主自身发起 MCP 的完整组合在 T7 验收。此处的远端指同一物理 Linux 机器上的独立 Runner，未冒充物理远端。未改在线服务、原用户模型配置或 HAPI 源码。
 - Commit：`hub-delegation-migration T4: connect CLI and MCP consumers to central Hub delegation`。
+
+## T5 默认服务与 Runner 统一切换
+
+- 结果：默认 serve 组合集中授权/资源/配置/委派网关，私有 HAPI root 不对公网认证。启动只创建服务，不创建用户、机器、runtime 或 Agent；启动恢复只扫描中心归属，附件未确认引用清理逐项失败保留并给出请求 ID。恢复前不接受新的委派业务。
+- 结果：root CLI 的 Agent、machine/runtime、repository、task/artifact/workspace 和 MCP 接入集中消费端，与显式 hub 子命令共用实现。Web complete 同时保存所选 hub.url，保留部署 mode；移除配置 tokenEnv、auth token 和带 token 浏览器 URL。open 默认 /hub，可 --print。
+- 结果：local 默认只托管 Hub，hub 模式管理当前连接 Runner；独立 runner start/stop/status 使用机器凭据，拒绝未登记和未完成轮换。显式 server.runner 可托管已登记 Runner；部署角色与业务 URL 独立。status/doctor 分别显示服务、身份/空间连接、机器登记与 Runner 在线事实；安装握手不依赖身份已连接。
+- 验证：typecheck、build、git diff --check 通过；全仓 248 pass/0 fail，38 文件、5092 断言，约 52 秒。集中消费测试改为编译 CLI/MCP 默认入口；淘汰旧 YAML/root CLI 验收，保留领域回归。日志 `.dev-smoke/t5/all-tests-final.log`；聚焦 5 pass/0 fail。
+- 真实验证：`scripts/smoke-hub-service.ts` 在专用目录通过 4 组，实际编译产品启动原 HAPI、两个 Runner、本地与 Hub 模式、root 拒绝、空登记、无秘密入口、失效凭据/轮换和托管重启，停止清理无错误。证据 `.dev-smoke/hub-service-PjYffV/evidence.json`。修正托管 Runner 正常停止误报意外退出的顺序，复测成功；未修改在线服务、用户配置或 HAPI 子模块。
+- Commit：`hub-delegation-migration T5: switch default services and consumers to Hub identity`。

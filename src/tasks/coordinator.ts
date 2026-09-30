@@ -51,9 +51,13 @@ export class TaskCoordinator {
         return new ResourceService(this.resources, namespace, (path, options) => this.client(namespace).request(path, options));
     }
     async reconcileFileIntents() {
+        const pending: { requestId: string; code: string }[] = [];
         for (const intent of this.store.pendingArtifactIntents()) {
-            if (!this.store.artifactIntentAccepted(intent)) await new TaskFiles(this.client(intent.namespace)).abandon(this.store, intent);
+            if (this.store.artifactIntentAccepted(intent)) continue;
+            try { await new TaskFiles(this.client(intent.namespace)).abandon(this.store, intent); }
+            catch (error) { pending.push({ requestId: intent.requestId, code: error instanceof Error && 'code' in error ? String(error.code) : 'artifact_cleanup_failed' }); }
         }
+        return pending;
     }
     start() {
         if (this.timer) return;

@@ -43,7 +43,7 @@
 
 ### T5 默认服务和 Runner 统一切换
 
-- 状态：待开始
+- 状态：已完成
 - 交付：serve 统一安全网关与 T4 消费端，业务 URL 与部署角色分离、持久机器凭据启动 Runner、status/doctor/paths；旧 YAML 权威和 root token 入口退出默认流程。
 - 依赖：T4。
 - 验收：首次服务可领取身份而无自动机器权限；root token 对公网拒绝；本地和远端 Hub 使用同一身份连接；机器登记不创建 runtime/Agent；全部启动扫描隔离未迁移记录。

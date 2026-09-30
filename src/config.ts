@@ -31,13 +31,12 @@ const configFields = z.strictObject({
         port: port.default(3210),
         publicUrl: origin.optional(),
         hapiPort: port.optional(),
-        runner: z.boolean().default(true),
+        runner: z.boolean().default(false),
         artifacts: artifactSettings.default(artifactDefaults),
-    }).default({ host: '127.0.0.1', port: 3210, runner: true, artifacts: artifactDefaults }),
+    }).default({ host: '127.0.0.1', port: 3210, runner: false, artifacts: artifactDefaults }),
     hub: z.strictObject({
         url: origin.optional(),
-        tokenEnv: z.string().regex(/^[A-Za-z_][A-Za-z0-9_]*$/, '填写环境变量名称').default('RUNWEFT_HUB_TOKEN'),
-    }).default({ tokenEnv: 'RUNWEFT_HUB_TOKEN' }),
+    }).default({}),
     hapi: z.strictObject({ executable: z.string().min(1).optional() }).default({}),
 });
 export const configSchema = configFields.superRefine((config, ctx) => {
@@ -140,8 +139,9 @@ export function initializeConfig(homeOption?: string, options: { mode?: string; 
     if (existsSync(file)) return { ...loadConfig(home, env), created: false };
     const config = validateConfig({ mode: options.mode ?? (options.url ? 'hub' : 'local'), hub: options.url ? { url: options.url } : {} });
     const header = '# Runweft 全局配置；配置说明：runweft config show\n'
-        + '# local 在本机运行；hub 连接已有 Runweft 服务，需填写 hub.url。\n'
-        + '# hub.tokenEnv 是环境变量名称，不要在此填写令牌。\n'
+        + '# local 托管本机 Hub；hub 使用已有服务。hub.url 是独立的业务连接地址。\n'
+        + '# 使用 hub connect begin/complete 连接身份与空间；token 不写入此文件。\n'
+        + '# 首次只启动 Hub；登记本机后使用 runner start，或显式启用 server.runner。\n'
         + '# server.publicUrl 用于反向代理；hapiPort 留空会自动选择。\n'
         + '# server.artifacts 只设置本机托管服务；远端限制用 artifact limits 查询。\n';
     atomicWrite(file, header + stringify(config));
@@ -164,25 +164,26 @@ export function setConfig(resolved: ResolvedConfig, key: string, value: string) 
 }
 
 export function connectionName(config: Pick<Config, 'mode' | 'hub'>): string {
-    if (config.mode === 'local') return 'local';
-    const url = config.hub.url!;
+    const url = config.hub.url;
+    if (!url) return 'unconnected';
     const label = new URL(url).hostname.replace(/[^a-zA-Z0-9.-]/g, '-');
     return `${label}-${createHash('sha256').update(url).digest('hex').slice(0, 12)}`;
 }
 
 export function localUrl(config: Config): string { return `http://127.0.0.1:${config.server.port}`; }
-export function targetUrl(config: Config): string { return config.mode === 'local' ? localUrl(config) : config.hub.url!; }
+export function targetUrl(config: Config): string { return config.hub.url ?? localUrl(config); }
 
 export function dataPaths(resolved: ResolvedConfig) {
     const { home, config } = resolved;
     const server = join(home, 'server');
-    const hapiClient = join(home, 'connections', connectionName(config), 'hapi');
+    const connection = join(home, 'connections', connectionName(config)), hapiClient = join(connection, 'hapi');
     return {
         home, config: resolved.file, agents: join(home, 'agents'),
         server, hapiServer: join(server, 'hapi'), runweftServer: join(server, 'runweft'),
         state: join(server, 'runweft', 'state.sqlite'),
         hapiClient, taskWorkspaces: join(hapiClient, 'workspaces', 'environments'),
-        machineConnection: join(home, 'connections', connectionName(config), 'machine.json'),
+        connection, identityConnection: join(connection, 'identity.json'), pendingConnection: join(connection, 'connect.json'),
+        machineConnection: join(connection, 'machine.json'),
         repositoryCaches: join(hapiClient, 'workspaces', 'repositories'), repositoryExports: join(hapiClient, 'workspaces', 'exports'), repositoryImports: join(hapiClient, 'workspaces', 'imports'),
         repositoryFetches: join(hapiClient, 'workspaces', 'fetches'),
         artifacts: join(server, 'hapi', 'artifacts'), artifactTransfers: join(hapiClient, 'artifact-transfers'),

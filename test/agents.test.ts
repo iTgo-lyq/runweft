@@ -114,28 +114,3 @@ test('non-Git discovery stops before user home and supports read-only dotfile sy
     rmSync(target);
     expect(() => readAgent(h.c, nested, 'linked')).toThrow();
 });
-
-test('agent CLI offline journey exposes scopes, partial list errors and actionable validation', async () => {
-    const h = setup();
-    async function cli(args: string[], human = false) {
-        const child = Bun.spawn([process.execPath, resolve('src/cli.ts'), '--home', h.home, ...(human ? [] : ['--json']), 'agent', ...args], { cwd: h.project, env: h.env, stdout: 'pipe', stderr: 'pipe' });
-        const [stdout, stderr, code] = await Promise.all([new Response(child.stdout).text(), new Response(child.stderr).text(), child.exited]);
-        return { stdout, stderr, code, value: !human && stdout ? JSON.parse(stdout) : null, error: !human && stderr ? JSON.parse(stderr).error : null };
-    }
-    expect((await cli(['list'], true)).stdout).toContain('runweft agent init');
-    expect((await cli(['validate'])).code).toBe(1);
-    expect(existsSync(h.home)).toBe(false);
-    expect((await cli(['init', 'review', '--scope', 'invalid'])).error.code).toBe('agent_scope_invalid');
-    expect((await cli(['init', 'review'])).code).toBe(0);
-    expect((await cli(['init', 'review', '--scope', 'project'])).code).toBe(0);
-    expect((await cli(['show', 'review'])).value.agent.source.scope).toBe('project');
-    expect((await cli(['show', 'review', '--scope', 'global'])).value.agent.source.scope).toBe('global');
-    expect((await cli(['validate', 'review'])).value.valid).toBe(true);
-    expect((await cli(['init', 'review'])).error.code).toBe('agent_exists');
-    h.put('project', 'broken', { command: 'no' });
-    const listed = await cli(['list']); expect(listed.code).toBe(1);
-    expect(listed.value.agents).toHaveLength(1); expect(listed.value.errors).toHaveLength(1);
-    expect((await cli(['show', 'review'], true)).stdout).toContain('遮蔽');
-    expect(existsSync(dataPaths(h.c).bindings)).toBe(false);
-    expect(existsSync(dataPaths(h.c).server)).toBe(false);
-}, 15_000);

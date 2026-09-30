@@ -1,3 +1,4 @@
+import { loadConfig } from '../src/config';
 import { afterAll, afterEach, beforeAll, expect, test } from 'bun:test';
 import { constants, createPublicKey, publicEncrypt, randomBytes, randomUUID } from 'node:crypto';
 import { existsSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
@@ -66,7 +67,9 @@ test('compiled CLI begins once, confirms encrypted identity and space, saves 060
     const poll = await h.request(`/api/runweft/connect/${request.requestId}/poll`, request.secret, 'POST');
     expect(poll.body.status).toBe('consumed'); expect(poll.body.ciphertext).toBeUndefined();
     expect((h.access.db.query('SELECT ciphertext FROM hub_connection_requests').get() as any).ciphertext).toBeNull();
-    expect(existsSync(join(home, 'config.yaml'))).toBe(false);
+    expect(loadConfig(home, {}).config.hub.url).toBe(h.url);
+    expect(loadConfig(home, {}).config.mode).toBe('local');
+    expect(readFileSync(join(home, 'config.yaml'), 'utf8')).not.toContain(h.a.token);
     const restored = new HubClient({ url: h.url, home, env: {} }, 'hubAccess', 'unavailable');
     expect(await restored.connection()).toEqual({ hub: h.url, ownerId: h.a.identity.id, spaceId: h.a.personalSpace.id });
     const explicit = new HubClient({ url: h.url, home, env: { RUNWEFT_IDENTITY_TOKEN: h.c.token } }, 'hubAccess', 'unavailable');

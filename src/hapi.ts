@@ -6,6 +6,7 @@ import { decodeJwt } from 'jose';
 import pkg from '../package.json';
 import { atomicWrite, dataPaths, targetUrl, type ResolvedConfig } from './config';
 import { RunweftError } from './errors';
+import { readMachineConnection } from './hub/resources/connection';
 
 export const BUILD = { version: pkg.version, hapi: pkg.hapi };
 export const deploymentKeys = ['HAPI_HOME', 'DB_PATH', 'HAPI_LISTEN_HOST', 'HAPI_LISTEN_PORT', 'HAPI_PUBLIC_URL', 'CORS_ORIGINS', 'HAPI_API_URL', 'CLI_API_TOKEN', 'HAPI_DISABLE_VERSION_HANDOFF',
@@ -29,11 +30,11 @@ export function serverToken(c: ResolvedConfig, create = false): string | undefin
 
 export function accessToken(c: ResolvedConfig): string {
     const token = c.config.mode === 'local' ? serverToken(c)
-        : c.env[c.config.hub.tokenEnv] || readSettings(dataPaths(c).hapiClient).cliApiToken;
+        : c.env.RUNWEFT_HUB_TOKEN || readSettings(dataPaths(c).hapiClient).cliApiToken;
     if (typeof token !== 'string' || !token) {
         throw new RunweftError('authentication_missing', '当前连接尚未配置 HAPI 访问令牌。', c.config.mode === 'local'
             ? '运行 runweft start 启动本地服务。'
-            : `设置 ${c.config.hub.tokenEnv}，或运行 runweft auth login。`);
+            : '设置 RUNWEFT_HUB_TOKEN，或运行 runweft auth login。');
     }
     return token;
 }
@@ -53,6 +54,8 @@ export function hapiEnvironment(c: ResolvedConfig, options: {
 }): NodeJS.ProcessEnv {
     const env = { ...c.env };
     for (const key of deploymentKeys) delete env[key];
+    delete env.RUNWEFT_IDENTITY_TOKEN;
+    delete env.RUNWEFT_HUB_TOKEN;
     env.HAPI_HOME = options.home;
     env.DB_PATH = join(options.home, 'hapi.db');
     env.HAPI_API_URL = options.url;
@@ -75,11 +78,15 @@ export function hapiEnvironment(c: ResolvedConfig, options: {
 }
 
 export function clientEnvironment(c: ResolvedConfig) {
-    let token: string | undefined;
-    try { token = accessToken(c); } catch (error) {
-        if (!(error instanceof RunweftError) || error.code !== 'authentication_missing') throw error;
+    const paths = dataPaths(c), record = c.config.hub.url ? readMachineConnection(c.home, c.config.hub.url) : undefined;
+    if (record?.machineId) {
+        const settings = readSettings(paths.hapiClient);
+        if (settings.machineId && settings.machineId !== record.machineId) throw new RunweftError('machine_native_identity_mismatch', '原生 Runner 目录属于不同的机器记录。', '停止服务并清理旧试验数据后重新登记；不会自动合并机器历史。');
+        if (settings.machineId !== record.machineId || settings.cliApiToken !== record.active.token) {
+            atomicWrite(join(paths.hapiClient, 'settings.json'), JSON.stringify({ ...settings, machineId: record.machineId, cliApiToken: record.active.token }, null, 2));
+        }
     }
-    return hapiEnvironment(c, { home: dataPaths(c).hapiClient, url: targetUrl(c.config), token });
+    return hapiEnvironment(c, { home: paths.hapiClient, url: targetUrl(c.config), token: record?.active.token });
 }
 
 export async function runHapi(c: ResolvedConfig, args: string[], capture = false) {

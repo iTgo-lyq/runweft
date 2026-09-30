@@ -1,3 +1,6 @@
+import { randomUUID } from 'node:crypto';
+import { atomicWrite } from '../src/config';
+import { hubConnectionPaths } from '../src/hub/resources/connection';
 import { afterEach, expect, test } from 'bun:test';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
@@ -25,8 +28,11 @@ async function fixture(host: 'codex' | 'claude') {
     cleanup.push(async () => { store.close(); await rm(root, { recursive: true, force: true }); });
     const service = new ArtifactService(store.artifacts, join(root, 'artifacts'), ARTIFACT_DEFAULT_LIMITS);
     const secret = new TextEncoder().encode('mcp-artifact-test-only');
-    const token = await new SignJWT({ uid: 1, ns: 'default' }).setProtectedHeader({ alg: 'HS256' }).sign(secret);
+    const owner = randomUUID(), space = randomUUID(), identityToken = 'rw_id_' + 'a'.repeat(43);
+    const token = await new SignJWT({ uid: 1, ns: 'default', kind: 'user', sub: owner, space }).setProtectedHeader({ alg: 'HS256' }).setExpirationTime('1h').sign(secret);
     const app = new Hono<WebAppEnv>();
+    app.get('/api/runweft/health', c => c.json({ service: 'runweft', capabilities: { hubAccess: 1 } }));
+    app.get('/api/runweft/hub/identity', c => c.json({ identity: { id: owner, name: 'fixture', createdAt: 1 } }));
     app.post('/api/auth', c => c.json({ token })); app.use('/api/*', createAuthMiddleware(secret)); app.route('/api', createArtifactRoutes(service));
     const faults = { loseUpload: false, stallDownload: false, started: false, writes: 0 };
     const http = Bun.serve({ hostname: '127.0.0.1', port: 0, async fetch(request) {
@@ -42,9 +48,10 @@ async function fixture(host: 'codex' | 'claude') {
         return result;
     } });
     cleanup.push(() => http.stop(true));
-    await writeFile(join(home, 'config.yaml'), `mode: hub\nhub:\n  url: ${http.url.origin}\n  tokenEnv: ARTIFACT_MCP_TOKEN\n`);
+    await writeFile(join(home, 'config.yaml'), `mode: hub\nhub:\n  url: ${http.url.origin}\n`);
+    atomicWrite(hubConnectionPaths(home, http.url.origin).identityConnection, JSON.stringify({ schemaVersion: 1, hub: http.url.origin, ownerId: owner, spaceId: space, token: identityToken, requestId: randomUUID(), createdAt: Date.now() }));
     const config = loadConfig(home, { ARTIFACT_MCP_TOKEN: 'test-only', GIT_CEILING_DIRECTORIES: root });
-    const server = createMcpServer({ client: host, cwd, config: () => config }), client = new Client({ name: 'file-test', version: '1' });
+    const server = createMcpServer({ client: host, cwd, config: () => config, hub: () => ({ url: http.url.origin, home, env: {} }) }), client = new Client({ name: 'file-test', version: '1' });
     const [left, right] = InMemoryTransport.createLinkedPair(); await server.connect(left); await client.connect(right);
     cleanup.push(async () => { await client.close(); await server.close(); });
     const call = async (name: string, args: Record<string, unknown>, callId = crypto.randomUUID(), signal?: AbortSignal) => {

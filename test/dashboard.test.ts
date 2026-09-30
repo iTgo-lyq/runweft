@@ -106,32 +106,20 @@ test('labels distinguish retained sessions, uncertain starts, delivery failures 
     expect(filesText({ status: 'delivered', retention: 'released', pending: 0, count: 1, available: 1, error: null })).toBe('已释放');
 });
 
-test('open defaults to dashboard, checks capability, and keeps browser arguments out of CLI output', async () => {
-    let dashboard = true;
-    const token = 'private token $(literal)', jwt = await new SignJWT({ uid: 1, ns: 'alpha' }).setProtectedHeader({ alg: 'HS256' }).setExpirationTime('1h').sign(new Uint8Array(32));
-    const server = Bun.serve({ hostname: '127.0.0.1', port: 0, async fetch(req) {
-        if (new URL(req.url).pathname === '/api/runweft/health') return Response.json({ service: 'runweft', protocolVersion: 1, capabilities: dashboard ? { dashboard: 1 } : {} });
-        if (new URL(req.url).pathname === '/api/auth') return (await req.json() as { accessToken: string }).accessToken === token
-            ? Response.json({ token: jwt }) : new Response('', { status: 401 });
-        return new Response('', { status: 404 });
-    } });
+test('open uses public Hub entry and never puts a credential in browser arguments', async () => {
+    const server = Bun.serve({ hostname: '127.0.0.1', port: 0, fetch: () => Response.json({ service: 'runweft', protocolVersion: 1 }) });
     cleanups.push(() => server.stop(true));
-    const address = await browserAddress(server.url.origin, token);
-    expect(new URL(address.url).pathname).toBe('/runweft/'); expect(new URL(address.url).searchParams.get('token')).toBe(token);
-    expect(address.publicUrl).toBe(server.url.origin + '/runweft/');
-    dashboard = false;
-    await expect(browserAddress(server.url.origin, token)).rejects.toMatchObject({ code: 'dashboard_unavailable' });
-    const native = await browserAddress(server.url.origin, token, true);
-    expect(new URL(native.url).pathname).toBe('/'); expect(new URL(native.url).searchParams.get('hub')).toBe(server.url.origin);
-    dashboard = true;
+    const address = await browserAddress(server.url.origin);
+    expect(address).toEqual({ url: server.url.origin + '/hub', publicUrl: server.url.origin + '/hub' });
+    expect((await browserAddress(server.url.origin, true)).url).toBe(server.url.origin + '/');
     const root = fixture('dashboard-open'), captured = join(root, 'browser-url');
     const command = join(root, process.platform === 'darwin' ? 'open' : 'xdg-open');
     writeFileSync(command, '#!/usr/bin/env node\nimport { writeFileSync } from "node:fs"; writeFileSync(process.env.DASHBOARD_OPEN_CAPTURE, process.argv[2]);\n'); chmodSync(command, 0o755);
     const run = Bun.spawn([process.execPath, resolve('src/cli.ts'), '--home', root, '--json', 'open'], {
-        env: { ...process.env, PATH: `${root}:${process.env.PATH}`, RUNWEFT_MODE: 'hub', RUNWEFT_HUB_URL: server.url.origin, RUNWEFT_HUB_TOKEN: token, DASHBOARD_OPEN_CAPTURE: captured }, stdout: 'pipe', stderr: 'pipe',
+        env: { ...process.env, PATH: `${root}:${process.env.PATH}`, RUNWEFT_MODE: 'hub', RUNWEFT_HUB_URL: server.url.origin, RUNWEFT_HUB_TOKEN: 'legacy-secret', DASHBOARD_OPEN_CAPTURE: captured }, stdout: 'pipe', stderr: 'pipe',
     });
     const stdout = await new Response(run.stdout).text(), stderr = await new Response(run.stderr).text();
     expect(await run.exited).toBe(0); expect(stderr).toBe('');
-    expect(JSON.parse(stdout)).toEqual({ opened: true, url: server.url.origin + '/runweft/' });
-    expect(stdout).not.toContain(token); expect(new URL(readFileSync(captured, 'utf8')).searchParams.get('token')).toBe(token);
+    expect(JSON.parse(stdout)).toEqual({ opened: true, url: server.url.origin + '/hub' });
+    expect(readFileSync(captured, 'utf8')).toBe(server.url.origin + '/hub');
 });

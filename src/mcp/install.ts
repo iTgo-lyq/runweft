@@ -241,5 +241,5 @@ export async function checkMcp(c: ResolvedConfig, selection?: string) {
     try { connection = await status(c); }
     catch (error) { connection = { running: false, error: errorDetails(error) }; }
     const configurationOk = checks.every(check => check.ok);
-    return { ok: configurationOk && connection.running === true, configurationOk, checks, mode: c.config.mode, dataRoot: c.home, connection };
+    return { ok: configurationOk && (connection.connection as { connected?: boolean } | undefined)?.connected === true, configurationOk, checks, mode: c.config.mode, dataRoot: c.home, connection };
 }

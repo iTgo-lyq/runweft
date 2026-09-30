@@ -1,3 +1,4 @@
+import type { HubConnectionOptions } from '../client';
 import { readFileSync } from 'node:fs';
 import type { Command } from 'commander';
 import { expandPath } from '../../config';
@@ -9,8 +10,8 @@ function definitionFile(path: string): unknown {
     try { const bytes = readFileSync(expandPath(path)); if (bytes.length > 65_536) throw new Error(); return JSON.parse(bytes.toString('utf8')); }
     catch { throw new HubError(400, 'agent_definition_file_invalid', '无法读取 Agent 定义 JSON。', '指定最多 64 KiB 的完整业务定义对象；文件只是本次输入，不是持续权威配置。'); }
 }
-export function addAgentCommands(hub: Command, output: (value: unknown, human: string) => void) {
-    const client = () => new HubAgentClient(hub.opts());
+export function addAgentCommands(hub: Command, output: (value: unknown, human: string) => void, options: () => HubConnectionOptions = () => hub.opts()) {
+    const client = () => new HubAgentClient(options());
     function show(c: HubAgentClient, result: object) { output({ connection: { hub: c.url, spaceId: c.spaceId }, ...result }, `Hub：${c.url}\n空间：${c.spaceId ?? '未选择'}\n${JSON.stringify(result, null, 2)}`); }
     function read(command: Command, action: (c: HubAgentClient, ...args: any[]) => Promise<object>) { command.action(async (...args) => { const c = client(); show(c, await action(c, ...args)); }); }
     const group = hub.command('agent').description('中心 Agent 定义、不可变版本、共享与管理员治理');

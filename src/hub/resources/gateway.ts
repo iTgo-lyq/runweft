@@ -4,10 +4,10 @@ import { HubResourceService } from './service';
 import { HubResourceStore } from './store';
 
 /** Composable Hub domain entry; the default service moves here in the delegation migration. */
-export async function createResourceGateway(options: Omit<AccessGatewayOptions, 'health'> & { capabilities?: Record<string, number> }) {
+export async function createResourceGateway(options: AccessGatewayOptions & { capabilities?: Record<string, number> }) {
     let resources: HubResourceService;
     const gateway = await createAccessGateway({ ...options,
-        health: () => ({ service: 'runweft', ready: true, protocolVersion: 1, capabilities: { ...options.capabilities, hubIdentity: 1, hubAccess: 1, hubConnect: 1, hubResources: 1 } }),
+        health: () => ({ service: 'runweft', ready: true, protocolVersion: 1, ...options.health?.(), capabilities: { ...options.capabilities, hubIdentity: 1, hubAccess: 1, hubConnect: 1, hubResources: 1 } }),
         executionPolicy: (ownerId, spaceId, machineId, flavor, binding) => {
             resources.store.nativeExecution(ownerId, spaceId, machineId, flavor);
             options.executionPolicy?.(ownerId, spaceId, machineId, flavor, binding);

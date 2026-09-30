@@ -56,7 +56,8 @@
     "test:hub-delegation-native": "bun scripts/smoke-hub-delegation-native.ts",
     "test:hub-delegation-preparation": "bun scripts/smoke-hub-delegation-preparation.ts",
     "test:hub-connect": "bun scripts/smoke-hub-connect.ts",
-    "test:hub-consumers": "bun scripts/smoke-hub-consumers.ts"
+    "test:hub-consumers": "bun scripts/smoke-hub-consumers.ts",
+    "test:hub-service": "bun scripts/smoke-hub-service.ts"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.25.1",

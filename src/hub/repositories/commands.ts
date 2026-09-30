@@ -1,9 +1,10 @@
+import type { HubConnectionOptions } from '../client';
 import type { Command } from 'commander';
 import { HubRepositoryClient } from './client';
 import { observeRepository } from './observation';
 
-export function addRepositoryCommands(hub: Command, output: (value: unknown, human: string) => void) {
-    const client = () => new HubRepositoryClient(hub.opts());
+export function addRepositoryCommands(hub: Command, output: (value: unknown, human: string) => void, options: () => HubConnectionOptions = () => hub.opts()) {
+    const client = () => new HubRepositoryClient(options());
     function show(c: HubRepositoryClient, result: object) {
         output({ connection: { hub: c.url, spaceId: c.spaceId }, ...result }, `Hub：${c.url}\n空间：${c.spaceId ?? '未选择'}\n${JSON.stringify(result, null, 2)}`);
     }

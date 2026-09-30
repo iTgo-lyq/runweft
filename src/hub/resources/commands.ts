@@ -2,7 +2,7 @@ import type { Command } from 'commander';
 import { addRepositoryCommands } from '../repositories/commands';
 import { addAgentCommands } from '../agents/commands';
 import { dirname } from 'node:path';
-import { configPath, loadConfig } from '../../config';
+import { configPath, loadConfig, setConfig } from '../../config';
 import { FlavorSchema, invalidInput } from '../../resources/types';
 import { HubResourceClient } from './client';
 import { hubConnectionPaths, MachineConnection } from './connection';
@@ -11,7 +11,7 @@ import { addTaskCommands } from '../../tasks/commands';
 import { addArtifactCommands } from '../../artifacts/commands';
 import { addPreparationCommands } from '../../remote/commands';
 import { ArtifactClient } from '../../artifacts/client';
-import { HubClient } from '../client';
+import { HubClient, type HubConnectionOptions } from '../client';
 import { HubTaskClient, HubPreparationClient } from '../delegation/client';
 import { hostClientSchema } from '../../mcp/identity';
 import { serveMcp } from '../../mcp/server';
@@ -19,14 +19,14 @@ import { RunweftError } from '../../errors';
 
 export function addHubCommands(program: Command, output: (value: unknown, human: string) => void) {
     const hub = program.command('hub').description('通过明确 Hub 身份管理中心资源；不会启动本地服务')
-        .requiredOption('--url <origin>', 'Hub HTTP(S) 根地址')
+        .option('--url <origin>', 'Hub HTTP(S) 根地址')
         .option('--identity-file <file>', '显式身份备份；默认环境变量或此 Hub 已保存的身份连接')
         .option('--space <id>', '当前空间 UUID；使用 runtime 和空间治理时需要');
     addRepositoryCommands(hub, output);
     addAgentCommands(hub, output);
     const client = () => new HubResourceClient(hub.opts());
     const home = () => dirname(configPath(program.opts().home));
-    hub.hook('preAction', () => { hub.setOptionValue('home', home()); });
+    hub.hook('preAction', () => { hub.setOptionValue('home', home()); if (!hub.opts().url) hub.setOptionValue('url', loadConfig(home()).config.hub.url); });
     const context = () => loadConfig(home());
     // Explicit Hub consumers are available before the default service is switched in T5.
     addTaskCommands(hub, context, output, { client: () => new HubTaskClient(hub.opts(), process.cwd()), url: () => hub.opts().url });
@@ -38,13 +38,6 @@ export function addHubCommands(program: Command, output: (value: unknown, human:
             if (!host.success) throw new RunweftError('unsupported_host', 'MCP 接入仅支持 codex 或 claude。');
             await serveMcp(host.data, context, () => hub.opts());
         });
-    function show(connection: HubResourceClient, result: object, message?: string) {
-        const value = { connection: { hub: connection.url, spaceId: connection.spaceId }, ...result };
-        output(value, `Hub：${connection.url}${connection.spaceId ? `\n空间：${connection.spaceId}` : ''}\n${message ?? JSON.stringify(result, null, 2)}`);
-    }
-    function read(command: Command, action: (c: HubResourceClient, ...args: any[]) => Promise<object>) {
-        command.action(async (...args) => { const c = client(); show(c, await action(c, ...args)); });
-    }
     hub.command('paths').description('显示该 Hub 的本机持久接入目录；无需读取 token').action(() => {
         const paths = hubConnectionPaths(home(), hub.opts().url);
         output(paths, `Hub：${paths.hub}\n身份连接：${paths.identityConnection}\n待确认连接：${paths.pendingConnection}\n机器接入凭据：${paths.machineConnection}\n本机协调数据库：${paths.clientState}\n原生 Runner 数据：${paths.connection}/hapi`);
@@ -56,6 +49,7 @@ export function addHubCommands(program: Command, output: (value: unknown, human:
     });
     connect.command('complete').description('领取并校验凭据，保存后确认消费；可重复执行').action(async () => {
         const result = await new IdentityConnection(home(), hub.opts().url).complete();
+        if (result.status === 'connected') setConfig(context(), 'hub.url', hub.opts().url);
         output(result, result.status === 'pending' ? `等待 Web 确认：${'confirmationUrl' in result ? result.confirmationUrl : ''}` : `身份连接已保存。\n${JSON.stringify(result, null, 2)}`);
     });
     connect.command('cancel').description('取消待确认请求，保留已保存身份').action(async () => {
@@ -64,7 +58,20 @@ export function addHubCommands(program: Command, output: (value: unknown, human:
     connect.command('status').description('显示本机连接摘要，不输出凭据；不代表远端授权仍有效').action(() => {
         const result = new IdentityConnection(home(), hub.opts().url).status(); output(result, JSON.stringify(result, null, 2));
     });
-    read(hub.command('identity').description('确认当前身份，不输出 token'), async c => ({ identity: await c.identity() }));
+    hub.command('identity').description('确认当前身份，不输出 token').action(async () => { const result = { identity: await client().identity() }; output(result, JSON.stringify(result, null, 2)); });
+    addHubResourceCommands(hub, () => hub.opts(), home, output);
+}
+
+export function addHubResourceCommands(hub: Command, options: () => HubConnectionOptions, home: () => string, output: (value: unknown, human: string) => void) {
+    const client = () => new HubResourceClient(options());
+    function show(connection: HubResourceClient, result: object, message?: string) {
+        const value = { connection: { hub: connection.url, spaceId: connection.spaceId }, ...result };
+        output(value, `Hub：${connection.url}${connection.spaceId ? `\n空间：${connection.spaceId}` : ''}\n${message ?? JSON.stringify(result, null, 2)}`);
+    }
+    function read(command: Command, action: (c: HubResourceClient, ...args: any[]) => Promise<object>) {
+        command.action(async (...args) => { const c = client(); show(c, await action(c, ...args)); });
+    }
+
     const machine = hub.command('machine').description('机器登记、空间关联与本机接入凭据');
     machine.command('enroll').description('保存本机凭据并接入 Hub；重跑恢复同一接入请求')
         .option('--name <name>', '首次接入的展示名称')

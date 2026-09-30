@@ -35,9 +35,10 @@ async function setup(flavor: 'codex' | 'claude' = 'codex') {
         machineId: h.machineId, active: { token: credential.token, credentialId: credential.credentialId }, createdAt: Date.now() }));
     h.gateway.selections.set(h.actor, { agentId: h.agent.id, repositoryId: null, runtimeId: null });
     // The native execution is mocked. '/' is an actual non-Git directory; all test writes remain under .dev-smoke.
+    atomicWrite(join(home, 'config.yaml'), `hub:\n  url: ${h.url}\n`);
     const cwd = '/', client = new HubTaskClient(options, cwd);
     async function cli(args: string[], extraEnv: NodeJS.ProcessEnv = {}) {
-        const child = Bun.spawn([executable, '--home', home, '--json', 'hub', '--url', h.url, ...args], { cwd, env: { ...options.env, ...extraEnv }, stdout: 'pipe', stderr: 'pipe' });
+        const child = Bun.spawn([executable, '--home', home, '--json', ...args], { cwd, env: { ...options.env, ...extraEnv }, stdout: 'pipe', stderr: 'pipe' });
         const [exit, stdout, stderr] = await Promise.all([child.exited, new Response(child.stdout).text(), new Response(child.stderr).text()]);
         expect(stdout + stderr).not.toContain(h.owner.token); expect(stdout + stderr).not.toContain(credential.token);
         const errors = stderr.split('\n').filter(Boolean).map(line => { try { return JSON.parse(line); } catch { return {}; } });
@@ -45,7 +46,7 @@ async function setup(flavor: 'codex' | 'claude' = 'codex') {
     }
     async function mcp(host: 'codex' | 'claude', hapiSessionId?: string) {
         const env = { ...options.env, ...(hapiSessionId ? { HAPI_SESSION_ID: hapiSessionId } : {}) };
-        const transport = new StdioClientTransport({ command: executable, args: ['--home', home, 'hub', '--url', h.url, 'mcp', 'serve', '--client', host],
+        const transport = new StdioClientTransport({ command: executable, args: ['--home', home, 'mcp', 'serve', '--client', host],
             cwd, env: Object.fromEntries(Object.entries(env).filter((entry): entry is [string, string] => typeof entry[1] === 'string')), stderr: 'pipe' });
         const mcp = new Client({ name: 'consumer-test', version: '1' }); await mcp.connect(transport); cleanups.push(() => mcp.close());
         let stderr = ''; transport.stderr?.on('data', chunk => { stderr += chunk; });
@@ -112,7 +113,7 @@ test('compiled MCP covers two hosts by two runtimes, native metadata, parent iso
 
 test('Hub transport forbids foreign origins and missing space, preserves cancellation, and refreshes only before a new operation', async () => {
     const h = await setup();
-    expect(() => hubOptions(loadConfig(h.home, {}))).toThrow('显式连接 Hub');
+    expect(() => hubOptions(loadConfig(join(h.home, 'unconnected'), {}))).toThrow('显式连接 Hub');
     expect(() => new HubTaskClient({ url: h.url, home: join(h.home, 'empty'), env: {} }, h.cwd)).toThrow('尚未连接');
     expect(() => new HubTaskClient({ url: h.url, home: join(h.home, 'empty'), space: h.space, env: { RUNWEFT_IDENTITY_TOKEN: h.owner.token } }, h.cwd)).toThrow('尚未登记本机');
     const consumer = new HubTaskClient(h.options, h.cwd);
