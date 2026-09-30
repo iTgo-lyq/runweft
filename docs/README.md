@@ -2,7 +2,7 @@
 
 Runweft 1.0.0 核心重构与产品官网均已完成，实现、自动验收和 Specs 见下列归档。安装、配置、部署与数据维护见[使用说明](usage.md)，源码构建和验证见[开发说明](development.md)。
 
-当前正在设计 [Hub 空间、身份与集中 Agent 配置](project/changes/hub-spaces-and-agent-configuration/requirement.md)：委派必须连接 Hub，项目设置关联 Git 仓库，用户通过 Agent/Skill 操作、通过 Web 查看配置与任务。身份采用访客可领取并自行保存的独立 token，无需登录/注册服务；共享限空间成员，私有 Agent 仅所有者可修改/分享。该 Change 处于需求草稿阶段，尚未进入实现；[产品模型](project/changes/hub-spaces-and-agent-configuration/product-design.md)、[授权边界](project/changes/hub-spaces-and-agent-configuration/access-design.md)和 [Multica 调查](project/changes/hub-spaces-and-agent-configuration/research.md)分别维护。
+当前开始推进 [Hub 空间、身份与集中 Agent 配置](project/changes/hub-spaces-and-agent-configuration/requirement.md)：委派必须连接 Hub，项目设置关联 Git 仓库，用户通过 Agent/Skill 操作、通过 Web 查看配置与任务。身份采用访客可领取并自行保存的独立 token，无需登录/注册服务；共享限空间成员，私有 Agent 仅所有者可修改/分享。按 [七阶段交付拆分](project/changes/hub-spaces-and-agent-configuration/delivery.md) 串行实施，首先交付 [身份与空间](project/changes/hub-identities-and-spaces/requirement.md)；[产品模型](project/changes/hub-spaces-and-agent-configuration/product-design.md)、[授权边界](project/changes/hub-spaces-and-agent-configuration/access-design.md)和 [Multica 调查](project/changes/hub-spaces-and-agent-configuration/research.md)保留依据，未验收内容不代表已实现。
 
 [最终交付验收](project/archive/2026-09-30-integrated-release/acceptance.md)汇总四平台产物、校验和、需求对应及原始证据。Linux x64 完成真实安装、20 组核心协作、8 组附件、2 组 MCP 控制、原生历史重建、升级回退和 Playwright；Mac 实机由用户验证，Linux arm64 为 QEMU CLI/配置验证，物理远端延期。远端功能已通过同机独立 Hub/多 Runner 真实链路。早期四平台基础安装证据不代替最终原生协作。
 
@@ -37,7 +37,7 @@ Runweft 1.0.0 核心重构与产品官网均已完成，实现、自动验收和
 
 按照 [project-workflow](../.agents/skills/project-workflow/SKILL.md)：
 
-- 新的未关闭目标、技术方案和计划放在 `project/changes/`；当前活跃项为 [Hub 空间与集中配置设计](project/changes/hub-spaces-and-agent-configuration/requirement.md)。
+- 新的未关闭目标、技术方案和计划放在 `project/changes/`；当前活跃项及依赖见 [Hub 集中配置交付](project/changes/hub-spaces-and-agent-configuration/delivery.md)。
 - 已验收 Specs：[CLI 安装](project/specs/installation/cli/spec.md)、[MCP 安装](project/specs/installation/mcp/spec.md)、[宿主 MCP](project/specs/host-mcp/spec.md)、[部署与数据](project/specs/deployment/spec.md)、[工作区绑定](project/specs/workspaces/bindings/spec.md)、[执行事实](project/specs/execution/lifecycle/spec.md)、[执行恢复](project/specs/execution/recovery/spec.md)、[执行兼容](project/specs/execution/compatibility/spec.md)、[机器](project/specs/resources/machines/spec.md)、[Runtime](project/specs/resources/runtimes/spec.md)、[资源范围](project/specs/resources/scope/spec.md)、[Agent 定义](project/specs/agents/definition/spec.md)、[来源与绑定](project/specs/agents/scope/spec.md)、[原生继承边界](project/specs/agents/inheritance/spec.md)。
 - 已验收协作 Specs：[委派入口](project/specs/delegation/interface/spec.md)、[持久协调](project/specs/delegation/lifecycle/spec.md)、[业务轮次](project/specs/delegation/rounds/spec.md)、[结果与等待](project/specs/delegation/results/spec.md)、[上下文](project/specs/delegation/context/spec.md)、[本机共享工作区](project/specs/local-workspace/shared/spec.md)。
 - 已验收附件 Specs：[持久文件](project/specs/artifacts/spec.md)、[启动前输入](project/specs/artifacts/inputs/spec.md)、[输出交付](project/specs/artifacts/delivery/spec.md)、[留存与清理](project/specs/artifacts/retention/spec.md)。

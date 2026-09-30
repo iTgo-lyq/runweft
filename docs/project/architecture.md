@@ -3,7 +3,7 @@
 > 更新：2026-09-30
 > 本文保存产品决策、职责边界和 Change 依赖；十二个 Change 已完成并归档，当前实现事实以 Specs 为准，验证范围见最终交付验收。
 
-2026-09-30 新产品方向进入 [Hub 空间、身份与集中 Agent 配置 Change](changes/hub-spaces-and-agent-configuration/requirement.md)：必须连接 Hub 后委派，Git 仓库关联中心配置，补充独立身份 token、空间与资源所有权；访客可领取 token 并自行保存，不建设登录/注册服务。该方向尚在设计，以下 local/Hub 双模式、文件定义和 HAPI 共用认证描述仍用于解释已交付版本，不代表新设计已经实现。
+2026-09-30 用户同意开始 [Hub 空间、身份与集中 Agent 配置](changes/hub-spaces-and-agent-configuration/requirement.md)：必须连接 Hub 后委派，Git 仓库关联中心配置，补充独立身份 token、空间与资源所有权；访客可领取 token 并自行保存，不建设登录/注册服务。实施按 [七阶段依赖](changes/hub-spaces-and-agent-configuration/delivery.md) 推进；以下 local/Hub 双模式、文件定义和 HAPI 共用认证描述仍用于解释已交付版本，不代表新设计已经实现。
 
 ## 产品边界
 
@@ -155,7 +155,7 @@ Runweft 只补必要协作与交付关联，原生会话/执行事实优先读�
 | 遗留代码如何形成成果 | 仅在 subagent 独立 worktree 内补 checkpoint，保留 agent 已有提交；共享主目录不自动提交，提交失败保留现场 | 遗留改动由程序封存，无改动不产生空提交 |
 | 未 push 的提交如何传输 | 输入基线与输出成果通过 Git bundle 传输，允许无 remote 或尚未 push 的提交；未提交的主工作区文件不自动传入 | 远端任务与成果取回不依赖 Git 托管平台；push/PR 仍由主 agent 按业务需要处理 |
 
-实现沿[六阶段交付结构](delivery-structure.md#阶段与可验收结果)逐项完成，领域功能先独立验收，再以同一已安装候选完成组合。全局看板、远端 worktree 委派及结果回收均已开放，当前没有未关闭 Change。
+原完整重构沿[六阶段交付结构](delivery-structure.md#阶段与可验收结果)逐项完成，领域功能先独立验收，再以同一已安装候选完成组合。全局看板、远端 worktree 委派及结果回收均已开放；新增的 Hub 集中配置工作见本文开头的活跃 Change。
 
 ## 调查与验证状态
 
