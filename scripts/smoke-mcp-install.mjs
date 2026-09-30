@@ -60,9 +60,9 @@ export function verifyMcpInstallation(cli, root, inheritedEnv) {
         assert.equal(command(['install', '--client', 'all']).changed, false);
         assert.deepEqual(read(), installed);
         assert.equal(command(['backups']).backups.length, 1);
-        // No service is started here: configuration/handshake pass; offline connection exits 1.
         const check = command(['check', '--client', 'all'], 1);
-        assert.equal(check.configurationOk, true); assert.equal(check.connection.running, false);
+        assert.equal(check.configurationOk, true); assert.equal(check.connection.connection.connected, false);
+        assert.equal(check.connection.connection.error.code, 'hub_connection_required');
         assert(check.checks.every(item => item.ok && item.handshake && !item.nativeCallVerified));
         evidence.checks.push('two installs are idempotent; comments, other MCP and hooks retained; installed executable serves both handshakes');
         const removed = command(['uninstall', '--client', 'all']);

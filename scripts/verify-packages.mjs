@@ -77,7 +77,7 @@ try {
             const env = { ...process.env, PATH: '/usr/bin:/bin' };
             for (const key of Object.keys(env)) if (key.startsWith('RUNWEFT_')) delete env[key];
             assert.equal(command(link, ['--version'], { cwd: root, env }).trim(), index.version);
-            assert(command(link, ['hapi', '--version'], { cwd: root, env }).includes(index.hapi.version));
+            assert(command(link, ['--home', join(root, 'version-home'), 'hapi', '--version'], { cwd: root, env }).includes(index.hapi.version));
             const log = command(process.execPath, [resolve('scripts/smoke-service.mjs'), link], { cwd: root, env: { ...env, RUNWEFT_SMOKE_ROOT: join(root, 'standalone-services') } });
             writeFileSync(join(root, 'standalone-services.log'), log);
             evidence.platforms.at(-1).nativeExecuted = true;

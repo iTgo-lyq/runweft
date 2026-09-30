@@ -2,7 +2,7 @@
 
 > 来源：[Requirement](requirement.md)
 > 技术方案：[Technical](technical.md)
-> 状态：待执行
+> 状态：执行中
 > 执行模式：同工作区串行，逐任务独立提交；正式方案/计划一次 iclaude 评审。
 
 ## 交付目标
@@ -11,7 +11,7 @@
 
 ### T1 当前安装与维护验收入口
 
-- 状态：待开始
+- 状态：已完成
 - 交付：轻量服务 smoke 与 registry 安装改用 Hub 独立身份/机器；删除旧 YAML/root 续验分支；MCP 专用配置保留、升级式重装、缺包诊断、数据根和显式 reset；阶段六程序以专用新数据验证升级，不复用旧 root 历史。
 - 依赖：前六阶段归档。
 - 验收：平台/registry 程序不靠开发 HAPI override 或产品 PATH 中的 Bun；服务/信号/重启可用，身份/root 不混同，安装不动用户全局配置。

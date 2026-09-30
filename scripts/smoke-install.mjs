@@ -8,15 +8,11 @@ import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 import { createHash } from 'node:crypto';
 import { verifyMcpInstallation } from './smoke-mcp-install.mjs';
+import { installedBinaries } from './fixtures/installed-binaries.mjs';
 
 const packageRoot = resolve(process.argv[2] ?? 'dist/packages');
-const workspaceFixtures = JSON.parse(process.env.RUNWEFT_SMOKE_WORKTREE_EVIDENCE ?? '[]');
-const artifactFixture = process.env.RUNWEFT_SMOKE_ARTIFACT_EVIDENCE;
-const remotePreparation = process.env.RUNWEFT_SMOKE_REMOTE_PREPARATION === '1';
-const remoteFixtures = JSON.parse(process.env.RUNWEFT_SMOKE_REMOTE_EVIDENCE ?? '[]');
-assert(Array.isArray(workspaceFixtures) && workspaceFixtures.every(file => typeof file === 'string'));
-assert(Array.isArray(remoteFixtures) && remoteFixtures.every(file => typeof file === 'string'));
 const index = JSON.parse(readFileSync(join(packageRoot, 'index.json'), 'utf8'));
+assert.equal(index.product, 'hub-console-v1');
 const smokeRoot = resolve(process.env.RUNWEFT_SMOKE_ROOT ?? '.dev-smoke');
 mkdirSync(smokeRoot, { recursive: true });
 const root = mkdtempSync(join(smokeRoot, 'install-'));
@@ -68,7 +64,8 @@ async function command(executable, args, overrides = {}) {
     assert.equal(result.code, 0, `${basename(executable)} exited with ${result.code ?? result.signal}`);
 }
 const npmOptions = ['--prefix', prefix, '--registry', registry, '--include=optional', '--ignore-scripts', '--no-audit', '--no-fund'];
-const evidence = { platform: process.platform, architecture: process.arch, version: index.version, root, registryRequests: requests, checks: [] };
+const evidence = { platform: process.platform, architecture: process.arch, version: index.version, source: index.source,
+    root, registryRequests: requests, checks: [], success: false };
 try {
     await command('npm', ['install', '--global', `runweft@${index.version}`, ...npmOptions]);
     const cli = join(prefix, 'bin', 'runweft');
@@ -76,14 +73,16 @@ try {
     const platformName = `runweft-${process.platform}-${process.arch}`;
     const platformDirectory = dirname(require.resolve(`${platformName}/package.json`));
     evidence.binaries = Object.fromEntries(['runweft', 'hapi'].map(name => [name, createHash('sha256').update(readFileSync(join(platformDirectory, 'bin', name))).digest('hex')]));
+    evidence.installedBinaries = installedBinaries(cli);
     const packageEntry = index.packages.find(entry => entry.name === platformName);
     for (const name of ['runweft', 'hapi']) if (packageEntry.binaries) assert.equal(evidence.binaries[name], packageEntry.binaries[`bin/${name}`]);
     const guide = readFileSync(join(prefix, 'lib', 'node_modules', 'runweft', 'README.md'), 'utf8');
-    assert(guide.includes('retry-finish')); assert(guide.includes('task workspace remove')); assert(guide.includes('Git common directory'));
+    assert(guide.includes('retry-finish')); assert(guide.includes('task workspace remove')); assert(guide.includes('worktree'));
     assert(guide.includes('upload_artifact')); assert(guide.includes('task artifacts release'));
     assert(guide.includes('workspace prepare')); assert(guide.includes('workspace release'));
     assert(guide.includes('task result fetch')); assert(guide.includes('task result release'));
-    assert(guide.includes('open --hapi')); assert(guide.includes('/runweft/'));
+    assert(guide.includes('hub connect')); assert(guide.includes('/hub')); assert(guide.includes('data reset'));
+    assert(readFileSync(join(platformDirectory, 'skills/runweft/SKILL.md'), 'utf8').includes('hub connect begin/complete'));
     assert(requests.includes('/runweft'));
     assert(requests.some(path => path.endsWith(`${platformName}-${index.version}.tgz`)));
     for (const file of ['bin/runweft', 'bin/hapi', 'HAPI-LICENSE', 'HAPI-NOTICE', 'SOURCES.txt', 'hapi-source.tar.gz']) assert(existsSync(join(platformDirectory, file)), `Missing packaged ${file}`);
@@ -99,7 +98,7 @@ try {
     assert(spawnHelp.stdout.includes('--workspace-mode')); assert(spawnHelp.stdout.includes('--base'));
     assert(spawnHelp.stdout.includes('--input')); assert(spawnHelp.stdout.includes('--output'));
     const openHelp = spawnSync(cli, ['open', '--help'], { env: cleanEnv, cwd: consumer, encoding: 'utf8' });
-    assert.equal(openHelp.status, 0, openHelp.stderr); assert(openHelp.stdout.includes('--hapi'));
+    assert.equal(openHelp.status, 0, openHelp.stderr); assert(openHelp.stdout.includes('--print'));
     const mcpHome = join(root, 'mcp-discovery');
     const transport = new StdioClientTransport({ command: cli, args: ['--home', mcpHome, 'mcp', 'serve', '--client', 'codex'],
         cwd: consumer, env: cleanEnv, stderr: 'pipe' });
@@ -117,23 +116,11 @@ try {
         evidence.nativeMcp = verifyMcpInstallation(cli, join(root, 'native-mcp'), env);
         evidence.checks.push('installed CLI native MCP install, idempotency, uninstall and explicit backup restoration');
     }
-    if (remotePreparation) {
-        // Bun runs the acceptance harness only; both service executables come from npm.
-        await command('bun', [resolve('scripts/smoke-workspace-preparation.ts'), cli, join(platformDirectory, 'bin/hapi')], { cwd: process.cwd(), env });
-        evidence.checks.push('installed CLI prepares, queries and releases remote diagnostic workspaces across Hub restarts; shared Git/LFS recovery objects and cache protection verified');
-    }
-    if (remoteFixtures.length) {
-        await command('bun', [resolve('scripts/smoke-remote-package.ts'), cli, join(platformDirectory, 'bin/hapi'), ...remoteFixtures.map(file => resolve(file))], { cwd: process.cwd(), env });
-        evidence.checks.push('installed CLI preserves completed native remote tasks across restart, displays dashboard facts, downloads both rounds and fetches code with executor offline without model replay');
-    }
-    if (workspaceFixtures.length) {
-        await command(process.execPath, [resolve('scripts/smoke-worktree-package.mjs'), cli, ...workspaceFixtures.map(file => resolve(file))], { cwd: process.cwd(), env: cleanEnv });
-        evidence.checks.push('installed CLI reads and explicitly removes completed real task worktrees; reports and Git refs remain');
-    }
-    if (artifactFixture) {
-        await command(process.execPath, [resolve('scripts/smoke-artifact-package.mjs'), cli, resolve(artifactFixture)], { cwd: process.cwd(), env: cleanEnv });
-        evidence.checks.push('installed CLI reads and downloads both real artifact rounds after service restart without model replay');
-    }
+    const marker = join(root, 'services', 'retained-install.txt'); writeFileSync(marker, 'KEEP_INSTALLED_DATA');
+    await command('npm', ['install', '--global', `runweft@${index.version}`, ...npmOptions]);
+    assert.equal(readFileSync(marker, 'utf8'), 'KEEP_INSTALLED_DATA');
+    assert.deepEqual(installedBinaries(cli), evidence.installedBinaries);
+    evidence.checks.push('same-version npm reinstall preserves dedicated service data and exact paired binaries');
     const unavailable = `${platformDirectory}.unavailable`;
     renameSync(platformDirectory, unavailable);
     try {
@@ -144,15 +131,12 @@ try {
     await command('npm', ['uninstall', '--global', 'runweft', ...npmOptions]);
     assert(!existsSync(cli));
     assert(existsSync(join(root, 'services')));
-    for (const file of workspaceFixtures) {
-        const previous = JSON.parse(readFileSync(file, 'utf8'));
-        assert(existsSync(join(previous.root, 'local/server/runweft/state.sqlite')));
-        assert(existsSync(join(previous.cases[0].cwd, '.git')));
-    }
+    assert.equal(readFileSync(marker, 'utf8'), 'KEEP_INSTALLED_DATA');
     evidence.checks.push('npm uninstall removes executable and preserves service data');
     if (process.env.RUNWEFT_SMOKE_KEEP_INSTALL === '1') {
         await command('npm', ['install', '--global', `runweft@${index.version}`, ...npmOptions]);
         evidence.installedCli = cli;
+        evidence.installedBinary = join(platformDirectory, 'bin', 'runweft');
         evidence.installedHapi = join(platformDirectory, 'bin', 'hapi');
         evidence.checks.push('dedicated installation retained for subsequent native acceptance');
     }
