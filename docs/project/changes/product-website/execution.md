@@ -17,3 +17,10 @@
 - 验证：node website/build.mjs、四个脚本语法、四平台 HTTP HEAD/长度/无 Content-Encoding/独立校验文件、UTF-8 手册及 diff 检查通过。Playwright 初查两页和 390px 首页无 pageError/页面横向溢出，桌面/手机/安装区/指南截图位于 .dev-smoke/product-website/，已目视检查。安装命令与 mcp check 客户端选项核对当前 CLI；完整下载/安装和浏览器边界在 T2 验收。
 - 边界：源码产品、package.json/lockfile、CLI 构建脚本、使用说明与 HAPI 相比冻结发行后提交 f188376 均未变化。
 - Commit：`product-website T1: build product site and installation guide`
+
+## T2 浏览器验收与交付说明
+
+- 结果：增加 website/verify.mjs 和 website/README.md；完整需求对应见 [Acceptance](acceptance.md)。实际浏览器下载四个平台包和一个子路径副本，校验字节后，从 DOM 原样执行 Linux x64 命令到版本输出。
+- 验证：.dev-smoke/website-70bwyG/evidence.json success，9 类检查、19 条布局记录、4 平台下载，pageErrors/networkErrors 均为空。复制拒绝、无 JS、键盘与 Escape、reduced motion、31 个 /sub/ 链接/锚点、真实子路径下载、坏包/缺包保留旧网站与暂存清理均通过；相关脚本语法和 diff 检查通过。未触碰用户全局客户端配置或调用模型。
+- 交付：本地预览 127.0.0.1:4173，源码 website/、完整静态目录 dist/website/。没有对外托管/公开发布；原 CLI 源码、package.json、lockfile、构建入口、docs/usage.md、HAPI 与冻结 index 均保持不变。维护文档说明静态部署、约 200 MiB 单文件和原样提供 tgz 的要求。
+- Commit：`product-website T2: verify downloads browser flows and installation`
