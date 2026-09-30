@@ -1,4 +1,4 @@
-# Hub 委派接入与迁移技术方案
+# Hub 委派接入与配置切换技术方案
 
 > 状态：已确认
 > 来源：[Requirement](requirement.md)、[Research](research.md)
@@ -8,7 +8,7 @@
 
 复用 TaskCoordinator/TaskStore、原生 ExecutionClient、文件与 Git helper；给它们接入已验收的 Hub 身份、资源、仓库和 Agent 服务。HAPI 缺少的是这些业务主体到任务的关系，原有 launcher、执行事实、工作区操作、文件存储不变。默认服务最后统一切换到 createConfigurationGateway，旧 root token 不再是公共认证入口。
 
-方案拆为[委派与原生桥接](delegation-contract.md)、[凭据与本机连接](connection-contract.md)、[显式迁移](migration-contract.md)。没有待用户决定的产品问题。真实物理远端需要外部机器；本阶段用专用 Hub 与多个真实 Runner 验证同一协议，不把等价测试写成物理远端验证。
+方案拆为[委派与原生桥接](delegation-contract.md)、[凭据与本机连接](connection-contract.md)、[历史清理与简化](migration-contract.md)。没有待用户决定的产品问题。真实物理远端需要外部机器；本阶段用专用 Hub 与多个真实 Runner 验证同一协议，不把等价测试写成物理远端验证。
 
 ## 端到端路径
 
@@ -20,10 +20,10 @@ Agent 使用已保存的显式 Hub 连接；CLI/MCP 核对用户凭据和宿主�
 
 ## 演进顺序
 
-先独立验证受控原生桥接，再接入 Task/Round；随后交付凭据交接，切换默认服务和两宿主调用，最后提供旧配置/历史的显式迁移。中间提交保留旧测试入口供回归；最终生产入口没有 YAML、namespace token 或无 Hub 的委派退路。
+先独立验证受控原生桥接，再接入 Task/Round；随后交付凭据交接，切换默认服务和两宿主调用，最后提供未上线版本的旧数据清理并删除过度封装。中间提交保留旧测试入口供回归；最终生产入口没有 YAML、namespace token 或无 Hub 的委派退路。
 
-存储迁移按需要递增 state schema；保留旧表供显式迁移，不因数据库升级自动认领历史。正式启动仅扫描具有中心归属的任务；未迁移历史不公开。用户配置、在线 Hub 和 HAPI 子模块不随本地开发改变。
+存储按需要递增 state schema，只有具有中心归属的任务进入执行扫描；旧试验历史直接清理，不自动认领，不增加兼容转换层。用户配置、在线 Hub 和 HAPI 子模块不随本地开发改变。
 
 ## 验证策略
 
-新接口覆盖两用户/两空间、请求重放、配置更新、共享撤回、token 轮换、成员移除、未确认派发与重启；结果权限独立于 Agent 分享。真实 Runner 验证 workspace/file RPC、两 runtime、native 会话续接及历史重建、代码 bundle 无 push 取回。连接页面使用 Playwright，迁移使用独立真实 SQLite/Git/文件样本并注入中断。每项任务通过聚焦验证后独立提交，整体验收执行 typecheck/test/build，再同步 Specs。
+新接口覆盖两用户/两空间、请求重放、配置更新、共享撤回、token 轮换、成员移除、未确认派发与重启；结果权限独立于 Agent 分享。真实 Runner 验证 workspace/file RPC、两 runtime、native 会话续接及历史重建、代码 bundle 无 push 取回。连接页面使用 Playwright，历史清理使用专用 SQLite/文件样本验证重新接入和路径边界。每项任务通过聚焦验证后独立提交，整体验收执行 typecheck/test/build，再同步 Specs。

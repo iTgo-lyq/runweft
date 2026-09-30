@@ -18,3 +18,9 @@ WorkspacePreparations 的遗漏由主 agent 同步复核发现并已在评审结
 - 真实验证：编译并运行 scripts/smoke-hub-delegation-native.ts，6 组全部通过。未改造 dist/hapi 和 Runner 完成共享机器私有 API 边界、实际输入字节下载、Git worktree/输入准备、输出上传和按请求恢复、无效准备拒绝真实 spawn RPC、共享撤回与日志秘密检查；无模型执行。证据 `.dev-smoke/hub-delegation-native-Y2J4an/evidence.json`，配套日志 `.dev-smoke/reviews/hub-delegation-migration/t1-*.log`。首次 smoke 发现 adapter 缺少 ExecutionClient 的 /health 能力查询，补齐后重跑通过。
 - 边界：释放输出授权由持久清单发布点调用，中心 Task/Round 和独立准备接线在 T2；仍未更新在线 Hub 或用户配置，HAPI 子模块无改动。
 - Commit：`hub-delegation-migration T1: bridge trusted task execution and scoped native transfers`。
+
+## 用户调整（T2 进行中）
+
+2026-10-01 用户明确项目尚未上线：破坏性更新直接清理历史，不为数据迁移过度编写逻辑，并清理过度封装。原 T6 的 YAML/多库归属转换、staging/journal、resume/rollback 设计撤销，改为简单历史清理和实现简化；相关 Requirement、Technical、Plan 与清理契约已同步。这一部分尚未实现，因此没有迁移代码需要保留。此前 iclaude 的迁移建议仅保留为历史评审事实，不再构成实施要求。
+
+用户另确认：整个第五阶段完成并归档后，在当前工作区驱动 traex（astra）接手整体第六、七阶段；确认启动后无需等待其完成，并结束本 goal。

@@ -21,17 +21,15 @@
 - 协调器优先保留现有 TaskStore/TaskCoordinator/helper，注入中心解析和授权检查；原生传输的逻辑业务范围与 HAPI namespace 分开。接受、异步准备、真正 RPC 派发、新轮次、结果读取分别核对现行权限；授权撤销不能伪造已停止。
 - 继续读取文件许可与原生 RPC 桥接，再确定受控任务如何复用 dispatch intent 和限定附件许可；不向调用者暴露 root 凭据或任意机器操作。
 
-## 迁移待验证事项
+## 历史兼容范围调整
 
-旧 namespace、机器 UUID、原生 session ID、任务/附件/基线记录需要明确归属映射。已有 Git worktree 和原生操作回执可能记录绝对目录，不能为了统一新连接名直接移动整个旧 native home。方案需要保留原目录或显式映射，并覆盖同一数据根的可读 paths 输出。
-
-迁移应有只读预览、备份、显式应用和持久去重/继续记录；不自动删除 YAML 或猜历史用户。原生 HAPI 数据与 Runweft state 是不同数据库，需调查真实表关系与 namespace 使用，再确定停服迁移和中断恢复顺序。尚未对在线 Hub、用户配置或模型凭据进行修改。
+2026-10-01 用户明确尚未上线，可清理旧历史，撤销此前映射/多库迁移调查的实施要求。原生 worktree 可能保存绝对目录，清理只处理明确的产品数据路径，不移动或删除外部工作区。
 
 ## 补充验证和收敛
 
 - `src/hub/access/sockets.ts` 在真实 SpawnHappySession RPC 发出和 ack 时均调用 NativeSessions.checkExecution；这里已有固定机器和资源检查，任务 binding 可供上层追加策略，不需要改 HAPI Runner。
 - `FileAccessStore.permit` 已提供可信中心先分配 output 的入口；机器 reserve 后产生用户归属并授予当前凭据字节权限。现有用户 lookup 按 sender 检索，中心接线需要按可信 owner/space 查询分配给 Runner 的同一预约；不能错误改成所有机器共享文件 namespace。
 - TaskStore.accept/append 的 JSON 分别保存 Task 和 Round；当前新轮次没有自己的 Agent 快照，starting 使用 task.agent。新增 round 快照必须同时覆盖 instructions 与启动参数，并处理不能原地改变模型的 resume 情况。
-- `hapi/hub/src/store/index.ts` 中 machines、sessions 的 ID 为全局主键，spawn_receipts 的主键为 namespace/request_id，artifacts 为全局 ID 加 namespace/request_id 唯一；events 等也包含 namespace。迁移需要实际列/唯一约束检查，不能只改 Runweft task.namespace。
-- `hapi/hub/src/artifacts/service.ts` 的物理路径是 root/sha256(namespace)/artifactId；`artifactStore.ts` 的 fingerprint 不含 namespace/requestId。方案选择备份后复制并校验字节、显式更新预约与归属，不修改 HAPI 源码。
+- `hapi/hub/src/store/index.ts` 中 machines、sessions 的 ID 为全局主键，spawn_receipts 的主键为 namespace/request_id，artifacts 为全局 ID 加 namespace/request_id 唯一；events 等也包含 namespace。新数据仍须保持这些原生约束，不对旧数据实现归属转换。
+- `hapi/hub/src/artifacts/service.ts` 的物理路径是 root/sha256(namespace)/artifactId；`artifactStore.ts` 的 fingerprint 不含 namespace/requestId。新文件按可信 owner/space namespace 写入，不实现旧字节复制迁移，不修改 HAPI 源码。
 - 身份 Web 只在 sessionStorage 持有原 token，Hub 只持摘要；采用 Web Crypto RSA-OAEP 把 token 交给请求本机公钥，CLI 校验身份后原子落盘。此为短期交接，不建立登录/注册或第二套账户体系。
