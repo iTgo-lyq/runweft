@@ -163,7 +163,7 @@ test('Hub origins, identity backup IDs and legacy tokens cannot be mixed; unknow
     expect(() => second.access.authenticate(firstToken)).toThrow();
     const forged = backup(h.home, h.url, { identity: h.a.identity, token: h.b.token }, 'wrong-id.txt');
     expect((await cli(home, h.url, forged, ['identity'])).error.code).toBe('hub_identity_response_invalid');
-    expect(() => new HubResourceClient({ url: h.url, env: { RUNWEFT_HUB_TOKEN: h.a.token } })).toThrow('身份 token');
+    expect(() => new HubResourceClient({ url: h.url, home, env: { RUNWEFT_HUB_TOKEN: h.a.token } })).toThrow('尚未连接');
     let observed = false;
     const old = Bun.serve({ hostname: '127.0.0.1', port: 0, async fetch(request) {
         observed ||= !!request.headers.get('authorization') || (request.method !== 'GET' && (await request.text()).includes(h.a.token));

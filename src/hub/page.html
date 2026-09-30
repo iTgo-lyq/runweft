@@ -7,6 +7,12 @@
 <main id="main">
 <div class="heading"><p class="eyebrow">身份与空间</p><h1 id="headline">从你的身份开始</h1><p id="intro">无需注册。保存你的身份 token，下次凭它回到自己的空间。</p></div>
 <p id="notice" role="status" aria-live="polite" hidden></p>
+<section id="connect-request" class="panel" aria-label="确认本机连接" hidden>
+  <h2>连接你的 Agent 工作环境</h2><p id="connect-details"></p><p>核对码：<strong id="connect-code"></strong></p>
+  <p id="connect-identity" class="muted"></p><p id="connect-status" role="status"></p>
+  <button id="confirm-connection" hidden>确认连接此身份与空间</button>
+  <p class="hint">只确认自己刚发起的请求，并核对 Hub 地址、机器名称和代码。身份凭据会加密交给该环境，由 CLI 直接保存，不需要发送到对话中。此连接共用你的身份 token；需要撤销设备时，请更换 token 并更新其他设备。</p>
+</section>
 <section id="entry" class="entry" aria-label="接入 Hub">
   <form id="create-identity" class="panel"><h2>创建新身份</h2><p class="muted">第一次使用这个 Hub，从这里开始。</p><label>显示名称<input id="new-name" required maxlength="80" autocomplete="nickname" placeholder="你希望如何被称呼"></label><button type="submit">领取身份 token</button><p class="hint">这会创建一个独立身份和初始空间，不会继承其他身份的配置。</p></form>
   <form id="import-identity" class="panel"><h2>使用已有 token</h2><p class="muted">换了设备或关闭过浏览器，使用保存的 token。</p><label>身份 token<input id="import-token" type="password" required autocomplete="off" spellcheck="false" placeholder="rw_id_…"></label><button type="submit" class="secondary">进入原身份</button><p class="hint">没有 token 副本时无法找回原身份。重新领取会创建另一个身份。</p></form>

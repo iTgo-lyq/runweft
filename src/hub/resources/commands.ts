@@ -6,16 +6,18 @@ import { configPath } from '../../config';
 import { FlavorSchema, invalidInput } from '../../resources/types';
 import { HubResourceClient } from './client';
 import { hubConnectionPaths, MachineConnection } from './connection';
+import { IdentityConnection } from '../connect/client';
 
 export function addHubCommands(program: Command, output: (value: unknown, human: string) => void) {
     const hub = program.command('hub').description('通过明确 Hub 身份管理中心资源；不会启动本地服务')
         .requiredOption('--url <origin>', 'Hub HTTP(S) 根地址')
-        .option('--identity-file <file>', 'Web 身份备份或只含身份 token 的文件；默认 RUNWEFT_IDENTITY_TOKEN')
+        .option('--identity-file <file>', '显式身份备份；默认环境变量或此 Hub 已保存的身份连接')
         .option('--space <id>', '当前空间 UUID；使用 runtime 和空间治理时需要');
     addRepositoryCommands(hub, output);
     addAgentCommands(hub, output);
     const client = () => new HubResourceClient(hub.opts());
     const home = () => dirname(configPath(program.opts().home));
+    hub.hook('preAction', () => { hub.setOptionValue('home', home()); });
     function show(connection: HubResourceClient, result: object, message?: string) {
         const value = { connection: { hub: connection.url, spaceId: connection.spaceId }, ...result };
         output(value, `Hub：${connection.url}${connection.spaceId ? `\n空间：${connection.spaceId}` : ''}\n${message ?? JSON.stringify(result, null, 2)}`);
@@ -25,7 +27,22 @@ export function addHubCommands(program: Command, output: (value: unknown, human:
     }
     hub.command('paths').description('显示该 Hub 的本机持久接入目录；无需读取 token').action(() => {
         const paths = hubConnectionPaths(home(), hub.opts().url);
-        output(paths, `Hub：${paths.hub}\n机器接入凭据：${paths.machineConnection}\n本机协调数据库：${paths.clientState}\n原生 Runner 数据：${paths.connection}/hapi`);
+        output(paths, `Hub：${paths.hub}\n身份连接：${paths.identityConnection}\n待确认连接：${paths.pendingConnection}\n机器接入凭据：${paths.machineConnection}\n本机协调数据库：${paths.clientState}\n原生 Runner 数据：${paths.connection}/hapi`);
+    });
+    const connect = hub.command('connect').description('通过 Web 确认身份与空间，凭据直接保存到本机');
+    connect.command('begin').option('--name <name>', '浏览器中展示的本机名称').action(async options => {
+        const result = await new IdentityConnection(home(), hub.opts().url).begin(options.name);
+        output(result, `请在浏览器核对并确认：${result.confirmationUrl}\n本机：${result.label}\n核对码：${result.code}\n过期时间：${new Date(result.expiresAt).toISOString()}\n确认后执行 hub connect complete。`);
+    });
+    connect.command('complete').description('领取并校验凭据，保存后确认消费；可重复执行').action(async () => {
+        const result = await new IdentityConnection(home(), hub.opts().url).complete();
+        output(result, result.status === 'pending' ? `等待 Web 确认：${'confirmationUrl' in result ? result.confirmationUrl : ''}` : `身份连接已保存。\n${JSON.stringify(result, null, 2)}`);
+    });
+    connect.command('cancel').description('取消待确认请求，保留已保存身份').action(async () => {
+        output(await new IdentityConnection(home(), hub.opts().url).cancel(), '待确认连接已取消；已有身份连接保留。');
+    });
+    connect.command('status').description('显示本机连接摘要，不输出凭据；不代表远端授权仍有效').action(() => {
+        const result = new IdentityConnection(home(), hub.opts().url).status(); output(result, JSON.stringify(result, null, 2));
     });
     read(hub.command('identity').description('确认当前身份，不输出 token'), async c => ({ identity: await c.identity() }));
     const machine = hub.command('machine').description('机器登记、空间关联与本机接入凭据');

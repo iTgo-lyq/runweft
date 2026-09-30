@@ -164,7 +164,7 @@ test('configuration gateway and shared Hub client enforce capabilities, selected
 });
 
 test('schema 12 migration preserves older resource tables and creates empty repository metadata', () => {
-    const h = setup(), m = machine(h); h.access.db.exec('DROP TABLE hub_delegation_scopes; DROP TABLE hub_agent_selections; DROP TABLE hub_agent_blocks; DROP TABLE hub_agent_members; DROP TABLE hub_agent_versions; DROP TABLE hub_agents; DROP TABLE hub_checkouts; DROP TABLE hub_repository_aliases; DROP TABLE hub_repositories; PRAGMA user_version=12;');
+    const h = setup(), m = machine(h); h.access.db.exec('DROP TABLE hub_connection_requests; DROP TABLE hub_delegation_scopes; DROP TABLE hub_agent_selections; DROP TABLE hub_agent_blocks; DROP TABLE hub_agent_members; DROP TABLE hub_agent_versions; DROP TABLE hub_agents; DROP TABLE hub_checkouts; DROP TABLE hub_repository_aliases; DROP TABLE hub_repositories; PRAGMA user_version=12;');
     const db = openState(h.path);
     try { expect(db.query('PRAGMA user_version').get()).toEqual({ user_version: STATE_SCHEMA_VERSION }); expect(db.query('SELECT machineId FROM hub_resource_machines').all()).toEqual([{ machineId: m }]); expect(db.query('SELECT * FROM hub_repositories').all()).toEqual([]); }
     finally { db.close(); }

@@ -11,6 +11,8 @@ const input = (id: string) => $<HTMLInputElement>(id);
 const secretDialog = $<HTMLDialogElement>('secret-dialog'), confirmDialog = $<HTMLDialogElement>('confirm-dialog');
 let saved: Saved = { token: '' }, identity: Identity | undefined, spaces: Space[] = [], selected: Space | undefined;
 let busy = false, secret = '', secretKind: 'identity' | 'invitation' | 'rotation' = 'identity';
+type ConnectionRequest = { id: string; origin: string; label: string; publicKey: string; code: string; expiresAt: number; status: string };
+let connectionRequest: ConnectionRequest | undefined;
 class ApiError extends Error { constructor(readonly status: number, message: string) { super(message); } }
 
 function notice(message: string, error = false) {
@@ -20,9 +22,9 @@ function persist() {
     try { sessionStorage.setItem(storageKey, JSON.stringify(saved)); }
     catch { throw new Error('浏览器无法保存当前身份。请允许此站点使用会话存储，并保留 token 副本。'); }
 }
-async function api(path: string, body?: unknown, method = body === undefined ? 'GET' : 'POST', token = saved.token): Promise<any> {
+async function api(path: string, body?: unknown, method = body === undefined ? 'GET' : 'POST', token = saved.token, base = '/api/runweft/hub'): Promise<any> {
     let response: Response;
-    try { response = await fetch(`/api/runweft/hub${path}`, { method, credentials: 'omit', headers: {
+    try { response = await fetch(`${base}${path}`, { method, credentials: 'omit', redirect: 'error', headers: {
         ...(token ? { authorization: `Bearer ${token}` } : {}), ...(body !== undefined ? { 'content-type': 'application/json' } : {}),
     }, body: body === undefined ? undefined : JSON.stringify(body), signal: AbortSignal.timeout(15_000) }); }
     catch { throw new ApiError(0, '无法连接 Hub。写操作的结果可能尚未确认，请先刷新核对，不要重复提交。'); }
@@ -61,6 +63,7 @@ function showEntry() {
     $('entry').hidden = false; $('workspace').hidden = true; $('logout').hidden = true;
     $('headline').textContent = '从你的身份开始'; $('intro').textContent = '无需注册。保存你的身份 token，下次凭它回到自己的空间。';
     for (const id of ['identity-name', 'identity-id', 'space-name', 'space-id', 'members', 'invitations', 'spaces']) $(id).replaceChildren();
+    renderConnection();
 }
 async function refresh() {
     identity = (await api('/identity')).identity;
@@ -70,6 +73,7 @@ async function refresh() {
     $('identity-name').textContent = identity!.name; $('identity-id').textContent = identity!.id; input('identity-name-input').value = identity!.name;
     selected = spaces.find(space => space.id === saved.spaceId) ?? spaces[0];
     saved.spaceId = selected?.id; persist();
+    await refreshConnection();
     $('spaces').replaceChildren(...spaces.map(space => {
         const node = button('', async () => { saved.spaceId = space.id; persist(); await refresh(); });
         node.append(text('span', space.name), text('span', labels[space.role]));
@@ -147,6 +151,45 @@ async function recover() {
     await api('/identity'); delete saved.pendingToken; persist();
 }
 
+function renderConnection() {
+    const request = connectionRequest;
+    $('connect-request').hidden = !request;
+    $('confirm-connection').hidden = true;
+    if (!request) return;
+    $('connect-details').textContent = `Hub：${request.origin} · 机器：${request.label} · ${new Date(request.expiresAt).toLocaleString('zh-CN')} 到期`;
+    $('connect-code').textContent = request.code;
+    $('connect-identity').textContent = request.status === 'pending' && identity && selected
+        ? `将连接身份「${identity.name}」与空间「${selected.name}」。可在下方切换空间。` : '';
+    let status: string;
+    if (request.origin !== location.origin) status = '请求的 Hub 地址与当前页面不一致，无法确认。请重新发起正确地址的请求。';
+    else if (!isSecureContext || !crypto.subtle) status = '浏览器需要 HTTPS 或 localhost 才能加密身份凭据。';
+    else if (request.expiresAt <= Date.now()) status = '此请求已过期，请让 Agent 重新发起。';
+    else if (request.status === 'confirmed' || request.status === 'consumed') status = '连接已确认。请让 Agent 执行 hub connect complete 完成本机保存。';
+    else if (request.status !== 'pending') status = '此请求已取消，请重新发起。';
+    else if (!identity || !selected) status = '先进入你的身份并选择空间，再确认连接。';
+    else { status = '确认前请与 Agent 提供的代码核对。'; $('confirm-connection').hidden = false; }
+    $('connect-status').textContent = status;
+}
+async function refreshConnection() {
+    const id = new URLSearchParams(location.hash.slice(1)).get('connect');
+    if (!id) { connectionRequest = undefined; renderConnection(); return; }
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) throw new Error('连接请求 ID 无效。请打开 Agent 提供的完整链接。');
+    connectionRequest = undefined; renderConnection();
+    connectionRequest = await api(`/${id}`, undefined, 'GET', '', '/api/runweft/connect'); renderConnection();
+}
+click('confirm-connection', async () => {
+    await refreshConnection();
+    const request = connectionRequest;
+    if (!request || $('confirm-connection').hidden || !identity || !selected) return;
+    const publicKey = Uint8Array.from(atob(request.publicKey.replaceAll('-', '+').replaceAll('_', '/')), c => c.charCodeAt(0));
+    const key = await crypto.subtle.importKey('spki', publicKey, { name: 'RSA-OAEP', hash: 'SHA-256' }, false, ['encrypt']);
+    const encrypted = new Uint8Array(await crypto.subtle.encrypt({ name: 'RSA-OAEP' }, key, new TextEncoder().encode(saved.token)));
+    const ciphertext = btoa(String.fromCharCode(...encrypted)).replaceAll('+', '-').replaceAll('/', '_').replaceAll('=', '');
+    connectionRequest = await api(`/${request.id}/confirm`, { spaceId: selected.id, ciphertext }, 'POST', saved.token, '/api/runweft/connect');
+    renderConnection(); notice('已确认连接，凭据已加密交给该环境。让 Agent 完成本机保存即可。');
+});
+window.addEventListener('hashchange', () => { void action(refreshConnection); });
+
 form('create-identity', async () => {
     // Probe storage before allocating an identity. Never replay a failed create automatically.
     persist();
@@ -208,5 +251,5 @@ void action(async () => {
     const raw = sessionStorage.getItem(storageKey);
     if (raw) { try { saved = JSON.parse(raw); } catch { throw new Error('此浏览器保存的身份信息损坏，请重新导入 token。'); } }
     if (!saved || typeof saved.token !== 'string') { saved = { token: '' }; throw new Error('请重新导入已保存的身份 token。'); }
-    if (saved.token) { await recover(); await refresh(); }
+    if (saved.token) { await recover(); await refresh(); } else await refreshConnection();
 });

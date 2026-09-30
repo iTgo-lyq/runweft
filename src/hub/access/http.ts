@@ -7,6 +7,8 @@ import { ResourceError } from '../../resources/types';
 import { TaskError } from '../../tasks/types';
 import { PreparationError } from '../../remote/types';
 import { handleHubRequest } from '../api';
+import { handleConnectionRequest } from '../connect/api';
+import { ConnectionRequestStore } from '../connect/store';
 import { hubPage } from '../page';
 import { HubStore } from '../store';
 import { HubError, hubNotFound, hubUnauthorized } from '../types';
@@ -39,6 +41,7 @@ export type AccessGatewayOptions = {
 /** Independent secure entry. The legacy serve switches to it only with the later identity migration. */
 export async function createAccessGateway(options: AccessGatewayOptions) {
     const store = new AccessStore(options.statePath), identities = new HubStore(options.statePath);
+    const connections = new ConnectionRequestStore(store);
     const authority = new AccessAuthority(store, options.key), native = new NativeTransport(options.target, options.rootToken);
     const files = new NativeFiles(store, native), sessions = new NativeSessions(store, native, options.executionPolicy);
     const events = new NativeEvents(store, native, options.key);
@@ -62,9 +65,9 @@ export async function createAccessGateway(options: AccessGatewayOptions) {
         const { url, parts } = pathParts(request), method = request.method ?? 'GET', path = url.pathname;
         if (['accessToken', 'namespace', 'ownerId', 'spaceId'].some(key => url.searchParams.has(key))
             || (url.searchParams.has('token') && path !== '/api/events')) throw inputError();
-        if (hubPage(request, response) || await handleHubRequest(request, response, identities)) return;
+        if (hubPage(request, response) || await handleConnectionRequest(request, response, connections) || await handleHubRequest(request, response, identities)) return;
         if (path === '/api/runweft/health' && method === 'GET') {
-            jsonResponse(response, 200, options.health?.() ?? { service: 'runweft', protocolVersion: 1, ready: true, capabilities: { hubIdentity: 1, hubAccess: 1 } }); return;
+            jsonResponse(response, 200, options.health?.() ?? { service: 'runweft', protocolVersion: 1, ready: true, capabilities: { hubIdentity: 1, hubAccess: 1, hubConnect: 1 } }); return;
         }
         if (path === '/health' && method === 'GET') { jsonResponse(response, 200, await native.json('/health')); return; }
         if (path === '/api/auth' && method === 'POST') {

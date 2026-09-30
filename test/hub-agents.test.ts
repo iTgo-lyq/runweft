@@ -150,7 +150,7 @@ test('HTTP/client permission checks whitelist governance responses, enforce body
 
 test('v13 migration preserves repository metadata without converting old file Agent definitions or claiming their ownership', () => {
     const h = setup(), repo = h.repos.create(h.actor, { requestId: randomUUID(), name: 'Repository' });
-    h.access.db.exec('DROP TABLE hub_delegation_scopes; DROP TABLE hub_agent_selections; DROP TABLE hub_agent_blocks; DROP TABLE hub_agent_members; DROP TABLE hub_agent_versions; DROP TABLE hub_agents; PRAGMA user_version=13;');
+    h.access.db.exec('DROP TABLE hub_connection_requests; DROP TABLE hub_delegation_scopes; DROP TABLE hub_agent_selections; DROP TABLE hub_agent_blocks; DROP TABLE hub_agent_members; DROP TABLE hub_agent_versions; DROP TABLE hub_agents; PRAGMA user_version=13;');
     const db = openState(h.path);
     try { expect(db.query('PRAGMA user_version').get()).toEqual({ user_version: STATE_SCHEMA_VERSION }); expect(db.query('SELECT id FROM hub_repositories').all()).toEqual([{ id: repo.id }]); expect(db.query('SELECT * FROM hub_agents').all()).toEqual([]); }
     finally { db.close(); }

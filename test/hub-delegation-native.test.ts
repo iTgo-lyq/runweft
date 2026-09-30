@@ -162,7 +162,7 @@ test('transfer grant schema upgrade preserves existing explicit grants without i
     h.access.db.exec(`ALTER TABLE hub_execution_grants RENAME TO grants_current;
         CREATE TABLE hub_execution_grants (credentialId TEXT, kind TEXT, objectId TEXT, operation TEXT, PRIMARY KEY(credentialId, kind, objectId, operation));
         INSERT INTO hub_execution_grants SELECT credentialId, kind, objectId, operation FROM grants_current;
-        DROP TABLE grants_current; DROP TABLE hub_delegation_scopes; PRAGMA user_version=15;`);
+        DROP TABLE grants_current; DROP TABLE hub_connection_requests; DROP TABLE hub_delegation_scopes; PRAGMA user_version=15;`);
     const reopened = new AccessStore(h.path); cleanups.push(() => reopened.close());
     expect(reopened.can(h.machine, 'artifact', file.id)).toBe(true);
     expect(reopened.db.query('SELECT leaseKey FROM hub_execution_grants').all()).toEqual([{ leaseKey: 'manual' }]);

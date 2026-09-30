@@ -4,7 +4,7 @@ import { dirname } from 'node:path';
 import { ensureDirectory } from './config';
 import { ResourceError } from './resources/types';
 
-export const STATE_SCHEMA_VERSION = 17;
+export const STATE_SCHEMA_VERSION = 18;
 
 /** One additive schema for the central business database; native history stays in HAPI. */
 export function openState(path: string) {
@@ -309,6 +309,17 @@ export function openState(path: string) {
                     spaceId TEXT NOT NULL REFERENCES hub_spaces(id), UNIQUE(ownerId, spaceId)
                 );
                 PRAGMA user_version=17;
+            `);
+            if (version < 18) db.exec(`
+                CREATE TABLE hub_connection_requests (
+                    id TEXT PRIMARY KEY, fingerprint TEXT NOT NULL, origin TEXT NOT NULL, label TEXT NOT NULL,
+                    publicKey TEXT NOT NULL, pollingDigest TEXT NOT NULL, code TEXT NOT NULL,
+                    createdAt INTEGER NOT NULL, expiresAt INTEGER NOT NULL,
+                    status TEXT NOT NULL CHECK(status IN ('pending', 'confirmed', 'consumed', 'cancelled')),
+                    ownerId TEXT REFERENCES hub_users(id), spaceId TEXT REFERENCES hub_spaces(id),
+                    identityDigest TEXT, ciphertext TEXT
+                );
+                PRAGMA user_version=18;
             `);
         }).immediate();
         return db;

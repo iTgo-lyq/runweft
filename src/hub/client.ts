@@ -1,13 +1,15 @@
 import { readFileSync } from 'node:fs';
+import { dirname } from 'node:path';
 import { decodeJwt } from 'jose';
 import { z } from 'zod';
-import { expandPath, hubOrigin } from '../config';
+import { configPath, expandPath, hubOrigin } from '../config';
 import { RunweftError } from '../errors';
 import { fetchJson, HapiRequestError } from '../hapi';
 import { IdentityToken, type Identity } from './types';
+import { readIdentityConnection } from './connect/record';
 
-export type HubConnectionOptions = { url: string; identityFile?: string; space?: string; env?: NodeJS.ProcessEnv };
-const missingIdentity = () => new RunweftError('hub_identity_missing', '需要此 Hub 的身份 token。', '使用 --identity-file 指向 Web 下载的备份，或设置 RUNWEFT_IDENTITY_TOKEN。');
+export type HubConnectionOptions = { url: string; identityFile?: string; space?: string; home?: string; env?: NodeJS.ProcessEnv };
+const missingIdentity = () => new RunweftError('hub_identity_missing', '尚未连接此 Hub 的身份。', '执行 hub connect begin，在 Web 确认后执行 hub connect complete；也可显式使用 --identity-file 或 RUNWEFT_IDENTITY_TOKEN。');
 
 /** Never starts a local service, accepts the legacy root credential, or keeps a central authority copy. */
 export class HubClient {
@@ -44,7 +46,13 @@ export class HubClient {
                 if (tokens.length !== 1) throw missingIdentity();
                 token = tokens[0]; this.expectedIdentity = identity;
             }
-        } else token = (options.env ?? process.env).RUNWEFT_IDENTITY_TOKEN;
+        } else {
+            token = (options.env ?? process.env).RUNWEFT_IDENTITY_TOKEN;
+            if (token === undefined) {
+                const record = readIdentityConnection(dirname(configPath(options.home, options.env)), this.url);
+                if (record) { token = record.token; this.spaceId = options.space ?? record.spaceId; this.expectedIdentity = record.ownerId; }
+            }
+        }
         if (!IdentityToken.safeParse(token).success) throw missingIdentity();
         this.identityToken = token!;
     }
@@ -90,6 +98,11 @@ export class HubClient {
         const parsed = z.object({ id: z.uuid(), name: z.string(), createdAt: z.number() }).safeParse(reply.identity);
         if (!parsed.success || (this.expectedIdentity && this.expectedIdentity !== parsed.data.id)) throw new RunweftError('hub_identity_response_invalid', 'Hub 返回的身份与当前备份不一致。');
         return parsed.data;
+    }
+    async connection() {
+        if (!this.spaceId) throw new RunweftError('hub_space_required', '尚未选择 Hub 空间。', '通过 Web 确认连接，或使用 --space 指定已加入的空间。');
+        await this.userJwt();
+        return { hub: this.url, ownerId: (await this.identity()).id, spaceId: this.spaceId };
     }
     async verifyMachine(token: string, credentialId: string): Promise<void> {
         const reply = await this.send('/api/auth', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ accessToken: token }) }, [token]);

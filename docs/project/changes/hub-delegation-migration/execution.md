@@ -35,3 +35,13 @@ WorkspacePreparations 的遗漏由主 agent 同步复核发现并已在评审结
 - 真实验证：编译 scripts/smoke-hub-delegation-preparation.ts 并运行，5 组通过；真实未改造 HAPI、两个独立 Runner、中心 Agent/仓库解析、已提交基线实际字节导出上传导入、独立 worktree、相同 owner/space 内复用及两端授权收回。证据 `.dev-smoke/hub-delegation-preparation-4796tH/evidence.json`。该 smoke 不启动模型；协调器会话行为本任务由可控原生 HTTP fixture 验证，完整真实模型组合由 T4/T7 验收。
 - 边界：默认 serve、CLI/MCP 尚未统一切换，按 T4/T5 顺序推进；旧数据按用户最新决策在 T6 清理/简化，不编写迁移框架。未修改在线服务、用户配置或 HAPI 子模块。
 - Commit：`hub-delegation-migration T2: resolve central task rounds and workspace preparations`。
+
+## T3 Web 凭据交接与明确连接记录
+
+- 结果：增加 hub connect begin/complete/cancel/status 与匿名请求、浏览器确认、秘密轮询 API。Hub 只持久公钥、摘要和 RSA-OAEP SHA-256 密文；确认前后校验身份与空间，十分钟过期，取消或消费后不再领取密文。
+- 结果：Web 展示 origin、机器、核对码和所选身份/空间，明确点击后用 WebCrypto 加密；只允许 HTTPS/localhost，地址不符不能确认。CLI 直接解密、向 Hub 验证后原子写入 0600 identity.json，再确认消费。私钥/轮询凭据保存在同连接目录的 0600 connect.json，完成后删除；输出不含秘密。
+- 结果：HubClient 自动读取对应 origin 的身份与空间，仍支持显式备份/环境变量；不复用另一 origin 的 token。身份与机器文件分别保存，跨 owner 的机器记录阻止身份覆盖。现有短 SQLite 文件锁复用于并发保存；丢失确认响应可恢复，旧请求不能覆盖后来切换的身份。hub paths 显示固定位置。
+- 验证：typecheck、build、git diff --check 通过；全仓 249 pass/0 fail（37 文件、5075 断言、约 55 秒）。新增 5 组测试覆盖编译 CLI 并发、真实 RSA 加密、响应丢失、替换身份、token/成员撤回、过期、密文错误、机器 owner 与 origin 隔离。日志 `.dev-smoke/reviews/hub-delegation-migration/t3-all-tests.log`。
+- 浏览器验证：scripts/smoke-hub-connect.ts 通过 5 组，使用开发机已有 Chromium 与真实 Hub 身份 API/SQLite、WebCrypto、编译 CLI；桌面/窄屏、选择空间、退出/重入、取消和假 origin，检查输出/URL/控制台无秘密。证据 `.dev-smoke/hub-connect-fJ61eZ/evidence.json` 及同目录截图；未启动模型或修改用户配置。Playwright 默认浏览器版本缺失，改用已有的 headless shell；首次组合脚本缺少资源网关能力，接入实际 ResourceGateway 后重跑通过。
+- 边界：此任务只接独立安全网关和 hub 命令。默认 serve 与任务/MCP 消费端仍按 T4/T5 切换，不宣称默认产品已完成集中身份接入。
+- Commit：`hub-delegation-migration T3: hand off Hub identity securely through Web confirmation`。

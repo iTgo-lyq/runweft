@@ -6,7 +6,7 @@ import { z } from 'zod';
 import { atomicWrite, connectionName, ensureDirectory, expandPath, hubOrigin } from '../../config';
 import { RunweftError } from '../../errors';
 import { NameSchema } from '../../resources/types';
-import { HubResourceClient } from './client';
+import type { HubResourceClient } from './client';
 import { MachineToken } from './types';
 
 const RecordSchema = z.object({
@@ -22,7 +22,17 @@ const changed = () => new RunweftError('machine_connection_changed', '机器接�
 export function hubConnectionPaths(home: string, url: string) {
     const hub = hubOrigin.safeParse(url); if (!hub.success) throw new RunweftError('hub_url_invalid', '请填写 Hub HTTP(S) 根地址。');
     const root = expandPath(home), connection = join(root, 'connections', connectionName({ mode: 'hub', hub: { url: hub.data, tokenEnv: 'RUNWEFT_IDENTITY_TOKEN' } }));
-    return { hub: hub.data, home: root, connection, machineConnection: join(connection, 'machine.json'), clientState: join(root, 'client.sqlite') };
+    return { hub: hub.data, home: root, connection, identityConnection: join(connection, 'identity.json'), pendingConnection: join(connection, 'connect.json'),
+        machineConnection: join(connection, 'machine.json'), clientState: join(root, 'client.sqlite') };
+}
+
+export function connectionFileLock<T>(paths: ReturnType<typeof hubConnectionPaths>, change: () => T): T {
+    ensureDirectory(paths.home);
+    const db = new Database(paths.clientState, { create: true });
+    try {
+        chmodSync(paths.clientState, 0o600); db.exec('PRAGMA busy_timeout=5000; PRAGMA journal_mode=WAL;');
+        return db.transaction(change).immediate();
+    } finally { db.close(); }
 }
 
 /** Secrets live in one predictable file; short SQLite write locks serialize file updates and release on process death. */
@@ -39,17 +49,12 @@ export class MachineConnection {
         return parsed.data;
     }
     private update(ownerId: string, change: (record: MachineConnectionRecord | undefined) => MachineConnectionRecord): MachineConnectionRecord {
-        ensureDirectory(this.paths.home);
-        const db = new Database(this.paths.clientState, { create: true });
-        try {
-            chmodSync(this.paths.clientState, 0o600); db.exec('PRAGMA busy_timeout=5000; PRAGMA journal_mode=WAL;');
-            return db.transaction(() => {
-                const record = change(this.read(ownerId));
-                if (!RecordSchema.safeParse(record).success) throw recordError();
-                atomicWrite(this.paths.machineConnection, JSON.stringify(record, null, 2) + '\n');
-                return record;
-            }).immediate();
-        } finally { db.close(); }
+        return connectionFileLock(this.paths, () => {
+            const record = change(this.read(ownerId));
+            if (!RecordSchema.safeParse(record).success) throw recordError();
+            atomicWrite(this.paths.machineConnection, JSON.stringify(record, null, 2) + '\n');
+            return record;
+        });
     }
     private required(ownerId: string) {
         const record = this.read(ownerId);

@@ -140,7 +140,7 @@ test('space defaults are unique under parallel PUT and schema 14 upgrade preserv
     await Promise.all(Array.from({ length: 8 }, (_, i) => c.select(i % 2 ? a.id : b.id)));
     expect((await c.selections()).selections).toHaveLength(1);
     expect(h.access.db.query('SELECT COUNT(*) AS n FROM hub_agent_selections WHERE repositoryId IS NULL').get()).toEqual({ n: 1 });
-    h.access.db.exec('DROP TABLE hub_delegation_scopes; DROP TABLE hub_agent_selections; PRAGMA user_version=14;');
+    h.access.db.exec('DROP TABLE hub_connection_requests; DROP TABLE hub_delegation_scopes; DROP TABLE hub_agent_selections; PRAGMA user_version=14;');
     const db = openState(h.path);
     try { expect(db.query('PRAGMA user_version').get()).toEqual({ user_version: STATE_SCHEMA_VERSION }); expect(db.query('SELECT COUNT(*) AS n FROM hub_agent_versions').get()).toEqual({ n: 2 }); expect(db.query('SELECT COUNT(*) AS n FROM hub_agent_selections').get()).toEqual({ n: 0 }); }
     finally { db.close(); }
