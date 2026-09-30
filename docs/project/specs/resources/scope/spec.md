@@ -1,5 +1,7 @@
 # 资源范围、存储与接口
 
+以下为默认旧 namespace 入口的已验收行为。独立新 Hub 组合入口的所有权、分享与接入见 [Hub 资源归属](../ownership/spec.md)，默认服务迁移前两者分别保持其认证契约。
+
 机器与 runtime 是当前中心 namespace 内的全局资源，Agent 定义是独立消费方。不同工作目录使用同一登记，项目文件不能重新登记全局资源；不同 Hub 或 namespace 的引用不按名称共享、迁移或自动替换。
 
 ResourceClient 在 local 模式只允许选择当前连接 settings 中的本机 machineId，缺少身份时提示 start。Hub 客户端可以选择当前 namespace 的其他机器。中心 ResourceService 只检查 namespace 与资源事实，不读取自身 local/hub 配置限制机器；保留 local 配置的公开 Hub 也能解析其他 Runner。

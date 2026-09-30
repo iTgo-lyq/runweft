@@ -42,7 +42,7 @@ HAPI Hub 只监听本机私有端口，省略端口配置时自动选择。Runwe
 | `agents/` | 全局 Agent YAML；项目定义保留于对应项目目录 |
 | `server/hapi/` | 托管 Hub 的原有数据库、令牌和状态 |
 | `server/hapi/artifacts/` | 所托管中心的持久文件字节；Hub 客户端从中心读取 |
-| `server/runweft/state.sqlite` | 中心机器/runtime、任务与成果关联，以及独立身份 token 摘要、空间/成员/邀请、执行授权与请求映射；schema v10、WAL 和事务迁移，不保存模型凭据或身份 token 明文 |
+| `server/runweft/state.sqlite` | 中心机器/runtime、任务与成果关联，以及独立身份 token 摘要、空间/成员/邀请、执行授权与请求映射、中心资源归属/关联/分享/治理；schema v12、WAL 和事务迁移，不保存模型凭据或身份 token 明文 |
 | `connections/local/hapi/` 或 `connections/<主机名>-<URL hash>/hapi/` | 当前机器 Runner 的连接身份、配置与原生日志 |
 | `connections/<连接>/hapi/workspaces/environments/<环境ID>/` | 独立任务或诊断 checkout、树外输入与准备/成果/操作回执；持久数据，不是缓存 |
 | `connections/<连接>/hapi/workspaces/repositories/` | 来源共享 Git/子模块/LFS 缓存；保护成果与活跃消费者，不按空闲时间删除 |
@@ -58,7 +58,7 @@ Hub 客户端不保存权威资源库；paths 明确指出登记位于中心，�
 
 paths.taskWorkspaces 指向当前连接的本机环境根。doctor 的 task_workspaces 检查只读统计实际 checkout 目录（含失败准备现场），即使中心离线仍可取得本机数量；读取失败明确报告错误，不推断零目录或成功任务数，不统计其他连接/机器。同时显示仓库 caches/exports/fetches 路径和 result release → workspace remove → artifact prune/remove 清理顺序；具体状态通过 task list/show 查询。
 
-任务协调器复用 serve，CLI/MCP 无需再安装独立 daemon。业务表及请求恢复见[委派生命周期](../delegation/lifecycle/spec.md)；schema v10 保留资源、任务、文件、基线/导入/消费者/诊断、代码清单与取回表，并保存独立身份/空间和执行通道授权；交付/释放进度归原 round，不改 consumer.importId 或重写旧行。遇到更高版本明确拒绝，不自动删除数据或降级。
+任务协调器复用 serve，CLI/MCP 无需再安装独立 daemon。业务表及请求恢复见[委派生命周期](../delegation/lifecycle/spec.md)；schema v12 保留资源、任务、文件、基线/导入/消费者/诊断、代码清单与取回表，并保存独立身份/空间和执行通道授权；交付/释放进度归原 round，不改 consumer.importId 或重写旧行。遇到更高版本明确拒绝，不自动删除数据或降级。
 
 远端准备继续使用同一服务和数据根；paths 展示 exports/imports/repositories/fetches，具体归属与释放见[远端工作区](../remote-workspace/spec.md)。中心 recovery pin 保护的文件与业务清单需一起备份，目标 cache 和环境分别保留，不能把 exports/imports 全目录当作可随意丢弃的临时文件。
 
@@ -67,3 +67,5 @@ server.artifacts 配置本机托管服务的大小、配额和期限，Hub 客�
 Codex/Claude 配置和历史仍沿各自原生位置；已有 HAPI 数据不自动搬迁，工作区留在原处。停止后备份数据根及相应原生数据，恢复使用兼容版本；不承诺任意版本间回退。
 
 独立 worktree 还依赖源仓库 Git common directory、对象与保留引用。备份前完成轮次停止/封存，再停止服务，并保存源仓库、Runweft 数据及所需原生历史；仅复制 checkout 或数据根不完整。当前不提供自动路径迁移，按原路径恢复后检查 Git 注册。卸载保留数据，工作区显式清理保留成果 refs；引用维护和迁移限制见[使用说明](../../../usage.md#数据升级与诊断)。
+
+独立集中资源组件的机器接入记录位于 `connections/<name>/machine.json`（0600），客户端原子保存 active/pending，短期协调使用既有 client.sqlite 而不复制凭据。新 Hub 域 CLI 必须显式指定 URL，默认服务切换仍属于后续迁移；见 [Hub 资源归属](../resources/ownership/spec.md)。

@@ -2,7 +2,7 @@
 
 > 状态：已确认
 > 规模：大型
-> 前置：[身份与空间](../../archive/2026-09-30-hub-identities-and-spaces/requirement.md)、[资源归属](../hub-resource-ownership/requirement.md)
+> 前置：[身份与空间](../../archive/2026-09-30-hub-identities-and-spaces/requirement.md)、[资源归属](../../archive/2026-09-30-hub-resource-ownership/requirement.md)
 > 更新：2026-09-30
 
 ## 目标与行为

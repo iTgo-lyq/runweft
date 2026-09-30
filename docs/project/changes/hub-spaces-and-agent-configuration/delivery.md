@@ -8,7 +8,7 @@
 | --- | --- | --- |
 | 1 [身份 token 与空间（已完成）](../../archive/2026-09-30-hub-identities-and-spaces/requirement.md) | 无注册创建/导入身份，Web 管理本人空间和成员，撤销和权限由服务端判断 | 无 |
 | 2 [HAPI 访问授权（已完成）](../../archive/2026-09-30-hub-hapi-access/requirement.md) | HTTP、SSE、Socket、Runner 有统一主体和对象权限；真实 HAPI 集成验证 | 1 |
-| 3 [机器/runtime 归属与共享](../hub-resource-ownership/requirement.md) | 机器登记和 runtime 注册独立，有所有者、空间授权、私有/共享规则 | 1、2 |
+| 3 [机器/runtime 归属与共享（已完成）](../../archive/2026-09-30-hub-resource-ownership/requirement.md) | 机器登记和 runtime 注册独立，有所有者、空间授权、私有/共享规则 | 1、2 |
 | 4 [仓库与中心 Agent 配置](../hub-repository-agents/requirement.md) | 同仓库不同用户有独立定义/偏好，中心版本快照及目标解析 | 1、3 |
 | 5 [委派接入及旧配置迁移](../hub-delegation-migration/requirement.md) | MCP/CLI 必连 Hub，按身份与空间委派；旧文件/历史显式迁移 | 2、3、4 |
 | 6 [Web 管理及 Agent 接入 Skill](../hub-console-onboarding/requirement.md) | 完整资源后台、Agent 执行安装接入流程、官网与诊断一致 | 3、4、5 |

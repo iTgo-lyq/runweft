@@ -19,3 +19,5 @@ Runweft 提供一个 `runweft` 命令，包含配置、工作区绑定、HAPI �
 全局 `--home` 与 `--json` 写在子命令前。JSON 输出用于已实现的结构化命令；HAPI 透传保留原程序输出。错误写入 stderr，并设置非零退出码。业务能力尚未实现时不提供占位命令。
 
 安装与维护操作见[使用说明](../../../../usage.md)；配置和服务行为见[部署](../../deployment/spec.md)。
+
+独立新 Hub 资源入口使用同一 CLI 的 `hub --url … machine/runtime` 命令，包含持久接入、凭据轮换、空间关联与 runtime 分享/禁用；要求相应 Hub 能力，不回退旧认证。已验收契约见 [Hub 资源归属](../../resources/ownership/spec.md)。

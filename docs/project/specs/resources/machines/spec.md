@@ -1,5 +1,7 @@
 # 全局机器登记
 
+以下为默认旧 namespace 入口的已验收行为。独立新 Hub 组合入口的所有权、分享与接入见 [Hub 资源归属](../ownership/spec.md)，默认服务迁移前两者分别保持其认证契约。
+
 机器身份、元数据、在线状态和心跳由 HAPI 提供。Runweft 直接使用 machineId，单独保存 namespace 内是否允许选用的登记状态，不创建第二套身份或心跳。机器登记不创建 runtime 或 agent。
 
 `runweft machine register [id] [--name <name>]` 登记当前连接的本机或显式指定的已有机器。未连接时提示 start，不自动启动服务；已知离线机器可以登记但不可选。可选名称及 `machine rename <id> <name>` 沿 HAPI 名称更新，保留 ID；名称可重复，最长 64 个字符，不用于路由。

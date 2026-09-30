@@ -1,5 +1,7 @@
 # 全局 Runtime 登记与目标解析
 
+以下为默认旧 namespace 入口的已验收行为。独立新 Hub 组合入口的所有权、分享与接入见 [Hub 资源归属](../ownership/spec.md)，默认服务迁移前两者分别保持其认证契约。
+
 runtime 表示指定 HAPI 机器上可调用的 Codex 或 Claude Code；flavor 只接受 codex/claude。每个 namespace/machineId/flavor 对应一个稳定 UUID，重复登记或取消后恢复沿用原 ID。名称可修改，不改绑机器或类型；多个消费者可以引用同一 ID，名称不承担路由。命令和原生配置沿 Runner 的环境，不提供每个 runtime 的自定义启动 profile。
 
 `runtime discover [--machine <id>]` 查询实际命令与版本，不登记、不安装、不调用模型。`runtime register <codex|claude> [--machine <id>] [--name <name>]` 要求机器已登记且当前原生工具可发现；默认当前连接的本机。`runtime list` 默认登记项，`--all` 包含取消项；show/check 查询当前目标，rename 只改名称，unregister 取消登记但保留 ID、历史观察和原生任务。
