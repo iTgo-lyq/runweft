@@ -3,7 +3,7 @@ import type { Machine } from '../../hapi/shared/src/schemas';
 import type { ArtifactTransfer, ArtifactTransferRequest, CaptureRequest, DeliverRequest } from '../../hapi/shared/src/artifactTransfers';
 import { ArtifactClient } from '../artifacts/client';
 import { errorDetails, RunweftError } from '../errors';
-import { HapiClient, HapiRequestError } from '../hapi';
+import { HapiHttp, HapiRequestError } from '../hapi';
 import type { TaskStore } from './store';
 import { TaskError, type Attention, type Round, type Task } from './types';
 import type { OutputItem, OutputJob, OutputStep } from './output-types';
@@ -18,7 +18,7 @@ export function outputAttention(task: Task, round: Round): Attention | null {
 
 export class TaskOutputs {
     private readonly artifacts: ArtifactClient;
-    constructor(private readonly hapi: HapiClient, private readonly store: TaskStore) { this.artifacts = new ArtifactClient(hapi); }
+    constructor(private readonly hapi: HapiHttp, private readonly store: TaskStore) { this.artifacts = new ArtifactClient(hapi); }
     async requireSupported(machineId: string) {
         const { machines } = await this.hapi.request('/api/machines?includeOffline=true') as { machines: Machine[] };
         if (machines.find(machine => machine.id === machineId)?.runnerState?.capabilities?.artifactOutputs !== 1) {

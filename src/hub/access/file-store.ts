@@ -6,7 +6,7 @@ import { AccessStore } from './store';
 import type { Principal } from './types';
 import { fingerprint, inputError } from './transport';
 
-type Reservation = { id: string; sender: string; requestId: string; ownerId: string; spaceId: string | null;
+export type Reservation = { id: string; sender: string; requestId: string; ownerId: string; spaceId: string | null;
     taskId: string | null; machineId: string | null; filename: string; reference: string | null;
     fingerprint: string | null; artifactId: string | null; cancelledAt: number | null };
 const senderKey = (actor: Principal) => `${actor.kind}:${actor.kind === 'machine' ? actor.machineId : actor.kind === 'task' ? actor.taskId : actor.ownerId}`;
@@ -53,6 +53,13 @@ export class FileAccessStore {
         if (actor.kind === 'user' && actor.spaceId !== null && row.spaceId !== null && actor.spaceId !== row.spaceId) throw hubNotFound();
         return row;
     }
+    /** Coordinator lookup includes its assigned Runner uploads; no arbitrary sender is selected. */
+    ownedRequest(ownerId: string, spaceId: string, requestId: string): Reservation {
+        const rows = this.db.query('SELECT * FROM hub_file_reservations WHERE ownerId=? AND spaceId=? AND requestId=?')
+            .all(ownerId, spaceId, requestId) as Reservation[];
+        if (rows.length > 1) throw conflict();
+        return this.current(rows[0] ?? null, true);
+    }
     reserve(actor: Principal, input: unknown) {
         const parsed = ArtifactReserveSchema.safeParse(input); if (!parsed.success) throw inputError();
         const body = parsed.data, hash = fingerprint(body), reference = body.reference ? JSON.stringify(body.reference) : null;
@@ -82,7 +89,10 @@ export class FileAccessStore {
             this.access.bind({ kind: 'artifact', id: artifactId, ownerId: row.ownerId, spaceId: row.spaceId, taskId: row.taskId, machineId: row.machineId });
             this.db.query('UPDATE hub_file_reservations SET artifactId=? WHERE id=?').run(artifactId, id);
             // Receipt recovery must not resurrect a revoked transfer grant.
-            if (!row.artifactId && current.kind !== 'user') { this.access.grant(current.id, artifactId, 'read'); this.access.grant(current.id, artifactId, 'write'); }
+            if (!row.artifactId && current.kind !== 'user') {
+                this.access.grant(current.id, artifactId, 'read', `output:${row.id}`);
+                this.access.grant(current.id, artifactId, 'write', `output:${row.id}`);
+            }
             return { ...row, artifactId };
         }).immediate();
     }

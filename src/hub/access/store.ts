@@ -133,6 +133,10 @@ export class AccessStore {
         if (principal.expiresAt !== undefined && principal.expiresAt <= Date.now()) throw hubUnauthorized();
         return { ...this.resolve(principal.kind, principal.digest, principal.kind === 'user' ? principal.spaceId : null), expiresAt: principal.expiresAt };
     }
+    /** Background service only: accepted work survives token rotation, never membership removal. */
+    serviceUser(ownerId: string, spaceId: string): Principal {
+        return this.resolve('user', this.user(ownerId).tokenDigest, spaceId);
+    }
     private permitted(principal: Principal, object: ExecutionObject, operation: Operation): boolean {
         if (object.retiredAt !== null || !this.member(object.ownerId, object.spaceId)) return false;
         if (principal.kind === 'user') return operation !== 'report' && object.ownerId === principal.ownerId
@@ -164,19 +168,23 @@ export class AccessStore {
                 .filter(object => this.permitted(current, object, 'read'));
         }).deferred();
     }
-    grant(credentialId: string, artifactId: string, operation: 'read' | 'write') {
+    grant(credentialId: string, artifactId: string, operation: 'read' | 'write', leaseKey = 'manual') {
         return this.db.transaction(() => {
             const credential = this.db.query('SELECT * FROM hub_execution_credentials WHERE id=?').get(credentialId) as Credential | null;
             if (!credential) throw hubNotFound();
             this.resolve(credential.kind, credential.tokenDigest);
             const object = this.live('artifact', artifactId);
             if (credential.kind === 'task' && object.ownerId !== credential.ownerId) throw conflict();
-            this.db.query("INSERT OR IGNORE INTO hub_execution_grants (credentialId, kind, objectId, operation) VALUES (?, 'artifact', ?, ?)")
-                .run(credentialId, artifactId, operation);
+            this.db.query("INSERT OR IGNORE INTO hub_execution_grants (credentialId, kind, objectId, operation, leaseKey) VALUES (?, 'artifact', ?, ?, ?)")
+                .run(credentialId, artifactId, operation, leaseKey);
         }).immediate();
     }
     revokeGrant(credentialId: string, artifactId: string) {
         this.db.query("DELETE FROM hub_execution_grants WHERE credentialId=? AND kind='artifact' AND objectId=?").run(credentialId, artifactId);
+    }
+    /** Release one persisted transfer across credential rotations; other transfers retain their grants. */
+    releaseFileLease(leaseKey: string) {
+        this.db.query("DELETE FROM hub_execution_grants WHERE kind='artifact' AND leaseKey=?").run(leaseKey);
     }
     intent(id: string): ExecutionIntent | null {
         return this.db.query('SELECT * FROM hub_execution_intents WHERE id=?').get(id) as ExecutionIntent | null;

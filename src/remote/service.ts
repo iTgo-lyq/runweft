@@ -1,6 +1,6 @@
 import { errorDetails, RunweftError } from '../errors';
 import { randomUUID } from 'node:crypto';
-import { HapiRequestError, type HapiClient } from '../hapi';
+import { HapiRequestError, type HapiHttp } from '../hapi';
 import { ResourceService } from '../resources/service';
 import { ResourceStore } from '../resources/store';
 import { TaskStore } from '../tasks/store';
@@ -15,11 +15,11 @@ export class WorkspacePreparations {
     readonly baselines: RemoteBaselines;
     private readonly tasks: TaskStore;
     private readonly resources: ResourceStore;
-    private readonly clients = new Map<string, HapiClient>();
+    private readonly clients = new Map<string, HapiHttp>();
     private readonly working = new Map<string, Promise<void>>();
     private timer?: ReturnType<typeof setInterval>;
     private closing = false;
-    constructor(path: string, private readonly clientFor: (namespace: string) => HapiClient, private readonly pollMs = 1000) {
+    constructor(path: string, private readonly clientFor: (namespace: string) => HapiHttp, private readonly pollMs = 1000) {
         this.store = new BaselineStore(path); this.tasks = new TaskStore(path); this.resources = new ResourceStore(path);
         this.baselines = new RemoteBaselines(this.store, namespace => this.client(namespace));
     }

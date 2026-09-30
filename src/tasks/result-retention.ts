@@ -2,7 +2,7 @@ import type { ArtifactTransfer } from '../../hapi/shared/src/artifactTransfers';
 import type { RepositoryOperation } from '../../hapi/shared/src/repositories';
 import { ArtifactClient } from '../artifacts/client';
 import { errorDetails } from '../errors';
-import { HapiRequestError, type HapiClient } from '../hapi';
+import { HapiRequestError, type HapiHttp } from '../hapi';
 import { RepositoryTransfers, invalid } from '../remote/transfers';
 import type { Problem } from '../resources/types';
 import { resultReference, type CodeFetch } from './result-types';
@@ -36,7 +36,7 @@ export function assertResultReleaseIdle(bundle: TaskBundle, selected: Round[], d
 export class TaskResultRetention {
     private readonly transport: RepositoryTransfers;
     private readonly artifacts: ArtifactClient;
-    constructor(hapi: HapiClient) { this.transport = new RepositoryTransfers(() => hapi); this.artifacts = new ArtifactClient(hapi); }
+    constructor(hapi: HapiHttp) { this.transport = new RepositoryTransfers(() => hapi); this.artifacts = new ArtifactClient(hapi); }
     private stopped(operation: RepositoryOperation | ArtifactTransfer) {
         if (operation.retention !== 'released' && !['succeeded', 'failed'].includes(operation.status)) {
             throw new TaskError(409, 'result_operation_pending', '代码或文件操作仍在执行或结果未知，不能释放。', `先核对原操作 ${operation.request.operationId}。`);

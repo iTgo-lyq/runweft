@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import type { RepositorySnapshot } from '../../hapi/shared/src/repositories';
 import { ArtifactClient } from '../artifacts/client';
 import { errorDetails } from '../errors';
-import type { HapiClient } from '../hapi';
+import type { HapiHttp } from '../hapi';
 import type { Problem } from '../resources/types';
 import { batches, invalid, stopped, RepositoryTransfers } from './transfers';
 import { PreparationError, type SnapshotFile, type TransferBatch } from './types';
@@ -15,7 +15,7 @@ export type PublicationContext = { namespace: string; machine: string; reference
 /** Fixed repository bytes use the same capture, delivery and recovery pins for input and output snapshots. */
 export class SnapshotPublisher {
     readonly transport: RepositoryTransfers;
-    constructor(private readonly client: (namespace: string) => HapiClient) { this.transport = new RepositoryTransfers(client); }
+    constructor(private readonly client: (namespace: string) => HapiHttp) { this.transport = new RepositoryTransfers(client); }
     async advance(record: SnapshotPublication, context: PublicationContext) {
         const { namespace, machine, reference, kind, save, lookupLfs, rememberLfs } = context;
         const artifacts = new ArtifactClient(this.client(namespace));

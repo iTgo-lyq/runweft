@@ -98,6 +98,10 @@ export class HubStore {
                     .run(Date.now(), spaceId, targetId);
                 this.db.query('UPDATE hub_file_reservations SET cancelledAt=COALESCE(cancelledAt, ?) WHERE spaceId=? AND ownerId=?')
                     .run(Date.now(), spaceId, targetId);
+                this.db.query(`DELETE FROM hub_execution_grants WHERE kind='artifact' AND objectId IN
+                    (SELECT id FROM hub_execution_objects WHERE kind='artifact' AND spaceId=? AND
+                        (ownerId=? OR hub_execution_grants.credentialId IN
+                            (SELECT id FROM hub_execution_credentials WHERE ownerId=?)))`).run(spaceId, targetId, targetId);
                 this.db.query('UPDATE hub_execution_intents SET cancelledAt=COALESCE(cancelledAt, ?) WHERE spaceId=? AND ownerId=?')
                     .run(Date.now(), spaceId, targetId);
             }

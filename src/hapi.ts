@@ -168,3 +168,6 @@ export class HapiClient {
 }
 
 export function hapiClient(c: ResolvedConfig) { return new HapiClient(targetUrl(c.config), accessToken(c)); }
+
+/** The existing native HTTP shape, shared by private coordinator and authenticated user transports. */
+export type HapiHttp = Pick<HapiClient, 'request' | 'response'>;

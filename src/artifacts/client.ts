@@ -3,7 +3,7 @@ import { constants } from 'node:fs';
 import { link, lstat, mkdir, open, realpath, rename, rm, type FileHandle } from 'node:fs/promises';
 import { basename, dirname, resolve } from 'node:path';
 import { ArtifactSchema, ArtifactReserveSchema, ArtifactLimitsSchema, ArtifactUsageSchema, ArtifactPruneSchema, ArtifactPruneResultSchema, type ArtifactPrune, type Artifact, type ArtifactLimits, type ArtifactReference } from '../../hapi/shared/src/artifacts';
-import { HapiClient } from '../hapi';
+import { HapiHttp } from '../hapi';
 import { RunweftError } from '../errors';
 
 function artifact(value: unknown): Artifact {
@@ -39,7 +39,7 @@ async function hashFile(file: FileHandle, signal: AbortSignal, tick: () => void)
 export type TransferProgress = (bytes: number, total: number) => void;
 
 export class ArtifactClient {
-    constructor(readonly hapi: HapiClient) {}
+    constructor(readonly hapi: HapiHttp) {}
     async limits(signal?: AbortSignal) {
         const result = await this.hapi.request('/api/artifacts/limits', { signal });
         const parsed = ArtifactLimitsSchema.safeParse(result.limits);

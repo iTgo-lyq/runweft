@@ -4,7 +4,7 @@ import type { ArtifactTransfer, ArtifactTransferRequest } from '../../hapi/share
 import type { Artifact } from '../../hapi/shared/src/artifacts';
 import { ArtifactClient } from '../artifacts/client';
 import { RunweftError } from '../errors';
-import { HapiRequestError, type HapiClient } from '../hapi';
+import { HapiRequestError, type HapiHttp } from '../hapi';
 import { PreparationError, type SnapshotFile } from './types';
 
 export const batches = <T>(items: T[]) => Array.from({ length: Math.ceil(items.length / 100) }, (_, index) => items.slice(index * 100, (index + 1) * 100));
@@ -22,7 +22,7 @@ export function stopped(operation: { status: string; error?: { code: string; mes
 
 /** Receipts retain the original machine operation identity across retries and process restarts. */
 export class RepositoryTransfers {
-    constructor(private readonly client: (namespace: string) => HapiClient) {}
+    constructor(private readonly client: (namespace: string) => HapiHttp) {}
     async repository(namespace: string, machine: string, request: RepositoryRequest): Promise<RepositoryOperation> {
         const result = await this.client(namespace).request(`/api/machines/${encodeURIComponent(machine)}/repositories`, {
             method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(request),

@@ -2,7 +2,7 @@ import { isAbsolute } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { WorkspaceSourceSchema, type PreparedWorkspace, type WorkspaceRequest, type WorkspaceResponse,
     type WorkspaceMutation } from '../../hapi/shared/src/workspaces';
-import { HapiClient, HapiRequestError } from '../hapi';
+import { HapiHttp, HapiRequestError } from '../hapi';
 import { RunweftError } from '../errors';
 import { nativeTerminal, TaskError, type Task, type Round, type Input } from './types';
 
@@ -14,7 +14,7 @@ export function preparedReference(task: Task, round: Round): PreparedWorkspace |
 
 /** Coordinates durable machine operations; Git and process ownership stay in HAPI. */
 export class TaskWorkspaces {
-    constructor(private readonly hapi: HapiClient, private readonly machineId: string) {}
+    constructor(private readonly hapi: HapiHttp, private readonly machineId: string) {}
     private async request(request: WorkspaceRequest): Promise<WorkspaceResponse> {
         return this.hapi.request(`/api/machines/${encodeURIComponent(this.machineId)}/workspaces`, {
             method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(request),

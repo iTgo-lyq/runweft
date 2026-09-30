@@ -4,7 +4,7 @@ import { dirname } from 'node:path';
 import { ensureDirectory } from './config';
 import { ResourceError } from './resources/types';
 
-export const STATE_SCHEMA_VERSION = 15;
+export const STATE_SCHEMA_VERSION = 16;
 
 /** One additive schema for the central business database; native history stays in HAPI. */
 export function openState(path: string) {
@@ -287,6 +287,21 @@ export function openState(path: string) {
                 );
                 CREATE UNIQUE INDEX hub_agent_selection_scope ON hub_agent_selections(userId, spaceId, COALESCE(repositoryId, ''));
                 PRAGMA user_version=15;
+            `);
+            if (version < 16) db.exec(`
+                ALTER TABLE hub_execution_grants RENAME TO hub_execution_grants_v15;
+                CREATE TABLE hub_execution_grants (
+                    credentialId TEXT NOT NULL REFERENCES hub_execution_credentials(id),
+                    kind TEXT NOT NULL, objectId TEXT NOT NULL,
+                    operation TEXT NOT NULL CHECK(operation IN ('read', 'write')),
+                    leaseKey TEXT NOT NULL DEFAULT 'manual',
+                    PRIMARY KEY(credentialId, kind, objectId, operation, leaseKey),
+                    FOREIGN KEY(kind, objectId) REFERENCES hub_execution_objects(kind, id)
+                );
+                INSERT INTO hub_execution_grants (credentialId, kind, objectId, operation)
+                    SELECT credentialId, kind, objectId, operation FROM hub_execution_grants_v15;
+                DROP TABLE hub_execution_grants_v15;
+                PRAGMA user_version=16;
             `);
         }).immediate();
         return db;

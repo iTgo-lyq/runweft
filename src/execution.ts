@@ -3,7 +3,7 @@ import { SpawnReceiptSchema, SpawnSessionRequestSchema, SendMessageRequestSchema
     type MessagesResponse, type QueuedStateResponse } from '../hapi/shared/src/apiTypes';
 import { ExecutionObservationSchema, InterruptExecutionResponseSchema, type ExecutionObservation } from '../hapi/shared/src/execution';
 import { errorDetails, RunweftError } from './errors';
-import { HapiClient, HapiRequestError } from './hapi';
+import { HapiHttp, HapiRequestError } from './hapi';
 import type { PreparedFiles } from '../hapi/shared/src/artifactTransfers';
 import type { PreparedWorkspace } from '../hapi/shared/src/workspaces';
 import { SteerQueuedMessageResponseSchema } from '../hapi/shared/src/schemas';
@@ -21,7 +21,7 @@ export type HistoryCursor = { at: number; seq: number; epoch: number };
 
 /** Native execution calls only. The delegation layer owns durable business IDs. */
 export class ExecutionClient {
-    constructor(private readonly hapi: HapiClient) {}
+    constructor(private readonly hapi: HapiHttp) {}
 
     async inspect(sessionId: string) {
         const { session } = await this.hapi.request(`/api/sessions/${encodeURIComponent(sessionId)}`) as SessionResponse;

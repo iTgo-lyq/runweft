@@ -9,3 +9,12 @@
 WorkspacePreparations 的遗漏由主 agent 同步复核发现并已在评审结束前补入文档，其余结论已落实到契约与 Plan。对输入/输出 grant 收回补充并行传输引用计数：不能因一个操作完成而撤掉其他操作仍需的同一 artifact 权限。无需新增 runtime 或人工产品门禁。
 
 本次文档提交：`hub-delegation-migration: define reviewed delegation and migration plan`。尚未执行本阶段生产改动或在线迁移。
+
+## T1 可信协调器到 HAPI 的桥接
+
+- 结果：私有 DelegationNativeClient 复用原生 HTTP、dispatch intent、对象/预约账本；限定 source/target 和 task session，派发及 ack 策略收到 task binding，重复 spawn 只取原回执。现有 helper 仅将依赖收窄为 HapiHttp，默认服务尚未切换。
+- 结果：输入 materialize 前授予当前机器凭据 read，确认完成后按操作释放；输出 permit/lookup 归 task caller，发布后显式释放。schema 16 给 grant 增加 leaseKey，保留旧手工授权；并行同文件传输独立释放。成员移除清除其文件及其机器在该空间的传输 grant，重入不复活。
+- 验证：typecheck、build 通过；全仓测试 236 pass/0 fail（35 文件、4764 断言，约 51 秒）；随后增加凭据轮换和 RPC ack 撤权用例，聚焦 7 pass/0 fail。新 schema 从 15 的手工 grant 保留有独立验证。
+- 真实验证：编译并运行 scripts/smoke-hub-delegation-native.ts，6 组全部通过。未改造 dist/hapi 和 Runner 完成共享机器私有 API 边界、实际输入字节下载、Git worktree/输入准备、输出上传和按请求恢复、无效准备拒绝真实 spawn RPC、共享撤回与日志秘密检查；无模型执行。证据 `.dev-smoke/hub-delegation-native-Y2J4an/evidence.json`，配套日志 `.dev-smoke/reviews/hub-delegation-migration/t1-*.log`。首次 smoke 发现 adapter 缺少 ExecutionClient 的 /health 能力查询，补齐后重跑通过。
+- 边界：释放输出授权由持久清单发布点调用，中心 Task/Round 和独立准备接线在 T2；仍未更新在线 Hub 或用户配置，HAPI 子模块无改动。
+- Commit：`hub-delegation-migration T1: bridge trusted task execution and scoped native transfers`。

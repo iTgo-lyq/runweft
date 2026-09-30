@@ -119,6 +119,11 @@ export class HubResourceStore {
         });
     }
     credential(actor: Principal, id: string) { return this.credentialInfo(this.owned(actor, id)); }
+    /** Trusted transfer adapter calls this only after validating the assigned source/target. */
+    executionCredential(machineId: string): Principal {
+        const row = this.row(machineId); if (!row || !row.registered) throw hubNotFound();
+        return this.access.resolve('machine', this.credentialRow(row.currentCredentialId).tokenDigest);
+    }
     replaceCredential(actor: Principal, id: string, input: unknown): CredentialInfo {
         const parsed = ReplacementInput.safeParse(input);
         if (!parsed.success) throw invalidInput('凭据替换需要当前凭据 ID 和预先保存的新随机机器凭据。');

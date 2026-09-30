@@ -4,7 +4,7 @@ import type { ArtifactTransfer, ArtifactTransferRequest, PreparedFiles } from '.
 import { outputAttention } from './outputs';
 import { ArtifactClient } from '../artifacts/client';
 import { errorDetails, RunweftError } from '../errors';
-import { HapiClient, HapiRequestError } from '../hapi';
+import { HapiHttp, HapiRequestError } from '../hapi';
 import type { TaskStore } from './store';
 import { TaskError, type ArtifactIntent, type Parent, type Round, type SendIntent, type SpawnIntent, type Task } from './types';
 
@@ -17,7 +17,7 @@ const uncertain = (error: unknown) => error instanceof HapiRequestError ? error.
 /** Task ownership and preparation only. HAPI owns all file bytes and machine transfers. */
 export class TaskFiles {
     private readonly artifacts: ArtifactClient;
-    constructor(private readonly hapi: HapiClient) { this.artifacts = new ArtifactClient(hapi); }
+    constructor(private readonly hapi: HapiHttp) { this.artifacts = new ArtifactClient(hapi); }
 
     async accept<T>(store: TaskStore, namespace: string, parent: Parent, requestId: string, intent: SpawnIntent | SendIntent, commit: () => T): Promise<T> {
         if (!intent.inputs?.length) return commit();

@@ -4,7 +4,7 @@ import { isDeepStrictEqual } from 'node:util';
 import { RepositorySnapshotSchema, type RepositorySnapshot } from '../../hapi/shared/src/repositories';
 import { ArtifactClient } from '../artifacts/client';
 import { errorDetails } from '../errors';
-import type { HapiClient } from '../hapi';
+import type { HapiHttp } from '../hapi';
 import { SnapshotPublisher } from '../remote/publication';
 import { BaselineStore } from '../remote/store';
 import { batches, invalid, stopped, uncertainPreparation } from '../remote/transfers';
@@ -56,7 +56,7 @@ export function codeView(task: Task, round: Round) {
 export class TaskResults {
     private readonly publisher: SnapshotPublisher;
     private readonly artifacts: ArtifactClient;
-    constructor(private readonly hapi: HapiClient, private readonly store: TaskStore, private readonly baselines: BaselineStore) {
+    constructor(private readonly hapi: HapiHttp, private readonly store: TaskStore, private readonly baselines: BaselineStore) {
         this.publisher = new SnapshotPublisher(() => hapi); this.artifacts = new ArtifactClient(hapi);
     }
     private context(task: Task, round: Round, save: () => void) {

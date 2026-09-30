@@ -1,6 +1,6 @@
 # Hub 委派接入与迁移实施计划
 
-> 状态：待执行
+> 状态：执行中
 > 来源：[Requirement](requirement.md)
 > 技术方案：[Technical](technical.md)
 > 执行模式：串行、逐任务提交；按既有授权实施，先完成当前工作区 iclaude Plan 评审。
@@ -11,7 +11,7 @@
 
 ### T1 可信协调器到 HAPI 的桥接
 
-- 状态：待开始
+- 状态：已完成
 - 交付：受控 native client、任务 dispatch intent/object binding、文件 permit/read grant 与原生 namespace 映射；复用现有 AccessStore/NativeTransport。
 - 依赖：已归档 HAPI 授权、资源和中心配置。
 - 验收：共享 runtime 能接受任务准备/派发但公开用户不能任意操作目标机器；Runner 自举和实际 spawn RPC 使用任务 owner；输入与输出文件归发起人，机器 owner 不得读取他人结果；丢回执不重复 spawn。

@@ -6,7 +6,7 @@ import { RepositorySnapshotSchema } from '../../hapi/shared/src/repositories';
 import { WorkspaceSourceSchema, type WorkspaceSource } from '../../hapi/shared/src/workspaces';
 import { ArtifactClient } from '../artifacts/client';
 import { errorDetails } from '../errors';
-import { HapiRequestError, type HapiClient } from '../hapi';
+import { HapiRequestError, type HapiHttp } from '../hapi';
 import { BaselineStore } from './store';
 import { batches, invalid, stopped, uncertainPreparation, RepositoryTransfers } from './transfers';
 export { uncertainPreparation } from './transfers';
@@ -17,7 +17,7 @@ export class RemoteBaselines {
     private readonly locks = new Map<string, Promise<void>>();
     private readonly transport: RepositoryTransfers;
     private readonly publisher: SnapshotPublisher;
-    constructor(readonly store: BaselineStore, private readonly client: (namespace: string) => HapiClient) { this.transport = new RepositoryTransfers(client); this.publisher = new SnapshotPublisher(client); }
+    constructor(readonly store: BaselineStore, private readonly client: (namespace: string) => HapiHttp) { this.transport = new RepositoryTransfers(client); this.publisher = new SnapshotPublisher(client); }
     private async serial<T>(key: string, action: () => Promise<T>) {
         const work = (this.locks.get(key) ?? Promise.resolve()).then(action);
         const done = work.then(() => {}, () => {}).finally(() => { if (this.locks.get(key) === done) this.locks.delete(key); });

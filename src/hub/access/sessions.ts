@@ -7,7 +7,7 @@ import type { ExecutionIntent, ExecutionObject, Principal } from './types';
 import { NativeTransport, RequestLease, fingerprint, inputError, record, unavailable } from './transport';
 
 const dispatchWindow = 5 * 60_000;
-export type ExecutionPolicy = (ownerId: string, spaceId: string | null, machineId: string, flavor: string) => void;
+export type ExecutionPolicy = (ownerId: string, spaceId: string | null, machineId: string, flavor: string, binding?: ExecutionObject) => void;
 function tagId(machineId: string, tag: string) {
     const hex = fingerprint(['session-tag', machineId, tag]).slice(0, 32).split('');
     hex[12] = '5'; hex[16] = '8'; const value = hex.join('');
@@ -16,7 +16,7 @@ function tagId(machineId: string, tag: string) {
 export class NativeSessions {
     constructor(readonly store: AccessStore, readonly native: NativeTransport, private readonly executionPolicy?: ExecutionPolicy) {}
     checkExecution(binding: ExecutionObject, flavor: string) {
-        this.executionPolicy?.(binding.ownerId, binding.spaceId, binding.machineId!, flavor);
+        this.executionPolicy?.(binding.ownerId, binding.spaceId, binding.machineId!, flavor, binding);
     }
     async guardMetadata(actor: Principal, id: string, metadata: Record<string, any>, signal?: AbortSignal) {
         const binding = this.store.require(actor, 'session', id, 'report');

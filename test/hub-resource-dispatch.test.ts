@@ -12,13 +12,16 @@ import { readJson } from '../src/hub/access/transport';
 import { jsonResponse } from '../src/proxy';
 import { fixture } from './helpers';
 import { resourceInspection } from './resources-fixture';
+import { DelegationNativeClient } from '../src/hub/delegation/native';
+import { HubError } from '../src/hub/types';
 
 test('actual outgoing native RPC rechecks resource governance after HTTP preflight and receipt allocation', async () => {
     const home = fixture('resource-dispatch'), statePath = join(home, 'state.sqlite'), key = randomBytes(32);
     const identities = new HubStore(statePath), a = identities.createIdentity('machine owner'), sid = a.personalSpace.id;
     const nativeToken = await new SignJWT({ uid: 1, ns: 'runweft' }).setProtectedHeader({ alg: 'HS256' }).sign(key);
     const receipts = new Map<string, object>();
-    let beforeRpc = () => {}, nativeSocket: any, down: Socket | undefined, nativeCount = 0, machineId = '';
+    let beforeRpc = () => {}, beforeAck = () => {}, nativeSocket: any, down: Socket | undefined, nativeCount = 0, machineId = '', blockedTask: string | undefined;
+    const dispatchedTasks: string[] = [];
     const server = createServer((req, res) => {
         void (async () => {
             const path = req.url!;
@@ -44,7 +47,13 @@ test('actual outgoing native RPC rechecks resource governance after HTTP preflig
     const nativeUrl = `http://127.0.0.1:${(server.address() as { port: number }).port}`;
     let gateway: Awaited<ReturnType<typeof createResourceGateway>> | undefined;
     try {
-        gateway = await createResourceGateway({ host: '127.0.0.1', port: 0, target: nativeUrl, rootToken: 'root-fixture', statePath, key });
+        gateway = await createResourceGateway({ host: '127.0.0.1', port: 0, target: nativeUrl, rootToken: 'root-fixture', statePath, key,
+            executionPolicy: (_owner, _space, _machine, _flavor, binding) => {
+                if (binding?.taskId) {
+                    dispatchedTasks.push(binding.taskId);
+                    if (binding.taskId === blockedTask) throw new HubError(403, 'task_revoked', '任务已撤权。');
+                }
+            } });
         const resources = gateway.resources.store, actor = gateway.store.authenticate(a.token, sid);
         const token = `rw_mc_${randomBytes(32).toString('base64url')}`;
         machineId = resources.enroll(actor, { requestId: randomUUID(), token }).machineId;
@@ -52,7 +61,7 @@ test('actual outgoing native RPC rechecks resource governance after HTTP preflig
         const runtime = resources.registerRuntime(actor, { machineId, flavor: 'codex' }, resourceInspection('codex'));
         const url = `http://127.0.0.1:${(gateway.server.address() as { port: number }).port}`;
         down = io(url + '/cli', { auth: { token, machineId }, transports: ['websocket'], forceNew: true, reconnection: false });
-        down.on('rpc-request', (_data, ack) => { nativeCount++; ack(JSON.stringify({ type: 'success' })); });
+        down.on('rpc-request', (_data, ack) => { nativeCount++; beforeAck(); ack(JSON.stringify({ type: 'success' })); });
         await new Promise<void>((resolve, reject) => { down!.once('connect', resolve); down!.once('connect_error', reject); });
         await down.timeout(2000).emitWithAck('ping');
         const jwt = (await gateway.authority.exchange(a.token, sid)).token;
@@ -63,6 +72,31 @@ test('actual outgoing native RPC rechecks resource governance after HTTP preflig
         const denied = await spawn(); expect(denied.status).toBe(409);
         expect(nativeCount).toBe(1); // The second payload never reached the external Runner socket.
         expect(gateway.store.list(actor, 'session')).toHaveLength(2); // Even the denied preallocated row has trusted ownership.
+        resources.block(actor, sid, 'runtime', runtime.id, false); beforeRpc = () => {};
+        const b = identities.createIdentity('task owner'); identities.acceptInvitation(b.identity.id, identities.invite(a.identity.id, sid, 'member').token);
+        resources.share(actor, runtime.id, sid, true);
+        const taskId = randomUUID();
+        gateway.store.bind({ kind: 'task', id: taskId, ownerId: b.identity.id, spaceId: sid, machineId });
+        const client = new DelegationNativeClient(resources, gateway.native, { ownerId: b.identity.id, spaceId: sid,
+            sourceMachineId: 'source-b', taskId, roundId: randomUUID(), target: { runtimeId: runtime.id, machineId, flavor: 'codex' }, check: () => {} });
+        const shared = await client.request(`/api/machines/${machineId}/spawn`, { method: 'POST', headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ directory: home, agent: 'codex', requestId: randomUUID() }) });
+        expect(nativeCount).toBe(2);
+        expect(gateway.store.object('session', shared.sessionId)).toMatchObject({ ownerId: b.identity.id, taskId });
+        expect(gateway.store.can(actor, 'session', shared.sessionId)).toBe(false);
+        expect(dispatchedTasks).toContain(taskId);
+        const memberJwt = (await gateway.authority.exchange(b.token, sid)).token;
+        const publicSpawn = await fetch(url + `/api/machines/${machineId}/spawn`, { method: 'POST', headers: { authorization: `Bearer ${memberJwt}`, 'content-type': 'application/json' },
+            body: JSON.stringify({ directory: home, agent: 'codex' }) });
+        expect(publicSpawn.status).toBe(404); await publicSpawn.arrayBuffer();
+        beforeRpc = () => { blockedTask = taskId; };
+        await expect(client.request(`/api/machines/${machineId}/spawn`, { method: 'POST', headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ directory: home, agent: 'codex', requestId: randomUUID() }) })).rejects.toThrow();
+        expect(nativeCount).toBe(2); // Task policy applies to actual dispatch, even while the runtime remains shared.
+        blockedTask = undefined; beforeRpc = () => {}; beforeAck = () => { blockedTask = taskId; };
+        await expect(client.request(`/api/machines/${machineId}/spawn`, { method: 'POST', headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ directory: home, agent: 'codex', requestId: randomUUID() }) })).rejects.toThrow();
+        expect(nativeCount).toBe(3); // The child may have started, but a revoked ack is not reported as successful authorization.
     } finally {
         down?.disconnect(); await gateway?.close();
         await new Promise<void>(resolve => socketServer.close(() => resolve()));

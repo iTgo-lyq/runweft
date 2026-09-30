@@ -2,7 +2,7 @@ import type { ArtifactTransfer, ArtifactTransferRequest } from '../../hapi/share
 import type { ArtifactReference } from '../../hapi/shared/src/artifacts';
 import { ArtifactClient } from '../artifacts/client';
 import { errorDetails, RunweftError } from '../errors';
-import { HapiClient, HapiRequestError } from '../hapi';
+import { HapiHttp, HapiRequestError } from '../hapi';
 import type { Problem } from '../resources/types';
 import { outputAttention } from './outputs';
 import type { OutputManifest } from './output-types';
@@ -18,7 +18,7 @@ export type ArtifactRetention = {
 /** Only removes references owned by this round and its confirmed machine copies. */
 export class TaskRetention {
     private readonly artifacts: ArtifactClient;
-    constructor(private readonly hapi: HapiClient) { this.artifacts = new ArtifactClient(hapi); }
+    constructor(private readonly hapi: HapiHttp) { this.artifacts = new ArtifactClient(hapi); }
     private async machine(task: Task, request: ArtifactTransferRequest): Promise<ArtifactTransfer> {
         const value = await this.hapi.request(`/api/machines/${encodeURIComponent(task.target.machineId)}/artifacts`, {
             method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(request),

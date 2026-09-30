@@ -6,7 +6,7 @@ import { assertResultReleaseIdle, TaskResultRetention } from './result-retention
 import { setTimeout as delay } from 'node:timers/promises';
 import { ExecutionClient } from '../execution';
 import { errorDetails } from '../errors';
-import type { HapiClient } from '../hapi';
+import type { HapiHttp } from '../hapi';
 import { ResourceStore } from '../resources/store';
 import { ResourceService } from '../resources/service';
 import { TaskStore } from './store';
@@ -24,11 +24,11 @@ export class TaskCoordinator {
     private readonly resources: ResourceStore;
     private readonly baselines: RemoteBaselines;
     private readonly ownsBaselines: boolean;
-    private readonly clients = new Map<string, HapiClient>();
+    private readonly clients = new Map<string, HapiHttp>();
     private readonly working = new Map<string, Promise<void>>();
     private timer?: ReturnType<typeof setInterval>;
     private closing = false;
-    constructor(path: string, private readonly clientFor: (namespace: string) => HapiClient, private readonly pollMs = 1000, baselines?: RemoteBaselines) {
+    constructor(path: string, private readonly clientFor: (namespace: string) => HapiHttp, private readonly pollMs = 1000, baselines?: RemoteBaselines) {
         this.store = new TaskStore(path); this.resources = new ResourceStore(path); this.ownsBaselines = !baselines;
         this.baselines = baselines ?? new RemoteBaselines(new BaselineStore(path), namespace => this.client(namespace));
     }
