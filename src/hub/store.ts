@@ -87,7 +87,13 @@ export class HubStore {
                 const owners = this.db.query("SELECT COUNT(*) AS count FROM hub_memberships WHERE spaceId=? AND role='owner'").get(spaceId) as { count: number };
                 if (owners.count <= 1) throw new HubError(409, 'last_space_owner', '空间必须保留至少一位所有者。', '先将另一位成员设为所有者。');
             }
-            if (role === null) this.db.query('DELETE FROM hub_memberships WHERE spaceId=? AND userId=?').run(spaceId, targetId);
+            if (role === null) {
+                this.db.query('DELETE FROM hub_memberships WHERE spaceId=? AND userId=?').run(spaceId, targetId);
+                this.db.query('UPDATE hub_execution_credentials SET revokedAt=COALESCE(revokedAt, ?) WHERE spaceId=? AND ownerId=?')
+                    .run(Date.now(), spaceId, targetId);
+                this.db.query('UPDATE hub_execution_intents SET cancelledAt=COALESCE(cancelledAt, ?) WHERE spaceId=? AND ownerId=?')
+                    .run(Date.now(), spaceId, targetId);
+            }
             else this.db.query('UPDATE hub_memberships SET role=? WHERE spaceId=? AND userId=?').run(role, spaceId, targetId);
             if (role !== target.role) this.db.query(`UPDATE hub_invitations SET revokedAt=?
                 WHERE spaceId=? AND createdBy=? AND consumedAt IS NULL AND revokedAt IS NULL`).run(Date.now(), spaceId, targetId);

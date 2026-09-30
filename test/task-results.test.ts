@@ -105,13 +105,13 @@ test('v5 migration preserves all fourteen legacy tables including task, session,
     h.store.beginArtifactIntent('alpha', h.parent, randomUUID(), { workspaceMode: 'shared', agentType: 'review', message: 'pending legacy input', inputs: [{ artifactId: file.artifactId! }] });
     await h.tasks!.close(); await h.preparations!.close();
     const db = new Database(h.statePath);
-    db.exec('DROP TABLE hub_invitations; DROP TABLE hub_memberships; DROP TABLE hub_spaces; DROP TABLE hub_users; DROP TABLE delegation_code_fetches; DROP TABLE delegation_code_manifests; PRAGMA user_version=5;');
+    db.exec('DROP TABLE hub_execution_grants; DROP TABLE hub_execution_intents; DROP TABLE hub_execution_credentials; DROP TABLE hub_execution_objects; DROP TABLE hub_invitations; DROP TABLE hub_memberships; DROP TABLE hub_spaces; DROP TABLE hub_users; DROP TABLE delegation_code_fetches; DROP TABLE delegation_code_manifests; PRAGMA user_version=5;');
     const tables = (db.query("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name").all() as { name: string }[]).map(row => row.name);
     expect(tables).toHaveLength(14);
     const snapshot = (database: Database) => Object.fromEntries(tables.map(name => [name, database.query(`SELECT * FROM ${name} ORDER BY rowid`).all()]));
     const before = snapshot(db); for (const rows of Object.values(before)) expect(rows.length).toBeGreaterThan(0); db.close();
     const migrated = openState(h.statePath);
-    expect(migrated.query('PRAGMA user_version').get()).toEqual({ user_version: 7 }); expect(snapshot(migrated)).toEqual(before);
+    expect(migrated.query('PRAGMA user_version').get()).toEqual({ user_version: 8 }); expect(snapshot(migrated)).toEqual(before);
     const consumerColumn = (migrated.query('PRAGMA table_info(repository_consumers)').all() as { name: string; notnull: number }[]).find(column => column.name === 'importId');
     expect(consumerColumn!.notnull).toBe(1); migrated.close();
     const reopened = new TaskStore(h.statePath);

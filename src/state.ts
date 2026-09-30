@@ -4,7 +4,7 @@ import { dirname } from 'node:path';
 import { ensureDirectory } from './config';
 import { ResourceError } from './resources/types';
 
-export const STATE_SCHEMA_VERSION = 7;
+export const STATE_SCHEMA_VERSION = 8;
 
 /** One additive schema for the central business database; native history stays in HAPI. */
 export function openState(path: string) {
@@ -137,6 +137,39 @@ export function openState(path: string) {
                 );
                 CREATE INDEX hub_invitation_space ON hub_invitations(spaceId);
                 PRAGMA user_version=7;
+            `);
+            if (version < 8) db.exec(`
+                CREATE TABLE hub_execution_objects (
+                    kind TEXT NOT NULL CHECK(kind IN ('machine', 'task', 'session', 'artifact')),
+                    id TEXT NOT NULL, ownerId TEXT NOT NULL REFERENCES hub_users(id),
+                    spaceId TEXT REFERENCES hub_spaces(id), taskId TEXT, machineId TEXT,
+                    retiredAt INTEGER, createdAt INTEGER NOT NULL, PRIMARY KEY(kind, id)
+                );
+                CREATE INDEX hub_execution_object_owner ON hub_execution_objects(ownerId, spaceId, kind);
+                CREATE TABLE hub_execution_credentials (
+                    id TEXT PRIMARY KEY, kind TEXT NOT NULL CHECK(kind IN ('machine', 'task')),
+                    ownerId TEXT NOT NULL REFERENCES hub_users(id), machineId TEXT NOT NULL,
+                    spaceId TEXT REFERENCES hub_spaces(id), taskId TEXT,
+                    tokenDigest TEXT NOT NULL UNIQUE, createdAt INTEGER NOT NULL,
+                    expiresAt INTEGER, revokedAt INTEGER
+                );
+                CREATE INDEX hub_execution_credential_machine ON hub_execution_credentials(machineId, kind);
+                CREATE TABLE hub_execution_grants (
+                    credentialId TEXT NOT NULL REFERENCES hub_execution_credentials(id),
+                    kind TEXT NOT NULL, objectId TEXT NOT NULL,
+                    operation TEXT NOT NULL CHECK(operation IN ('read', 'write')),
+                    PRIMARY KEY(credentialId, kind, objectId, operation),
+                    FOREIGN KEY(kind, objectId) REFERENCES hub_execution_objects(kind, id)
+                );
+                CREATE TABLE hub_execution_intents (
+                    id TEXT PRIMARY KEY, requestKey TEXT NOT NULL, ownerId TEXT NOT NULL REFERENCES hub_users(id),
+                    spaceId TEXT REFERENCES hub_spaces(id), taskId TEXT, machineId TEXT NOT NULL,
+                    sourceSessionId TEXT, operation TEXT NOT NULL CHECK(operation IN ('spawn', 'resume', 'reopen', 'fork', 'clear')),
+                    fingerprint TEXT NOT NULL, createdAt INTEGER NOT NULL, expiresAt INTEGER NOT NULL,
+                    sessionId TEXT, cancelledAt INTEGER, UNIQUE(ownerId, requestKey)
+                );
+                CREATE INDEX hub_execution_intent_machine ON hub_execution_intents(machineId, expiresAt);
+                PRAGMA user_version=8;
             `);
         }).immediate();
         return db;

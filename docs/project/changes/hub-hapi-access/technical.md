@@ -14,6 +14,8 @@
 
 业务库增量保存机器/任务凭据、原生对象归属、执行发起意图。随机凭据使用 32 字节随机值、类型前缀及 SHA-256 摘要；不保存明文。用户继续使用已有 identity token，不另建账户。机器凭据绑定一个机器 ID 和所有者；任务凭据绑定确定任务及机器，供 Runweft 自身的传输/协同进程访问已分配附件，不能登记机器或调用配置 API；不宣称原生子进程会持有它。原生 Runner 和子进程继续使用机器凭据，网关按已分配会话限制其访问。机器注册/共享产品 API 由阶段 3 提供，阶段 2 暴露内部签发/撤销方法供集成与自动测试使用。
 
+schema v8 在同一 state.sqlite 增加四张表：`hub_execution_objects`、`hub_execution_credentials`、`hub_execution_grants`、`hub_execution_intents`。不复制原生会话/消息/文件。对象 kind 包含 machine/task/session/artifact；task 是业务授权锚点。附件的机器/任务读写须有单独的方向性 grant，绑定到具体凭据，可独立撤销。
+
 对象记录包含 kind/id、ownerId、可选 spaceId/taskId/machineId。主键是 kind/id；已有归属不能通过 upsert 重写。task 关联对象有同一发起人/空间，机器全局归属不以空间替代。资源共享不等于任务内容共享，阶段 2 不提供自动共享会话的路径。
 
 用户只能读写本人拥有且仍属于其空间的对象；未关联空间的本人原生会话仍可访问。机器凭据仅控制绑定的机器，执行该机器已分配的会话及文件操作。机器操作者能读取执行现场，这是既有 OS 信任边界，不因拥有机器而在用户 API 获得他人任务内容。任务凭据不能取得机器管理权。
@@ -22,7 +24,7 @@
 
 ## 认证和长连接
 
-新网关 `/api/auth` 接受 identity token 或受限机器/任务 token，签发短期 Runweft JWT，保留原生 UI 所需的 token/user 响应结构。JWT 使用独立用途的密钥、issuer/audience，引用凭据摘要及稳定主体。每个请求、双向事件和 ack 再核对当前凭据及成员关系；轮换 identity token 会使其旧 JWT 立即失效。外部根 token、HAPI JWT、任意 namespace 后缀和未知认证方式均拒绝。
+新网关 `/api/auth` 接受 identity token 或受限机器/任务 token，签发短期 Runweft JWT，保留原生 UI 所需的 token/user 响应结构。JWT 有效期 15 分钟，使用部署秘密经 HMAC 用途分离的密钥及独立 issuer/audience，引用凭据摘要及稳定主体；可绑定当前空间。兼容 UI 的数值 uid 不承担授权，稳定 userId 才是归属依据。每个请求、双向事件和 ack 再核对当前凭据及成员关系；轮换 identity token 会使其旧 JWT 立即失效；独立机器凭据由其显式撤销入口管理，不随用户 token 自动换号。成员移除同时撤销该空间的任务凭据并取消派生意图，重新加入不会复活这些执行权限。外部根 token、HAPI JWT、任意 namespace 后缀和未知认证方式均拒绝。
 
 JWT 只用于外层，向 HAPI 请求时换为内部 JWT；`/cli` 内部使用根 token。内部 token 不出现在外部响应、Socket auth、错误或日志。浏览器 SSE 只能使用短期 JWT 的 query token；长期 identity/机器 token 不接受于 URL。原生 UI 登录接管与 Web 到 CLI 接入在阶段 6 接通。
 
