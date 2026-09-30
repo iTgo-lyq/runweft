@@ -4,7 +4,7 @@ import { dirname } from 'node:path';
 import { ensureDirectory } from './config';
 import { ResourceError } from './resources/types';
 
-export const STATE_SCHEMA_VERSION = 12;
+export const STATE_SCHEMA_VERSION = 13;
 
 /** One additive schema for the central business database; native history stays in HAPI. */
 export function openState(path: string) {
@@ -227,6 +227,29 @@ export function openState(path: string) {
                     PRIMARY KEY(spaceId, kind, objectId)
                 );
                 PRAGMA user_version=12;
+            `);
+            if (version < 13) db.exec(`
+                CREATE TABLE hub_repositories (
+                    id TEXT PRIMARY KEY, spaceId TEXT NOT NULL REFERENCES hub_spaces(id), ownerId TEXT NOT NULL REFERENCES hub_users(id),
+                    name TEXT NOT NULL, registered INTEGER NOT NULL CHECK(registered IN (0, 1)),
+                    requestId TEXT NOT NULL, fingerprint TEXT NOT NULL, createdAt INTEGER NOT NULL, updatedAt INTEGER NOT NULL,
+                    UNIQUE(ownerId, requestId), UNIQUE(id, spaceId)
+                );
+                CREATE INDEX hub_repository_space ON hub_repositories(spaceId);
+                CREATE TABLE hub_repository_aliases (
+                    spaceId TEXT NOT NULL, canonicalKey TEXT NOT NULL, repositoryId TEXT NOT NULL,
+                    displayUrl TEXT NOT NULL, descriptor TEXT NOT NULL, PRIMARY KEY(spaceId, canonicalKey),
+                    FOREIGN KEY(repositoryId, spaceId) REFERENCES hub_repositories(id, spaceId)
+                );
+                CREATE TABLE hub_checkouts (
+                    ownerId TEXT NOT NULL REFERENCES hub_users(id), spaceId TEXT NOT NULL, machineId TEXT NOT NULL REFERENCES hub_resource_machines(machineId),
+                    gitCommonDir TEXT NOT NULL, repositoryId TEXT NOT NULL, remoteFingerprint TEXT NOT NULL,
+                    repositoryRoot TEXT NOT NULL, cwd TEXT NOT NULL, objectFormat TEXT NOT NULL CHECK(objectFormat IN ('sha1', 'sha256')),
+                    createdAt INTEGER NOT NULL, updatedAt INTEGER NOT NULL,
+                    PRIMARY KEY(ownerId, spaceId, machineId, gitCommonDir),
+                    FOREIGN KEY(repositoryId, spaceId) REFERENCES hub_repositories(id, spaceId)
+                );
+                PRAGMA user_version=13;
             `);
         }).immediate();
         return db;

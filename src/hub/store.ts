@@ -89,6 +89,7 @@ export class HubStore {
             }
             if (role === null) {
                 this.db.query('DELETE FROM hub_memberships WHERE spaceId=? AND userId=?').run(spaceId, targetId);
+                this.db.query('DELETE FROM hub_checkouts WHERE spaceId=? AND ownerId=?').run(spaceId, targetId);
                 this.db.query(`DELETE FROM hub_machine_spaces WHERE spaceId=? AND machineId IN
                     (SELECT id FROM hub_execution_objects WHERE kind='machine' AND ownerId=?)`).run(spaceId, targetId);
                 this.db.query('UPDATE hub_execution_credentials SET revokedAt=COALESCE(revokedAt, ?) WHERE spaceId=? AND ownerId=?')

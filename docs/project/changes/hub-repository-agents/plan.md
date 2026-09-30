@@ -1,6 +1,6 @@
 # 仓库与中心 Agent 实施计划
 
-> 状态：待执行
+> 状态：执行中
 > 来源：[Requirement](requirement.md)
 > 技术方案：[Technical](technical.md)
 > 执行模式：逐任务提交；主 agent 按既有授权确认，实施前在当前工作区用 iclaude 评审一次。
@@ -13,7 +13,7 @@ Hub 持有明确的 Repository、中心 Agent 版本与本人选择；同一仓�
 
 ### T1 Repository、checkout 与 Git 观察
 
-- 状态：待开始
+- 状态：已完成
 - 交付：规范 URL 候选、空间仓库/别名/登记、owner-only checkout 关联和匹配；HTTP 与 Hub CLI，抽取通用 Hub 认证客户端。
 - 依赖：已归档资源归属。
 - 验收：fork/host/大小写不误合并；跨 clone/worktree 和明确别名匹配；多 remote/漂移明确处理；无 remote 支持显式绑定；自报 URL 不增加权限、私有目录不外泄；创建重放不覆盖后续编辑。

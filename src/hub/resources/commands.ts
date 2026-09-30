@@ -1,4 +1,5 @@
 import type { Command } from 'commander';
+import { addRepositoryCommands } from '../repositories/commands';
 import { dirname } from 'node:path';
 import { configPath } from '../../config';
 import { FlavorSchema, invalidInput } from '../../resources/types';
@@ -10,6 +11,7 @@ export function addHubCommands(program: Command, output: (value: unknown, human:
         .requiredOption('--url <origin>', 'Hub HTTP(S) 根地址')
         .option('--identity-file <file>', 'Web 身份备份或只含身份 token 的文件；默认 RUNWEFT_IDENTITY_TOKEN')
         .option('--space <id>', '当前空间 UUID；使用 runtime 和空间治理时需要');
+    addRepositoryCommands(hub, output);
     const client = () => new HubResourceClient(hub.opts());
     const home = () => dirname(configPath(program.opts().home));
     function show(connection: HubResourceClient, result: object, message?: string) {

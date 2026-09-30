@@ -122,7 +122,7 @@ test('v10 migration preserves existing native bindings without automatically enr
     const h = setup(); h.access.bind({ kind: 'machine', id: 'legacy', ownerId: h.a.identity.id });
     const db = new Database(h.path);
     try {
-        db.exec('DROP TABLE hub_resource_blocks; DROP TABLE hub_runtime_shares; DROP TABLE hub_resource_runtimes; DROP TABLE hub_machine_spaces; DROP TABLE hub_resource_machines; PRAGMA user_version=10;');
+        db.exec('DROP TABLE hub_checkouts; DROP TABLE hub_repository_aliases; DROP TABLE hub_repositories; DROP TABLE hub_resource_blocks; DROP TABLE hub_runtime_shares; DROP TABLE hub_resource_runtimes; DROP TABLE hub_machine_spaces; DROP TABLE hub_resource_machines; PRAGMA user_version=10;');
         const access = new AccessStore(h.path);
         try {
             expect(db.query('PRAGMA user_version').get()).toEqual({ user_version: STATE_SCHEMA_VERSION });
@@ -360,7 +360,7 @@ test('v11 upgrade retains machine enrollment, credential and space association w
     h.store.associate(h.actor, enrolled.machineId, h.a.personalSpace.id, true);
     const db = new Database(h.path);
     try {
-        db.exec('DROP TABLE hub_resource_blocks; DROP TABLE hub_runtime_shares; DROP TABLE hub_resource_runtimes; PRAGMA user_version=11;');
+        db.exec('DROP TABLE hub_checkouts; DROP TABLE hub_repository_aliases; DROP TABLE hub_repositories; DROP TABLE hub_resource_blocks; DROP TABLE hub_runtime_shares; DROP TABLE hub_resource_runtimes; PRAGMA user_version=11;');
         const access = new AccessStore(h.path), store = new HubResourceStore(access);
         try {
             expect(store.enroll(h.actor, input)).toEqual(enrolled);

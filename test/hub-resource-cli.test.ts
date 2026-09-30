@@ -1,5 +1,6 @@
 import { afterAll, afterEach, beforeAll, expect, test } from 'bun:test';
-import { randomBytes } from 'node:crypto';
+import { randomBytes, randomUUID } from 'node:crypto';
+import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { HubResourceClient } from '../src/hub/resources/client';
@@ -173,3 +174,46 @@ test('Hub origins, identity backup IDs and legacy tokens cannot be mixed; unknow
         expect(observed).toBe(false);
     } finally { old.stop(true); }
 });
+
+test('compiled repository CLI serializes replay, matches real Git worktrees, reports drift and preserves private checkout metadata', async () => {
+    const h = await hubResourceFixture(cleanups, true), space = h.a.personalSpace.id, file = backup(h.home, h.url, h.a), home = join(h.home, 'repo-client');
+    const run = (args: string[]) => cli(home, h.url, file, ['repository', ...args], space);
+    const enrolled = await cli(home, h.url, file, ['machine', 'enroll']); expect(enrolled.exit).toBe(0); const machine = enrolled.result.machineId;
+    const requestId = randomUUID(), args = ['create', 'Project', '--request-id', requestId, '--alias', 'ssh://git@example.invalid/team/repo.git'];
+    const created = await Promise.all([run(args), run(args)]);
+    expect(created[0].exit).toBe(0); expect(created[1].exit).toBe(0); const repo = created[0].result.repository;
+    expect(created[1].result.repository.id).toBe(repo.id); expect((await run(['list'])).result.repositories).toHaveLength(1);
+    expect((await run(['rename', repo.id, 'Renamed'])).result.repository.name).toBe('Renamed');
+    expect((await run(args)).result.repository.name).toBe('Renamed');
+    expect((await run(['request', requestId])).result.repository.id).toBe(repo.id);
+    const root = join(h.home, 'checkout'), worktree = join(h.home, 'worktree');
+    const git = (...argv: string[]) => execFileSync('git', argv, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], env: { ...process.env,
+        GIT_CONFIG_GLOBAL: join(h.home, 'empty-config'), GIT_CONFIG_NOSYSTEM: '1', GIT_AUTHOR_NAME: 'Fixture', GIT_AUTHOR_EMAIL: 'fixture@example.invalid',
+        GIT_COMMITTER_NAME: 'Fixture', GIT_COMMITTER_EMAIL: 'fixture@example.invalid' } });
+    git('init', root); writeFileSync(join(root, 'file'), 'source\n'); git('-C', root, 'add', 'file'); git('-C', root, 'commit', '-m', 'init');
+    git('-C', root, 'worktree', 'add', '-b', 'other', worktree); git('-C', root, 'remote', 'add', 'origin', 'ssh://git@example.invalid/team/repo.git');
+    const inspect = await run(['inspect', '--cwd', root]); expect(inspect.exit).toBe(0); expect(inspect.result.observation.kind).toBe('git');
+    const match = await run(['match', '--machine', machine, '--cwd', root]); expect(match.exit).toBe(0); expect(match.result.repository.id).toBe(repo.id);
+    expect((await run(['checkouts'])).result.checkouts).toHaveLength(0);
+    expect((await run(['bind', repo.id, '--machine', machine, '--cwd', root])).exit).toBe(0);
+    expect((await run(['match', '--machine', machine, '--cwd', worktree])).result.source).toBe('checkout');
+    expect((await run(['checkouts'])).result.checkouts).toHaveLength(1);
+    const otherFile = backup(h.home, h.url, h.b, 'admin.txt');
+    expect((await cli(home, h.url, otherFile, ['repository', 'checkouts'], space)).result.checkouts).toHaveLength(0);
+    git('-C', root, 'remote', 'set-url', 'origin', 'https://alice:DO_NOT_LEAK@example.invalid/team/repo.git');
+    const drift = await run(['match', '--machine', machine, '--cwd', root]); expect(drift.exit).toBe(1); expect(drift.result.status).toBe('binding_changed');
+    expect(drift.stdout + drift.stderr).not.toContain('DO_NOT_LEAK'); expect(drift.stdout).not.toContain('alice');
+    expect((await run(['unbind', '--machine', machine, '--cwd', root])).result.removed).toBe(true);
+    expect((await run(['match', '--machine', machine, '--cwd', root])).result.status).toBe('unmatched');
+    // Direct URL registration and local descriptor observation must agree.
+    const jwt = await h.auth(h.a.token, space);
+    expect((await h.request(`/api/runweft/repositories/${repo.id}/aliases`, jwt, 'PUT', { alias: 'https://example.invalid/team/repo' })).status).toBe(200);
+    expect((await run(['match', '--machine', machine, '--cwd', root])).result.repository.id).toBe(repo.id);
+    expect((await run(['un-alias', repo.id, 'https://example.invalid/team/repo'])).result.repository.aliases).toHaveLength(1);
+    expect((await run(['alias', repo.id, 'https://example.invalid/team/repo'])).result.repository.aliases).toHaveLength(2);
+    expect((await run(['unregister', repo.id])).result.repository.registered).toBe(false);
+    expect((await run(['match', '--machine', machine, '--cwd', root])).error.code).toBe('repository_unregistered');
+    expect((await run(['register', repo.id])).result.repository.registered).toBe(true);
+    expect((await run(['show', repo.id])).result.repository.id).toBe(repo.id);
+    expect(h.calls).toEqual([]); // metadata does not probe or start the native runtime
+}, 20_000);
