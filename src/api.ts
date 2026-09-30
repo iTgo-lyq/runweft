@@ -16,10 +16,11 @@ import { handlePreparationRequest } from './remote/api';
 import { dashboard } from './dashboard/server';
 import { handleHubRequest } from './hub/api';
 import type { HubStore } from './hub/store';
+import { hubPage } from './hub/page';
 
 export function createRunweftHandler(options: { key: Uint8Array; hapiUrl: string; statePath: string; health: () => object; tasks?: TaskCoordinator; preparations?: WorkspacePreparations; hub?: HubStore }) {
     return async (request: IncomingMessage, response: ServerResponse): Promise<boolean> => {
-        if (dashboard(request, response)) return true;
+        if (dashboard(request, response) || hubPage(request, response)) return true;
         if (await handleHubRequest(request, response, options.hub)) return true;
         const path = new URL(request.url ?? '/', 'http://localhost').pathname;
         if (path === '/api/runweft/health' && request.method === 'GET') {

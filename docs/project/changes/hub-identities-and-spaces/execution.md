@@ -13,3 +13,10 @@
 - 验证：`bun run typecheck` 通过；`bun test ./test/hub.test.ts ./test/resources.test.ts ./test/task-results.test.ts` 共 22 通过，覆盖 v5/v6 迁移、独立进程最后 owner、轮换竞争、邀请重放与跨空间 ID。最后局部修正后 Hub 6 项再次通过；`git diff --check` 通过。
 - 边界：当前反向旧凭据拒绝已在 API 集成测试验证；真实 HAPI/Socket 拒绝在 T3 验证，不提前声明。
 - Commit：`hub-identities-and-spaces T1: persist token identities and space membership`
+
+## T2 Web 身份与空间管理
+
+- 结果：编译产物内嵌 `/hub`；创建/导入、备份下载/复制、更换 token、退出、名称修改、空间切换/创建、邀请和角色管理可用。token 留在会话存储和显式备份，页面不读取 HAPI 凭据。
+- 验证：`bun run typecheck`、`bun run build` 通过；`RUNWEFT_SMOKE_CHROMIUM=/home/tiger/.cache/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-linux64/chrome-headless-shell bun run test:hub` 的 8 组检查通过。实际编译二进制启动专用 Hub，无 Runner/模型执行；Playwright 覆盖 1280px/390px、键盘入口、两个身份及角色改变、轮换响应丢失恢复。
+- 原始证据：`.dev-smoke/hub-identity-Pu5w40/evidence.json` 及 desktop/mobile.png；截图复核并修正窄屏按钮换行。环境默认 Playwright browser revision 缺失，显式采用已有 Chromium 后通过，不借用用户浏览器。
+- Commit：`hub-identities-and-spaces T2: add browser identity and space management`

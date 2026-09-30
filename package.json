@@ -15,6 +15,7 @@
     "test": "bun test ./test",
     "test:service": "node scripts/smoke-service.mjs",
     "test:dashboard": "bun scripts/smoke-dashboard.ts",
+    "test:hub": "bun scripts/smoke-hub.ts",
     "test:execution": "bun scripts/smoke-execution.ts",
     "test:mcp": "bun scripts/smoke-mcp.ts",
     "test:resources": "bun scripts/smoke-resources.ts",
