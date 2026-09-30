@@ -2,7 +2,7 @@
 
 > 来源：./requirement.md
 > 技术方案：./technical.md
-> 状态：执行中
+> 状态：已完成
 > 执行模式：逐任务提交
 
 ## 交付目标
@@ -21,8 +21,8 @@
 
 ### T2 更新配套产物并验收
 
-- 状态：进行中
-- 交付：重建四平台安装包与本地官网，完成自动验收、同步规格及归档。
+- 状态：已完成
+- 交付：重建四平台安装包、完整交付归档与本地官网，完成自动验收、同步规格及归档。
 - 依赖：T1
 - 验收：配套程序通过 Playwright 语言默认值、切换和刷新验证，所有包的 pin 与校验和一致。
 - 验证：bun run typecheck、bun run test、bun run build:hapi --all、bun run build、bun run package --all --reuse-hapi、bun run test:packages、bun .dev-smoke/smoke-hapi-language.ts、node website/build.mjs。
