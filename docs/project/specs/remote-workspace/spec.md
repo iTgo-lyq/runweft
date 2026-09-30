@@ -4,12 +4,12 @@ Runweft 使用既有 Agent/runtime 绑定，把主 Git 仓库的明确已提交�
 
 | 命令 | 行为 |
 | --- | --- |
-| `workspace prepare --agent <name> --base <ref>` | 从当前真实 cwd 准备，HEAD 可作为显式 base；不要求 Git URL、远端路径、手动 clone 或上传 bundle |
-| `workspace preparations [--all]` | 默认列当前目录，all 列当前 namespace 的准备 |
+| `workspace prepare --base <ref> [--agent <uuid>]` | 从当前真实 cwd 准备，省略 Agent 用本人仓库/空间选择，可显式 runtime/remote；HEAD 可作为 base，不要求 Git URL、远端路径、手动 clone 或上传 bundle |
+| `workspace preparations [--all]` | 默认列当前目录，all 列本人当前空间的准备 |
 | `workspace inspect <id>` | 查询原记录的固定 SHA、阶段、传输/复用字节、目标目录、错误及保留状态 |
 | `workspace release <id> [--discard-ignored]` | 显式释放诊断环境与其基线引用；接受后 inspect 确认最终结果 |
 
-源/目标 Runner 的能力和 Agent 快照在受理前核对；目标与发起机相同则提示使用本机 worktree 委派。沿已有认证 namespace、parent/工作区及子执行委派拒绝规则；Hub 操作者无需本机 Runner 也可查询本 namespace 的记录。
+源/目标 Runner 的能力和 Agent 快照在受理前核对；目标与发起机相同则提示使用本机 worktree 委派。按 Hub 身份/空间、parent/cwd 及子执行拒绝规则校验；CLI 查询需已保存本机登记，Runner 可离线。
 
 prepare 在副作用前输出 request ID；同 ID/参数返回原记录，冲突拒绝。未知结果和重启沿原操作查询，明确失败后按原固定 SHA 发起新请求，保留历史。详情分别展示中心快照与目标导入阶段，不把目标离线解释成中心恢复对象丢失。诊断的 nativeExecution 表示本诊断没有发起原生执行。
 

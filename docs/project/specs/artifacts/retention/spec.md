@@ -2,7 +2,7 @@
 
 中心字节保存在 HAPI_HOME/artifacts，业务关联/清单保存在 Runweft state.sqlite；Runner 输入、持久操作回执和未交付 spool 保存在当前连接 HAPI_HOME/artifact-transfers。输入与候选不散落于系统临时目录，备份须覆盖中心数据库、字节、业务库及尚未交付的机器数据。
 
-server.artifacts 默认 maxFileMiB=512、namespaceQuotaGiB=10、unreferencedDays=7、pendingHours=24。限制作用于所托管 HAPI；Hub 客户端读取服务实际限制，不能用本地配置覆盖它。预约与未删除对象共同占额，只有字节确实删除才释放配额；limits/doctor 按预约、发布、删除中及去重引用对象展示用量，该数字不是文件系统物理占用。
+server.artifacts 默认 maxFileMiB=512、namespaceQuotaGiB=10、unreferencedDays=7、pendingHours=24。限制作用于所托管 HAPI；Hub 客户端读取服务实际限制，不能用本地配置覆盖它。预约与未删除对象共同占额，只有字节确实删除才释放配额；artifact limits 按预约、发布、删除中及去重引用对象展示用量，该数字不是文件系统物理占用。
 
 对象有任意 pin 时，普通删除和过期清理拒绝；purpose 为 input/output/recovery 或未知来源均受保护。`artifact refs` 查看留存原因。单对象 remove 不要求达到过期年龄，但仍检查引用及活跃上传；删除中断可沿原对象继续，墓碑可通过 ID/requestId 查询。
 

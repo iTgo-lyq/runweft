@@ -80,3 +80,7 @@ WorkspacePreparations 的遗漏由主 agent 同步复核发现并已在评审结
 - 验证：最终 typecheck/test/build/diff-check 通过；249 pass/0 fail，5143 断言。四组合、7 组真实领域链路、5 组服务/重置与 5 组 Playwright 的完整需求矩阵、原始证据及失败调试事实见 [Acceptance](acceptance.md)。HAPI revision 未变化，未更新在线部署和用户配置。
 - 边界：物理远端缺少访问条件；Mac 实机由用户承担。完整后台/Skill、官网及四平台配套发行归整体阶段 6/7，交由 traex（astra）继续。本地验收按既有授权自动完成，不另设人工门禁。
 - Commit：`hub-delegation-migration T7: verify default Hub delegation with real native hosts`。
+
+## Specs 同步与归档
+
+2026-10-01，按既有本地自动验收授权关闭本 Change。同步默认 Hub 部署、独立连接凭据、中心配置/委派、资源与仓库范围、MCP 角色、数据重置和当前页面能力；保留原生执行及 Git/附件契约。发行与官网规格明确现有旧产物范围，不把新源码验收视为新版四平台交付。已更新文档入口、架构和阶段 6 的依赖。独立归档提交：`hub-delegation-migration: sync specs and archive`。阶段 6/7 由用户指定的 traex/Astra 在本次归档后接手，物理跨机缺口继续保留。

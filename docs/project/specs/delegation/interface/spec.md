@@ -1,13 +1,13 @@
 # 委派入口
 
-CLI 与 MCP 使用同一 TaskClient、认证和中心协调能力。支持 Codex/Claude Code 主宿主，执行 flavor 由 Agent 定义所选 runtime 决定，两者可以不同。工作区支持[本机 shared/worktree 与远端 worktree](../../local-workspace/mode/spec.md)；远端必须显式指定已提交 base，自动准备后启动。
+CLI 与 MCP 使用同一 HubTaskClient、用户/空间连接和中心协调能力，必须已连接 Hub 且登记发起机器。支持 Codex/Claude Code 主宿主，执行 flavor 由 Agent 定义所选 runtime 决定，两者可以不同。工作区支持[本机 shared/worktree 与远端 worktree](../../local-workspace/mode/spec.md)；远端必须显式指定已提交 base，自动准备后启动。
 
 ## MCP 工具
 
 | 工具 | 契约 |
 | --- | --- |
 | `list_agent_definitions` | 当前工作区的有效定义、来源和在线目标资格，不启动执行 |
-| `spawn_agent` | `agent_type`、`message`、可选 UUID `request_id`、`workspace_mode`（默认 shared）；本机 worktree 可指定 `base_ref`（默认 HEAD），远端 worktree 必须指定；持久接受后立即返回 agent_id、round_id、request_id、revision、accepted |
+| `spawn_agent` | 可选 Agent UUID `agent_type`（省略用本人当前仓库/空间选择）、可选 runtime_id/remote、`message`、可选 UUID `request_id`、`workspace_mode`（默认 shared）；本机 worktree 可指定 `base_ref`（默认 HEAD），远端 worktree 必须指定；持久接受后立即返回 agent_id、round_id、request_id、revision、accepted |
 | `list_agents` | 当前原生父会话的任务概览和最近 20 条接受记录 |
 | `read_agent` | `id`、可选 `round_id`、`offset`、`limit`；读取轮次事实、报告和待审批请求 |
 | `wait` | `ids` 为 1–8 个任务；`timeout_ms` 为 0–540000，默认 30000；可传各任务的 `after_revision`，语义见[结果](../results/spec.md) |
@@ -28,9 +28,9 @@ spawn/next 可传 inputs[{artifactId,name?}] 和 outputs[{name,relativePath}]，
 
 `task spawn/list/show/wait/send/interrupt/permission/retry-finish` 对应上述能力。spawn 可选 `--workspace-mode worktree --base <ref>`；`task workspace remove` 是显式操作者清理入口，不提供 MCP 删除工具。任务文本来自 `--message` 或 `--message-file`，`-` 读 stdin；派生/追加先向 stderr 输出 request ID，JSON 模式为进度 JSON 行，接受结果在 stdout。重试使用 `--request-id`，不维护额外客户端任务数据库。
 
-列表默认当前发起机器和 cwd，包含 MCP 来源；`--all` 列当前 namespace。show 默认最新接受轮次，可指定 `--round` 与报告 `--offset/--limit`；wait 支持 `--timeout/--after-revision`。send 默认下一轮，`--steer --round` 才追加本轮。interrupt 和 permission 必须指定轮次；permission 还需原生请求 ID，可附 `--answers`。
+列表默认当前发起机器和 cwd，包含 MCP 来源；`--all` 列本人当前空间。show 默认最新接受轮次，可指定 `--round` 与报告 `--offset/--limit`；wait 支持 `--timeout/--after-revision`。send 默认下一轮，`--steer --round` 才追加本轮。interrupt 和 permission 必须指定轮次；permission 还需原生请求 ID，可附 `--answers`。
 
-CLI 使用当前连接的本机 Runner 身份作为操作者来源，不伪装原生父会话；没有本机身份时提示先 start。MCP 只能操作自己的父会话任务，CLI 操作者可操作同 namespace 的既有任务。完整示例见[使用说明](../../../../usage.md#本机任务)。
+CLI 使用当前连接已登记 machine.json 作为来源，不伪装原生父会话；未登记时明确提示先 enroll。MCP 只能操作自己的父会话任务，CLI 可操作本人当前空间内既有任务。完整示例见[使用说明](../../../../usage.md#本机任务)。
 
 spawn/send 支持可重复 --input/--output；`task artifacts show/retry/collect/release` 提供历史版本、传输恢复、补收及显式留存释放。清理仍是 CLI 操作者入口，不新增 MCP 删除工具。
 

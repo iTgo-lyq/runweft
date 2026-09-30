@@ -1,9 +1,9 @@
 # 项目能力边界与讨论地图
 
-> 更新：2026-09-30
-> 本文保存产品决策、职责边界和 Change 依赖；十二个 Change 已完成并归档，当前实现事实以 Specs 为准，验证范围见最终交付验收。
+> 更新：2026-10-01
+> 本文保存产品决策、职责边界和 Change 依赖；原重构已归档，Hub 集中配置已完成前五阶段。当前实现事实以 Specs 为准。
 
-2026-09-30 用户同意开始 [Hub 空间、身份与集中 Agent 配置](changes/hub-spaces-and-agent-configuration/requirement.md)：必须连接 Hub 后委派，Git 仓库关联中心配置，补充独立身份 token、空间与资源所有权；访客可领取 token 并自行保存，不建设登录/注册服务。实施按 [七阶段依赖](changes/hub-spaces-and-agent-configuration/delivery.md) 推进；以下 local/Hub 双模式、文件定义和 HAPI 共用认证描述仍用于解释已交付版本，不代表新设计已经实现。
+2026-09-30 用户同意开始 [Hub 空间、身份与集中 Agent 配置](changes/hub-spaces-and-agent-configuration/requirement.md)：必须连接 Hub 后委派，Git 仓库关联中心配置，补充独立身份 token、空间与资源所有权；访客可领取 token 并自行保存，不建设登录/注册服务。实施按 [七阶段依赖](changes/hub-spaces-and-agent-configuration/delivery.md) 推进；前五阶段已验收，默认服务与 CLI/MCP 已必连 Hub，采用中心配置、独立用户/机器凭据和对象授权。完整后台、Skill、官网及新版四平台发行尚待第六、七阶段，见[第五阶段验收](archive/2026-10-01-hub-delegation-migration/acceptance.md)。
 
 ## 产品边界
 
@@ -13,7 +13,7 @@
 
 **HAPI 已有能力优先复用。** 技术方案按“当前入口 → 是否足够 → 最小缺口”推导；已有会话、消息、状态、恢复、审批、文件与 UI 不重复实现。旧工程只参考交互和历史证据，不能完全照搬其 daemon、状态机、认证锁或补丁；具体边界见[执行基础需求](archive/2026-09-29-hapi-subagent-foundation/requirement.md#已确认的架构决策)。
 
-协作服务的运行位置已在[统一 CLI 技术方案](archive/2026-09-29-unified-cli-and-deployment/technical.md#服务与数据归属)中落实：Runweft 服务与原有 HAPI Hub 同机部署，共用 HTTP 入口和 HAPI 认证；本地模式部署在本机，Hub 模式部署在所选中心。只补父子关联、角色分流、工作区准备与成果交付，不复制 HAPI 原生会话库。当前行为见[部署](specs/deployment/spec.md)、[委派入口](specs/delegation/interface/spec.md)、[工作区模式](specs/local-workspace/mode/spec.md)、[附件](specs/artifacts/spec.md)和[远端成果](specs/remote-results/delivery/spec.md)。
+Runweft 服务与 HAPI Hub 同机部署：HAPI 只监听私有 loopback，公开入口使用 Runweft 的身份/空间及 HAPI 对象授权网关。mode 只决定服务托管角色，hub.url 独立指定业务连接；本地自托管也须明确连接并完成身份与机器接入。机器、runtime、Agent 分别登记，不由启动服务自动创建。只补中心配置、授权和委派/交付关联，不复制 HAPI 原生会话库。当前行为见[部署](specs/deployment/spec.md)、[委派入口](specs/delegation/interface/spec.md)、[工作区模式](specs/local-workspace/mode/spec.md)、[附件](specs/artifacts/spec.md)和[远端成果](specs/remote-results/delivery/spec.md)。
 
 ## 完整版本的交付目标
 
@@ -21,13 +21,13 @@
 
 完整交付须覆盖统一 CLI 一键辅助全局安装 MCP、清晰配置与持久数据布局、本地/Hub 两种运行模式、全局机器/runtime 注册、Codex/Claude Code 宿主 MCP、本地共享与独立工作区、远端准备与执行、等待/中断/续接、附件与代码取回、Agent 定义及全局 subagent 看板，并提供部署、诊断与维护说明。主 agent 负责代码接纳和冲突；产品自身不增加合并执行器。
 
-复用 HAPI 的详情、审批、机器管理及默认权限属于完整方案，不要求重写。简单全局看板就是本轮目标；正式工作台、集中 skill/MCP 管理、主宿主退出后的恢复和 runtime 插件平台继续不在范围内。
+原生详情、审批和默认执行权限继续复用 HAPI。Hub 后台负责独立身份、空间、机器/runtime、仓库、Agent 与任务的查看和管理；CLI 面向 Agent，产品 Skill 承担接入。集中 skill/MCP 管理、主宿主退出后的恢复和 runtime 插件平台不在范围内。
 
 验收同时要求原生交互和安装部署证据，覆盖两种宿主、两种内置 runtime、本地/远端工作模式、任务续接、失败与交付重试。本地验收由 agent 自动完成；2026-09-30 用户明确允许 Playwright，并接手 Mac 实机验证，Mac 双架构仍须一并构建。物理远端验证按用户授权延期，同机多 Runner 的真实链路与物理跨机分别记录。源码、模拟测试和交叉构建不能代替对应实机证据，最终范围见[完整验收](archive/2026-09-30-integrated-release/acceptance.md)。
 
 ## 交付模块与依赖
 
-拆分审查、六个阶段的验收出口和唯一职责见 [Change 边界与分阶段交付](delivery-structure.md)。本次调整复用已有目录；下表为调整后的依赖，不再让本地执行依赖远端准备，或让宿主身份反向依赖委派。
+原重构的拆分审查、六个阶段验收出口和唯一职责见 [Change 边界与分阶段交付](delivery-structure.md)。本次调整复用已有目录；下表为调整后的依赖，不再让本地执行依赖远端准备，或让宿主身份反向依赖委派。
 
 | Change | 独立交付结果 | 前置 Change |
 | --- | --- | --- |
@@ -67,8 +67,8 @@ flowchart TD
 
 ## 本轮已经收敛的范围
 
-- 本地模式无需用户另部署共享 Hub；Hub 模式连接明确目标，二者复用 HAPI 基础与同一业务契约。持久数据有受控根及路径诊断，不依赖随机临时目录。
-- 机器注册、runtime 注册和 agent 定义分离：前两者全局，agent 可全局或项目级。引用方向是 agent → runtime → machine；HAPI 的 agent flavor 不直接等于业务 agent 定义。
+- 本地模式可托管本机 Hub；任何委派都连接明确 Hub 并具备有效身份/空间，本地模式不提供离线配置退路。持久数据有统一根及路径诊断，不散落临时目录。
+- 机器注册、runtime 注册和 Agent 定义分离：前两者为 Hub 全局资源，Agent 按空间及可选中心 Git 仓库定义，支持本人选择和空间成员共享。引用方向是 Agent → runtime → machine；HAPI flavor 不直接等于业务 Agent 定义。
 - CLI 提供显式命令一键辅助全局安装、更新、诊断及卸载 Runweft MCP；开发验证使用专用配置，保留用户其他 MCP 与原生设置。
 
 - 主宿主关闭后不要求恢复；在线主会话的查看、等待和续接按宿主适配实现。
@@ -76,7 +76,8 @@ flowchart TD
 - Agent 定义参考 Multica 的职责、指令与 runtime 分工；不集中管理 skill/MCP。启动 cwd 是主工作目录或准备完成的 worktree，沿原生规则加载项目配置。
 - 只允许一层 Runweft 委派。HAPI 调度的 Runweft subagent 移除全部 Runweft MCP 工具，结果由 HAPI 原生输出收回；CLI 委派入口也拒绝受控子执行再次派生。原生内置 subagent 的使用和递归不由 Runweft 管控。
 - 每轮任务结束关闭子执行进程，保留可续接的 session 和工作区；后续优先由 HAPI resume，确认 session 缺失才构造历史上下文。
-- 冲突、合入与发布交给主 agent；权限沿 HAPI/原生默认，不新增隔离或独立权限体系。先做简单全局看板，正式工作台和统一 agent 控制台留待以后。
+- 冲突、合入与发布交给主 Agent；模型执行权限沿 HAPI/原生默认，不新增 OS 隔离。Hub 独立身份和对象授权保护配置及任务；资源后台在第六阶段实现。
+- 尚未上线的历史可通过显式 data reset 清理，保留 Git/worktree 和未交付现场；不建设 YAML 导入或跨库迁移/回退框架。
 
 ## 远端组合流程
 
@@ -110,12 +111,12 @@ sequenceDiagram
 
 | 对象 | 定义归属 | 稳定范围 |
 | --- | --- | --- |
-| 主体、namespace、`workspaceId` 与主工作区绑定入口 | 统一 CLI 与部署 | 授权主体与真实主机目录；原生父身份由宿主适配提供 |
+| userId、spaceId、执行主体与业务 scope | Hub 身份/空间、HAPI 授权 | 用户/成员关系与真实对象；原生父身份由宿主适配提供，不另造本机 workspaceId |
 | `hapiSessionId`、原生输入/轮次身份 | HAPI 执行契约 | 真实执行与恢复关联，不能假定恢复后 ID 永远不变 |
 | machineId、runtimeId 与已解析执行目标 | 全局资源注册 | 当前用户/所选 Hub 的全局范围，项目定义只能引用；沿 HAPI 身份和查询映射 |
-| 全局/项目 agent 标识与定义版本 | Agent 定义 | 职责和 runtime 引用，与机器及 runtime 注册分开 |
+| 中心 Repository、Agent ID 与定义版本 | 仓库与中心 Agent | 真实 Git 观察关联仓库、本人选择与每轮不可变配置，独立于原生 Git environment ID |
 | 宿主身份、主/子角色与 MCP 传递上下文 | 宿主适配 | 在委派之前识别，不由模型自报；业务工具由委派注册 |
-| `delegationId`、`roundId` | 委派生命周期 | 关联已验证主工作区的父子上下文与每次明确任务输入；不由 prompt 任意路径代替工作区绑定 |
+| `delegationId`、`roundId` | 委派生命周期 | 关联已验证主工作区的父子上下文与每次明确任务输入；不由 prompt 自报路径代替真实 cwd 和机器身份 |
 | `repositoryId`、`environmentId`、`preparationId`、固定 Git 成果 | 本地工作区执行 | 公共 Git 生命周期；远端准备消费，不重新定义身份或收尾 |
 | `artifactId`、不可变对象与引用 | 任务附件交付 | 可授权读取的输入/输出及版本 |
 | 任务/轮次的代码与附件清单 | 委派生命周期、代码回收与附件交付 | 沿 taskId/roundId 查询，不另要求 resultId；原生执行、封存、发布、取回和留存分别表达 |
@@ -135,7 +136,7 @@ Runweft 只补必要协作与交付关联，原生会话/执行事实优先读�
 
 各领域 Research 保存 HAPI 复用点和已复现的缺口，Technical 记录最小补充，不迁回旧实现框架。最终组合证据与限制见[发行验收范围](specs/release/acceptance/spec.md)。
 
-## 实施结果
+## 原重构实施结果（2026-09-30）
 
 2026-09-30 完成十二个 Change；原先的跨模块技术缺口均按契约归属落实，发行验收没有接收尚未完成的领域功能。
 
@@ -155,7 +156,7 @@ Runweft 只补必要协作与交付关联，原生会话/执行事实优先读�
 | 遗留代码如何形成成果 | 仅在 subagent 独立 worktree 内补 checkpoint，保留 agent 已有提交；共享主目录不自动提交，提交失败保留现场 | 遗留改动由程序封存，无改动不产生空提交 |
 | 未 push 的提交如何传输 | 输入基线与输出成果通过 Git bundle 传输，允许无 remote 或尚未 push 的提交；未提交的主工作区文件不自动传入 | 远端任务与成果取回不依赖 Git 托管平台；push/PR 仍由主 agent 按业务需要处理 |
 
-原完整重构沿[六阶段交付结构](delivery-structure.md#阶段与可验收结果)逐项完成，领域功能先独立验收，再以同一已安装候选完成组合。全局看板、远端 worktree 委派及结果回收均已开放；新增的 Hub 集中配置工作见本文开头的活跃 Change。
+原完整重构沿[六阶段交付结构](delivery-structure.md#阶段与可验收结果)逐项完成，领域功能先独立验收，再以同一已安装候选完成组合。当时的全局看板使用旧认证；当前默认入口已切换为 Hub 身份，旧 /runweft 页面不再开放。远端委派与结果回收已接中心配置，完整资源和任务页面按第六阶段交付。
 
 ## 调查与验证状态
 

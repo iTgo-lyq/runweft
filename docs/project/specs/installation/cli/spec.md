@@ -1,6 +1,6 @@
 # CLI 安装与命令承载
 
-Runweft 提供一个 `runweft` 命令，包含配置、工作区绑定、HAPI 服务管理、认证、诊断、[MCP 安装](../mcp/spec.md)和全局[机器](../../resources/machines/spec.md)/[Runtime](../../resources/runtimes/spec.md)登记，以及[Agent 定义](../../agents/definition/spec.md)的创建、发现、个人绑定与目标检查。[任务命令](../../delegation/interface/spec.md)提供本机共享/独立 worktree 协作、收尾修复与显式清理。`runweft hapi …` 调用配套的原生 HAPI，保留参数、终端交互、退出码与信号；覆盖同一托管 Hub/Runner 的操作提示改用统一启停命令。
+Runweft 提供一个 `runweft` 命令，包含本机部署配置、Hub 连接、HAPI 服务管理、认证、诊断、[MCP 安装](../mcp/spec.md)和全局[机器](../../resources/machines/spec.md)/[Runtime](../../resources/runtimes/spec.md)登记，以及中心仓库关联和 [Agent 定义](../../agents/definition/spec.md)的创建、个人选择与目标检查。[任务命令](../../delegation/interface/spec.md)提供本机共享/独立 worktree 协作、收尾修复与显式清理。`runweft hapi …` 调用配套的原生 HAPI，保留参数、终端交互、退出码与信号；覆盖同一托管 Hub/Runner 的操作提示改用统一启停命令。
 
 ## 安装包
 
@@ -20,6 +20,6 @@ Runweft 提供一个 `runweft` 命令，包含配置、工作区绑定、HAPI �
 
 安装与维护操作见[使用说明](../../../../usage.md)；配置和服务行为见[部署](../../deployment/spec.md)。
 
-独立新 Hub 资源入口使用同一 CLI 的 `hub --url … machine/runtime` 命令，包含持久接入、凭据轮换、空间关联与 runtime 分享/禁用；要求相应 Hub 能力，不回退旧认证。已验收契约见 [Hub 资源归属](../../resources/ownership/spec.md)。
+根级 machine/runtime 与 `hub --url … machine/runtime` 共用中心资源命令，包含持久接入、凭据轮换、空间关联与 runtime 分享/禁用；默认使用选中 Hub，要求相应能力，不回退旧认证。契约见 [Hub 资源归属](../../resources/ownership/spec.md)。
 
-集中配置命令在同一 `hub` 域内提供 `repository` 和 `agent`，使用明确 Hub 身份/空间；见[仓库关联](../../repositories/association/spec.md)与[中心 Agent](../../agents/central/spec.md)。不满足能力时明确报错，不回退旧文件。
+repository/agent 同时提供根级与 hub 域入口，使用明确 Hub 身份/空间；见[仓库关联](../../repositories/association/spec.md)与[中心 Agent](../../agents/central/spec.md)。不满足能力时明确报错，不回退旧文件。旧 workspace bind/list、agent init/bind 和 HAPI token 认证入口不再提供；data reset 是显式未上线历史清理，默认只预览。

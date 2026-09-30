@@ -1,6 +1,6 @@
 # Hub 中心 Agent、个人选择与解析
 
-独立配置网关使用 Hub 的用户身份、所选空间和中心资源授权。默认根级 Agent YAML/旧委派入口仍使用其原有路径；中心配置通过 `runweft hub` 命令及 HTTP 独立使用。健康能力为 hubAgentDefinitions:1 和 hubAgents:1，不满足时客户端拒绝，不回退本地文件。
+默认配置网关使用 Hub 用户身份、所选空间和中心资源授权。根级 agent 命令、hub agent 和委派解析共用此配置；不读取本地 Agent YAML。健康能力为 hubAgentDefinitions:1 和 hubAgents:1，不满足时客户端拒绝，不回退本地文件。
 
 ## 定义和权限
 

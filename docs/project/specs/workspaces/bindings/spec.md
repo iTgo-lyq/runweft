@@ -1,9 +1,7 @@
-# 本机工作区绑定
+# 主工作区与仓库关联
 
-`runweft workspace bind [directory]` 校验本机目录并绑定稳定 workspaceId；省略参数时使用进程当前目录。绑定保存真实路径与可发现的 Git 根，符号链接别名指向同一真实工作区。
+业务调用采用宿主已验证的真实 cwd；MCP 不为目录另建 workspaceId 或写本机工作区绑定表。旧 workspace bind/list 已移除。
 
-绑定存于当前 Runweft 数据根的 `client.sqlite`，SQLite 唯一约束保证同一真实目录取得同一 ID。重复绑定、跨进程查询及服务重启保留身份；`workspace list` 查询已有绑定。
+Git 仓库、remote 别名与本人 checkout 关联保存在 Hub。使用 repository inspect/match/bind/checkouts，观察和绑定规则见[仓库关联](../../repositories/association/spec.md)。Agent 项目范围引用中心 Repository ID，不读项目中的 Runweft YAML 配置。不同用户可以为同一仓库保存自己的选择。
 
-绑定不创建或移动仓库，不修改源码、Git 分支或原生会话。非 Git 目录可以绑定，绑定本身不表示已具备独立 worktree 或远端任务能力。父会话识别、委派与工作区准备仍由各自模块实现。
-
-中心 Repository 与本人 checkout 是独立的配置关联，使用空间内稳定仓库 UUID，见[仓库关联](../../repositories/association/spec.md)。它不改写本页 workspaceId 或 HAPI 原生 repositoryId。
+原生执行从主 cwd 或已经准备的 git worktree 启动，因此项目 skills 和原生配置继续由 Codex/Claude 加载。非 Git 目录可执行本机共享任务；独立工作区和远端执行要求 Git 来源。

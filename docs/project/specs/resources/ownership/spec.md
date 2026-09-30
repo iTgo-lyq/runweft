@@ -1,6 +1,6 @@
 # Hub 资源归属、分享与接入
 
-独立 `createResourceGateway` 组合身份/空间、HAPI 授权和集中资源领域，提供 `hubResources:1`。默认 `serve` 仍使用旧 namespace 入口，后续委派迁移才切换；以下不代表现有部署已开启新多用户模型。机器/runtime 是 Hub 全局对象，Agent 是独立消费方。
+默认 serve 组合身份/空间、HAPI 授权和集中资源领域，提供 hubResources:1。root 命令与 hub 子命令共用中心身份及资源服务。机器/runtime 是 Hub 全局对象，Agent 是独立消费方。
 
 ## 机器与凭据
 

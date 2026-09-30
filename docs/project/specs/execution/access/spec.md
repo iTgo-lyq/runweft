@@ -1,6 +1,6 @@
 # 原生执行通道授权
 
-Runweft 的独立授权网关使用现有 HAPI HTTP、Socket.IO、终端与 SSE，不修改 runtime、Launcher、会话或文件执行。默认 `serve` 仍使用既有入口；这里描述 `src/hub/access/http.ts` 的独立组件，不将其权限能力等同于旧部署已启用。
+默认 serve 通过授权网关复用现有 HAPI HTTP、Socket.IO、终端与 SSE，不修改 runtime、Launcher、会话或文件执行。私有 HAPI 只监听 loopback，公开请求使用 Runweft 主体和对象权限。
 
 ## 主体与持久归属
 
@@ -34,4 +34,4 @@ SSE 对原生实时与重放事件按当前归属过滤，短期 JWT 可供 Even
 
 `bun run test:hub-access` 验证真实 HAPI HTTP/文件，`bun run test:hub-realtime` 验证真实 HAPI Socket/终端/SSE 和未改造 Runner 的登记/心跳/目录 RPC。终端与 fork/clear 使用协议执行端，不能视为真实模型或 PTY 验证。普通用户不开放原生全局 storage/settings/usage/devices/push/voice/workGraph、Codex Desktop 导入和其他 runtime 管理接口。
 
-组合 [Hub 资源领域](../../resources/ownership/spec.md)时，原生 spawn/派生及实际 outgoing RPC/ack 追加中心 runtime 授权：共享/登记/空间治理在执行边界再次检查。此钩子不替换 HAPI runtime，默认旧 serve 仍未切换。
+默认网关组合 [Hub 资源领域](../../resources/ownership/spec.md)，原生 spawn/派生及实际 outgoing RPC/ack 追加中心 runtime 授权：共享/登记/空间治理在执行边界再次检查。此钩子不替换 HAPI runtime；受管任务的直接原生输入、resume 与模型修改被拒绝，须走中心委派入口。

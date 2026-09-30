@@ -1,6 +1,6 @@
 # 持久文件
 
-HAPI 是文件字节与对象元数据的唯一权威，Runweft 维护委派关联、版本清单和 CLI/MCP。文件操作不依赖活跃 agent；local 使用托管 HAPI，Hub 模式使用所连中心，执行机离线后仍可下载已发布对象。认证沿 HAPI namespace，文件 ID 或摘要不替代认证。
+HAPI 是文件字节与对象元数据的唯一权威，Runweft 维护委派关联、版本清单和 CLI/MCP。文件操作不依赖活跃 agent；两种部署模式均使用显式连接的 Hub，执行机离线后仍可下载已发布对象。授权按 Hub owner/space 映射到独立 HAPI 文件 namespace，文件 ID 或摘要不替代认证。
 
 对象包含 UUID、上传 requestId、名称、大小、SHA-256、状态和时间。状态为 reserved、available、deleting、deleted；完成长度/摘要校验和持久发布才可下载，上传中不开放字节。相同 requestId 固定内容声明，重复上传查回原对象，参数冲突拒绝；已发布字节不可覆盖，删除保留墓碑且不能复活旧请求。
 

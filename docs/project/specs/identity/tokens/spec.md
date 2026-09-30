@@ -24,6 +24,6 @@ Hub 的 `/hub` 页面支持主动创建独立身份或导入已有 token，无�
 
 `/hub` 页面和静态资源内嵌编译程序，设置 CSP/no-store；未知 `/hub/*` 返回 404。健康响应的 `capabilities.hubIdentity=1` 表示此入口可用。
 
-## 与当前原生协作入口的区别
+## 执行入口与凭据
 
-默认服务将这套 token 接入身份与 [空间](../../spaces/membership/spec.md) API；[独立执行授权网关](../../execution/access/spec.md) 另支持交换受限 JWT。旧 `/api/runweft/identity` 仍返回 HAPI 数字 uid/namespace，旧 `/runweft`、原生 HAPI、Runner 与委派沿原有认证。新 token 无法访问这些旧接口；HAPI root/JWT 也不能访问新身份接口。独立 token 不是共享 HAPI root 凭据的替代表示。
+默认服务将独立 token 接入身份、空间、配置与委派；[执行授权网关](../../execution/access/spec.md) 交换受限 JWT，Runner 使用独立机器凭据。HAPI root/JWT 不能作为公开身份登录，旧 identity 与 /runweft 入口不开放。秘密经 [Web 交接](../connection/spec.md) 保存到本机，不作为模型工具输出。

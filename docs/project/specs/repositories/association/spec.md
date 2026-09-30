@@ -1,6 +1,6 @@
 # Hub 仓库身份与 checkout 关联
 
-独立 createConfigurationGateway 提供中心 Repository 目录与本人 checkout 关联；默认 serve 的接入不因此改变。仓库是所选空间内的配置身份，不授予 Git 代码读取、机器执行或空间成员资格。
+默认 Hub 网关提供中心 Repository 目录与本人 checkout 关联，CLI/MCP 委派使用同一仓库匹配。仓库是所选空间内的配置身份，不授予 Git 代码读取、机器执行或空间成员资格。
 
 Repository 使用稳定 UUID、固定 owner/space、名称、登记状态与明确别名。当前成员可创建/查看本空间目录；创建者和空间 owner/admin 可改名、管理别名、取消/恢复登记。取消登记保留 ID/别名/配置引用，阻止新解析。创建用 owner 作用域 requestId 与含空间的规范摘要去重；重放/回执读取原对象当前状态，不覆盖后来编辑。
 

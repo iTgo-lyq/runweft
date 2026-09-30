@@ -1,6 +1,6 @@
 # 业务轮次与定向控制
 
-同一 delegation 的 next 持久排队，等待前轮停止及当前工作区模式收尾后才开始。任务始终沿用既有目录、runtime 与定义快照；后来修改 YAML、个人绑定或 CLI cwd 不重定向旧任务。
+同一 delegation 的 next 持久排队，等待前轮停止及当前工作区模式收尾后才开始。任务沿用既有目录和执行目标；已接受轮次保留快照，next 重新鉴权并解析中心定义。目标变化拒绝，不兼容的启动参数新建原生 session 并携带有界业务历史；CLI cwd 不重定向旧任务。
 
 有附件时，preparing 先完成[本轮输入](../../artifacts/inputs/spec.md)。原生停止和 Git 封存后进行[文件交付](../../artifacts/delivery/spec.md)，传输未确定前不开放下一轮；确认部分交付后可结束本轮。文件 retry/collect 的恢复独立于模型轮次，不改 completed_revision。
 

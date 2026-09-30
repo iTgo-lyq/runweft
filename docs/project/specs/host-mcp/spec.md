@@ -8,7 +8,7 @@ Codex 每次调用解析原生 `_meta` 的 threadId、sessionId、callId 和可�
 
 Claude Code 通过匹配 Runweft 工具的 PreToolUse hook 保存该次 toolUseId、原生 sessionId、cwd、可用 agentId 和时间；工具调用以原生 claudecode/toolUseId 精确消费该记录。相同 cwd 的会话不共用身份槽，`/clear` 和 resume 使用当次 hook，不沿用启动时的 session 环境变量。记录位于 `client.sqlite`，用后删除，未消费记录保留 24 小时；不保存 prompt 或工具输入。
 
-业务工具参数不能覆盖宿主身份或 cwd；身份缺失、冲突或 hook 记录不存在时明确报错。initialize/tools/list 只返回静态工具目录，不写工作区数据或访问服务。有效业务调用才绑定真实工作区，传入身份、工作区、配置及取消信号。
+业务工具参数不能覆盖宿主身份或 cwd；身份缺失、冲突或 hook 记录不存在时明确报错。普通 initialize/tools/list 不写工作区数据；受管 HAPI 上下文的 tools/list 查询中心角色，已确认子会话返回空列表，无法确认时仅保留诊断。有效业务调用使用真实 cwd、身份、连接和取消信号，不维护本机工作区绑定。
 
 ## 工具、结果与取消
 
