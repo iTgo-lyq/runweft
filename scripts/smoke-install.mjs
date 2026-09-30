@@ -6,6 +6,8 @@ import { spawn, spawnSync } from 'node:child_process';
 import { createRequire } from 'node:module';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
+import { createHash } from 'node:crypto';
+import { verifyMcpInstallation } from './smoke-mcp-install.mjs';
 
 const packageRoot = resolve(process.argv[2] ?? 'dist/packages');
 const workspaceFixtures = JSON.parse(process.env.RUNWEFT_SMOKE_WORKTREE_EVIDENCE ?? '[]');
@@ -73,6 +75,9 @@ try {
     const require = createRequire(join(prefix, 'lib', 'node_modules', 'runweft', 'package.json'));
     const platformName = `runweft-${process.platform}-${process.arch}`;
     const platformDirectory = dirname(require.resolve(`${platformName}/package.json`));
+    evidence.binaries = Object.fromEntries(['runweft', 'hapi'].map(name => [name, createHash('sha256').update(readFileSync(join(platformDirectory, 'bin', name))).digest('hex')]));
+    const packageEntry = index.packages.find(entry => entry.name === platformName);
+    for (const name of ['runweft', 'hapi']) if (packageEntry.binaries) assert.equal(evidence.binaries[name], packageEntry.binaries[`bin/${name}`]);
     const guide = readFileSync(join(prefix, 'lib', 'node_modules', 'runweft', 'README.md'), 'utf8');
     assert(guide.includes('retry-finish')); assert(guide.includes('task workspace remove')); assert(guide.includes('Git common directory'));
     assert(guide.includes('upload_artifact')); assert(guide.includes('task artifacts release'));
@@ -108,6 +113,10 @@ try {
     evidence.checks.push('installed task commands and side-effect-free MCP catalog without Bun or source checkout on PATH');
     await command(process.execPath, [resolve('scripts/smoke-service.mjs'), cli], { env: cleanEnv });
     evidence.checks.push('installed CLI services and signals with no Bun or source checkout on PATH');
+    if (process.env.RUNWEFT_SMOKE_NATIVE_INSTALL === '1') {
+        evidence.nativeMcp = verifyMcpInstallation(cli, join(root, 'native-mcp'), env);
+        evidence.checks.push('installed CLI native MCP install, idempotency, uninstall and explicit backup restoration');
+    }
     if (remotePreparation) {
         // Bun runs the acceptance harness only; both service executables come from npm.
         await command('bun', [resolve('scripts/smoke-workspace-preparation.ts'), cli, join(platformDirectory, 'bin/hapi')], { cwd: process.cwd(), env });
@@ -141,6 +150,12 @@ try {
         assert(existsSync(join(previous.cases[0].cwd, '.git')));
     }
     evidence.checks.push('npm uninstall removes executable and preserves service data');
+    if (process.env.RUNWEFT_SMOKE_KEEP_INSTALL === '1') {
+        await command('npm', ['install', '--global', `runweft@${index.version}`, ...npmOptions]);
+        evidence.installedCli = cli;
+        evidence.installedHapi = join(platformDirectory, 'bin', 'hapi');
+        evidence.checks.push('dedicated installation retained for subsequent native acceptance');
+    }
     evidence.success = true;
 } finally {
     await new Promise(resolve => server.close(resolve));

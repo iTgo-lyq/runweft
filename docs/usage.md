@@ -1,18 +1,46 @@
-# Runweft 基础入口使用说明
+# Runweft 使用说明
 
-当前实现包含配置、HAPI 服务管理、机器/runtime 登记、Agent 定义，以及 Codex/Claude Code 经 MCP 或 CLI 进行本机共享目录、独立 worktree 和远端 worktree 协作。已支持文件输入/输出、代码成果发布及取回、补交、显式释放和远端 Git 诊断准备。协作看板已通过自动验收，完整发行集成仍在推进；当前候选包不是完整项目的最终发布。
+Runweft 将 HAPI 执行能力接入 Codex 和 Claude Code，提供共享目录、本地独立 worktree、远端 worktree 的委派、续接、输入/输出文件和代码回收。一个 CLI 管理本地或 Hub 连接、全局 MCP、机器、runtime、Agent 定义和协作看板。
 
 ## 安装与首次使用
 
-运行环境需要 Node.js 20+，工作区识别需要 Git 命令；执行任务还需安装所选的原生 Codex/Claude Code 并完成模型登录。候选包覆盖 macOS arm64/x64、glibc Linux arm64/x64；不需要全局 Bun 或单独安装 HAPI。当前尚未发布到公共 npm，使用提供候选包的 registry：
+1.0.0 提供 macOS arm64/x64、glibc Linux arm64/x64 四个平台包，配套 HAPI 0.30.7。程序不需要全局 Bun 或另装 HAPI；工作区操作需要 Git，执行任务还需安装所选原生 Codex/Claude Code 并完成模型登录。使用 Git LFS 的项目需要在源机器与执行机器安装 Git LFS。
+
+### 直接安装交付包
+
+当前未发布到公共 npm。取得完整交付目录（`index.json`、`SHA256SUMS` 和 `tarballs/`）后，在该目录运行校验，再选本机平台解包。以下以 Apple Silicon Mac 为例；Intel Mac 改为 `darwin-x64`，Linux 根据架构改为 `linux-arm64` 或 `linux-x64`：
 
 ```sh
-npm install -g runweft@0.1.0 --registry <候选包-registry> --include=optional
+shasum -a 256 -c SHA256SUMS
+runweft_platform=darwin-arm64
+runweft_install="$HOME/.local/share/runweft/1.0.0-$runweft_platform"
+mkdir -p "$runweft_install" "$HOME/.local/bin"
+tar -xzf "tarballs/runweft-$runweft_platform-1.0.0.tgz" -C "$runweft_install" --strip-components=1
+ln -sfn "$runweft_install/bin/runweft" "$HOME/.local/bin/runweft"
+export PATH="$HOME/.local/bin:$PATH"
+runweft --version
+runweft init
 runweft start
 runweft open
 ```
 
-安装源必须同时提供 `runweft` 和当前平台的 `runweft-<os>-<arch>` 包。主包只有启动器，单独安装主包 tarball 不能代替平台依赖安装。`runweft --version` 可核对版本；找不到平台包时按错误提示重新安装并保留可选依赖。
+将 `$HOME/.local/bin` 加入自己的 shell PATH 以便新终端继续使用。保留解包目录中相邻的 `bin/runweft` 与 `bin/hapi`，不要只移动单个程序；许可证和对应 HAPI 源码也随包提供。直接运行平台程序无需 Node.js；原生客户端的安装要求由各自工具决定。
+
+Mac 产物未签名、未公证，本次由使用者在实机验证；系统如阻止运行，先核对校验清单，再通过 macOS 的隐私与安全性设置允许该程序。首次运行按后文完成 MCP、机器/runtime 和 Agent 绑定，再从实际项目调用 `runweft_status` 和一次委派，核对看板、报告与进程结束。双架构交叉构建不代表已完成 Mac 实机验证。
+
+### 从包 registry 安装
+
+有提供这一批包的 registry 时，也可使用 Node.js 20+ 和 npm：
+
+```sh
+npm install -g runweft@1.0.0 --registry <发行包-registry> --include=optional
+runweft --version
+runweft init
+runweft start
+runweft open
+```
+
+安装源必须同时提供 `runweft` 和当前平台的 `runweft-<os>-<arch>` 包。主包只有启动器，单独安装主包 tarball 不能代替平台依赖安装。找不到平台包时按错误提示重新安装并保留可选依赖。
 
 本地默认入口是 `http://127.0.0.1:3210`，默认数据根是 `~/.runweft`。`start` 自动管理本机 HAPI Hub 与 Runner；`open` 使用该连接的 HAPI 登录打开 `/runweft/` 协作总览，`open --hapi` 直接打开 HAPI 会话界面。无图形浏览器时，在本机交互终端运行 `runweft auth token`，然后手动访问服务地址的 `/runweft/` 登录。令牌不会写入普通状态输出或 JSON。
 
@@ -379,6 +407,66 @@ runweft task artifacts show <任务ID> --round <轮次ID> --version 1
 
 重传不重新读取工作目录，也不运行模型或 Git。补收记录新的捕获时间；用相同逻辑名补收会在新清单版本中替换该项，旧版本和旧对象保留。两类命令都返回请求 ID，响应丢失时加 `--request-id` 重试相同参数。补交接受后，命令会给出带 `--after-revision` 的完整等待命令；发布新清单才通知更新。下一轮不自动继承上一轮的 `--output`，`--steer` 不接受输出声明。
 
+### 文件清理与用量
+
+```sh
+runweft artifact limits
+runweft artifact prune
+runweft artifact prune --apply
+runweft artifact refs <文件ID>
+runweft artifact remove <无引用文件ID>
+runweft doctor
+```
+
+`prune` 默认只预览，`--apply` 才删除本页符合条件的字节。默认一页 100 个，`--limit` 可选 1–200；按返回的 `nextCursor` 用 `--after` 继续。apply 时重新检查引用、期限、对象状态和活跃上传，逐项列出失败原因；失败项不阻止其他项。响应丢失时用 show/lookup 查原对象，重新从第一页清理也不会重复删除已删除对象。删除保留元数据墓碑及原 request ID，下载返回已删除，已发布内容不能以旧 request ID 复活。
+
+默认只清理没有任何引用的对象：已发布对象从发布时间满 7 天，未完成上传预约从创建时间满 24 小时。释放引用不重置这些期限；删除中断的对象可继续清理。单对象 remove 不要求满期限，但同样拒绝任何引用。任务输入、成果、恢复和其他来源的引用均受保护，完成任务不会自动删掉唯一文件副本，也不会隐式定时清理。用下述轮次释放入口解除其 input/output 引用；不要手工删数据库引用或数据目录以绕过保护。
+
+limits 与 doctor 展示当前中心的已发布、预约、删除中及引用保留用量；同一对象的多个引用只计一次，引用字节已包含在前三项总额中。这是配额占用，不是磁盘实际占用，Runner 输入/候选和数据库另计。Hub 客户端的本地 server.artifacts 设置不覆盖所连 Hub；修改服务端配置后重启托管服务。配额不足时先预览可清文件，查看被引用对象的留存原因；按需提高中心 namespaceQuotaGiB。
+
+### 释放轮次附件留存
+
+```sh
+runweft task artifacts release <任务ID>
+runweft task artifacts release <任务ID> --round <轮次ID> --apply
+runweft task artifacts release <任务ID> --round <轮次ID> --discard-pending --apply
+runweft task artifacts show <任务ID> --round <轮次ID>
+```
+
+release 默认只预览，省略 round 选择本任务全部已结束轮次；本任务仍有排队、执行或未确定的文件操作时拒绝释放。预览列出本轮各历史版本的引用和未交付捕获候选；后者应先 retry，只有明确放弃重传来源时才用 `--discard-pending`。缺失且从未捕获的文件没有候选可放弃。
+
+`--apply` 先持久记录释放意图，再回收本轮下载/捕获副本并逐项解除 input/output 引用。CLI 返回受理结果，用 show 查询；服务重启和同一 release 重试继续已有记录，不重新运行模型。释放进行中暂不接受该任务新的轮次或文件操作，其他任务照常执行。输入接受过程中已登记但未接受的引用仍由中心启动时自动对账；未知来源和 recovery 引用始终保留。
+
+留存状态 retained/releasing/released/discarded 与不可变的历史清单分开；release 不删除报告、Git ref、工作区或中心对象字节。解除引用后，其他来源的引用仍保护对象；没有引用时可显式 remove 或到期 prune。历史清单中的 available 表示当时发布成功，实际下载以当前中心对象状态为准。
+
+释放后不再对原轮次 retry/collect；需要新成果时用 next 新建轮次，并重新显式提供所需输入。后续仍可复用原生 session 和保留的 worktree。释放结果通过 artifactsRevision 通知 wait，原完成 revision 和执行结论保持不变。
+
+### 文件部署与恢复
+
+`runweft paths` 标出本机托管中心的 artifacts、连接对应的 artifact-transfers 以及中心业务库。Hub 模式的权威对象字节在 Hub，执行机只保留准备文件与未交付候选；成功候选会在清单确认后自动回收。所有这些路径都在配置的数据根内，用户显式下载的位置由用户选择。
+
+备份前停止业务中心与对应 Runner，保存中心 Runweft state.sqlite、HAPI 数据库与整个 artifacts 目录；保留执行机 artifact-transfers 中的未交付候选和回执。恢复时数据库与字节来自同一次备份，不单独回滚数据库；恢复后运行 doctor，并查询原任务/文件操作。未知来源引用保守保留，无法仅凭缺少本地任务记录判定可删除。原生凭据继续由原生配置管理，不进入文件对象存储。
+
+反向代理需允许配置的单文件体积和持续流式传输。以下 Nginx 示例适用于默认 512 MiB 上限，服务端和各级网关的限制需要一致；此环境未安装 Nginx，示例尚未经过 Nginx 实测：
+
+```nginx
+location / {
+    proxy_pass http://127.0.0.1:3210;
+    proxy_http_version 1.1;
+    client_max_body_size 512m;
+    proxy_request_buffering off;
+    proxy_buffering off;
+    client_body_timeout 60s;
+    proxy_send_timeout 60s;
+    proxy_read_timeout 60s;
+    proxy_set_header Host $host;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "upgrade";
+}
+```
+
+这些超时约束两次 I/O 之间的空闲时间，不能另加限制整个文件传输时长的网关规则；依据 [Nginx proxy 超时与缓冲说明](https://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_read_timeout)及 [client body 限制说明](https://nginx.org/en/docs/http/ngx_http_core_module.html#client_body_timeout)。遇到 413 或代理 HTML 错误，检查入口代理与 Hub 的体积限制；不要重复派生任务。公开 Hub 的 TLS、访问控制和已有 WebSocket 配置仍按部署要求设置。
+
 ## 配置
 
 没有配置文件时可以直接使用本地默认值。需要调整时：
@@ -489,7 +577,7 @@ local 模式的资源库位于本机中心；hub 模式只读写所连中心的�
 
 升级时安装同一批次的主包与平台包，再按角色重启相应服务。`status` 区分已安装与正在运行的服务版本；`doctor` 检查固定 HAPI 兼容版本。更换二进制不自动删除旧数据，也不主动迁移用户已有 `~/.hapi`。有活跃模型任务时先收尾再更新执行组件。
 
-备份前停止对应服务；备份 `config.yaml`、`agents/`、`server/`、`connections/` 和 `client.sqlite`。SQLite 使用 WAL，整个停止后的数据根一起备份最直接。恢复时使用匹配的 Runweft/HAPI 版本；未来数据升级由所属 Change 定义，当前不承诺跨任意版本回退。npm 卸载只删除软件包，数据根需另行管理。
+备份前停止对应服务；备份 `config.yaml`、`agents/`、`server/`、`connections/` 和 `client.sqlite`。SQLite 使用 WAL，整个停止后的数据根一起备份最直接。恢复时使用匹配的 Runweft/HAPI 版本；本版业务数据库使用 schema v6，遇到更高 schema 会拒绝打开。回退必须符合目标版本的数据兼容要求，不承诺跨任意版本回退。npm 卸载只删除软件包，数据根需另行管理。
 
 有本机源仓库派生的 worktree 时，先等待所有轮次停止并完成收尾，再停止服务，同时备份源仓库及其 Git common directory、Runweft 数据和需要续接的原生历史。checkout 的 `.git` 指向源仓库，Git 对象/refs 不在 Runweft 数据根；只备份其中一侧不完整。远端诊断 worktree 指向执行机数据根内的 `workspaces/repositories/`，备份时同时保留该缓存、环境目录及中心基线记录/文件对象。按原路径恢复后检查 `git worktree list` 和对应记录；迁移路径涉及 Git 注册及持久环境记录，当前没有自动迁移命令，不能仅移动目录后直接续接。子模块对象和 LFS 实体也应一起保存。
 
@@ -498,125 +586,3 @@ local 模式的资源库位于本机中心；hub 模式只读写所连中心的�
 常见排查顺序是 `config check` → `status` → `doctor` → `paths` 所列日志。端口占用先修正 `server.port`；纯 HAPI 地址改为 Runweft 中心；认证失败核对当前连接与令牌来源。错误不会静默切回本地或其他执行目标。
 
 原有 HAPI 命令可通过 `runweft hapi …` 使用，参数、终端、退出码和信号沿原程序传递；覆盖同一托管 Hub/Runner 的操作会提示使用统一启停命令。
-
-## 源码构建和候选安装验收
-
-```sh
-git submodule update --init hapi
-bun install --frozen-lockfile
-bun run build:hapi
-bun run build
-bun run typecheck
-bun run test
-bun run test:service
-bun run test:resources
-bun run test:agents
-bun run package --all
-bun run test:install
-```
-
-构建使用固定版本 Bun 1.4.2。`build` 会核对 HAPI 源码 revision、工作区状态及已构建文件的校验和；修改固定版本后须先重新运行 `build:hapi`，不能混用旧二进制。`package --all` 生成四个平台的 npm 包和可移交的 `dist/packages/index.json`；`package --platform darwin-arm64` 可只构建一个平台。`--reuse-hapi` 使用相同核对规则跳过 HAPI 重建。
-
-安装验收启动一次性 registry，并使用 `.dev-smoke/` 下的专用 npm 配置、缓存、安装前缀和数据目录；不改用户的全局 Runweft、HAPI 或模型配置。平台包附有 HAPI 许可、NOTICE、工具许可和对应源码归档。候选包保持 private，不会由构建或 CI 自动发布到 npm。
-
-`test:resources` 需要已安装 Codex 和 Claude Code（优先 iclaude，可设置 `RUNWEFT_SMOKE_CLAUDE`），仅执行版本查询，不需要模型登录。它使用专用空原生配置和配套编译程序验证本地与 Hub 资源命令、MCP 安装/握手、稳定 ID、离线、恢复和环境故障；离线等待沿 HAPI 的 45 秒活跃超时。脚本保存证据并关闭自建服务，故障环境只作用于测试 Runner；macOS 若发现原生 Codex.app 回退路径，会如实记录，命令缺失仍通过专用 Claude 覆盖验证。
-
-`test:workspace-preparation` 验证配套编译 CLI 的远端诊断准备与释放：专用 Hub 无 Runner，同机两个 Runner 传输 103 个 Git/LFS 文件，检查请求接受后重启、同提交与 LFS 复用、源端离线后的查询、脏文件/ignored 保护、目标离线恢复、实际缓存删除及跨快照 pin 留存，并验证 local 模式同机目标拒绝。需要 Git/LFS 和已安装 Codex，仅查询 runtime 版本，不调用模型；证据在 `.dev-smoke/workspace-preparation-*`。底层导出与导入可分别运行 `test:repository-export`、`test:repository-import`。这些实验不代替真实跨物理机器验收。
-
-`RUNWEFT_SMOKE_REMOTE_PREPARATION=1 bun run test:install` 在 npm 候选实际安装后，使用安装的 CLI/HAPI 再执行上述完整诊断验证。Bun 只运行验收脚本；安装产品本身无需 Bun，基础服务检查另用不含 Bun 的 PATH 验证。
-
-`test:remote-native` 会实际调用已登录的 Codex 和 Claude Code（优先 iclaude），需要真实 agent 验收授权。它复制配置与认证到专用目录，在导入的独立 worktree 中各运行两轮只读任务：读取工程指令、skill、每轮新附件、子模块和二进制 LFS，核对续接原生会话、Runweft MCP 禁用、其他 MCP 保留，并验证失效准备拒绝启动、进程退出和源/执行 Runner 离线后的中心下载。可追加 `dist/runweft dist/hapi codex` 或 `claude` 只运行一种 runtime；证据在 `.dev-smoke/remote-native-*`，原全局配置保持不变。这是同机双 Runner 验证，仍不代表真实跨机验收。
-
-`test:remote-tasks` 通过正式 CLI 自动准备并委派两种 runtime 各两轮，验证工程继承、输入/输出、Git 收尾故障修复、session 续接以及执行端离线后的代码取回与显式合入。`bun run test:result-retention <已成功的 .dev-smoke/remote-tasks-native-目录>` 随后使用该专用现场验证公开 CLI 成果预览/释放、两任务共享缓存删除及缓存消失后的取回；后者不启动模型，会实际清理指定测试环境。
-
-`test:agents` 同样只需要已安装的原生工具，不需要模型登录。它用配套编译 CLI 和专用 Hub/Runner 验证定义创建、worktree 绑定、local/Hub 连接、真实 token namespace 后缀、目标失效与恢复；保存证据并停止自建服务，不启动模型会话。
-
-已有 Codex/Claude Code 模型登录的开发环境可显式运行原生验收：
-
-```sh
-bun run test:mcp
-bun run test:execution
-bun run test:tasks
-bun run test:task-controls
-bun run test:task-mcp
-bun run test:collaboration
-bun run test:workspaces
-bun run test:worktree-tasks
-```
-
-独立工作区的两宿主 × 两 runtime × local/同机 Hub 矩阵使用 `RUNWEFT_SMOKE_WORKSPACE=worktree bun run test:collaboration`；可用 `RUNWEFT_SMOKE_CASE=local-codex-claude` 选择单组。`test:workspaces` 验证机器 Git/准备入口；`test:worktree-tasks` 运行实际模型。测试证据和专用数据都保存在 `.dev-smoke/`，不能把跨平台编译或同机 Hub 当作跨机器执行验证。
-
-`test:mcp` 复制原生配置及认证到 `.dev-smoke/` 专用目录，用编译产物验证 local/hub 两种连接下的真实全局安装、身份和 HAPI 子执行启动/续接的工具禁用，并记录证据和进程清理结果。默认 Claude 命令优先使用 `iclaude`，可通过 `RUNWEFT_SMOKE_CLAUDE` 指定。`test:execution` 使用当前原生模型配置和专用服务/工作目录，验证执行事实、审批、中断、续接与结果不确定时的查询。二者会实际调用模型，不属于常规单元测试。
-
-`test:tasks` 使用专用 Codex 配置副本、非 Git 工作目录和编译 CLI，验证任务接受/去重、原生完成、自动关闭进程、等待游标及服务重启后读取。它会实际调用模型，证据保存在 `.dev-smoke/tasks-*`，结束后关闭自建服务。
-
-`test:task-controls` 用专用 Codex/Claude 配置及明确模型/推理参数，验证真实续接、权限批准/拒绝、定向中断与 Codex 追加。只在专用 Codex 配置副本中启用 on-request 和 workspace-write 以产生审批；产品继续继承用户原生默认配置。可通过 RUNWEFT_SMOKE_CODEX_MODEL/EFFORT 和 RUNWEFT_SMOKE_CLAUDE_MODEL/EFFORT 选择当前可用参数，证据保存在 `.dev-smoke/task-controls-*`。
-
-`test:task-mcp` 由两个真实原生宿主分别完成派生、等待、结果读取，验证子 CLI 拒绝递归委派和超过 60 秒的 MCP 等待；`RUNWEFT_SMOKE_HOST=codex|claude` 可只验证一个宿主。
-
-`test:collaboration` 覆盖 local 与同机 Hub 下两宿主 × 两 runtime 的八个组合，包括共享编辑、纯报告续接、其他 MCP 保留、Runweft 工具过滤、进程退出及实际 MCP 连接中断。`RUNWEFT_SMOKE_CASE=hub-claude-codex` 可选择一个组合；指定组合后加 `RUNWEFT_SMOKE_CONTROLS=1` 验证原生 MCP steer/不支持分支与定向中断。证据保存在 `.dev-smoke/collaboration-*`。这些测试会调用模型，只修改专用原生配置；同机 Hub 结果不代替真实跨机远端验收。
-
-`RUNWEFT_SMOKE_REMOTE=1 bun run test:collaboration` 验证独立 Hub、发起 Runner 和目标 Runner 下的两宿主 × 两 runtime 四组远端委派；也可用 `RUNWEFT_SMOKE_CASE` 选择一组。每组两轮包含自动基线、附件、Git/LFS、未改变的递归子模块、MCP 取回和 session 续接；执行端停止、源分支删除后再经 CLI 取回并显式合入。证据在 `.dev-smoke/remote-mcp-*`，同机不同 Runner 身份不代表物理跨机。传入 `RUNWEFT_SMOKE_REMOTE_EVIDENCE='[".dev-smoke/remote-mcp-…/evidence.json"]' bun run test:install` 可让候选安装验证复用已完成现场，只重启中心/发起端、查询、下载和取回，不再次运行模型。
-
-`test:artifact-mcp` 使用同样的两宿主 × 两 runtime × local/同机 Hub 八组，实际通过 MCP 上传、带输入派生、读取输出、重试/补收并下载，第二轮续接同一原生会话。Hub 的两个交叉 runtime 组合使用独立 worktree，其余使用 shared；可用 `RUNWEFT_SMOKE_CASE` 选择单组。证据在 `.dev-smoke/artifact-mcp-*`，测试配置与数据独立保存，结束后关闭自建服务。
-
-
-### 文件清理与用量
-
-```sh
-runweft artifact limits
-runweft artifact prune
-runweft artifact prune --apply
-runweft artifact refs <文件ID>
-runweft artifact remove <无引用文件ID>
-runweft doctor
-```
-
-`prune` 默认只预览，`--apply` 才删除本页符合条件的字节。默认一页 100 个，`--limit` 可选 1–200；按返回的 `nextCursor` 用 `--after` 继续。apply 时重新检查引用、期限、对象状态和活跃上传，逐项列出失败原因；失败项不阻止其他项。响应丢失时用 show/lookup 查原对象，重新从第一页清理也不会重复删除已删除对象。删除保留元数据墓碑及原 request ID，下载返回已删除，已发布内容不能以旧 request ID 复活。
-
-默认只清理没有任何引用的对象：已发布对象从发布时间满 7 天，未完成上传预约从创建时间满 24 小时。释放引用不重置这些期限；删除中断的对象可继续清理。单对象 remove 不要求满期限，但同样拒绝任何引用。任务输入、成果、恢复和其他来源的引用均受保护，完成任务不会自动删掉唯一文件副本，也不会隐式定时清理。用下述轮次释放入口解除其 input/output 引用；不要手工删数据库引用或数据目录以绕过保护。
-
-limits 与 doctor 展示当前中心的已发布、预约、删除中及引用保留用量；同一对象的多个引用只计一次，引用字节已包含在前三项总额中。这是配额占用，不是磁盘实际占用，Runner 输入/候选和数据库另计。Hub 客户端的本地 server.artifacts 设置不覆盖所连 Hub；修改服务端配置后重启托管服务。配额不足时先预览可清文件，查看被引用对象的留存原因；按需提高中心 namespaceQuotaGiB。
-
-### 释放轮次附件留存
-
-```sh
-runweft task artifacts release <任务ID>
-runweft task artifacts release <任务ID> --round <轮次ID> --apply
-runweft task artifacts release <任务ID> --round <轮次ID> --discard-pending --apply
-runweft task artifacts show <任务ID> --round <轮次ID>
-```
-
-release 默认只预览，省略 round 选择本任务全部已结束轮次；本任务仍有排队、执行或未确定的文件操作时拒绝释放。预览列出本轮各历史版本的引用和未交付捕获候选；后者应先 retry，只有明确放弃重传来源时才用 `--discard-pending`。缺失且从未捕获的文件没有候选可放弃。
-
-`--apply` 先持久记录释放意图，再回收本轮下载/捕获副本并逐项解除 input/output 引用。CLI 返回受理结果，用 show 查询；服务重启和同一 release 重试继续已有记录，不重新运行模型。释放进行中暂不接受该任务新的轮次或文件操作，其他任务照常执行。输入接受过程中已登记但未接受的引用仍由中心启动时自动对账；未知来源和 recovery 引用始终保留。
-
-留存状态 retained/releasing/released/discarded 与不可变的历史清单分开；release 不删除报告、Git ref、工作区或中心对象字节。解除引用后，其他来源的引用仍保护对象；没有引用时可显式 remove 或到期 prune。历史清单中的 available 表示当时发布成功，实际下载以当前中心对象状态为准。
-
-释放后不再对原轮次 retry/collect；需要新成果时用 next 新建轮次，并重新显式提供所需输入。后续仍可复用原生 session 和保留的 worktree。释放结果通过 artifactsRevision 通知 wait，原完成 revision 和执行结论保持不变。
-
-### 文件部署与恢复
-
-`runweft paths` 标出本机托管中心的 artifacts、连接对应的 artifact-transfers 以及中心业务库。Hub 模式的权威对象字节在 Hub，执行机只保留准备文件与未交付候选；成功候选会在清单确认后自动回收。所有这些路径都在配置的数据根内，用户显式下载的位置由用户选择。
-
-备份前停止业务中心与对应 Runner，保存中心 Runweft state.sqlite、HAPI 数据库与整个 artifacts 目录；保留执行机 artifact-transfers 中的未交付候选和回执。恢复时数据库与字节来自同一次备份，不单独回滚数据库；恢复后运行 doctor，并查询原任务/文件操作。未知来源引用保守保留，无法仅凭缺少本地任务记录判定可删除。原生凭据继续由原生配置管理，不进入文件对象存储。
-
-反向代理需允许配置的单文件体积和持续流式传输。以下 Nginx 示例适用于默认 512 MiB 上限，服务端和各级网关的限制需要一致；此环境未安装 Nginx，示例尚未经过 Nginx 实测：
-
-```nginx
-location / {
-    proxy_pass http://127.0.0.1:3210;
-    proxy_http_version 1.1;
-    client_max_body_size 512m;
-    proxy_request_buffering off;
-    proxy_buffering off;
-    client_body_timeout 60s;
-    proxy_send_timeout 60s;
-    proxy_read_timeout 60s;
-    proxy_set_header Host $host;
-    proxy_set_header Upgrade $http_upgrade;
-    proxy_set_header Connection "upgrade";
-}
-```
-
-这些超时约束两次 I/O 之间的空闲时间，不能另加限制整个文件传输时长的网关规则；依据 [Nginx proxy 超时与缓冲说明](https://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_read_timeout)及 [client body 限制说明](https://nginx.org/en/docs/http/ngx_http_core_module.html#client_body_timeout)。遇到 413 或代理 HTML 错误，检查入口代理与 Hub 的体积限制；不要重复派生任务。公开 Hub 的 TLS、访问控制和已有 WebSocket 配置仍按部署要求设置。

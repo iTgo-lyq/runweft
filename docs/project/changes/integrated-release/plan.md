@@ -2,7 +2,7 @@
 
 > 来源：[Requirement](requirement.md)
 > 技术方案：[Technical](technical.md)
-> 状态：待执行
+> 状态：执行中
 > 执行模式：主 agent 逐任务实现和本地提交；唯一一次 iclaude 评审已完成并由主 agent 复核，见 [Execution](execution.md)。沿用户持续授权执行，不新增确认门禁。
 
 ## 交付目标
@@ -20,7 +20,7 @@
 
 ### T1 四平台发行包与可复现安装
 
-- 状态：待开始
+- 状态：已完成
 - 依赖：C11 归档。
 - 交付：1.0.0 主包与四平台包、来源与校验清单、明确的未发布安装入口；生成包可发布，源码工程保持 private。修复干净构建/CI 的 HAPI 依赖安装顺序，并同步首次安装、数据路径、local/Hub、MCP 和 Mac 操作说明。
 - 验收：先保存 0.1.0 产物及索引，新交付目录不含旧 tarball。四平台二进制格式与架构、许可和匹配源码完整；Linux x64 从真实 npm 安装及平台包解包独立运行，不依赖开发 checkout 或全局 Bun；arm64 探查本地仿真并记录实际范围。安装候选在专用原生配置完成两次 MCP install、uninstall、其他配置保留及 backups/restore。Mac 双架构产物和验证步骤一并可交付。
