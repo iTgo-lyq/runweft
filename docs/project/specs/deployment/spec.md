@@ -42,7 +42,7 @@ HAPI Hub 只监听本机私有端口，省略端口配置时自动选择。Runwe
 | `agents/` | 全局 Agent YAML；项目定义保留于对应项目目录 |
 | `server/hapi/` | 托管 Hub 的原有数据库、令牌和状态 |
 | `server/hapi/artifacts/` | 所托管中心的持久文件字节；Hub 客户端从中心读取 |
-| `server/runweft/state.sqlite` | 中心机器/runtime、任务与成果关联，以及独立身份 token 摘要、空间/成员/邀请；schema v7、WAL 和事务迁移，不保存模型凭据或身份 token 明文 |
+| `server/runweft/state.sqlite` | 中心机器/runtime、任务与成果关联，以及独立身份 token 摘要、空间/成员/邀请、执行授权与请求映射；schema v10、WAL 和事务迁移，不保存模型凭据或身份 token 明文 |
 | `connections/local/hapi/` 或 `connections/<主机名>-<URL hash>/hapi/` | 当前机器 Runner 的连接身份、配置与原生日志 |
 | `connections/<连接>/hapi/workspaces/environments/<环境ID>/` | 独立任务或诊断 checkout、树外输入与准备/成果/操作回执；持久数据，不是缓存 |
 | `connections/<连接>/hapi/workspaces/repositories/` | 来源共享 Git/子模块/LFS 缓存；保护成果与活跃消费者，不按空闲时间删除 |
@@ -58,7 +58,7 @@ Hub 客户端不保存权威资源库；paths 明确指出登记位于中心，�
 
 paths.taskWorkspaces 指向当前连接的本机环境根。doctor 的 task_workspaces 检查只读统计实际 checkout 目录（含失败准备现场），即使中心离线仍可取得本机数量；读取失败明确报告错误，不推断零目录或成功任务数，不统计其他连接/机器。同时显示仓库 caches/exports/fetches 路径和 result release → workspace remove → artifact prune/remove 清理顺序；具体状态通过 task list/show 查询。
 
-任务协调器复用 serve，CLI/MCP 无需再安装独立 daemon。业务表及请求恢复见[委派生命周期](../delegation/lifecycle/spec.md)；当前 schema v6 在保留既有资源、任务、文件、基线/导入/消费者/诊断记录的基础上增加代码清单与取回表；交付/释放进度归原 round，不改 consumer.importId 或重写旧行。遇到更高版本明确拒绝，不自动删除数据或降级。
+任务协调器复用 serve，CLI/MCP 无需再安装独立 daemon。业务表及请求恢复见[委派生命周期](../delegation/lifecycle/spec.md)；schema v10 保留资源、任务、文件、基线/导入/消费者/诊断、代码清单与取回表，并保存独立身份/空间和执行通道授权；交付/释放进度归原 round，不改 consumer.importId 或重写旧行。遇到更高版本明确拒绝，不自动删除数据或降级。
 
 远端准备继续使用同一服务和数据根；paths 展示 exports/imports/repositories/fetches，具体归属与释放见[远端工作区](../remote-workspace/spec.md)。中心 recovery pin 保护的文件与业务清单需一起备份，目标 cache 和环境分别保留，不能把 exports/imports 全目录当作可随意丢弃的临时文件。
 

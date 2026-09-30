@@ -33,3 +33,5 @@ Hub 空间是成员授权边界，不是 Git 仓库、磁盘工作区或 HAPI na
 | `/invitations/accept` | POST `{token}` 接受邀请 |
 
 Web `/hub` 提供上述管理动作，空间切换仅改变当前选中项；服务端始终复核权限。状态在同一业务库的 hub_spaces/hub_memberships/hub_invitations 表中持久保存。升级不会自动将旧 namespace、机器或历史任务归给新身份。
+
+成员移除还在同一事务撤销该空间的任务凭据、取消派生与文件输出许可；重新加入不恢复旧许可。独立网关的请求与长连接如何失权见[执行通道授权](../../execution/access/spec.md)。

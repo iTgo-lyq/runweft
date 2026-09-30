@@ -2,7 +2,7 @@
 
 > 状态：已确认
 > 规模：大型
-> 前置：[HAPI 授权](../hub-hapi-access/requirement.md)、[资源归属](../hub-resource-ownership/requirement.md)、[中心 Agent](../hub-repository-agents/requirement.md)
+> 前置：[HAPI 授权](../../archive/2026-09-30-hub-hapi-access/requirement.md)、[资源归属](../hub-resource-ownership/requirement.md)、[中心 Agent](../hub-repository-agents/requirement.md)
 > 更新：2026-09-30
 
 ## 目标与行为
