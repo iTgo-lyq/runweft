@@ -2,7 +2,7 @@
 
 > 状态：已确认
 > 规模：大型
-> 前置：[身份与空间](../hub-identities-and-spaces/requirement.md)、[HAPI 授权](../hub-hapi-access/requirement.md)
+> 前置：[身份与空间](../../archive/2026-09-30-hub-identities-and-spaces/requirement.md)、[HAPI 授权](../hub-hapi-access/requirement.md)
 > 更新：2026-09-30
 
 ## 目标与行为

@@ -6,7 +6,7 @@
 
 | 顺序 / Change | 独立交付与验收结果 | 依赖 |
 | --- | --- | --- |
-| 1 [身份 token 与空间](../hub-identities-and-spaces/requirement.md) | 无注册创建/导入身份，Web 管理本人空间和成员，撤销和权限由服务端判断 | 无 |
+| 1 [身份 token 与空间（已完成）](../../archive/2026-09-30-hub-identities-and-spaces/requirement.md) | 无注册创建/导入身份，Web 管理本人空间和成员，撤销和权限由服务端判断 | 无 |
 | 2 [HAPI 访问授权](../hub-hapi-access/requirement.md) | HTTP、SSE、Socket、Runner 有统一主体和对象权限；真实 HAPI 集成验证 | 1 |
 | 3 [机器/runtime 归属与共享](../hub-resource-ownership/requirement.md) | 机器登记和 runtime 注册独立，有所有者、空间授权、私有/共享规则 | 1、2 |
 | 4 [仓库与中心 Agent 配置](../hub-repository-agents/requirement.md) | 同仓库不同用户有独立定义/偏好，中心版本快照及目标解析 | 1、3 |
@@ -27,4 +27,4 @@
 
 同一工作区串行实现；每个 Change 的 Technical 依据实际代码形成、Plan 经 iclaude 评审后落实。只因额度耗尽改用新 subagent。自动验收使用专用目录，网页使用 Playwright；物理远端条件缺失则如实保留缺口，Mac 双架构产物照常构建。既有在线 Hub 的部署更新不随开发自动执行。
 
-当前首先交付身份/空间的完整独立 API 和 Web 流程。HAPI 多用户桥接在阶段 2 验证，阶段 1 不把新 token 翻译成原有 root 凭据。全产品默认入口和连接配置在阶段 5–7 切换，避免让一个尚不完整的授权模型接管现有执行。
+身份/空间的完整独立 API 和 Web 流程已验收归档。HAPI 多用户桥接在阶段 2 验证，阶段 1 不把新 token 翻译成原有 root 凭据。全产品默认入口和连接配置在阶段 5–7 切换，避免让一个尚不完整的授权模型接管现有执行。

@@ -24,7 +24,9 @@ HAPI Hub 只监听本机私有端口，省略端口配置时自动选择。Runwe
 
 ## 认证与原生环境
 
-身份和登录沿 HAPI；Runweft 自有认证路由验证同一 HAPI JWT 的用户和 namespace，不另建账号。Hub 令牌优先取指定环境变量，再取当前连接保存的 HAPI settings。本地令牌来自托管 Hub 配置。
+原生协作入口的身份和登录沿 HAPI；Runweft 原有资源/委派路由验证同一 HAPI JWT 的用户和 namespace。Hub 令牌优先取指定环境变量，再取当前连接保存的 HAPI settings。本地令牌来自托管 Hub 配置。
+
+另有 `/hub` 的独立[身份 token](../identity/tokens/spec.md)与[空间](../spaces/membership/spec.md)入口，无需注册服务。新旧凭据互不通用，独立身份当前不授予原生执行/委派权限。
 
 `auth login/status` 配置和核对当前连接，`auth login --token-stdin` 接受标准输入。`auth token` 只在交互终端显式展示；普通状态、配置、JSON 和日志不包含令牌。`open` 默认打开[协作看板](../dashboard/subagents/spec.md)，`--hapi` 打开原生 HAPI；两者共用 HAPI 登录。
 
@@ -40,7 +42,7 @@ HAPI Hub 只监听本机私有端口，省略端口配置时自动选择。Runwe
 | `agents/` | 全局 Agent YAML；项目定义保留于对应项目目录 |
 | `server/hapi/` | 托管 Hub 的原有数据库、令牌和状态 |
 | `server/hapi/artifacts/` | 所托管中心的持久文件字节；Hub 客户端从中心读取 |
-| `server/runweft/state.sqlite` | 中心机器/runtime 登记、最后原生探测及委派任务/轮次/请求关联和报告；WAL、事务化 schema version，不保存模型凭据 |
+| `server/runweft/state.sqlite` | 中心机器/runtime、任务与成果关联，以及独立身份 token 摘要、空间/成员/邀请；schema v7、WAL 和事务迁移，不保存模型凭据或身份 token 明文 |
 | `connections/local/hapi/` 或 `connections/<主机名>-<URL hash>/hapi/` | 当前机器 Runner 的连接身份、配置与原生日志 |
 | `connections/<连接>/hapi/workspaces/environments/<环境ID>/` | 独立任务或诊断 checkout、树外输入与准备/成果/操作回执；持久数据，不是缓存 |
 | `connections/<连接>/hapi/workspaces/repositories/` | 来源共享 Git/子模块/LFS 缓存；保护成果与活跃消费者，不按空闲时间删除 |

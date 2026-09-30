@@ -1,9 +1,9 @@
 # 身份 token 与空间
 
-> 状态：待验收
+> 状态：已完成
 > 规模：大型
 > 更新：2026-09-30
-> 前置：无；产品契约见 [总体需求](../hub-spaces-and-agent-configuration/requirement.md)。工程决策、Plan 评审和自动验收沿用用户授权。
+> 前置：无；产品契约见 [总体需求](../../changes/hub-spaces-and-agent-configuration/requirement.md)。工程决策、Plan 评审和自动验收沿用用户授权。
 
 ## 目标与边界
 
