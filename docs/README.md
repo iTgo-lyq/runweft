@@ -2,17 +2,19 @@
 
 Runweft 1.0.0 核心重构与产品官网均已完成，实现、自动验收和 Specs 见下列归档。安装、配置、部署与数据维护见[使用说明](usage.md)，源码构建和验证见[开发说明](development.md)。
 
+当前正在设计 [Hub 空间、账户与集中 Agent 配置](project/changes/hub-spaces-and-agent-configuration/requirement.md)：委派必须连接 Hub，项目设置关联 Git 仓库，用户通过 Agent/Skill 操作、通过 Web 查看配置与任务。该 Change 处于需求草稿阶段，尚未进入实现；[产品模型](project/changes/hub-spaces-and-agent-configuration/product-design.md)、[授权边界](project/changes/hub-spaces-and-agent-configuration/access-design.md)和 [Multica 调查](project/changes/hub-spaces-and-agent-configuration/research.md)分别维护。
+
 [最终交付验收](project/archive/2026-09-30-integrated-release/acceptance.md)汇总四平台产物、校验和、需求对应及原始证据。Linux x64 完成真实安装、20 组核心协作、8 组附件、2 组 MCP 控制、原生历史重建、升级回退和 Playwright；Mac 实机由用户验证，Linux arm64 为 QEMU CLI/配置验证，物理远端延期。远端功能已通过同机独立 Hub/多 Runner 真实链路。早期四平台基础安装证据不代替最终原生协作。
 
 实现以当前 HAPI 为第一依据，Runweft 尽量只做上层流程封装与 MCP；旧工程技术方案不直接沿用。
 
-整体方案与各 Change 均完成 iclaude 辅助评审；[整体复核记录](project/architecture-review.md)和各归档的 Execution 保存采纳依据。模块分工与依赖见[项目架构](project/architecture.md)。
+已交付整体方案与各归档 Change 均完成 iclaude 辅助评审；[整体复核记录](project/architecture-review.md)和各归档的 Execution 保存采纳依据。模块分工与依赖见[项目架构](project/architecture.md)。
 
 核心重构按[六阶段交付结构](project/delivery-structure.md)完成十一个领域 Change 和一个集成发行 Change；当前事实见 Specs，历史需求和验收见下列归档。
 
 产品官网另行交付，包含介绍、真实四平台下载和上手指南；构建与预览见[官网说明](../website/README.md)。
 
-全部 Change 按独立交付结果拆分并声明依赖，归档入口如下：
+已交付 Change 按独立交付结果拆分并声明依赖，归档入口如下：
 
 | Change | 需求入口 | 方案与依据 |
 | --- | --- | --- |
@@ -31,11 +33,11 @@ Runweft 1.0.0 核心重构与产品官网均已完成，实现、自动验收和
 | 完整版本集成与发布（已归档） | [Requirement](project/archive/2026-09-30-integrated-release/requirement.md) | [验收](project/archive/2026-09-30-integrated-release/acceptance.md)、[发行规格](project/specs/release/distribution/spec.md)、[验证范围](project/specs/release/acceptance/spec.md) |
 | 产品官网（已归档） | [Requirement](project/archive/2026-09-30-product-website/requirement.md) | [验收](project/archive/2026-09-30-product-website/acceptance.md)、[产品与下载](project/specs/website/product/spec.md)、[指南](project/specs/website/guide/spec.md) |
 
-当前没有未关闭 Change。每个 Change 均经一次 iclaude Plan 评审、逐任务实现提交、自动本地验收及 Specs 同步后归档；明确由用户承担或延期的实测范围见最终验收。`design.md` 保存前期讨论，不代替正式 Technical 或 Plan。
+上述归档 Change 均经一次 iclaude Plan 评审、逐任务实现提交、自动本地验收及 Specs 同步后关闭；明确由用户承担或延期的实测范围见最终验收。活跃 Change 的设计草稿不代替正式 Technical 或 Plan，也不修改已验收 Specs。
 
 按照 [project-workflow](../.agents/skills/project-workflow/SKILL.md)：
 
-- 新的未关闭目标、技术方案和计划放在 `project/changes/`；当前无活跃变更。
+- 新的未关闭目标、技术方案和计划放在 `project/changes/`；当前活跃项为 [Hub 空间与集中配置设计](project/changes/hub-spaces-and-agent-configuration/requirement.md)。
 - 已验收 Specs：[CLI 安装](project/specs/installation/cli/spec.md)、[MCP 安装](project/specs/installation/mcp/spec.md)、[宿主 MCP](project/specs/host-mcp/spec.md)、[部署与数据](project/specs/deployment/spec.md)、[工作区绑定](project/specs/workspaces/bindings/spec.md)、[执行事实](project/specs/execution/lifecycle/spec.md)、[执行恢复](project/specs/execution/recovery/spec.md)、[执行兼容](project/specs/execution/compatibility/spec.md)、[机器](project/specs/resources/machines/spec.md)、[Runtime](project/specs/resources/runtimes/spec.md)、[资源范围](project/specs/resources/scope/spec.md)、[Agent 定义](project/specs/agents/definition/spec.md)、[来源与绑定](project/specs/agents/scope/spec.md)、[原生继承边界](project/specs/agents/inheritance/spec.md)。
 - 已验收协作 Specs：[委派入口](project/specs/delegation/interface/spec.md)、[持久协调](project/specs/delegation/lifecycle/spec.md)、[业务轮次](project/specs/delegation/rounds/spec.md)、[结果与等待](project/specs/delegation/results/spec.md)、[上下文](project/specs/delegation/context/spec.md)、[本机共享工作区](project/specs/local-workspace/shared/spec.md)。
 - 已验收附件 Specs：[持久文件](project/specs/artifacts/spec.md)、[启动前输入](project/specs/artifacts/inputs/spec.md)、[输出交付](project/specs/artifacts/delivery/spec.md)、[留存与清理](project/specs/artifacts/retention/spec.md)。

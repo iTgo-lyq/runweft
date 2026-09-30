@@ -3,6 +3,8 @@
 > 更新：2026-09-30
 > 本文保存产品决策、职责边界和 Change 依赖；十二个 Change 已完成并归档，当前实现事实以 Specs 为准，验证范围见最终交付验收。
 
+2026-09-30 新产品方向进入 [Hub 空间、账户与集中 Agent 配置 Change](changes/hub-spaces-and-agent-configuration/requirement.md)：必须连接 Hub 后委派，Git 仓库关联中心配置，补充账户、空间与资源所有权。该方向尚在设计，以下 local/Hub 双模式、文件定义和 HAPI 共用认证描述仍用于解释已交付版本，不代表新设计已经实现。
+
 ## 产品边界
 
 只接入 Codex 与 Claude Code 主宿主，协作体验尽量对齐原生 Codex；执行目标与主客户端独立。Runweft 提供 MCP 和 HAPI 上层流程封装，何时使用什么 agent 由业务 skill 与主 agent 决定，不构建自动业务编排器。
