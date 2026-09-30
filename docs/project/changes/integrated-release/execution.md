@@ -59,3 +59,12 @@
 - 失败路径：复用冻结产品在 T1 已通过的 173 项根测试：`tasks.test.ts` 的丢失接受/输入、未知状态及重启不重发；`task-outputs.test.ts`/`task-results.test.ts` 的固定候选重试、补交/补收不重跑模型；`task-workspaces.test.ts`/`remote-tasks.test.ts` 的准备失败、封存失败与现场保留；`resources.test.ts` 的 schema 7 拒绝及保留。这里是故障 fixture 证据，与上述真实原生和升级验证区分。
 - 检查：新增脚本 typecheck 与 diff 检查通过；冻结 Runweft/HAPI hash 未变化，不重建或重跑无关测试。
 - Commit：`integrated-release T3: verify native recovery and version upgrade rollback`
+
+## T4 完整交付核对
+
+- 需求：十二项标准逐一对应 [Acceptance](acceptance.md)，明确真实原生、故障 fixture、QEMU 与用户待验证的范围；包内使用说明保持 T1 定稿的相同字节。
+- 交付：`dist/runweft-1.0.0-release.tar.gz` 为 778,574,699 字节，SHA-256 `d6b1d689bb9dd516b65278f51c90016a8a03de08ec6c523d2f6700df12cd5830`，相邻提供校验文件。仅包含五个包、manifest、使用说明、index 与 SHA256SUMS，没有 `.dev-smoke`、原生配置或认证。
+- 核对：`.dev-smoke/c12-final-audit.json` success，逐个确认五包 SHA-512/SHA-256、四平台程序 hash、包内 README/manifest、汇总归档每个文件的字节、冻结候选以来产品未变化、HAPI revision/干净状态及 16 份成功证据。首次审计脚本比较 tar 目录名时未统一尾随 `/`，修正名称标准化后完成；未更改归档或产品来绕过检查。
+- 文档：当前入口、Specs 与本 Change 共 49 个 Markdown 文件、242 个本地链接及标题锚点通过检查，证据 `.dev-smoke/c12-doc-links.json`；结构和 diff 检查通过。归档移动后再次核对引用。
+- 结论：沿用户持续授权自动验收通过，Mac 实机由用户验证、物理跨机延期；Linux arm64 仿真边界、当前 CI 未触发、Nginx 未运行及上游环境性失败均已记录。没有新增需要用户执行的其他本地验收任务，未公开发布或改动用户客户端配置。
+- Commit：`integrated-release T4: finalize release evidence and deliverable`
