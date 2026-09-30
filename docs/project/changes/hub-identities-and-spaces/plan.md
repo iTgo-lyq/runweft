@@ -1,6 +1,6 @@
 # 身份 token 与空间实施计划
 
-> 状态：待执行
+> 状态：执行中
 > 来源：[需求](requirement.md)、[技术方案](technical.md)
 > 执行模式：逐任务提交；用户已授权主 agent 决策及本地验收，iclaude 评审后执行。
 
@@ -12,11 +12,11 @@
 
 ### T1 身份和空间持久 API
 
-- 状态：待开始
+- 状态：进行中
 - 交付：schema v7、独立 token 认证、个人空间、成员角色、单次邀请、轮换和 API 接入。
 - 依赖：无。
 - 验收：真实 HTTP 验证两个空间三角色、并发更新、重启与秘密不入库；新旧凭据互不转换。
-- 验证：新增领域集成测试及相关旧 API/schema 测试、typecheck。
+- 验证：新增领域集成测试及相关旧 API/schema 测试、typecheck；旧 resources 的未来版本拒绝测试改为 v8，task-results 的 v5 fixture 排除新增 v7 表后再迁移。
 
 ### T2 Web 身份与空间管理
 
@@ -32,7 +32,7 @@
 - 交付：专用服务下完整流程、兼容检查、使用说明及 Specs；归档本 Change。
 - 依赖：T1、T2。
 - 验收：需求全部通过，不将未接通的 HAPI 多用户执行写成完成。
-- 验证：typecheck、`bun run test`、build，复用已通过且未变化的聚焦证据。
+- 验证：typecheck、`bun run test`、build；真实 HAPI 新旧凭据双向拒绝、Socket 认证和 DB/WAL/日志明文扫描，复用已通过且未变化的聚焦证据。
 
 ## 风险与后续
 
