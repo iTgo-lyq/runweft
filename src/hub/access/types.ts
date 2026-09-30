@@ -8,7 +8,7 @@ export type Operation = 'read' | 'write' | 'report';
 export type PrincipalKind = 'user' | 'machine' | 'task';
 export type Principal = {
     kind: PrincipalKind; id: string; ownerId: string; userNumber: number; name: string;
-    digest: string; machineId: string | null; taskId: string | null; spaceId: string | null;
+    digest: string; expiresAt?: number; machineId: string | null; taskId: string | null; spaceId: string | null;
 };
 export const Binding = z.object({
     kind: ObjectKind, id: ExecutionId, ownerId: z.uuid(), spaceId: z.uuid().nullable().default(null),

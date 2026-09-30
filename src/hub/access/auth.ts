@@ -29,7 +29,7 @@ export class AccessAuthority {
                 || (payload.space !== null && typeof payload.space !== 'string')) throw hubUnauthorized();
             const actor = this.store.resolve(payload.kind as Principal['kind'], payload.ref, payload.space as string | null);
             if (actor.id !== payload.sub) throw hubUnauthorized();
-            return actor;
+            return { ...actor, expiresAt: payload.exp! * 1000 };
         } catch { throw hubUnauthorized(); }
     }
 }

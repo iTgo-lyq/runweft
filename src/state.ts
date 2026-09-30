@@ -4,7 +4,7 @@ import { dirname } from 'node:path';
 import { ensureDirectory } from './config';
 import { ResourceError } from './resources/types';
 
-export const STATE_SCHEMA_VERSION = 8;
+export const STATE_SCHEMA_VERSION = 9;
 
 /** One additive schema for the central business database; native history stays in HAPI. */
 export function openState(path: string) {
@@ -170,6 +170,16 @@ export function openState(path: string) {
                 );
                 CREATE INDEX hub_execution_intent_machine ON hub_execution_intents(machineId, expiresAt);
                 PRAGMA user_version=8;
+            `);
+            if (version < 9) db.exec(`
+                CREATE TABLE hub_file_reservations (
+                    id TEXT PRIMARY KEY, sender TEXT NOT NULL, requestId TEXT NOT NULL,
+                    ownerId TEXT NOT NULL REFERENCES hub_users(id), spaceId TEXT REFERENCES hub_spaces(id),
+                    taskId TEXT, machineId TEXT, filename TEXT NOT NULL, reference TEXT,
+                    fingerprint TEXT, artifactId TEXT, cancelledAt INTEGER,
+                    UNIQUE(sender, requestId)
+                );
+                PRAGMA user_version=9;
             `);
         }).immediate();
         return db;

@@ -14,13 +14,13 @@
 
 业务库增量保存机器/任务凭据、原生对象归属、执行发起意图。随机凭据使用 32 字节随机值、类型前缀及 SHA-256 摘要；不保存明文。用户继续使用已有 identity token，不另建账户。机器凭据绑定一个机器 ID 和所有者；任务凭据绑定确定任务及机器，供 Runweft 自身的传输/协同进程访问已分配附件，不能登记机器或调用配置 API；不宣称原生子进程会持有它。原生 Runner 和子进程继续使用机器凭据，网关按已分配会话限制其访问。机器注册/共享产品 API 由阶段 3 提供，阶段 2 暴露内部签发/撤销方法供集成与自动测试使用。
 
-schema v8 在同一 state.sqlite 增加四张表：`hub_execution_objects`、`hub_execution_credentials`、`hub_execution_grants`、`hub_execution_intents`。不复制原生会话/消息/文件。对象 kind 包含 machine/task/session/artifact；task 是业务授权锚点。附件的机器/任务读写须有单独的方向性 grant，绑定到具体凭据，可独立撤销。
+schema v8 在同一 state.sqlite 增加四张表：`hub_execution_objects`、`hub_execution_credentials`、`hub_execution_grants`、`hub_execution_intents`。schema v9 增加 `hub_file_reservations`，保存发布者限定的客户端请求键、内部 UUID、可信交付许可与原生附件 ID。成员移除同时取消未完成文件许可；重新加入仅允许所有者恢复历史文件，不恢复机器传输权。回执重查不重新授予已撤销的 grant。不复制原生会话/消息/文件。对象 kind 包含 machine/task/session/artifact；task 是业务授权锚点。附件的机器/任务读写须有单独的方向性 grant，绑定到具体凭据，可独立撤销。
 
 对象记录包含 kind/id、ownerId、可选 spaceId/taskId/machineId。主键是 kind/id；已有归属不能通过 upsert 重写。task 关联对象有同一发起人/空间，机器全局归属不以空间替代。资源共享不等于任务内容共享，阶段 2 不提供自动共享会话的路径。
 
 用户只能读写本人拥有且仍属于其空间的对象；未关联空间的本人原生会话仍可访问。机器凭据仅控制绑定的机器，执行该机器已分配的会话及文件操作。机器操作者能读取执行现场，这是既有 OS 信任边界，不因拥有机器而在用户 API 获得他人任务内容。任务凭据不能取得机器管理权。
 
-内部 HAPI 使用固定 `runweft` namespace。产品 user/space/task ID 不作为外部可任意选择的 HAPI namespace。Runweft 业务任务仍按可信 user × space 范围管理；阶段 5 的内部 HapiClient 分离业务范围与执行 namespace。
+会话和机器共用内部 HAPI `runweft` namespace，以便共享执行资源。附件独立映射到由服务端按 owner × space 计算的 HAPI namespace；这样直接复用原生列表、用量、配额和原子清理，不在网关重建文件到期判断。跨机器附件访问从可信对象归属选择对应 namespace，客户端不能提交 namespace。产品 user/space/task ID 不作为外部可任意选择的 HAPI namespace。Runweft 业务任务仍按可信 user × space 范围管理；阶段 5 的内部 HapiClient 分离业务范围与执行 namespace。
 
 ## 认证和长连接
 
@@ -40,7 +40,7 @@ JWT 只用于外层，向 HAPI 请求时换为内部 JWT；`/cli` 内部使用�
 
 恢复前检查绑定机器在线；更关键的是在实际下发 spawn RPC 时检查 reservedSessionId/existingSessionId 对应意图或已绑定会话的 machineId 必须等于目标机器。原生 HAPI 按 host 回退到另一台机器时，网关在数据送达 Runner 前拒绝，不能只靠发起前在线检查。所有权不随元数据变化，机器迁移也只能由可信协调操作改绑定；原生 metadata.machineId 不直接重写授权。后续真实复现若仍有网关无法拦截的通道，再按需求在独立 fork 补最小通用认证入口。
 
-附件字节、校验、额度、引用和清理由 HAPI 完成。网关登记预约 ID，检查读取/上传对象和引用关联，机器仅访问明确授予其执行的附件。业务协调器的跨机器输入/成果分配由阶段 5 调用本阶段的可信绑定方法，不开放任意用户写授权表。列表/清理只作用于授权对象，不能代理整个内部 namespace 的 prune。
+附件字节、校验、额度、引用和清理由 HAPI 完成。网关登记预约 ID，检查读取/上传对象和引用关联，机器仅访问明确授予其执行的附件。业务协调器的跨机器输入/成果分配由阶段 5 调用本阶段的可信绑定方法，不开放任意用户写授权表。附件列表/清理只作用于当前用户 × 当前空间对应的文件 namespace；机器/任务凭据不允许 prune。跨空间或跨用户的附件字节访问仍须显式对象授权。每个机器上传 requestId 要有协调器预先登记的交付许可，不能将未知机器输出默认归给机器所有者。预约结果中的 requestId 保持客户端原值，内部 HAPI requestId 由中心映射。迁移旧附件时需按明确归属复制到目标文件 namespace，并保留源文件和映射记录；旧共享 namespace 不直接冒充某个新用户的文件库。
 
 ## Socket 与 SSE
 

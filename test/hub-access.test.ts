@@ -1,6 +1,6 @@
 import { afterEach, expect, test } from 'bun:test';
 import { Database } from 'bun:sqlite';
-import { randomBytes } from 'node:crypto';
+import { randomBytes, randomUUID } from 'node:crypto';
 import { readFileSync, rmSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { decodeJwt, SignJWT } from 'jose';
@@ -8,6 +8,7 @@ import { fixture } from './helpers';
 import { createIdentityToken, HubStore } from '../src/hub/store';
 import { AccessStore } from '../src/hub/access/store';
 import { AccessAuthority } from '../src/hub/access/auth';
+import { FileAccessStore } from '../src/hub/access/file-store';
 import { STATE_SCHEMA_VERSION } from '../src/state';
 
 const cleanup: (() => void)[] = [];
@@ -155,7 +156,7 @@ test('two processes cannot claim the same native object for different owners; to
 
 test('v7 migration preserves identities and existing resource rows without inferring execution ownership', () => {
     const h = setup(), db = new Database(h.path);
-    db.exec(`DROP TABLE hub_execution_grants; DROP TABLE hub_execution_intents; DROP TABLE hub_execution_credentials;
+    db.exec(`DROP TABLE hub_file_reservations; DROP TABLE hub_execution_grants; DROP TABLE hub_execution_intents; DROP TABLE hub_execution_credentials;
         DROP TABLE hub_execution_objects; INSERT INTO machine_registrations VALUES ('default', 'legacy', 1, 1, 1); PRAGMA user_version=7;`);
     const migrated = new AccessStore(h.path);
     try {
@@ -164,4 +165,57 @@ test('v7 migration preserves identities and existing resource rows without infer
         expect(migrated.object('machine', 'legacy')).toBeNull();
         expect(db.query('SELECT machineId FROM machine_registrations').get()).toEqual({ machineId: 'legacy' });
     } finally { migrated.close(); db.close(); }
+});
+
+test('file request IDs are scoped to the publisher and pin both content and selected space', () => {
+    const h = setup(), files = new FileAccessStore(h.access), requestId = randomUUID();
+    const a = h.access.authenticate(h.a.token, h.sid), b = h.access.authenticate(h.b.token, h.sid);
+    const body = { requestId, filename: 'result.txt', size: 3, sha256: 'a'.repeat(64) };
+    const first = files.reserve(a, body), second = files.reserve(b, body);
+    expect(first.body.requestId).not.toBe(second.body.requestId);
+    expect(first.body.requestId).not.toBe(requestId);
+    expect(files.reserve(a, body).body.requestId).toBe(first.body.requestId);
+    expect(() => files.reserve(a, { ...body, sha256: 'b'.repeat(64) })).toThrow('内容');
+    expect(() => files.reserve(h.access.authenticate(h.a.token), body)).toThrow('归属');
+    expect(() => files.lookup(h.access.authenticate(h.b.token, h.b.personalSpace.id), requestId)).toThrow();
+    files.bind(a, first.reservation.id, 'file-a');
+    expect(() => files.bind(b, first.reservation.id, 'file-b')).toThrow();
+    expect(() => files.bind(a, first.reservation.id, 'file-b')).toThrow('内容');
+    expect(h.access.can(b, 'artifact', 'file-a')).toBe(false);
+});
+
+test('machine output requires a trusted permit; task and user ownership cannot be replaced by machine ownership', () => {
+    const h = setup(), files = new FileAccessStore(h.access), machine = h.access.authenticate(h.machine.token);
+    const requestId = randomUUID(), body = { requestId, filename: 'result.txt', size: 3, sha256: 'a'.repeat(64) };
+    expect(() => files.reserve(machine, body)).toThrow();
+    const permit = { requestId, filename: body.filename, ownerId: h.b.identity.id, spaceId: h.sid, taskId: 'task-b', machineId: 'machine-a' };
+    const row = files.permit(permit);
+    expect(files.permit(permit).id).toBe(row.id);
+    expect(() => files.permit({ ...permit, ownerId: h.a.identity.id })).toThrow();
+    expect(() => files.reserve(machine, { ...body, filename: 'other.txt' })).toThrow();
+    expect(files.reserve(machine, body).reservation.id).toBe(row.id);
+    expect(() => files.reserve(h.access.authenticate(h.task.token), body)).toThrow();
+    const bound = files.bind(machine, row.id, 'machine-output');
+    expect(bound.ownerId).toBe(h.b.identity.id);
+    expect(h.access.can(machine, 'artifact', 'machine-output', 'write')).toBe(true);
+    expect(h.access.can(h.access.authenticate(h.a.token), 'artifact', 'machine-output')).toBe(false);
+    h.access.revokeGrant(h.machine.id, 'machine-output');
+    files.bind(machine, files.reserve(machine, body).reservation.id, 'machine-output');
+    expect(h.access.can(machine, 'artifact', 'machine-output')).toBe(false);
+});
+
+test('removed members cannot revive output permits; rejoining owners can recover their existing native file receipt', () => {
+    const h = setup(), files = new FileAccessStore(h.access), machine = h.access.authenticate(h.machine.token);
+    const requestId = randomUUID(), body = { requestId, filename: 'orphan.txt', size: 3, sha256: 'a'.repeat(64) };
+    const row = files.permit({ requestId, filename: body.filename, ownerId: h.b.identity.id, spaceId: h.sid, machineId: 'machine-a' });
+    files.reserve(machine, body);
+    h.hub.changeMember(h.a.identity.id, h.sid, h.b.identity.id, null);
+    expect(() => files.bind(machine, row.id, 'orphan')).toThrow();
+    const invitation = h.hub.invite(h.a.identity.id, h.sid, 'member'); h.hub.acceptInvitation(h.b.identity.id, invitation.token);
+    expect(() => files.reserve(machine, body)).toThrow();
+    expect(() => files.bind(machine, row.id, 'orphan')).toThrow();
+    const owner = h.access.authenticate(h.b.token, h.sid);
+    files.bind(owner, row.id, 'orphan');
+    expect(h.access.can(owner, 'artifact', 'orphan')).toBe(true);
+    expect(h.access.can(machine, 'artifact', 'orphan')).toBe(false);
 });

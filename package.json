@@ -48,13 +48,16 @@
     "test:workspace-preparation": "bun scripts/smoke-workspace-preparation.ts",
     "test:remote-tasks": "bun scripts/smoke-remote-native.ts --tasks",
     "test:result-retention": "bun scripts/smoke-result-retention.ts",
-    "test:remote-native": "bun scripts/smoke-remote-native.ts"
+    "test:remote-native": "bun scripts/smoke-remote-native.ts",
+    "test:hub-access": "bun scripts/smoke-hub-access.ts"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.25.1",
     "commander": "15.0.0",
     "http-proxy": "1.18.1",
     "jose": "6.2.12",
+    "socket.io": "4.8.3",
+    "socket.io-client": "4.8.3",
     "toml-eslint-parser": "1.0.3",
     "yaml": "2.9.1",
     "zod": "4.6.5"

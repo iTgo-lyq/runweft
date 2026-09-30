@@ -32,3 +32,9 @@
 优先使用 Runweft 授权网关：HTTP 选择允许的原生路由并检查对象；Socket.IO 库负责协议转接，Runweft 只检查握手、对象和 RPC scope。原生执行、会话与文件存储仍由 HAPI 管理。新授权网关先作为可独立启动验收的模块交付，阶段 5 切换正式服务；不同时把缺少身份迁移的旧 Runner 改接新凭据。
 
 共享机器与不同用户的任务需要在同一内部执行 namespace 协作，因此不能把一个 namespace 当一个产品用户。对象归属由中心业务库保存，根 token 只在服务进程与 loopback HAPI 间使用。旧 namespace 未显式迁移前不自动出现在新授权域中。
+
+## T2 文件库与 HTTP 实证
+
+- HAPI 原生附件按 namespace 提供列表、用量、配额和原子过期清理。每个 owner × space 采用独立且不可由客户端选择的文件 namespace，即可复用上述能力，不需要重写 prune 或修改 HAPI。会话/机器仍用共同执行 namespace。
+- 真实 smoke `.dev-smoke/hub-access-wsgSKh/evidence.json`：同一 requestId 在两个发布者下得到不同原生对象；A 机器受许可上传 B 的结果但 A 用户不能读取；网关重启仍恢复请求映射；B 的 prune 删除 B 过期文件而保留同龄 A 文件。撤销正在上传/下载的授权均终止流，HAPI 回收上传残片；显式重新授权可对同一对象继续上传。
+- 验证仅使用隔离 HAPI、SQLite 与原生协议 fixture，未调用模型或修改真实用户配置；Socket/终端授权尚待 T3。

@@ -11,7 +11,7 @@ const invalid = () => new HubError(400, 'invalid_execution_binding', '执行主�
 
 /** Trusted service methods only. HTTP callers never supply authoritative owner or machine bindings. */
 export class AccessStore {
-    private readonly db;
+    readonly db;
     constructor(path: string) { this.db = openState(path); }
     close() { this.db.close(); }
 
@@ -113,7 +113,10 @@ export class AccessStore {
         return { kind, id: row.id, ownerId: row.ownerId, userNumber: user.userNumber, name: user.name, digest,
             machineId: row.machineId, taskId: row.taskId, spaceId: row.spaceId };
     }
-    refresh(principal: Principal): Principal { return this.resolve(principal.kind, principal.digest, principal.kind === 'user' ? principal.spaceId : null); }
+    refresh(principal: Principal): Principal {
+        if (principal.expiresAt !== undefined && principal.expiresAt <= Date.now()) throw hubUnauthorized();
+        return { ...this.resolve(principal.kind, principal.digest, principal.kind === 'user' ? principal.spaceId : null), expiresAt: principal.expiresAt };
+    }
     private permitted(principal: Principal, object: ExecutionObject, operation: Operation): boolean {
         if (object.retiredAt !== null || !this.member(object.ownerId, object.spaceId)) return false;
         if (principal.kind === 'user') return operation !== 'report' && object.ownerId === principal.ownerId
@@ -195,17 +198,20 @@ export class AccessStore {
             return this.intent(id)!;
         }).immediate();
     }
+    intentByRequest(ownerId: string, requestKey: string): ExecutionIntent | null {
+        return this.db.query('SELECT * FROM hub_execution_intents WHERE ownerId=? AND requestKey=?').get(ownerId, requestKey) as ExecutionIntent | null;
+    }
     pending(machineId: string): ExecutionIntent[] {
         return (this.db.query(`SELECT * FROM hub_execution_intents WHERE machineId=? AND expiresAt>? AND cancelledAt IS NULL AND sessionId IS NULL`)
             .all(machineId, Date.now()) as ExecutionIntent[]).filter(intent => this.member(intent.ownerId, intent.spaceId));
     }
     /** Caller must first prove the native receipt or authorized fork/clear relation. */
-    bindIntent(id: string, sessionId: string): ExecutionObject {
+    bindIntent(id: string, sessionId: string, confirmedReceipt = false): ExecutionObject {
         return this.db.transaction(() => {
             const intent = this.intent(id);
             if (!intent || intent.cancelledAt !== null) throw hubNotFound();
             if (intent.sessionId && intent.sessionId !== sessionId) throw conflict();
-            if (!intent.sessionId && intent.expiresAt <= Date.now()) throw hubNotFound();
+            if (!confirmedReceipt && !intent.sessionId && intent.expiresAt <= Date.now()) throw hubNotFound();
             const object = this.bind({ kind: 'session', id: sessionId, ownerId: intent.ownerId, spaceId: intent.spaceId,
                 taskId: intent.taskId, machineId: intent.machineId });
             this.db.query('UPDATE hub_execution_intents SET sessionId=? WHERE id=?').run(sessionId, id);
