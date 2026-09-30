@@ -1,3 +1,4 @@
+import { clearConsole, mountConsole } from './console.js';
 export default '';
 type Identity = { id: string; name: string; createdAt: number };
 type Role = 'owner' | 'admin' | 'member';
@@ -13,6 +14,7 @@ let saved: Saved = { token: '' }, identity: Identity | undefined, spaces: Space[
 let busy = false, secret = '', secretKind: 'identity' | 'invitation' | 'rotation' = 'identity';
 type ConnectionRequest = { id: string; origin: string; label: string; publicKey: string; code: string; expiresAt: number; status: string };
 let connectionRequest: ConnectionRequest | undefined;
+const domainTokens = new Map<string, { token: string; expiresAt: number }>();
 class ApiError extends Error { constructor(readonly status: number, message: string) { super(message); } }
 
 function notice(message: string, error = false) {
@@ -57,8 +59,8 @@ function button(value: string, fn: () => Promise<void>, className = 'secondary')
     const node = document.createElement('button'); node.type = 'button'; node.className = className; node.textContent = value;
     node.addEventListener('click', () => { void action(fn); }); return node;
 }
-function canAssign(actor: Role, role: Role) { return actor === 'owner' || (actor === 'admin' && role === 'member'); }
 function showEntry() {
+    domainTokens.clear(); clearConsole();
     identity = undefined; selected = undefined; spaces = [];
     $('entry').hidden = false; $('workspace').hidden = true; $('logout').hidden = true;
     $('headline').textContent = '从你的身份开始'; $('intro').textContent = '无需注册。保存你的身份 token，下次凭它回到自己的空间。';
@@ -66,10 +68,11 @@ function showEntry() {
     renderConnection();
 }
 async function refresh() {
+    clearConsole(); domainTokens.clear();
     identity = (await api('/identity')).identity;
     spaces = (await api('/spaces')).spaces;
     $('entry').hidden = true; $('workspace').hidden = false; $('logout').hidden = false;
-    $('headline').textContent = '你的空间'; $('intro').textContent = '选择空间，查看成员和管理协作范围。';
+    $('headline').textContent = '资源与协作'; $('intro').textContent = '机器 → Runtime → Agent → 任务。配置属于 Hub，执行留在你选择的机器。';
     $('identity-name').textContent = identity!.name; $('identity-id').textContent = identity!.id; input('identity-name-input').value = identity!.name;
     selected = spaces.find(space => space.id === saved.spaceId) ?? spaces[0];
     saved.spaceId = selected?.id; persist();
@@ -85,9 +88,11 @@ async function refresh() {
     const space = selected, route = `/spaces/${encodeURIComponent(space.id)}`;
     $('space-name').textContent = space.name; $('space-id').textContent = space.id; $('space-role').textContent = `当前角色 · ${labels[space.role]}`;
     input('space-name-input').value = space.name;
-    const manage = space.role !== 'member'; $('rename-space').hidden = !manage; $('invitation-manager').hidden = !manage;
+    const permissions = (await api(route + '/permissions')).permissions;
+    const manage = permissions.manageInvitations; $('rename-space').hidden = !permissions.rename; $('invitation-manager').hidden = !manage;
+    $('leave-space').hidden = !permissions.leave;
     const roleSelect = $<HTMLSelectElement>('invitation-role');
-    roleSelect.replaceChildren(new Option('成员', 'member'), ...(space.role === 'owner' ? [new Option('管理员', 'admin')] : []));
+    roleSelect.replaceChildren(...permissions.inviteRoles.map((role: Role) => new Option(labels[role], role)));
     $('members').replaceChildren(); $('invitations').replaceChildren();
     const [members, invitations] = await Promise.all([api(route + '/members'), manage ? api(route + '/invitations') : Promise.resolve({ invitations: [] })]);
     $('member-count').textContent = String(members.members.length);
@@ -96,9 +101,10 @@ async function refresh() {
         name.append(text('span', member.name + (member.userId === identity!.id ? '（你）' : '')), text('code', member.userId));
         role.textContent = labels[member.role];
         const group = text('div', '', 'member-actions');
-        if (space.role === 'owner') {
+        const memberPermissions = permissions.members[member.userId];
+        if (memberPermissions.roles.length > 1) {
             const select = document.createElement('select'); select.setAttribute('aria-label', `${member.name}的角色`);
-            for (const [value, label] of Object.entries(labels)) select.add(new Option(label, value));
+            for (const value of memberPermissions.roles as Role[]) select.add(new Option(labels[value], value));
             select.value = member.role;
             group.append(select, button('保存', async () => {
                 if (select.value === member.role) return;
@@ -106,7 +112,7 @@ async function refresh() {
                 await api(route + `/members/${member.userId}`, { role: select.value }, 'PATCH'); await refresh(); notice('成员角色已更新。');
             }));
         }
-        if (canAssign(space.role, member.role) && member.userId !== identity!.id) group.append(button('移除', async () => {
+        if (memberPermissions.remove && member.userId !== identity!.id) group.append(button('移除', async () => {
             if (!await confirm(`将 ${member.name} 移出 ${space.name}？`)) return;
             await api(route + `/members/${member.userId}`, undefined, 'DELETE'); await refresh(); notice('成员已移除。');
         }, 'quiet'));
@@ -115,11 +121,26 @@ async function refresh() {
     if (manage) $('invitations').replaceChildren(...(invitations.invitations.length ? invitations.invitations.map((invite: Invitation) => {
         const node = text('div', '', 'invitation');
         node.append(text('span', `${labels[invite.role]}邀请 · ${new Date(invite.expiresAt).toLocaleString('zh-CN')} 到期`));
-        if (canAssign(space.role, invite.role)) node.append(button('撤销', async () => {
+        if (permissions.invitations[invite.id]?.revoke) node.append(button('撤销', async () => {
             await api(route + `/invitations/${invite.id}`, undefined, 'DELETE'); await refresh(); notice('邀请已撤销。');
         }, 'quiet'));
         return node;
     }) : [text('p', '没有待使用的邀请。', 'hint')]));
+    const currentToken = saved.token, currentSpace = space.id;
+    await mountConsole({ userId: identity!.id, spaceId: space.id, members: members.members, spaces, action, confirm, notice,
+        request: async (path, body, method = body === undefined ? 'GET' : 'POST', global = false) => {
+            if (saved.token !== currentToken || selected?.id !== currentSpace) throw new Error('当前身份或空间已变化，请刷新。');
+            const key = global ? 'global' : currentSpace;
+            let credential = domainTokens.get(key);
+            if (!credential || credential.expiresAt < Date.now() + 30_000) {
+                const auth = await api('/auth', { accessToken: currentToken, ...(global ? {} : { spaceId: currentSpace }) }, 'POST', '', '/api');
+                credential = { token: auth.token, expiresAt: Date.now() + 14 * 60_000 }; domainTokens.set(key, credential);
+            }
+            const result = await api(path, body, method, credential.token, '/api/runweft');
+            if (saved.token !== currentToken || selected?.id !== currentSpace) throw new Error('当前身份或空间已变化，请刷新。');
+            return result;
+        },
+    });
 }
 function confirm(message: string): Promise<boolean> {
     $('confirm-description').textContent = message; confirmDialog.returnValue = '';

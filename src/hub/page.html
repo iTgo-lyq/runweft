@@ -1,11 +1,11 @@
 <!doctype html>
 <html lang="zh-CN">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>身份与空间 · Runweft Hub</title><link rel="stylesheet" href="/hub/style.css"><script type="module" src="/hub/app.js"></script></head>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>资源与协作 · Runweft Hub</title><link rel="stylesheet" href="/hub/style.css"><script type="module" src="/hub/app.js"></script></head>
 <body>
 <a class="skip" href="#main">跳到主内容</a>
 <header><a class="brand" href="/hub">Runweft <span>Hub</span></a><span id="host"></span><button id="logout" class="secondary" hidden>退出此浏览器</button></header>
 <main id="main">
-<div class="heading"><p class="eyebrow">身份与空间</p><h1 id="headline">从你的身份开始</h1><p id="intro">无需注册。保存你的身份 token，下次凭它回到自己的空间。</p></div>
+<div class="heading"><p class="eyebrow">RUNWEFT / 协作工作台</p><h1 id="headline">从你的身份开始</h1><p id="intro">无需注册。保存你的身份 token，下次凭它回到自己的空间。</p></div>
 <p id="notice" role="status" aria-live="polite" hidden></p>
 <section id="connect-request" class="panel" aria-label="确认本机连接" hidden>
   <h2>连接你的 Agent 工作环境</h2><p id="connect-details"></p><p>核对码：<strong id="connect-code"></strong></p>
@@ -24,10 +24,15 @@
   </aside>
   <section class="space-content" aria-label="空间详情">
     <div class="section-heading"><div><p class="eyebrow" id="space-role"></p><h2 id="space-name"></h2><code id="space-id"></code></div><button id="refresh" class="secondary">刷新</button></div>
+    <details class="onboarding"><summary>让 Agent 帮我接入此 Hub</summary><p>复制以下说明交给 Codex 或 Claude Code。身份 token 只在本页面领取或导入，不要发送给模型。</p><pre id="agent-onboarding" tabindex="0"></pre></details>
+    <nav id="console-navigation" aria-label="资源导航"></nav>
+    <div id="console-content" aria-live="polite"></div>
+    <div id="members-panel" hidden>
     <form id="rename-space" class="inline" hidden><label>空间名称<input id="space-name-input" maxlength="80" required></label><button type="submit" class="secondary">保存</button></form>
     <section class="members-section"><h3>空间成员 <span id="member-count"></span></h3><div class="table-wrap"><table><thead><tr><th scope="col">成员</th><th scope="col">角色</th><th scope="col">操作</th></tr></thead><tbody id="members"></tbody></table></div></section>
     <section id="invitation-manager" hidden><h3>邀请成员</h3><form id="create-invitation" class="inline"><label>加入后的角色<select id="invitation-role"><option value="member">成员</option><option value="admin">管理员</option></select></label><button type="submit">生成邀请</button></form><p class="hint">邀请仅能加入当前空间，24 小时内由一人使用。成员身份不授予他人私有资源的编辑权。</p><div id="invitations"></div></section>
     <div class="leave"><button id="leave-space" class="quiet">退出这个空间</button><p class="hint">最后一位所有者需要先指定另一位所有者。</p></div>
+    </div>
   </section>
 </div>
 <footer>身份只在当前浏览器会话中保存。请自行保留 token 副本。</footer>

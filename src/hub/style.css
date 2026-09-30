@@ -8,3 +8,24 @@ dialog{border:1px solid var(--line);border-radius:8px;box-shadow:0 18px 60px #21
 @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto}}
 button{white-space:nowrap}.section-heading>div{min-width:0}.section-heading>button{flex-shrink:0}th:nth-child(2),td:nth-child(2),th:nth-child(3){white-space:nowrap}
 @media(max-width:680px){td:first-child{width:48%}td:nth-child(2){width:20%}td select{min-width:78px}}
+textarea{font:inherit;display:block;width:100%;min-height:140px;resize:vertical;border:1px solid var(--line);border-radius:5px;padding:10px;color:var(--ink);background:var(--paper)}
+#console-navigation{display:flex;gap:6px;overflow:auto;border-bottom:1px solid var(--line);padding:16px 0;margin-bottom:24px}
+#console-navigation button{border-color:transparent;background:transparent;flex-shrink:0}
+#console-navigation button[aria-current=page]{background:var(--action);color:var(--paper)}
+.onboarding{margin:0;border:1px solid var(--line);padding:0 14px;background:var(--bg)}
+.onboarding pre{white-space:pre-wrap;line-height:1.7;user-select:all}
+.resource-list{display:grid;gap:18px;margin-top:24px}
+.resource-card{border:1px solid var(--line);border-left:3px solid var(--action);padding:20px;min-width:0}
+.resource-card h3{margin:0 0 5px;overflow-wrap:anywhere}
+.resource-card>code{display:block}
+.resource-card p{overflow-wrap:anywhere}
+.facts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 24px;margin:18px 0}
+.fact dt{font-size:11px;color:var(--muted)}.fact dd{margin:3px 0 0;overflow-wrap:anywhere}
+.resource-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;align-items:end;padding:8px 0}
+.resource-form label{margin:0}.resource-form button{justify-self:start}
+.resource-form label:has(textarea){grid-column:1/-1}
+.space-grants{display:flex;gap:8px;flex-wrap:wrap;padding:10px 0}
+.relation{font:13px/1.7 var(--mono);border-bottom:1px solid var(--line);padding-bottom:10px}
+.empty-state{padding:30px 20px;background:var(--bg);color:var(--muted);border:1px dashed var(--line)}
+.inspection-output{white-space:pre-wrap;max-height:400px;overflow:auto;background:var(--bg);padding:16px}
+@media(max-width:680px){.facts,.resource-form{grid-template-columns:1fr}.resource-card{padding:16px}.resource-card .actions button{white-space:normal;text-align:left}.space-grants{flex-direction:column}#console-navigation{margin-top:10px}}

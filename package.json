@@ -58,6 +58,7 @@
     "test:hub-connect": "bun scripts/smoke-hub-connect.ts",
     "test:hub-consumers": "bun scripts/smoke-hub-consumers.ts",
     "test:hub-service": "bun scripts/smoke-hub-service.ts",
+    "test:hub-console": "bun scripts/smoke-hub-console.ts",
     "test:hub-native-mcp": "bun scripts/smoke-hub-native-mcp.ts"
   },
   "dependencies": {

@@ -21,3 +21,10 @@
 - 结果：Socket 交互 terminal 要求同时拥有 session 和机器，并在持续连接/输入/输出核对执行策略；agent-terminal 输入走受管任务控制门禁，共享 runtime 不授予 shell。
 - 验证：typecheck、build、diff-check 通过；22 pass / 0 fail、255 断言，覆盖直接越权、管理员/最后 owner、JWT scope/期限/撤销、详情分页与终端策略。初次测试预期终端静态 404，实际按既有网关规则 403；修正测试后通过，未放宽授权。日志 `.dev-smoke/reviews/hub-console-onboarding/t1-{tests,build}.log`。尚未声称真实原生 UI/PTY 已验证。
 - Commit：`hub-console-onboarding T1: expose authorized console views and scoped native access`。
+
+## T2 后台外壳与机器/Runtime
+
+- 结果：内嵌 ES module 静态路由、统一资源导航、机器/runtime 完整管理表单和共享/治理确认、实际工具探测、全局本人探测 JWT 与当前空间 JWT 分开且只在内存。成员操作改用 T1 领域权限；退出/刷新清空旧资源，Hub 提供当前 origin 的 Agent 接入说明。
+- 验证：typecheck/build/diff-check 通过；24 pass / 0 fail、514 断言。已有加密连接 Playwright 5 组再次通过，证据 `.dev-smoke/hub-connect-XvCyry/evidence.json`。
+- 真实浏览器：`scripts/smoke-hub-console.ts` 使用编译 CLI、专用 HAPI/Runner、真实 Codex 工具探测，3 组通过；加密接入、机器改名、runtime 登记/分享/停用/恢复、最后 owner 和退出清空全部核对。证据 `.dev-smoke/hub-console-RdO1wb/evidence.json`，success=true、cleanupErrors=[]；桌面与 390px 截图人工视觉核对，无水平溢出。没有调用模型，不声称执行已就绪。
+- Commit：`hub-console-onboarding T2: build resource console and machine runtime management`。
