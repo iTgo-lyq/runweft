@@ -24,3 +24,7 @@
 - 验证：.dev-smoke/website-70bwyG/evidence.json success，9 类检查、19 条布局记录、4 平台下载，pageErrors/networkErrors 均为空。复制拒绝、无 JS、键盘与 Escape、reduced motion、31 个 /sub/ 链接/锚点、真实子路径下载、坏包/缺包保留旧网站与暂存清理均通过；相关脚本语法和 diff 检查通过。未触碰用户全局客户端配置或调用模型。
 - 交付：本地预览 127.0.0.1:4173，源码 website/、完整静态目录 dist/website/。没有对外托管/公开发布；原 CLI 源码、package.json、lockfile、构建入口、docs/usage.md、HAPI 与冻结 index 均保持不变。维护文档说明静态部署、约 200 MiB 单文件和原样提供 tgz 的要求。
 - Commit：`product-website T2: verify downloads browser flows and installation`
+
+## 自动验收与归档
+
+沿 AGENTS.md 与用户持续授权完成本地自动验收；T1/T2 独立提交 5118d97 / 76b6124。同步 website/product 与 website/guide Specs，更新仓库文档入口后归档至 2026-09-30-product-website；官网没有改变 1.0.0 CLI 的产品代码与发行物，未执行公开部署。

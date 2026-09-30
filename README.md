@@ -10,6 +10,8 @@ Linux x64 已完成真实安装、两宿主 × 两 runtime 的完整协作、Pla
 
 从[项目文档](docs/README.md)阅读架构决策、当前 Specs 和全部归档；后续开发沿 [project-workflow](.agents/skills/project-workflow/SKILL.md)。旧实现保留在 [runweft-archive](https://github.com/iTgo-lyq/runweft-archive)，本仓库使用新的 Git 历史。
 
+产品官网包含介绍、四平台下载与上手指南，源码及静态部署见[官网说明](website/README.md)。已有发行产物时，运行 `node website/build.mjs` 和 `node website/serve.mjs` 可在本机预览。
+
 源码构建、打包和自动验收见[开发说明](docs/development.md)。开发使用 Bun 1.4.2，需先初始化 submodule 并安装 root/HAPI 两处依赖，再运行类型检查和构建。
 
 通用 HAPI fork 位于 [iTgo-lyq/hapi](https://github.com/iTgo-lyq/hapi)，本仓库通过 [`hapi/`](hapi/) Git submodule 固定其版本。克隆本仓库后运行 `git submodule update --init hapi` 获取源码；HAPI 的修改与提交在 fork 仓库中进行。
