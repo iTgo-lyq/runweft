@@ -7,6 +7,7 @@ import { HapiClient } from '../src/hapi';
 import { loadConfig, targetUrl } from '../src/config';
 import { TaskClient } from '../src/tasks/client';
 import { TaskStore } from '../src/tasks/store';
+import type { TaskOverview } from '../src/tasks/query';
 
 // The installed product handles persistence and Git; Bun runs only this no-model acceptance harness.
 const binary = resolve(process.argv[2]!), hapiBinary = resolve(process.argv[3]!), fixtures = process.argv.slice(4).map(value => resolve(value));
@@ -37,6 +38,7 @@ for (const file of fixtures) {
         assert.equal(cli(target, ['status']).runner, false, 'Executor Runner must remain stopped');
         const sourcePaths = cli(source, ['paths']);
         const sourceId = JSON.parse(readFileSync(join(sourcePaths.hapiClient, 'settings.json'), 'utf8')).machineId;
+        cli(center, ['stop']); cli(center, ['start']);
         // Hub restores persisted heartbeats before its normal offline timeout elapses.
         const readyUntil = Date.now() + 90_000;
         let sourceOnly = false;
@@ -46,9 +48,18 @@ for (const file of fixtures) {
             await Bun.sleep(250);
         }
         assert(sourceOnly, 'Only source Runner should be online');
-        cli(center, ['stop']); cli(center, ['start']);
         for (const item of previous.cases) {
             const client = new TaskClient(loadConfig(source, env), item.cwd), id = item.first.agent_id;
+            const overview = await hapi.request(`/api/runweft/tasks/overview?workspace=${encodeURIComponent(item.cwd)}`) as TaskOverview & { namespace: string };
+            const row = overview.items.find(row => row.id === id);
+            assert(row, 'Installed dashboard must include the retained native task');
+            assert.equal(overview.namespace, 'default'); assert.equal(overview.inventory.available, true);
+            assert.equal(row.round, 2); assert.equal(row.status, 'completed'); assert.equal(row.stop, 'stopped');
+            assert.equal(row.parent.cwd, item.cwd); assert.equal(row.runtime.flavor, item.flavor);
+            assert.equal(row.workspace_mode, 'worktree'); assert.equal(row.cwd, item.first.cwd);
+            assert.equal(row.machine.online, false); assert.equal(row.possibly_stale, false);
+            assert.equal(row.code.status, 'available'); assert.equal(row.code.result_head, item.second.git.result_head);
+            assert.equal(row.files.status, 'delivered'); assert(row.session_id); assert(row.summary.length <= 1000);
             const protectedState = [digest(join(item.cwd, '.git/index')), digest(join(item.cwd, '.git/config'))];
             for (const [index, round] of [item.first, item.second].entries()) {
                 const shown = cli(source, ['task', 'show', id, '--round', round.round_id], item.cwd);
@@ -68,7 +79,9 @@ for (const file of fixtures) {
             }
             assert(fetched); assert.deepEqual([digest(join(item.cwd, '.git/index')), digest(join(item.cwd, '.git/config'))], protectedState);
             assert(existsSync(item.first.cwd), 'Installing the package must retain executor worktrees');
-            evidence.cases.push({ fixture: file, taskId: id, resultHead: item.second.git.result_head, rounds: 2, executorOffline: true });
+            evidence.cases.push({ fixture: file, taskId: id, resultHead: item.second.git.result_head, rounds: 2, executorOffline: true,
+                dashboard: { namespace: overview.namespace, status: row.status, phase: row.phase, stop: row.stop, sessionId: row.session_id,
+                    parent: row.parent, machineOnline: row.machine.online, code: row.code.status, files: row.files.status, summaryLength: row.summary.length } });
         }
         assert.deepEqual((await hapi.request('/api/sessions')).sessions.map((session: any) => session.id).sort(), sessions);
     } catch (error) { evidence.error = error instanceof Error ? error.stack : String(error); process.exitCode = 1; }

@@ -8,7 +8,7 @@
 - `src/proxy.ts` 的单地址网关将未处理路径交给 HAPI，`src/service-commands.ts` 的 open 已沿现有访问令牌打开浏览器。可在自有 `/runweft/` 提供嵌入资源，不修改 HAPI UI 或 runtime。
 - HAPI Web `useAuthSource.ts/useAuth.ts/useServerUrl.ts` 使用 `hapi_access_token::<origin>`、`/api/auth` 及内存 JWT。详情路由为 `/sessions/<sessionId>`。看板可复用同一来源与认证，链接固定同源，不新设账号。只处理当前 Runweft origin，不把存储的另一个 Hub 当成本次目标。
 - 当前 root 使用 Bun 编译单程序、无前端框架；静态 HTML/CSS/JS 可作为文本嵌入编译产物，继续 Node npm launcher，不引入在线 CDN 或独立 UI 部署。CSS/JS 单独文件便于审阅，启动无需源码路径。
-- 可验证环境为当前 Linux x64、真实 HAPI 服务与 C10 已完成专用任务。当前未暴露 browser 插件/交互工具，也无在运行的 Dia/Chrome；Codex 提供原生浏览器面板打开工具。T3 将以专用页面驱动同源界面并回传自动断言，尝试使用真实 Codex 浏览器；无法连接时保留实际验证限制，不冒称浏览器通过，不改用户浏览器配置。
+- 可验证环境为当前 Linux x64、真实 HAPI 服务与 C10 已完成专用任务。原 Codex 浏览器面板未连通；2026-09-30 用户明确改用 Playwright，当前以 Chromium 执行自动交互、原生 HAPI 详情跳转和桌面/窄屏布局验收，不改用户浏览器配置。
 
 - 原语实测：Bun 以 `import … with {type: "text"}` 编译 HTML 后可独立输出内嵌内容，`.dev-smoke/dashboard-browser-research/embed` 成功。真实浏览器探针的面板打开请求返回 queued，尚无页面回传；插件查询未发现可直接使用的已连接 Dia/Chrome 工具，不将云浏览器或未安装的 Opera 当作当前真实浏览器。
 

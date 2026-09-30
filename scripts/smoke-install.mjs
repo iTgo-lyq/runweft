@@ -78,6 +78,7 @@ try {
     assert(guide.includes('upload_artifact')); assert(guide.includes('task artifacts release'));
     assert(guide.includes('workspace prepare')); assert(guide.includes('workspace release'));
     assert(guide.includes('task result fetch')); assert(guide.includes('task result release'));
+    assert(guide.includes('open --hapi')); assert(guide.includes('/runweft/'));
     assert(requests.includes('/runweft'));
     assert(requests.some(path => path.endsWith(`${platformName}-${index.version}.tgz`)));
     for (const file of ['bin/runweft', 'bin/hapi', 'HAPI-LICENSE', 'HAPI-NOTICE', 'SOURCES.txt', 'hapi-source.tar.gz']) assert(existsSync(join(platformDirectory, file)), `Missing packaged ${file}`);
@@ -92,6 +93,8 @@ try {
     assert.equal(spawnHelp.status, 0, spawnHelp.stderr);
     assert(spawnHelp.stdout.includes('--workspace-mode')); assert(spawnHelp.stdout.includes('--base'));
     assert(spawnHelp.stdout.includes('--input')); assert(spawnHelp.stdout.includes('--output'));
+    const openHelp = spawnSync(cli, ['open', '--help'], { env: cleanEnv, cwd: consumer, encoding: 'utf8' });
+    assert.equal(openHelp.status, 0, openHelp.stderr); assert(openHelp.stdout.includes('--hapi'));
     const mcpHome = join(root, 'mcp-discovery');
     const transport = new StdioClientTransport({ command: cli, args: ['--home', mcpHome, 'mcp', 'serve', '--client', 'codex'],
         cwd: consumer, env: cleanEnv, stderr: 'pipe' });
@@ -112,7 +115,7 @@ try {
     }
     if (remoteFixtures.length) {
         await command('bun', [resolve('scripts/smoke-remote-package.ts'), cli, join(platformDirectory, 'bin/hapi'), ...remoteFixtures.map(file => resolve(file))], { cwd: process.cwd(), env });
-        evidence.checks.push('installed CLI preserves completed native remote tasks across restart, downloads both rounds and fetches code with executor offline without model replay');
+        evidence.checks.push('installed CLI preserves completed native remote tasks across restart, displays dashboard facts, downloads both rounds and fetches code with executor offline without model replay');
     }
     if (workspaceFixtures.length) {
         await command(process.execPath, [resolve('scripts/smoke-worktree-package.mjs'), cli, ...workspaceFixtures.map(file => resolve(file))], { cwd: process.cwd(), env: cleanEnv });

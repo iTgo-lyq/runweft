@@ -17,7 +17,7 @@ export class LoginRequired extends Error {}
 export class DashboardClient {
     private jwt = '';
     private accessToken = '';
-    constructor(private origin: string, private storage?: Storage, private fetcher: Fetch = fetch) {}
+    constructor(private origin: string, private storage?: Storage, private fetcher: Fetch = (input, init) => fetch(input, init)) {}
     remembered() { try { return this.storage?.getItem(tokenKey(this.origin)) ?? ''; } catch { return ''; } }
     async login(token: string, signal?: AbortSignal) {
         const response = await this.fetcher('/api/auth', { method: 'POST', headers: { 'content-type': 'application/json' },

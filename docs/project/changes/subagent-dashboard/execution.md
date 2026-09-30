@@ -31,3 +31,14 @@
 - 验证：`bun test ./test` 173 pass / 0 fail、3693 assertions；`bun run test:service` 成功，`.dev-smoke/service-Vp9Fgf/evidence.json` success=true，独立二进制提供页面/脚本/样式、原生认证及总览，既有 HAPI Web/SSE/WebSocket、local/Hub/无 Runner 服务生命周期通过。日志 `.dev-smoke/c11-t2-{dashboard,all,types-final,build,service}.log`。
 - 边界：上述不是实际浏览器布局/交互验收；T3 继续验证真实历史记录、浏览器与候选安装，尚未同步 Specs/归档。
 - Commit：`subagent-dashboard T2: embed dashboard and unify browser entry`
+
+## T3 真实记录、浏览器与候选包
+
+- 已验证：`bun run package --all --reuse-hapi` 重新编译 macOS/Linux arm64/x64 四平台候选，HAPI 未改动。`RUNWEFT_SMOKE_REMOTE_EVIDENCE='[".dev-smoke/remote-mcp-I0obyD/evidence.json",".dev-smoke/remote-mcp-IIBTDU/evidence.json"]' bun run test:install` 最终成功；`.dev-smoke/install-FL0qpY/evidence.json` 与内嵌 `.dev-smoke/install-FL0qpY/services/service-PLAuM6/evidence.json` success=true。真实 npm 私有前缀安装与卸载、无源码/Bun PATH 的页面/脚本/样式/认证/服务检查通过；不是公共发布或四平台当前版本原生运行验证。
+- 已验证：`.dev-smoke/remote-package-Vyp7Bt/evidence.json` success=true、cleanupErrors=[]。已安装 CLI 在两个已结束原生宿主 fixture 中，准确展示第二轮 completed/stopped、父 cwd、真实 session ID、代码 available、附件 delivered；执行 Runner 离线仍保留可靠完成事实。两轮文件下载与代码 fetch 通过，原生 sessions 集合不增加，没有模型重放。
+- 纠正：首次安装验证 `.dev-smoke/install-d7oTHC` 在重启 Hub 后立即断言机器离线，得到 HAPI 恢复的旧活跃心跳，失败保存在 `.dev-smoke/remote-package-3NFG4G`。等待原生心跳到期的检查移到最后一次重启之后，未改变产品库存或重发原生任务；最终验证通过。
+- 浏览器：用户于 2026-09-30 明确使用 Playwright。`bun run test:dashboard dist/runweft dist/hapi <两个 C10 evidence.json>` 在专用无 Runner Hub 提供实际编译页面，已结束原生历史以只读 SQLite 快照复制；合成状态只在测试代理中。`.dev-smoke/dashboard-3pZ7AN/evidence.json` success=true、cleanupErrors=[]，Chromium 153.0.8010.12 完成八组检查：登录/续期、筛选分页、纯文本与展开保持、离线及失败恢复、空/无匹配、URL token 移除、1200/375px 布局/焦点、共享登录后打开真实 HAPI 历史会话。原生 sessions 集合不变。桌面/窄屏截图已目视检查，无水平溢出。
+- 修正：浏览器复现原生 fetch 作为 DashboardClient 方法调用的 Illegal invocation，改用闭包调用；测试代理另改为 identity 编码，避免 Bun 解压后仍携带压缩标头。重新连接的驱动等待条件改为登录成功且按钮恢复，防止将保留的旧列表当作新认证完成。测试工具默认使用已安装 Chromium，也支持 RUNWEFT_SMOKE_CHROMIUM 指定路径；本机缓存版本与 Playwright 默认 revision 不同，使用显式路径并记录实际版本。
+- 验证：`bun run typecheck`、`bun test ./test/dashboard.test.ts`、`bun run build` 通过；`bun run test` 173 pass / 0 fail、3694 assertions。日志 `.dev-smoke/c11-t3-{types-final-browser,root-tests,playwright-settled}.log`。
+- 最终候选：浏览器修正后重新执行 `bun run package --all --reuse-hapi`，四平台构建成功；同一组两份 C10 evidence 的 `bun run test:install` exit 0。`.dev-smoke/install-UEzdGr/evidence.json`、其 service-aXMrtx 与 `.dev-smoke/remote-package-dCKnXX/evidence.json` 均 success=true，历史记录总览与离线成果取回再次通过，清理无错误。日志 `.dev-smoke/c11-t3-{package,install}-browser-fixed.log`。HAPI 无改动，未重复上游完整测试。
+- Commit：`subagent-dashboard T3: verify browser workflow and installed packages`
