@@ -32,9 +32,9 @@ C11 已对当前 CLI 代码编译四平台，并在 Linux x64 通过真实私有
 
 只读复核 [C1 四平台 CI](https://github.com/iTgo-lyq/runweft/actions/runs/36478994571)：head `846caf386670997aca854bfee051c2ccf54a4712`，build、macos-15 arm64、macos-15-intel x64、ubuntu-24.04-arm 均 success。它只覆盖那个早期提交的无模型安装/服务，不能证明当前最终原生协作。
 
-Codex app 的项目目录可见本地 `/Users/bytedance/...` 项目，但本会话执行工具只连接 Linux `lyq-dev-ultra`；当前可调用工具没有跨主机命令入口，SSH 配置及其 Include 中也未找到 Mac 目标。存在 Mac 项目不等于取得了执行权限或连接。已询问可自动执行的 Mac SSH 入口或任务执行主机切换方式；不要求用户手工验收、不索取或迁移模型秘密到 CI。
+Codex app 的项目目录可见本地 `/Users/bytedance/...` 项目，但本会话执行工具只连接 Linux `lyq-dev-ultra`；当前可调用工具没有跨主机命令入口，SSH 配置及其 Include 中也未找到 Mac 目标。存在 Mac 项目不等于取得了执行权限或连接。2026-09-30 用户明确由自己验证 Mac，agent 仍须一并构建 macOS 两种架构；该运行环境不再阻塞 Plan 或交付。
 
-当前 CI 可自动做四平台安装，但不能运行未推送的最终代码，也没有已授权的原生模型认证。没有为此 push、workflow_dispatch 或上传凭据；最终 macOS 原生验收仍是明确前置条件。
+当前 CI 可自动做四平台安装，但不能运行未推送的最终代码，也没有已授权的原生模型认证。没有为此 push、workflow_dispatch 或上传凭据；最终 Mac 实机结果由用户补充，交付记录保持“用户待验证”，不把交叉编译写成实机通过。
 
 ## 原生历史缺失后的重建
 
