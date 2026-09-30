@@ -20,6 +20,7 @@ export async function handleResourceRequest(request: IncomingMessage, response: 
         else if (id === 'enroll' && parts.length === 5 && method === 'POST') result = store.enroll(actor, body);
         else if (id === 'enrollments' && parts.length === 6 && method === 'GET') result = store.enrollment(actor, section);
         else if (parts.length === 5 && method === 'GET') result = { machine: await service.machine(lease, id) };
+        else if (section === 'discover' && parts.length === 6 && method === 'GET') result = await service.discover(lease, id);
         else if (parts.length === 5 && method === 'PATCH') result = { machine: await service.renameMachine(lease, id, body) };
         else if (parts.length === 5 && method === 'DELETE') { requireEmpty(); result = { machine: store.register(actor, id, false), existingExecutions: 'unchanged' }; }
         else if (section === 'register' && parts.length === 6 && method === 'POST') { requireEmpty(); result = { machine: store.register(actor, id, true) }; }
@@ -31,6 +32,20 @@ export async function handleResourceRequest(request: IncomingMessage, response: 
         } else if (section === 'spaces' && parts.length === 7 && ['PUT', 'DELETE'].includes(method)) {
             requireEmpty(); result = store.associate(actor, id, target, method === 'PUT');
         } else throw hubNotFound();
+    } else if (kind === 'runtimes') {
+        if (parts.length === 4 && method === 'GET') result = { runtimes: await service.runtimes(lease) };
+        else if (parts.length === 4 && method === 'POST') result = { runtime: await service.registerRuntime(lease, body) };
+        else if (parts.length === 5 && method === 'GET') result = { runtime: await service.runtime(lease, id) };
+        else if (parts.length === 5 && method === 'PATCH') result = { runtime: store.renameRuntime(actor, id, body) };
+        else if (parts.length === 5 && method === 'DELETE') { requireEmpty(); result = { runtime: store.unregisterRuntime(actor, id), existingExecutions: 'unchanged' }; }
+        else if (section === 'check' && parts.length === 6 && method === 'GET') result = { runtime: await service.runtime(lease, id, true) };
+        else if (section === 'resolve' && parts.length === 6 && method === 'GET') result = { target: await service.resolve(lease, id) };
+        else if (section === 'spaces' && parts.length === 7 && ['PUT', 'DELETE'].includes(method)) {
+            requireEmpty(); result = store.share(actor, id, target, method === 'PUT');
+        } else throw hubNotFound();
+    } else if (kind === 'spaces' && section === 'blocks' && parts.length === 8 && ['PUT', 'DELETE'].includes(method)
+        && ['machine', 'runtime'].includes(target)) {
+        requireEmpty(); result = store.block(actor, id, target as 'machine' | 'runtime', parts[7], method === 'PUT');
     } else throw hubNotFound();
     lease.check(); jsonResponse(response, 200, result); return true;
 }

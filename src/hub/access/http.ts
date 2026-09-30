@@ -11,7 +11,7 @@ import { HubError, hubNotFound, hubUnauthorized } from '../types';
 import { AccessStore } from './store';
 import { AccessAuthority } from './auth';
 import { NativeFiles, STREAMED } from './files';
-import { NativeSessions } from './sessions';
+import { NativeSessions, type ExecutionPolicy } from './sessions';
 import { NativeTransport, RequestLease, inputError, pathParts, readJson, unavailable } from './transport';
 import type { Principal } from './types';
 import { attachAccessSockets } from './sockets';
@@ -29,6 +29,7 @@ export const SESSION_ROUTES: Record<string, RegExp[]> = {
 export type AccessGatewayOptions = {
     host: string; port: number; target: string; rootToken: string; key: Uint8Array; statePath: string;
     health?: () => object;
+    executionPolicy?: ExecutionPolicy;
     business?: (request: IncomingMessage, response: ServerResponse, actor: Principal, lease: RequestLease) => Promise<boolean>;
 };
 
@@ -36,7 +37,7 @@ export type AccessGatewayOptions = {
 export async function createAccessGateway(options: AccessGatewayOptions) {
     const store = new AccessStore(options.statePath), identities = new HubStore(options.statePath);
     const authority = new AccessAuthority(store, options.key), native = new NativeTransport(options.target, options.rootToken);
-    const files = new NativeFiles(store, native), sessions = new NativeSessions(store, native);
+    const files = new NativeFiles(store, native), sessions = new NativeSessions(store, native, options.executionPolicy);
     const events = new NativeEvents(store, native, options.key);
     const sockets = new Set<Socket>();
     const leases = new Set<RequestLease>();

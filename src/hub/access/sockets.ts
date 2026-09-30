@@ -156,7 +156,7 @@ export function attachAccessSockets(server: HttpServer, store: AccessStore, auth
             if (typeof id !== 'string') throw hubNotFound();
             if (!store.object('session', id)) await sessions.allocated(actor, id, controller.signal);
             // Recheck the actual RPC destination, including HAPI's same-host fallback after HTTP preflight.
-            session(id); check();
+            sessions.checkExecution(session(id), params.agent ?? 'claude'); check();
         }
         function send(destination: Upstream | Downstream, event: string, args: any[], validate: () => void | Promise<void>) {
             const original = typeof args.at(-1) === 'function' ? args.pop() : undefined;
@@ -191,7 +191,7 @@ export function attachAccessSockets(server: HttpServer, store: AccessStore, auth
                         outgoing(event, args[0]);
                         if (event === 'rpc-request' && rpc(args[0]) === RPC_METHODS.SpawnHappySession) {
                             const params = record(JSON.parse(args[0].params));
-                            session(params.reservedSessionId ?? params.existingSessionId ?? params.sessionId);
+                            sessions.checkExecution(session(params.reservedSessionId ?? params.existingSessionId ?? params.sessionId), params.agent ?? 'claude');
                         }
                     });
                     if (namespace === '/terminal' && ['terminal:exit', 'terminal:error'].includes(event)) terminals.delete(args[0]?.terminalId);

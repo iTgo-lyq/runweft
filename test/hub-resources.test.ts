@@ -11,6 +11,7 @@ import { HubResourceStore } from '../src/hub/resources/store';
 import { HubStore, createIdentityToken } from '../src/hub/store';
 import { STATE_SCHEMA_VERSION } from '../src/state';
 import { fixture } from './helpers';
+import { resourceInspection } from './resources-fixture';
 
 const cleanups: (() => void | Promise<void>)[] = [];
 afterEach(async () => { for (const fn of cleanups.splice(0).reverse()) await fn(); });
@@ -132,7 +133,7 @@ test('v10 migration preserves existing native bindings without automatically enr
     const h = setup(); h.access.bind({ kind: 'machine', id: 'legacy', ownerId: h.a.identity.id });
     const db = new Database(h.path);
     try {
-        db.exec('DROP TABLE hub_machine_spaces; DROP TABLE hub_resource_machines; PRAGMA user_version=10;');
+        db.exec('DROP TABLE hub_resource_blocks; DROP TABLE hub_runtime_shares; DROP TABLE hub_resource_runtimes; DROP TABLE hub_machine_spaces; DROP TABLE hub_resource_machines; PRAGMA user_version=10;');
         const access = new AccessStore(h.path);
         try {
             expect(db.query('PRAGMA user_version').get()).toEqual({ user_version: STATE_SCHEMA_VERSION });
@@ -146,12 +147,23 @@ async function httpSetup() {
     const h = setup(), key = randomBytes(32), machines: Machine[] = [], calls: string[] = [];
     const nativeToken = await new SignJWT({ uid: 1, ns: 'runweft' }).setProtectedHeader({ alg: 'HS256' }).sign(key);
     let inventoryHook: (() => void | Promise<void>) | undefined;
+    let probeHook: ((machineId: string) => void | Promise<void>) | undefined;
+    let probeFailure: { status: number; body: object } | undefined;
+    const sessions = new Map<string, object>();
     const native = Bun.serve({ hostname: '127.0.0.1', port: 0, async fetch(request) {
         const url = new URL(request.url);
         if (url.pathname === '/api/auth') return Response.json({ token: nativeToken });
         expect(request.headers.get('authorization')).toBe(`Bearer ${nativeToken}`); calls.push(`${request.method} ${url.pathname}`);
         if (url.pathname === '/health') return Response.json({ capabilities: { machineInventory: 1 } });
         if (url.pathname === '/api/machines') { await inventoryHook?.(); return Response.json({ machines }); }
+        const probeMachine = machines.find(m => url.pathname === `/api/machines/${m.id}/agent-availability`);
+        if (probeMachine) {
+            expect(url.searchParams.get('details')).toBe('true'); await probeHook?.(probeMachine.id);
+            if (probeFailure) return Response.json(probeFailure.body, { status: probeFailure.status });
+            return Response.json({ agents: [resourceInspection('codex'), resourceInspection('claude')] });
+        }
+        const session = sessions.get(url.pathname.slice('/api/sessions/'.length));
+        if (session && request.method === 'GET') return Response.json({ session });
         const machine = machines.find(m => url.pathname === `/api/machines/${m.id}`);
         if (machine && request.method === 'PATCH') {
             const { displayName } = await request.json() as { displayName: string }; machine.metadata!.displayName = displayName;
@@ -169,7 +181,8 @@ async function httpSetup() {
             ...(body ? { body: JSON.stringify(body) } : {}) });
         return { status: response.status, body: await response.json() as any };
     }
-    return { ...h, gateway, url, auth, request, machines, calls, setInventoryHook(fn: typeof inventoryHook) { inventoryHook = fn; },
+    return { ...h, gateway, url, auth, request, machines, calls, sessions, setInventoryHook(fn: typeof inventoryHook) { inventoryHook = fn; },
+        setProbeHook(fn: typeof probeHook) { probeHook = fn; }, setProbeFailure(failure: typeof probeFailure) { probeFailure = failure; },
         connect(id: string) { machines.push({ id, namespace: 'runweft', seq: 1, createdAt: 1, updatedAt: 1, active: true, activeAt: 1,
             metadata: { host: '/private/host', platform: 'test', happyCliVersion: 'test' }, metadataVersion: 1, runnerState: { status: 'running' }, runnerStateVersion: 1 }); } };
 }
@@ -193,11 +206,12 @@ test('resource HTTP handles owner lifecycle, pending machines and native rename;
     expect((await h.request(base + '/register', jwt, 'POST', {})).body.machine.registered).toBe(true);
     const unknown = await h.auth(h.c.token), admin = await h.auth(h.b.token, h.a.personalSpace.id);
     for (const token of [unknown, admin]) {
-        for (const [path, method, body] of [[base, 'GET'], [base, 'PATCH', { name: 'stolen' }], [base + '/credential', 'GET'], [base + '/credential', 'DELETE'],
+        for (const [path, method, body] of [[base, 'PATCH', { name: 'stolen' }], [base + '/credential', 'GET'], [base + '/credential', 'DELETE'],
             [base + `/spaces/${h.a.personalSpace.id}`, 'PUT', {}], [base + '/register', 'POST', {}]] as const) {
-            expect((await h.request(path, token, method, body)).status).toBe(404);
+            expect((await h.request(path, token, method, body)).status).toBe(token === admin ? 403 : 404);
         }
-        expect((await h.request(prefix + '/machines', token)).body.machines).toEqual([]);
+        expect((await h.request(prefix + '/machines', token)).body.machines).toHaveLength(token === admin ? 1 : 0);
+        expect((await h.request(base, token)).status).toBe(token === admin ? 200 : 404);
     }
     for (const token of [h.a.token, 'fixture-root', input.token]) expect((await h.request(base, token)).status).toBe(401);
     expect((await h.request(base, await h.auth(input.token))).status).toBe(403);
@@ -220,4 +234,192 @@ test('HTTP async native inventory rechecks identity before returning or starting
     expect(result.status).toBe(401);
     expect(h.calls.some(call => call.startsWith('PATCH'))).toBe(false);
     expect(h.machines[0].metadata!.displayName).toBeUndefined();
+});
+
+test('runtime sharing grants use only; governance is space local, persistent through toggles, and association removal cascades', () => {
+    const h = setup(), sid = h.a.personalSpace.id, tid = h.c.personalSpace.id;
+    const d = h.hub.createIdentity('ordinary member');
+    for (const [issuer, target, space] of [[h.a, d, sid], [h.c, h.a, tid], [h.c, d, tid]] as const) {
+        h.hub.acceptInvitation(target.identity.id, h.hub.invite(issuer.identity.id, space, 'member').token);
+    }
+    const aS = h.access.authenticate(h.a.token, sid), bS = h.access.authenticate(h.b.token, sid), dS = h.access.authenticate(d.token, sid);
+    const aT = h.access.authenticate(h.a.token, tid), dT = h.access.authenticate(d.token, tid);
+    const { machineId } = h.store.enroll(aS, enrollmentInput());
+    for (const space of [sid, tid]) h.store.associate(aS, machineId, space, true);
+    const r = h.store.registerRuntime(aS, { machineId, flavor: 'codex' }, resourceInspection('codex'));
+    const privateClaude = h.store.registerRuntime(aS, { machineId, flavor: 'claude' }, resourceInspection('claude'));
+    expect(h.store.registerRuntime(aS, { machineId, flavor: 'codex' }, resourceInspection('codex')).id).toBe(r.id);
+    expect(privateClaude.id).not.toBe(r.id);
+    expect(h.store.runtimes(dS)).toEqual([]);
+    expect(h.store.runtimes(bS)).toHaveLength(2);
+    expect(h.store.usable(h.b.identity.id, sid, r.id).reason?.code).toBe('runtime_private');
+    expect(h.store.usable(h.a.identity.id, sid, r.id).eligible).toBe(true);
+    expect(h.store.usable(h.a.identity.id, null, r.id).reason?.code).toBe('resource_space_required');
+    h.store.share(aS, r.id, sid, true);
+    expect(h.store.runtimes(dS).map(r => r.id)).toEqual([r.id]);
+    expect(h.store.runtimes(dT)).toEqual([]);
+    expect(h.store.usable(d.identity.id, sid, r.id).eligible).toBe(true);
+    for (const actor of [bS, dS]) {
+        expect(() => h.store.renameRuntime(actor, r.id, { name: 'stolen' })).toThrow('所有者');
+        expect(() => h.store.share(actor, r.id, tid, true)).toThrow('所有者');
+        expect(() => h.store.registerRuntime(actor, { machineId, flavor: 'codex' }, resourceInspection('codex'))).toThrow('所有者');
+        expect(() => h.store.unregisterRuntime(actor, r.id)).toThrow('所有者');
+    }
+    expect(() => h.store.block(dS, sid, 'runtime', r.id, true)).toThrow();
+    expect(() => h.store.block(bS, tid, 'runtime', r.id, true)).toThrow();
+    h.store.share(aT, r.id, tid, true);
+    h.store.block(bS, sid, 'runtime', r.id, true);
+    expect(h.store.usable(d.identity.id, tid, r.id).eligible).toBe(true);
+    expect(h.store.usable(h.a.identity.id, sid, privateClaude.id).eligible).toBe(true);
+    expect(() => h.store.nativeExecution(h.a.identity.id, sid, machineId, 'codex')).toThrow('禁用');
+    h.store.unregisterRuntime(aS, r.id); h.store.registerRuntime(aS, { machineId, flavor: 'codex' }, resourceInspection('codex'));
+    h.store.register(aS, machineId, false); h.store.register(aS, machineId, true);
+    h.store.share(aS, r.id, sid, false); h.store.share(aS, r.id, sid, true);
+    expect(h.store.usable(h.a.identity.id, sid, r.id).reason?.code).toBe('resource_space_blocked');
+    h.store.associate(aS, machineId, sid, false);
+    expect(h.store.shares(aT, r.id)).toEqual([tid]);
+    h.store.associate(aS, machineId, sid, true);
+    expect(h.store.usable(d.identity.id, sid, r.id).reason?.code).toBe('runtime_private');
+    h.store.share(aS, r.id, sid, true);
+    expect(h.store.usable(d.identity.id, sid, r.id).reason?.code).toBe('resource_space_blocked');
+    h.store.block(bS, sid, 'runtime', r.id, false);
+    h.store.block(bS, sid, 'machine', machineId, true);
+    expect(h.store.usable(h.a.identity.id, sid, privateClaude.id).reason?.code).toBe('resource_space_blocked');
+    expect(h.store.usable(d.identity.id, tid, r.id).eligible).toBe(true);
+    h.store.block(bS, sid, 'machine', machineId, false);
+    h.hub.changeMember(h.a.identity.id, sid, h.b.identity.id, 'owner');
+    h.hub.changeMember(h.b.identity.id, sid, h.a.identity.id, null);
+    expect(h.second.spaces(h.actor, machineId)).toEqual([tid]);
+    expect(h.second.shares(h.actor, r.id)).toEqual([tid]);
+    h.hub.acceptInvitation(h.a.identity.id, h.hub.invite(h.b.identity.id, sid, 'member').token);
+    expect(h.second.spaces(h.actor, machineId)).toEqual([tid]);
+    expect(h.second.shares(h.actor, r.id)).toEqual([tid]);
+});
+
+test('shared and governance DTOs exclude native paths, other shares and private tools; offline observations are historical', async () => {
+    const h = await httpSetup(), sid = h.a.personalSpace.id;
+    const d = h.hub.createIdentity('member'); h.hub.acceptInvitation(d.identity.id, h.hub.invite(h.a.identity.id, sid, 'member').token);
+    const jwt = await h.auth(h.a.token, sid), admin = await h.auth(h.b.token, sid), member = await h.auth(d.token, sid);
+    const { machineId } = h.store.enroll(h.actor, enrollmentInput()); h.connect(machineId); h.store.associate(h.actor, machineId, sid, true);
+    const [reg, concurrent] = await Promise.all([h.request(prefix + '/runtimes', jwt, 'POST', { machineId, flavor: 'codex' }),
+        h.request(prefix + '/runtimes', jwt, 'POST', { machineId, flavor: 'codex' })]);
+    expect(reg.status).toBe(200); const id = reg.body.runtime.id;
+    expect(concurrent.body.runtime.id).toBe(id);
+    const other = await h.request(prefix + '/runtimes', jwt, 'POST', { machineId, flavor: 'claude' });
+    expect(other.status).toBe(200);
+    h.calls.length = 0;
+    const governance = await h.request(prefix + '/runtimes', admin);
+    expect(governance.body.runtimes).toHaveLength(2);
+    expect(h.calls.filter(s => s.includes('agent-availability'))).toHaveLength(0);
+    expect((await h.request(prefix + '/runtimes', member)).body.runtimes).toHaveLength(0);
+    expect((await h.request(`${prefix}/runtimes/${id}/check`, admin)).body.error.code).toBe('runtime_private');
+    expect((await h.request(`${prefix}/spaces/${sid}/blocks/runtime/${id}`, admin, 'PUT', {})).body.blocked).toBe(true);
+    expect((await h.request(`${prefix}/runtimes/${id}`, admin)).body.runtime.blockedInSpace).toBe(true);
+    expect((await h.request(`${prefix}/spaces/${sid}/blocks/runtime/${id}`, admin, 'DELETE', {})).body.blocked).toBe(false);
+    expect((await h.request(`${prefix}/runtimes/${id}/spaces/${sid}`, jwt, 'PUT', {})).status).toBe(200);
+    h.calls.length = 0;
+    const shared = await h.request(prefix + '/runtimes', member);
+    expect(shared.body.runtimes).toHaveLength(1);
+    expect(shared.body.runtimes[0]).toMatchObject({ id, inspectionCurrent: true, eligibility: { eligible: true }, permissions: { use: true, manage: false } });
+    expect(h.calls.filter(s => s.includes('agent-availability'))).toHaveLength(1);
+    const resolved = await h.request(`${prefix}/runtimes/${id}/resolve`, member);
+    expect(resolved.body.target).toMatchObject({ runtimeId: id, machineId, flavor: 'codex', spaceId: sid, toolFound: true });
+    expect(Object.keys(resolved.body.target).sort()).toEqual(['checkedAt', 'flavor', 'machineId', 'ownerId', 'runtimeId', 'shared', 'spaceId', 'toolFound', 'version', 'versionStatus']);
+    const machine = await h.request(`${prefix}/machines/${machineId}`, member);
+    for (const result of [governance.body, shared.body, resolved.body, machine.body]) {
+        const text = JSON.stringify(result);
+        for (const secret of ['/private/host', '/test/bin', 'executable', 'runnerState', 'shareSpaceIds', 'spaceIds']) expect(text).not.toContain(secret);
+    }
+    expect((await h.request(`${prefix}/machines/${machineId}/discover`, member)).status).toBe(403);
+    expect((await h.request(`/api/machines/${machineId}/agent-availability`, member)).status).toBe(404);
+    expect((await h.request(`${prefix}/runtimes/${id}`, member, 'PATCH', { name: 'no' })).status).toBe(403);
+    h.machines[0].active = false;
+    const offline = await h.request(`${prefix}/runtimes/${id}`, member);
+    expect(offline.body.runtime).toMatchObject({ version: '1.2.3', inspectionCurrent: false, eligibility: { reason: { code: 'machine_offline' } } });
+    expect((await h.request(`${prefix}/runtimes/${id}/resolve`, member)).body.error.code).toBe('machine_offline');
+    h.machines[0].active = true;
+    h.setProbeFailure({ status: 500, body: { error: '/private/host/raw-native-error' } });
+    const failed = await h.request(`${prefix}/runtimes/${id}`, member);
+    expect(failed.body.runtime.eligibility.reason.code).toBe('runtime_probe_failed');
+    expect(JSON.stringify(failed.body)).not.toContain('/private/host');
+});
+
+test('revocation during tool probing rejects resolution and stale registration; no current facts survive unauthorized completion', async () => {
+    const h = await httpSetup(), sid = h.a.personalSpace.id, aS = h.access.authenticate(h.a.token, sid);
+    const { machineId } = h.store.enroll(h.actor, enrollmentInput()); h.connect(machineId); h.store.associate(h.actor, machineId, sid, true);
+    const row = h.store.registerRuntime(h.actor, { machineId, flavor: 'codex' }, resourceInspection('codex'));
+    const owner = await h.auth(h.a.token, sid), member = await h.auth(h.b.token, sid);
+    const other = new HubResourceStore(h.other);
+    h.store.share(h.actor, row.id, sid, true);
+    h.setProbeHook(() => { other.share(h.actor, row.id, sid, false); });
+    expect((await h.request(`${prefix}/runtimes/${row.id}/resolve`, member)).body.error.code).toBe('runtime_private');
+    h.setProbeHook(() => { other.block(h.member, sid, 'runtime', row.id, true); });
+    expect((await h.request(`${prefix}/runtimes/${row.id}/resolve`, owner)).body.error.code).toBe('resource_space_blocked');
+    other.block(h.member, sid, 'runtime', row.id, false);
+    h.setProbeHook(() => { other.register(h.actor, machineId, false); });
+    expect((await h.request(prefix + '/runtimes', owner, 'POST', { machineId, flavor: 'claude' })).body.error.code).toBe('machine_unregistered');
+    expect(h.store.runtimes(aS).map(r => r.flavor)).toEqual(['codex']);
+    other.register(h.actor, machineId, true);
+    h.setProbeHook(() => { other.unregisterRuntime(h.actor, row.id); });
+    expect((await h.request(prefix + '/runtimes', owner, 'POST', { machineId, flavor: 'codex' })).body.error.code).toBe('runtime_unregistered');
+    expect(h.store.runtime(h.actor, row.id).registered).toBe(false);
+    other.registerRuntime(h.actor, { machineId, flavor: 'codex' }, resourceInspection('codex'));
+    other.share(h.actor, row.id, sid, true);
+    h.setProbeHook(() => { h.hub.changeMember(h.a.identity.id, sid, h.b.identity.id, null); });
+    expect((await h.request(`${prefix}/runtimes/${row.id}/resolve`, member)).status).toBe(401);
+});
+
+test('native scoped spawn/derive checks resource policy, including machine peer resume using the task owner', async () => {
+    const h = await httpSetup(), sid = h.a.personalSpace.id;
+    const input = enrollmentInput(), { machineId } = h.store.enroll(h.actor, input); h.connect(machineId); h.store.associate(h.actor, machineId, sid, true);
+    const runtime = h.store.registerRuntime(h.actor, { machineId, flavor: 'codex' }, resourceInspection('codex'));
+    const owner = await h.auth(h.a.token, sid), machine = await h.auth(input.token);
+    const sessionId = randomUUID();
+    h.access.bind({ kind: 'session', id: sessionId, ownerId: h.b.identity.id, spaceId: sid, machineId });
+    h.sessions.set(sessionId, { id: sessionId, metadata: { machineId, flavor: 'codex' } });
+    const request = { directory: '/workspace', agent: 'codex' };
+    h.store.block(h.member, sid, 'runtime', runtime.id, true);
+    expect((await h.request(`/api/machines/${machineId}/spawn`, owner, 'POST', request)).body.error.code).toBe('resource_space_blocked');
+    h.store.block(h.member, sid, 'runtime', runtime.id, false);
+    expect((await h.request(`/api/sessions/${sessionId}/resume`, machine, 'POST', {})).body.error.code).toBe('runtime_private');
+    h.store.share(h.actor, runtime.id, sid, true);
+    h.store.block(h.member, sid, 'machine', machineId, true);
+    expect((await h.request(`/api/sessions/${sessionId}/resume`, machine, 'POST', {})).body.error.code).toBe('resource_space_blocked');
+    expect(h.calls.filter(c => c.startsWith('POST'))).toHaveLength(0); // Nothing reaches the native execution boundary.
+});
+
+test('one probe per machine preserves independent failures and does not treat owner global inspection as an execution target', async () => {
+    const h = await httpSetup(), sid = h.a.personalSpace.id;
+    const jwt = await h.auth(h.a.token, sid), global = await h.auth(h.a.token);
+    const ids: string[] = [];
+    for (let n = 0; n < 2; n++) {
+        const { machineId } = h.store.enroll(h.actor, enrollmentInput()); ids.push(machineId);
+        h.store.associate(h.actor, machineId, sid, true); h.connect(machineId);
+        for (const flavor of ['codex', 'claude'] as const) h.store.registerRuntime(h.actor, { machineId, flavor }, resourceInspection(flavor));
+    }
+    h.setProbeHook(id => { h.setProbeFailure(id === ids[0] ? { status: 401, body: { error: '/private/native-auth-path' } } : undefined); });
+    const result = await h.request(prefix + '/runtimes', jwt);
+    expect(result.body.runtimes).toHaveLength(4);
+    expect(result.body.runtimes.filter((r: any) => r.eligibility.eligible)).toHaveLength(2);
+    expect(h.calls.filter(c => c.includes('agent-availability'))).toHaveLength(2);
+    expect(JSON.stringify(result.body)).not.toContain('/private/native-auth-path');
+    const healthy = result.body.runtimes.find((r: any) => r.eligibility.eligible);
+    expect((await h.request(`${prefix}/runtimes/${healthy.id}/check`, global)).body.runtime.inspectionCurrent).toBe(true);
+    expect((await h.request(`${prefix}/runtimes/${healthy.id}/resolve`, global)).body.error.code).toBe('resource_space_required');
+});
+
+test('v11 upgrade retains machine enrollment, credential and space association without inventing runtimes', () => {
+    const h = setup(), input = enrollmentInput(), enrolled = h.store.enroll(h.actor, input);
+    h.store.associate(h.actor, enrolled.machineId, h.a.personalSpace.id, true);
+    const db = new Database(h.path);
+    try {
+        db.exec('DROP TABLE hub_resource_blocks; DROP TABLE hub_runtime_shares; DROP TABLE hub_resource_runtimes; PRAGMA user_version=11;');
+        const access = new AccessStore(h.path), store = new HubResourceStore(access);
+        try {
+            expect(store.enroll(h.actor, input)).toEqual(enrolled);
+            expect(store.spaces(h.actor, enrolled.machineId)).toEqual([h.a.personalSpace.id]);
+            expect(store.runtimes(h.actor)).toEqual([]);
+            expect(access.authenticate(input.token).machineId).toBe(enrolled.machineId);
+        } finally { access.close(); }
+    } finally { db.close(); }
 });

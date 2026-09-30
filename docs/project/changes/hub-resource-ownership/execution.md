@@ -16,3 +16,12 @@
 - 回归：真实 `test:hub-access` 12 组通过（`.dev-smoke/hub-access-KHeDQs`）；`test:hub-realtime` 10 组通过（`.dev-smoke/hub-realtime-6GvQgc`），包含未改造 Runner 与真实 45 秒心跳失联后的同主机兜底拒绝。原始日志位于 `.dev-smoke/reviews/hub-resource-ownership/t1-*.log`。
 - 边界：默认 serve 未切换；CLI 持久接入与真实 Runner 使用新 enrollment 由 T3/T4 验证。
 - Commit：`hub-resource-ownership T1: enroll owned machines and rotate scoped credentials`
+
+## T2 Runtime 归属、共享和空间治理
+
+- 结果：schema 12 保存全局 machine × flavor runtime、空间分享与治理禁用；删除关联依靠同事务外键级联撤回分享，成员重新加入/重新登记不恢复授权。同步 usable 判定供解析及后续委派调用；详情明确当前空间的机器/runtime 禁用状态。
+- 探测与 DTO：沿公共 nativeInspections 复用原 HAPI 详情，不增加执行适配；每台机器最多一次探测，单机失败保留历史且不阻断其他机器。共享/治理响应按白名单构造，完整 inspection 仅给所有者；公开执行目标无路径、Runner state、其他空间分享或原生错误文本。
+- 授权：原生 spawn/derive 和实际 outgoing RPC/ack 均复查当前领域权限；机器 peer 按已绑定会话的 owner/space 使用 runtime，不能换成机器所有者。异步探测后的持久写事务再次授权；注册过程中注销 runtime 不会被旧请求恢复。
+- 验证：typecheck；全仓 205 pass、0 fail、4180 expectations（30 文件）；补充治理展示字段后的聚焦复核 14 pass、0 fail、292 expectations。覆盖两空间/多角色、并发注册、v11 迁移、配置留存、路径裁剪、单机失败及探测期间撤销；真实双跳 Socket.IO 协议 fixture 证明预检后禁用也不会把启动字节交给 Runner。原始日志 `t2-tests.log` / `t2-final-focused.log`。
+- 回归：真实 HAPI HTTP/文件 12 组通过（`.dev-smoke/hub-access-hGHSA4`），实时/Runner 10 组通过（`.dev-smoke/hub-realtime-Vi8Fkm`）。结构与 diff 检查通过。新领域组合下真实 enrollment/Runner 探测在 T4 验收，未把协议 fixture 称为真实模型执行。
+- Commit：`hub-resource-ownership T2: govern runtime sharing and native dispatch`

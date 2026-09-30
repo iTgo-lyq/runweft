@@ -3,17 +3,21 @@ import { CreateOrLoadSessionRequestSchema, SpawnSessionRequestSchema } from '../
 import { HapiRequestError } from '../../hapi';
 import { HubError, hubNotFound } from '../types';
 import { AccessStore } from './store';
-import type { ExecutionIntent, Principal } from './types';
+import type { ExecutionIntent, ExecutionObject, Principal } from './types';
 import { NativeTransport, RequestLease, fingerprint, inputError, record, unavailable } from './transport';
 
 const dispatchWindow = 5 * 60_000;
+export type ExecutionPolicy = (ownerId: string, spaceId: string | null, machineId: string, flavor: string) => void;
 function tagId(machineId: string, tag: string) {
     const hex = fingerprint(['session-tag', machineId, tag]).slice(0, 32).split('');
     hex[12] = '5'; hex[16] = '8'; const value = hex.join('');
     return `${value.slice(0, 8)}-${value.slice(8, 12)}-${value.slice(12, 16)}-${value.slice(16, 20)}-${value.slice(20)}`;
 }
 export class NativeSessions {
-    constructor(readonly store: AccessStore, readonly native: NativeTransport) {}
+    constructor(readonly store: AccessStore, readonly native: NativeTransport, private readonly executionPolicy?: ExecutionPolicy) {}
+    checkExecution(binding: ExecutionObject, flavor: string) {
+        this.executionPolicy?.(binding.ownerId, binding.spaceId, binding.machineId!, flavor);
+    }
     async guardMetadata(actor: Principal, id: string, metadata: Record<string, any>, signal?: AbortSignal) {
         const binding = this.store.require(actor, 'session', id, 'report');
         if (metadata.machineId !== binding.machineId) throw hubNotFound();
@@ -129,6 +133,7 @@ export class NativeSessions {
         const body = parsed.data;
         if (!['codex', 'claude'].includes(body.agent ?? 'claude')) throw unavailable();
         if (body.preparedFiles || body.preparedWorkspace) throw unavailable('工作区准备引用只能由 Runweft 委派协调器提交。');
+        lease.add(() => { this.executionPolicy?.(actor.ownerId, actor.spaceId, machineId, body.agent ?? 'claude'); });
         const requestKey = body.requestId ?? randomUUID();
         const intent = this.store.beginIntent({ requestKey, ownerId: actor.ownerId, spaceId: actor.spaceId, machineId,
             operation: 'spawn', fingerprint: fingerprint({ ...body, requestId: undefined }), expiresAt: Date.now() + dispatchWindow });
@@ -149,7 +154,8 @@ export class NativeSessions {
     }
     async derive(actor: Principal, id: string, action: 'resume' | 'reopen' | 'fork' | 'clear', body: Record<string, any>, lease: RequestLease) {
         if (body.preparedFiles || body.preparedWorkspace) throw unavailable('准备引用通过 Runweft 委派入口校验。');
-        const { binding } = await this.checked(actor, id, 'write', lease.signal);
+        const { binding, session } = await this.checked(actor, id, 'write', lease.signal);
+        lease.add(() => this.checkExecution(binding, session.metadata?.flavor ?? 'claude'));
         const machines = await this.native.json('/api/machines', { signal: lease.signal });
         if (!machines.machines.some((m: any) => m.id === binding.machineId && m.active)) {
             throw new HubError(409, 'execution_machine_offline', '会话绑定的机器未在线，不能转移到同名机器。');

@@ -1,11 +1,9 @@
 import type { Machine } from '../../hapi/shared/src/schemas';
-import { AgentAvailabilityResponseSchema } from '../../hapi/shared/src/apiTypes';
 import { errorDetails } from '../errors';
-import { HapiRequestError } from '../hapi';
 import { ResourceStore } from './store';
-import { nativeMachines } from './native';
-import { ResourceError, InspectionSchema, FlavorSchema, MachineRegistrationInput, RuntimeRegistrationInput, RenameInput,
-    flavors, eligibility, machineProblem, inspectionProblem, invalidInput, rejectProblem,
+import { nativeMachines, nativeInspections } from './native';
+import { ResourceError, FlavorSchema, MachineRegistrationInput, RuntimeRegistrationInput, RenameInput,
+    eligibility, machineProblem, inspectionProblem, invalidInput, rejectProblem,
     type HapiRequester, type Inspection, type Problem, type MachineView, type RuntimeRegistration, type RuntimeView,
     type Discovery, type ExecutionTarget } from './types';
 
@@ -64,24 +62,7 @@ export class ResourceService {
     }
     private async inspect(machine: MachineView): Promise<Inspection[]> {
         if (!machine.online) rejectProblem({ code: 'machine_offline', message: '目标机器离线，无法探测工具。', hint: '在目标机器运行 runweft start。' });
-        let inspections: Inspection[];
-        try {
-            const raw = await this.hapi(`/api/machines/${encodeURIComponent(machine.id)}/agent-availability?details=true`);
-            const parsed = AgentAvailabilityResponseSchema.safeParse(raw);
-            if (!parsed.success) throw new Error('invalid availability response');
-            inspections = flavors.map(flavor => {
-                const entries = parsed.data.agents.filter(entry => entry.agent === flavor);
-                if (entries.length !== 1) throw new Error('missing or repeated runtime detail');
-                return InspectionSchema.parse(entries[0]);
-            });
-        } catch (error) {
-            if (error instanceof HapiRequestError) {
-                if ([401, 403].includes(error.status)) throw error;
-                if (error.code === 'runner_upgrade_required') throw new ResourceError(409, error.code, '目标 Runner 不支持原生工具详情。', '在目标机器更新 Runweft 并运行 runweft restart。');
-                if (error.code === 'machine_offline') throw new ResourceError(409, error.code, '目标机器已离线。', '在目标机器运行 runweft start。');
-            }
-            throw new ResourceError(502, 'runtime_probe_failed', '无法取得目标 Runner 的原生工具详情。', '检查目标机器连接和 Runner 日志，再运行 runweft runtime check；未启动或重发任务。');
-        }
+        const inspections = await nativeInspections(this.hapi, machine.id);
         for (const inspection of inspections) this.store.saveInspection(this.namespace, machine.id, inspection);
         return inspections;
     }

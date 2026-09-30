@@ -4,7 +4,7 @@ import { dirname } from 'node:path';
 import { ensureDirectory } from './config';
 import { ResourceError } from './resources/types';
 
-export const STATE_SCHEMA_VERSION = 11;
+export const STATE_SCHEMA_VERSION = 12;
 
 /** One additive schema for the central business database; native history stays in HAPI. */
 export function openState(path: string) {
@@ -206,6 +206,27 @@ export function openState(path: string) {
                     PRIMARY KEY(machineId, spaceId)
                 );
                 PRAGMA user_version=11;
+            `);
+            if (version < 12) db.exec(`
+                CREATE TABLE hub_resource_runtimes (
+                    id TEXT PRIMARY KEY, machineId TEXT NOT NULL REFERENCES hub_resource_machines(machineId),
+                    flavor TEXT NOT NULL CHECK(flavor IN ('codex', 'claude')), name TEXT NOT NULL,
+                    registered INTEGER NOT NULL CHECK(registered IN (0, 1)),
+                    inspection TEXT, inspectedAt INTEGER, createdAt INTEGER NOT NULL, updatedAt INTEGER NOT NULL,
+                    UNIQUE(machineId, flavor), UNIQUE(id, machineId)
+                );
+                CREATE TABLE hub_runtime_shares (
+                    runtimeId TEXT NOT NULL, machineId TEXT NOT NULL, spaceId TEXT NOT NULL,
+                    createdAt INTEGER NOT NULL, PRIMARY KEY(runtimeId, spaceId),
+                    FOREIGN KEY(runtimeId, machineId) REFERENCES hub_resource_runtimes(id, machineId),
+                    FOREIGN KEY(machineId, spaceId) REFERENCES hub_machine_spaces(machineId, spaceId) ON DELETE CASCADE
+                );
+                CREATE TABLE hub_resource_blocks (
+                    spaceId TEXT NOT NULL REFERENCES hub_spaces(id), kind TEXT NOT NULL CHECK(kind IN ('machine', 'runtime')),
+                    objectId TEXT NOT NULL, actorId TEXT NOT NULL REFERENCES hub_users(id), createdAt INTEGER NOT NULL,
+                    PRIMARY KEY(spaceId, kind, objectId)
+                );
+                PRAGMA user_version=12;
             `);
         }).immediate();
         return db;
