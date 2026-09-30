@@ -11,6 +11,7 @@ import { createRunweftHandler } from './api';
 import { ArtifactClient } from './artifacts/client';
 import { TaskCoordinator } from './tasks/coordinator';
 import { WorkspacePreparations } from './remote/service';
+import { HubStore } from './hub/store';
 
 export type ServiceState = {
     pid: number; instanceId: string; version: string; hapiRevision: string;
@@ -117,6 +118,7 @@ export async function serve(c: ResolvedConfig, publicly = false): Promise<void> 
     let gateway: Awaited<ReturnType<typeof createGateway>> | undefined;
     let tasks: TaskCoordinator | undefined;
     let preparations: WorkspacePreparations | undefined;
+    let identities: HubStore | undefined;
     let stopping = false, ready = false;
     let failure: Error | undefined;
     let complete!: () => void;
@@ -133,6 +135,8 @@ export async function serve(c: ResolvedConfig, publicly = false): Promise<void> 
             try { await preparations?.close(); }
             catch (error) { failure ??= error instanceof Error ? error : new Error(String(error)); }
             try { await gateway?.close(); }
+            catch (error) { failure ??= error instanceof Error ? error : new Error(String(error)); }
+            try { identities?.close(); identities = undefined; }
             catch (error) { failure ??= error instanceof Error ? error : new Error(String(error)); }
             for (const child of [...children].reverse()) await stopChild(child);
         } finally {
@@ -168,11 +172,12 @@ export async function serve(c: ResolvedConfig, publicly = false): Promise<void> 
         const secret = JSON.parse(readFileSync(join(paths.hapiServer, 'jwt-secret.json'), 'utf8'));
         const key = Buffer.from(secret.secretBase64, 'base64');
         const clientFor = (namespace: string) => new HapiClient(privateUrl, namespace === 'default' ? token : `${token}:${namespace}`);
+        identities = new HubStore(paths.state);
         preparations = new WorkspacePreparations(paths.state, clientFor);
         tasks = new TaskCoordinator(paths.state, clientFor, 1000, preparations.baselines);
         await tasks.reconcileFileIntents();
         gateway = await createGateway({ host, port: c.config.server.port, target: privateUrl,
-            handle: createRunweftHandler({ key, hapiUrl: privateUrl, statePath: paths.state, tasks, preparations,
+            handle: createRunweftHandler({ key, hapiUrl: privateUrl, statePath: paths.state, tasks, preparations, hub: identities,
                 health: () => ({ service: 'runweft', protocolVersion: 1, ready, version: BUILD.version,
                     hapiRevision: BUILD.hapi.revision, instanceId: state.instanceId, role: publicly ? 'hub-server' : 'local', capabilities: { dashboard: 1 } }),
             }),

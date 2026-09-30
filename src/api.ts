@@ -14,10 +14,13 @@ import { WorkspacePreparations } from './remote/service';
 import { PreparationError } from './remote/types';
 import { handlePreparationRequest } from './remote/api';
 import { dashboard } from './dashboard/server';
+import { handleHubRequest } from './hub/api';
+import type { HubStore } from './hub/store';
 
-export function createRunweftHandler(options: { key: Uint8Array; hapiUrl: string; statePath: string; health: () => object; tasks?: TaskCoordinator; preparations?: WorkspacePreparations }) {
+export function createRunweftHandler(options: { key: Uint8Array; hapiUrl: string; statePath: string; health: () => object; tasks?: TaskCoordinator; preparations?: WorkspacePreparations; hub?: HubStore }) {
     return async (request: IncomingMessage, response: ServerResponse): Promise<boolean> => {
         if (dashboard(request, response)) return true;
+        if (await handleHubRequest(request, response, options.hub)) return true;
         const path = new URL(request.url ?? '/', 'http://localhost').pathname;
         if (path === '/api/runweft/health' && request.method === 'GET') {
             jsonResponse(response, 200, options.health()); return true;

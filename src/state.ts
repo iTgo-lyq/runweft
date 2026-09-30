@@ -4,6 +4,8 @@ import { dirname } from 'node:path';
 import { ensureDirectory } from './config';
 import { ResourceError } from './resources/types';
 
+export const STATE_SCHEMA_VERSION = 7;
+
 /** One additive schema for the central business database; native history stays in HAPI. */
 export function openState(path: string) {
     ensureDirectory(dirname(path));
@@ -13,7 +15,7 @@ export function openState(path: string) {
         db.exec('PRAGMA busy_timeout=5000; PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON;');
         db.transaction(() => {
             const { user_version: version } = db.query('PRAGMA user_version').get() as { user_version: number };
-            if (version > 6) throw new ResourceError(503, 'state_version_newer', '业务数据版本高于当前程序。', '使用创建该数据的新版 Runweft；不要删除数据库。');
+            if (version > STATE_SCHEMA_VERSION) throw new ResourceError(503, 'state_version_newer', '业务数据版本高于当前程序。', '使用创建该数据的新版 Runweft；不要删除数据库。');
             if (version < 1) db.exec(`
                 CREATE TABLE machine_registrations (
                     namespace TEXT NOT NULL, machineId TEXT NOT NULL, registered INTEGER NOT NULL,
@@ -111,6 +113,30 @@ export function openState(path: string) {
                 );
                 CREATE INDEX delegation_code_fetch_task ON delegation_code_fetches(taskId);
                 PRAGMA user_version=6;
+            `);
+            if (version < 7) db.exec(`
+                CREATE TABLE hub_users (
+                    id TEXT PRIMARY KEY, name TEXT NOT NULL, tokenDigest TEXT NOT NULL UNIQUE,
+                    createdAt INTEGER NOT NULL
+                );
+                CREATE TABLE hub_spaces (
+                    id TEXT PRIMARY KEY, name TEXT NOT NULL, createdAt INTEGER NOT NULL
+                );
+                CREATE TABLE hub_memberships (
+                    spaceId TEXT NOT NULL REFERENCES hub_spaces(id), userId TEXT NOT NULL REFERENCES hub_users(id),
+                    role TEXT NOT NULL CHECK(role IN ('owner', 'admin', 'member')), joinedAt INTEGER NOT NULL,
+                    PRIMARY KEY(spaceId, userId)
+                );
+                CREATE INDEX hub_membership_user ON hub_memberships(userId);
+                CREATE TABLE hub_invitations (
+                    id TEXT PRIMARY KEY, spaceId TEXT NOT NULL REFERENCES hub_spaces(id),
+                    tokenDigest TEXT NOT NULL UNIQUE, createdBy TEXT NOT NULL REFERENCES hub_users(id),
+                    role TEXT NOT NULL CHECK(role IN ('admin', 'member')), createdAt INTEGER NOT NULL,
+                    expiresAt INTEGER NOT NULL, consumedBy TEXT REFERENCES hub_users(id),
+                    consumedAt INTEGER, revokedAt INTEGER
+                );
+                CREATE INDEX hub_invitation_space ON hub_invitations(spaceId);
+                PRAGMA user_version=7;
             `);
         }).immediate();
         return db;
