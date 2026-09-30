@@ -1,5 +1,7 @@
 # Agent 来源与个人绑定
 
+本页描述默认根级 Agent 文件路径；独立 `hub agent` 的中心定义、分享和个人选择见[中心 Agent](../central/spec.md)。默认委派入口尚未切换。
+
 全局文件位于 `<数据根>/agents/<id>.yaml`，项目文件位于 `<项目根>/.runweft/agents/<id>.yaml`。项目同 id 定义整体覆盖全局项，空值不继承；show 显示生效来源和被遮蔽路径。坏的项目项不会退回全局；被遮蔽文件不参与生效校验。show/check/bind/unbind 的 `--scope global|project` 可显式维护指定来源。
 
 调用库必须提供宿主的绝对 cwd，不使用 MCP 进程的工作目录。Git 项目以当前 worktree 根为范围，保留原调用 cwd；非 Git 项目向上找最近的 `.runweft/agents`，搜索在用户 home 前停止。无定义时可在当前目录创建项目定义，非 Git 用户 home 只使用全局来源；全局目录不重复解释为项目来源。文件定位不注册工作区、机器或 runtime。

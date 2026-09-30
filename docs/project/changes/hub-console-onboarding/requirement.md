@@ -2,7 +2,7 @@
 
 > 状态：已确认
 > 规模：大型
-> 前置：[资源归属](../../archive/2026-09-30-hub-resource-ownership/requirement.md)、[中心 Agent](../hub-repository-agents/requirement.md)、[委派迁移](../hub-delegation-migration/requirement.md)
+> 前置：[资源归属](../../archive/2026-09-30-hub-resource-ownership/requirement.md)、[中心 Agent](../../archive/2026-10-01-hub-repository-agents/requirement.md)、[委派迁移](../hub-delegation-migration/requirement.md)
 > 更新：2026-09-30
 
 ## 目标与行为

@@ -18,7 +18,7 @@
 
 ## Multica 采用边界
 
-父 Change [固定版本调查](../hub-spaces-and-agent-configuration/research.md)已经记录 Agent 的 owner/访问范围、runtime 分离及中心 Git 资源。采用仅自己/指定成员/空间成员与中心配置对象；继续遵循已确认差异：共享 Agent 和 runtime 权限取交集、私有 Agent 非所有者管理员仅可治理、工作区从主仓库准备、非独立配置 repo。
+父 Change [固定版本调查](../../changes/hub-spaces-and-agent-configuration/research.md)已经记录 Agent 的 owner/访问范围、runtime 分离及中心 Git 资源。采用仅自己/指定成员/空间成员与中心配置对象；继续遵循已确认差异：共享 Agent 和 runtime 权限取交集、私有 Agent 非所有者管理员仅可治理、工作区从主仓库准备、非独立配置 repo。
 
 ## 推导
 

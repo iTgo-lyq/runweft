@@ -21,3 +21,5 @@ Runweft 提供一个 `runweft` 命令，包含配置、工作区绑定、HAPI �
 安装与维护操作见[使用说明](../../../../usage.md)；配置和服务行为见[部署](../../deployment/spec.md)。
 
 独立新 Hub 资源入口使用同一 CLI 的 `hub --url … machine/runtime` 命令，包含持久接入、凭据轮换、空间关联与 runtime 分享/禁用；要求相应 Hub 能力，不回退旧认证。已验收契约见 [Hub 资源归属](../../resources/ownership/spec.md)。
+
+集中配置命令在同一 `hub` 域内提供 `repository` 和 `agent`，使用明确 Hub 身份/空间；见[仓库关联](../../repositories/association/spec.md)与[中心 Agent](../../agents/central/spec.md)。不满足能力时明确报错，不回退旧文件。

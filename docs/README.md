@@ -2,7 +2,7 @@
 
 Runweft 1.0.0 核心重构与产品官网均已完成，实现、自动验收和 Specs 见下列归档。安装、配置、部署与数据维护见[使用说明](usage.md)，源码构建和验证见[开发说明](development.md)。
 
-当前开始推进 [Hub 空间、身份与集中 Agent 配置](project/changes/hub-spaces-and-agent-configuration/requirement.md)：委派必须连接 Hub，项目设置关联 Git 仓库，用户通过 Agent/Skill 操作、通过 Web 查看配置与任务。身份采用访客可领取并自行保存的独立 token，无需登录/注册服务；共享限空间成员，私有 Agent 仅所有者可修改/分享。按 [七阶段交付拆分](project/changes/hub-spaces-and-agent-configuration/delivery.md) 串行实施，已完成 [身份与空间](project/archive/2026-09-30-hub-identities-and-spaces/requirement.md)，已完成[独立 HAPI 通道授权](project/archive/2026-09-30-hub-hapi-access/acceptance.md)，已完成[机器/runtime 归属与共享](project/archive/2026-09-30-hub-resource-ownership/acceptance.md)，下一阶段是仓库关联与中心 Agent 配置；[产品模型](project/changes/hub-spaces-and-agent-configuration/product-design.md)、[授权边界](project/changes/hub-spaces-and-agent-configuration/access-design.md)和 [Multica 调查](project/changes/hub-spaces-and-agent-configuration/research.md)保留依据，未验收内容不代表已实现。
+当前开始推进 [Hub 空间、身份与集中 Agent 配置](project/changes/hub-spaces-and-agent-configuration/requirement.md)：委派必须连接 Hub，项目设置关联 Git 仓库，用户通过 Agent/Skill 操作、通过 Web 查看配置与任务。身份采用访客可领取并自行保存的独立 token，无需登录/注册服务；共享限空间成员，私有 Agent 仅所有者可修改/分享。按 [七阶段交付拆分](project/changes/hub-spaces-and-agent-configuration/delivery.md) 串行实施，已完成 [身份与空间](project/archive/2026-09-30-hub-identities-and-spaces/requirement.md)，已完成[独立 HAPI 通道授权](project/archive/2026-09-30-hub-hapi-access/acceptance.md)，已完成[机器/runtime 归属与共享](project/archive/2026-09-30-hub-resource-ownership/acceptance.md)，已完成[仓库关联与中心 Agent 配置](project/archive/2026-10-01-hub-repository-agents/acceptance.md)，下一阶段是委派接入与旧配置迁移；[产品模型](project/changes/hub-spaces-and-agent-configuration/product-design.md)、[授权边界](project/changes/hub-spaces-and-agent-configuration/access-design.md)和 [Multica 调查](project/changes/hub-spaces-and-agent-configuration/research.md)保留依据，未验收内容不代表已实现。
 
 [最终交付验收](project/archive/2026-09-30-integrated-release/acceptance.md)汇总四平台产物、校验和、需求对应及原始证据。Linux x64 完成真实安装、20 组核心协作、8 组附件、2 组 MCP 控制、原生历史重建、升级回退和 Playwright；Mac 实机由用户验证，Linux arm64 为 QEMU CLI/配置验证，物理远端延期。远端功能已通过同机独立 Hub/多 Runner 真实链路。早期四平台基础安装证据不代替最终原生协作。
 
@@ -55,3 +55,5 @@ Hub 新身份模块已验收：[身份 token](project/specs/identity/tokens/spec
 独立执行授权网关已验收：[通道与对象权限](project/specs/execution/access/spec.md)。默认 serve 仍保留旧入口，集中配置后的完整接入由活跃 Change 继续推进。
 
 独立集中资源组件已验收：[Hub 资源归属](project/specs/resources/ownership/spec.md)，含同一 CLI 下的 Hub 管理、持久接入、空间分享与原生派发授权。默认服务迁移继续按活跃 Change 推进。
+
+独立中心配置已验收：[仓库与 checkout](project/specs/repositories/association/spec.md)、[Agent 版本、共享和个人选择](project/specs/agents/central/spec.md)。同一 CLI 可预览固定配置，实际任务接入与 Web 后台按活跃 Change 继续。
