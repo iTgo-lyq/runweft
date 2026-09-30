@@ -88,12 +88,16 @@ export class AccessStore {
             if (kind === 'task') this.db.query('UPDATE hub_execution_credentials SET revokedAt=COALESCE(revokedAt, ?) WHERE taskId=?').run(now, id);
         }).immediate();
     }
-    issueMachine(machineId: string) { return this.issue('machine', machineId); }
+    issueMachine(machineId: string, token?: string) { return this.issue('machine', machineId, token); }
     issueTask(taskId: string) { return this.issue('task', taskId); }
-    private issue(kind: 'machine' | 'task', objectId: string) {
+    private issue(kind: 'machine' | 'task', objectId: string, suppliedToken?: string) {
         return this.db.transaction(() => {
             const object = this.live(kind, objectId);
-            const id = randomUUID(), token = `${kind === 'machine' ? 'rw_mc_' : 'rw_task_'}${randomBytes(32).toString('base64url')}`;
+            if (suppliedToken !== undefined && (kind !== 'machine' || !/^rw_mc_[A-Za-z0-9_-]{43}$/.test(suppliedToken))) throw invalid();
+            const id = randomUUID(), token = suppliedToken ?? `${kind === 'machine' ? 'rw_mc_' : 'rw_task_'}${randomBytes(32).toString('base64url')}`;
+            if (this.db.query('SELECT 1 FROM hub_execution_credentials WHERE tokenDigest=?').get(tokenDigest(token))) {
+                throw new HubError(409, 'machine_credential_unavailable', '该机器凭据无法使用，请生成新的凭据。');
+            }
             this.db.query(`INSERT INTO hub_execution_credentials
                 (id, kind, ownerId, machineId, spaceId, taskId, tokenDigest, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`)
                 .run(id, kind, object.ownerId, object.machineId, object.spaceId, object.taskId, tokenDigest(token), Date.now());

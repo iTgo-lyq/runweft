@@ -20,7 +20,8 @@ export function fingerprint(value: unknown): string {
 }
 export const fileNamespace = (ownerId: string, spaceId: string | null) => `rw_files_${fingerprint([ownerId, spaceId])}`;
 export async function readJson(request: IncomingMessage, limit = 72 * 1024 * 1024, signal?: AbortSignal): Promise<Record<string, any>> {
-    if (!request.headers['content-type'] && !request.headers['content-length'] && !request.headers['transfer-encoding']) return {};
+    if ((!request.headers['content-length'] || request.headers['content-length'] === '0')
+        && !request.headers['content-type'] && !request.headers['transfer-encoding']) return {};
     if (request.headers['content-type']?.split(';')[0].trim().toLowerCase() !== 'application/json') throw inputError();
     const chunks: Buffer[] = []; let size = 0;
     let timer: ReturnType<typeof setTimeout>;

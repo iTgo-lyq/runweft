@@ -1,15 +1,14 @@
-import { z } from 'zod';
-import { MachineSchema, type Machine } from '../../hapi/shared/src/schemas';
+import type { Machine } from '../../hapi/shared/src/schemas';
 import { AgentAvailabilityResponseSchema } from '../../hapi/shared/src/apiTypes';
 import { errorDetails } from '../errors';
 import { HapiRequestError } from '../hapi';
 import { ResourceStore } from './store';
+import { nativeMachines } from './native';
 import { ResourceError, InspectionSchema, FlavorSchema, MachineRegistrationInput, RuntimeRegistrationInput, RenameInput,
     flavors, eligibility, machineProblem, inspectionProblem, invalidInput, rejectProblem,
     type HapiRequester, type Inspection, type Problem, type MachineView, type RuntimeRegistration, type RuntimeView,
     type Discovery, type ExecutionTarget } from './types';
 
-const InventorySchema = z.object({ machines: z.array(MachineSchema) });
 type Probe = { inspections: Inspection[]; problem: null } | { inspections: null; problem: Problem };
 
 /** Scope comes from the authenticated caller, never the server's local/hub configuration. */
@@ -26,13 +25,7 @@ export class ResourceService {
         return view;
     }
     async machines(): Promise<MachineView[]> {
-        const health = await this.hapi('/health');
-        if (health?.capabilities?.machineInventory !== 1) throw new ResourceError(409, 'resource_capability_missing', 'HAPI 不支持完整机器库存。', '更新配套 Runweft Hub。');
-        const result = InventorySchema.safeParse(await this.hapi('/api/machines?includeOffline=true'));
-        if (!result.success || result.data.machines.some(machine => machine.namespace !== this.namespace)) {
-            throw new ResourceError(502, 'invalid_hapi_response', 'HAPI 返回的机器库存或作用域无效。', '运行 runweft doctor 检查配套版本。');
-        }
-        return result.data.machines.map(machine => this.machineView(machine));
+        return (await nativeMachines(this.hapi, this.namespace)).map(machine => this.machineView(machine));
     }
     async machine(id: string): Promise<MachineView> {
         const machine = (await this.machines()).find(machine => machine.id === id);

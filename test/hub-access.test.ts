@@ -156,7 +156,7 @@ test('two processes cannot claim the same native object for different owners; to
 
 test('v7 migration preserves identities and existing resource rows without inferring execution ownership', () => {
     const h = setup(), db = new Database(h.path);
-    db.exec(`DROP TABLE hub_native_session_claims; DROP TABLE hub_file_reservations; DROP TABLE hub_execution_grants; DROP TABLE hub_execution_intents; DROP TABLE hub_execution_credentials;
+    db.exec(`DROP TABLE hub_machine_spaces; DROP TABLE hub_resource_machines; DROP TABLE hub_native_session_claims; DROP TABLE hub_file_reservations; DROP TABLE hub_execution_grants; DROP TABLE hub_execution_intents; DROP TABLE hub_execution_credentials;
         DROP TABLE hub_execution_objects; INSERT INTO machine_registrations VALUES ('default', 'legacy', 1, 1, 1); PRAGMA user_version=7;`);
     const migrated = new AccessStore(h.path);
     try {

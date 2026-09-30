@@ -3,6 +3,7 @@ import type { Socket } from 'node:net';
 import { z } from 'zod';
 import { jsonResponse } from '../../proxy';
 import { HapiRequestError } from '../../hapi';
+import { ResourceError } from '../../resources/types';
 import { handleHubRequest } from '../api';
 import { hubPage } from '../page';
 import { HubStore } from '../store';
@@ -28,7 +29,7 @@ export const SESSION_ROUTES: Record<string, RegExp[]> = {
 export type AccessGatewayOptions = {
     host: string; port: number; target: string; rootToken: string; key: Uint8Array; statePath: string;
     health?: () => object;
-    business?: (request: IncomingMessage, response: ServerResponse, actor: Principal) => Promise<boolean>;
+    business?: (request: IncomingMessage, response: ServerResponse, actor: Principal, lease: RequestLease) => Promise<boolean>;
 };
 
 /** Independent secure entry. The legacy serve switches to it only with the later identity migration. */
@@ -44,7 +45,7 @@ export async function createAccessGateway(options: AccessGatewayOptions) {
         void handle(request, response).catch(error => {
             if (response.destroyed) return;
             if (response.headersSent) { response.destroy(); return; }
-            const known = error instanceof HubError || error instanceof HapiRequestError;
+            const known = error instanceof HubError || error instanceof HapiRequestError || error instanceof ResourceError;
             jsonResponse(response, known ? error.status : 500, { error: known ? { code: error.code, message: error.message, hint: error.hint }
                 : { code: 'native_gateway_failed', message: '原生请求未能完成。', hint: '查询原任务或对象确认状态，不要盲目重发。' } });
         });
@@ -84,7 +85,7 @@ export async function createAccessGateway(options: AccessGatewayOptions) {
         const lease = new RequestLease(actor, store, response); leases.add(lease);
         try {
             if (path.startsWith('/api/runweft/')) {
-                if (actor.kind === 'user' && options.business && await options.business(request, response, actor)) return;
+                if (actor.kind === 'user' && options.business && await options.business(request, response, actor, lease)) return;
                 throw unavailable();
             }
             let result: any;

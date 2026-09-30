@@ -1,6 +1,6 @@
 # 机器与 Runtime 归属实施计划
 
-> 状态：待执行
+> 状态：执行中
 > 来源：[Requirement](requirement.md)
 > 技术方案：[Technical](technical.md)
 > 执行模式：逐任务提交。方案/Plan 由主 agent 按授权确认，已完成 iclaude 评审并由主 agent 落实修正，见 execution.md。
@@ -13,7 +13,7 @@
 
 ### T1 可信机器接入与全局登记
 
-- 状态：待开始
+- 状态：已完成
 - 交付：增量存储、带 requestId 的 enrollment、凭据替换/撤销、机器名称/登记/空间关联及 HTTP 接线；可复用组合函数，传递 RequestLease，成员移除级联撤回关联。
 - 依赖：已归档身份/空间和 HAPI 通道授权。
 - 验收：不能自报旧机器 ID 认领；被替换/撤销的 enrollment 重放明确冲突，不复活旧凭据；重启/丢响应保留原机器；凭据只存摘要；其他所有者/管理员不能改机器；关联不产生 runtime 或机器控制权。
