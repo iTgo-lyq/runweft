@@ -72,3 +72,11 @@ WorkspacePreparations 的遗漏由主 agent 同步复核发现并已在评审结
 - 验证：typecheck、build 通过；全仓 249 pass/0 fail，38 文件、5143 断言，约 49 秒。新增 3 组清理测试覆盖预览/重复执行、进程拒绝、符号链接、损坏旧配置和保留字节。最后进行路径字段统一并复查 MCP/Agent 领域聚焦测试，21 pass/0 fail、484 断言，typecheck/build 再次通过。日志 `.dev-smoke/t5/t6-*.log`。
 - 真实验证：编译 CLI + 原 HAPI/Runner 的 5 组通过，`.dev-smoke/hub-service-MI3IfS/evidence.json` success=true、cleanupErrors=[]；先启动验证运行中清理拒绝，再停服清理，保留 worktree 字节，重新启动领取身份并登记新机器，旧身份被拒绝。本任务不启动模型；清理后新委派在 T7 验证。
 - Commit：`hub-delegation-migration T6: reset prerelease records and simplify consumer entry points`。
+
+## T7 组合自动验收
+
+- 结果：真实原生主宿主 Codex/Claude × 两 runtime 四组合均完成默认 MCP 派生、等待、读取、精确原生父身份、子 CLI 递归拒绝、原生终态和进程退出；四组合实际超过 60 秒的工具等待通过。新 Hub 在显式 prerelease reset 后完整登记接入。
+- 结果：默认编译 CLI 通过真实 shared 两轮复用、确认缺失后的原生历史重建、本地 worktree 和同机远端 Claude；输入/输出字节与权限、无 push 的 Git ref 取回、显式释放保留主仓库 ref 均验证。Playwright 再次覆盖 Web 密钥交接与界面状态。
+- 验证：最终 typecheck/test/build/diff-check 通过；249 pass/0 fail，5143 断言。四组合、7 组真实领域链路、5 组服务/重置与 5 组 Playwright 的完整需求矩阵、原始证据及失败调试事实见 [Acceptance](acceptance.md)。HAPI revision 未变化，未更新在线部署和用户配置。
+- 边界：物理远端缺少访问条件；Mac 实机由用户承担。完整后台/Skill、官网及四平台配套发行归整体阶段 6/7，交由 traex（astra）继续。本地验收按既有授权自动完成，不另设人工门禁。
+- Commit：`hub-delegation-migration T7: verify default Hub delegation with real native hosts`。

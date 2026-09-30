@@ -1,6 +1,6 @@
 # 委派接入与配置切换
 
-> 状态：进行中
+> 状态：待验收
 > 规模：大型
 > 前置：[HAPI 授权](../../archive/2026-09-30-hub-hapi-access/requirement.md)、[资源归属](../../archive/2026-09-30-hub-resource-ownership/requirement.md)、[中心 Agent](../../archive/2026-10-01-hub-repository-agents/requirement.md)
 > 更新：2026-10-01

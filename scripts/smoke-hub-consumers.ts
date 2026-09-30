@@ -44,12 +44,13 @@ const hapi = Bun.spawn([nativeBinary, 'hub'], { env: { ...env, HAPI_HOME: native
     HAPI_LISTEN_HOST: '127.0.0.1', HAPI_LISTEN_PORT: String(port), HAPI_PUBLIC_URL: target, TELEGRAM_BOT_TOKEN: '' },
     stdout: Bun.file(join(root, 'hapi-out.log')), stderr: Bun.file(join(root, 'hapi-err.log')) });
 let gateway: Awaited<ReturnType<typeof createDelegationGateway>> | undefined, hub: HubStore | undefined, base = '';
+const runnerEnvironments: NodeJS.ProcessEnv[] = [];
 const runners: ReturnType<typeof Bun.spawn>[] = [], evidence: any = { root, binary, nativeBinary, codexModel, selected, success: false, checks: [], tasks: [], cleanupErrors: [],
     scope: 'compiled Hub consumers, unchanged HAPI, real Codex/Claude runtimes and two Runners on one physical Linux machine; host MCP metadata covered by separate tests' };
 const project = join(root, 'project'); mkdirSync(project);
 function git(...args: string[]) { return execFileSync('git', ['-C', project, ...args], { env, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim(); }
 async function cli(home: string, args: string[]) {
-    const child = Bun.spawn([binary, '--home', home, '--json', 'hub', '--url', base, ...args], { cwd: project, env, stdout: 'pipe', stderr: 'pipe' });
+    const child = Bun.spawn([binary, '--home', home, '--json', ...args], { cwd: project, env, stdout: 'pipe', stderr: 'pipe' });
     const [exit, stdout, stderr] = await Promise.all([child.exited, new Response(child.stdout).text(), new Response(child.stderr).text()]);
     for (const secret of secrets) assert(!(stdout + stderr).includes(secret), 'Credential in CLI output');
     assert.equal(exit, 0, `${args[0]}: ${stderr}`); return JSON.parse(stdout);
@@ -78,12 +79,14 @@ try {
     const homes = [join(root, 'source-client'), join(root, 'target-client')], machineIds: string[] = [];
     for (const [index, user] of [owner, remote].entries()) {
         const home = homes[index], paths = hubConnectionPaths(home, base);
+        atomicWrite(join(home, 'config.yaml'), `mode: ${index ? 'hub' : 'local'}\nhub:\n  url: ${base}\n`);
         atomicWrite(paths.identityConnection, JSON.stringify({ schemaVersion: 1, hub: base, ownerId: user.identity.id, spaceId: space, token: user.token, requestId: randomUUID(), createdAt: Date.now() }));
         const enrollment = await cli(home, ['machine', 'enroll', '--name', `consumer-runner-${index}`]); machineIds.push(enrollment.machineId);
         await cli(home, ['machine', 'associate', enrollment.machineId, space]);
         const record = JSON.parse(readFileSync(paths.machineConnection, 'utf8')), runnerHome = join(paths.connection, 'hapi'); secrets.push(record.active.token);
         atomicWrite(join(runnerHome, 'settings.json'), JSON.stringify({ machineId: record.machineId, cliApiToken: record.active.token }));
-        runners.push(Bun.spawn([nativeBinary, 'runner', 'start-sync'], { env: { ...env, HAPI_HOME: runnerHome, HAPI_API_URL: base, CLI_API_TOKEN: record.active.token, HAPI_DISABLE_VERSION_HANDOFF: '1' },
+        const runnerEnv = { ...env, HAPI_HOME: runnerHome, HAPI_API_URL: base, CLI_API_TOKEN: record.active.token, HAPI_DISABLE_VERSION_HANDOFF: '1' }; runnerEnvironments.push(runnerEnv);
+        runners.push(Bun.spawn([nativeBinary, 'runner', 'start-sync'], { env: runnerEnv,
             stdout: Bun.file(join(root, `runner-${index}-out.log`)), stderr: Bun.file(join(root, `runner-${index}-err.log`)) }));
     }
     for (const [index, home] of homes.entries()) await until(async () => { assert.equal(runners[index].exitCode, null); const result = await cli(home, ['machine', 'list']); return result.machines.some((m: any) => m.id === machineIds[index] && m.online); }, Boolean, 'Runner online');
@@ -123,6 +126,25 @@ try {
     assert.equal(second.native_session_id, first.native_session_id); assert.equal(second.stop, 'stopped');
     evidence.tasks.push({ mode: 'shared', runtime: 'codex', id: accepted.agent_id, firstRound: first.round_id, secondRound: second.round_id, nativeSessionId: second.native_session_id });
     check('real Codex shared execution stops each round and resumes the same native session through the saved Hub identity');
+    // A removed rollout with an intact native index is corruption, not confirmed absence.
+    // Restart only this dedicated Runner with a clean native history store and the same model configuration/authentication.
+    const emptyCodex = join(root, 'codex-without-history'); mkdirSync(emptyCodex, { mode: 0o700 });
+    for (const file of ['config.toml', 'auth.json']) copy(join(codexHome, file), join(emptyCodex, file));
+    runners[0].kill(); await runners[0].exited;
+    runners[0] = Bun.spawn([nativeBinary, 'runner', 'start-sync'], { env: { ...runnerEnvironments[0], CODEX_HOME: emptyCodex },
+        stdout: Bun.file(join(root, 'runner-restarted-out.log')), stderr: Bun.file(join(root, 'runner-restarted-err.log')) });
+    await until(async () => {
+        const state = join(runnerEnvironments[0].HAPI_HOME!, 'runner.state.json');
+        if (!existsSync(state) || JSON.parse(readFileSync(state, 'utf8')).pid !== runners[0].pid) return false;
+        return (await cli(homes[0], ['machine', 'list'])).machines.some((machine: any) => machine.id === machineIds[0] && machine.online);
+    }, Boolean, 'Runner with missing native history');
+    const rebuilt = await cli(homes[0], ['task', 'send', accepted.agent_id, '--message', '原生历史可能已缺失。只根据系统提供的业务历史，回复前两轮的最终回复原文，再加 CENTRAL_HISTORY_DONE。不要调用工具。']);
+    const third = await finish(homes[0], accepted.agent_id); assert.equal(third.round_id, rebuilt.round_id);
+    assert.notEqual(third.native_session_id, second.native_session_id); assert.equal(third.reconstruction?.reason, 'native_session_missing');
+    assert(third.report.text.includes('CENTRAL_CODEX_FIRST') && third.report.text.includes('CENTRAL_CODEX_RESUMED') && third.report.text.includes('CENTRAL_HISTORY_DONE'));
+    evidence.tasks.push({ mode: 'history-reconstruction', runtime: 'codex', id: accepted.agent_id, round: third.round_id, nativeSessionId: third.native_session_id });
+    check('missing native history starts one replacement session with bounded business history, preserving previous round reports');
+
 
     const local = await cli(homes[0], ['task', 'spawn', agents[0].id, '--workspace-mode', 'worktree', '--base', initial,
         '--message', '在当前工作目录创建 local.txt，内容为 CENTRAL_LOCAL_WORKTREE。只修改这个文件，不进行 git 操作。完成后回复 CENTRAL_LOCAL_DONE。']);
@@ -151,6 +173,14 @@ try {
     assert.equal(git('rev-parse', 'HEAD'), initial); assert.equal(git('status', '--porcelain'), '');
     evidence.tasks.push({ mode: 'remote-worktree', runtime: 'claude', id: remoteTask.agent_id, ref, artifactId: file.artifactId });
     check('real remote Claude receives input before launch, returns private artifact bytes and a fetchable code ref without pushing or merging');
+    assert.equal((await cli(homes[0], ['task', 'show', remoteTask.agent_id])).environment.status, 'retained');
+    await cli(homes[0], ['task', 'result', 'release', remoteTask.agent_id, '--apply']);
+    await cli(homes[0], ['task', 'artifacts', 'release', remoteTask.agent_id, '--apply']);
+    await cli(homes[0], ['task', 'workspace', 'remove', remoteTask.agent_id, '--discard-ignored']);
+    await until(() => cli(homes[0], ['task', 'show', remoteTask.agent_id]), value => value.environment.status === 'removed', 'explicit remote workspace release');
+    assert.equal(git('show', `${ref}:result.txt`), 'CENTRAL_INPUT_BYTES');
+    check('explicit release removes remote environment and central references while preserving the fetched parent result ref');
+
     }
     const logs = ['hapi-out.log', 'hapi-err.log', 'runner-0-out.log', 'runner-0-err.log', 'runner-1-out.log', 'runner-1-err.log'];
     for (const file of logs) for (const secret of secrets) assert(!readFileSync(join(root, file), 'utf8').includes(secret), 'Credential in native service log');

@@ -24,6 +24,6 @@ polling secret 与私钥只在本机；请求 ID/核对码是展示信息，不�
 
 local 表示本机托管 Hub，hub 表示使用已有服务；hub.url 独立表示当前业务连接。local 的 start 默认只启动 Hub，hub 的 start 启动当前连接的 Runner；统一 runner start/stop/status 可单独管理 Runner。server.runner 默认 false，仅在显式启用且已保存机器接入记录时随托管服务启动。connect complete 成功后将明确选择的地址保存为 hub.url，不修改部署模式；身份/空间仍在对应连接的 identity.json，不进入 YAML。
 
-root Agent/resource 命令转向中心服务，旧 YAML 写入/绑定命令退出生产入口并返回中心配置的替代命令说明。MCP/任务/附件/远端诊断共用已保存 Hub 身份 transport，配置错误即时给出接入路径，不启动临时本地退路。服务状态与 doctor 分别显示托管 Hub、业务连接、身份空间、机器接入和原生工具情况，不再将 root token 名称作为用户接入提示。
+root Agent/resource 命令转向中心服务，旧 YAML 写入/绑定命令退出生产入口，help 展示中心配置命令。MCP/任务/附件/远端诊断共用已保存 Hub 身份 transport，配置错误即时给出接入路径，不启动临时本地退路。服务状态与 doctor 分别显示托管 Hub、业务连接、身份空间、机器接入和原生工具情况，不再将 root token 名称作为用户接入提示。
 
 未上线版本旧数据按[清理契约](migration-contract.md)处理，不建立 native home 映射或历史转换层；不删除外部 Git worktree。
