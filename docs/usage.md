@@ -2,6 +2,16 @@
 
 Runweft 将 HAPI 执行能力接入 Codex 和 Claude Code，提供共享目录、本地独立 worktree、远端 worktree 的委派、续接、输入/输出文件和代码回收。一个 CLI 管理本地或 Hub 连接、全局 MCP、机器、runtime、Agent 定义和协作看板。
 
+## Hub 身份与空间入口
+
+当前源码构建新增 `<Hub 地址>/hub`。打开后可“创建新身份”或“使用已有 token”，无需邮箱、密码和注册服务；创建后请复制或下载身份 token。浏览器只在当前会话保存它，刷新仍是原身份；退出或换设备后可导入副本。没有副本时无法找回，重新领取不会继承旧身份的空间或配置。
+
+每个身份有初始空间，也可创建协作空间。空间所有者可邀请成员/管理员、修改角色；管理员只能邀请和移除普通成员。邀请 24 小时内由一人使用。成员可退出空间，最后一位所有者须先指定另一位所有者。初始空间与协作空间使用同一规则，不自动加入其他人的空间。
+
+“更换 token”会先生成供保存的新 token，再由用户应用；成功后旧 token 立即失效，身份和成员关系保留。若响应丢失，页面会用已经保存的新 token 核实结果。关闭此浏览器会话前请保存最新副本。
+
+这是已完成的身份/空间模块。新的 token 暂不用于原有 `/runweft` 看板、HAPI 原生接口或委派；这些接口仍沿下文旧连接认证，后续按 [Hub 交付拆分](project/changes/hub-spaces-and-agent-configuration/delivery.md) 接通。不得把身份 token 与 HAPI 内部 root token 混用。下列 1.0.0 发行包不会因源码改动自动更新。
+
 ## 安装与首次使用
 
 1.0.0 提供 macOS arm64/x64、glibc Linux arm64/x64 四个平台包，配套 HAPI 0.30.7。程序不需要全局 Bun 或另装 HAPI；工作区操作需要 Git，执行任务还需安装所选原生 Codex/Claude Code 并完成模型登录。使用 Git LFS 的项目需要在源机器与执行机器安装 Git LFS。
@@ -579,7 +589,7 @@ local 模式的资源库位于本机中心；hub 模式只读写所连中心的�
 
 升级时安装同一批次的主包与平台包，再按角色重启相应服务。`status` 区分已安装与正在运行的服务版本；`doctor` 检查固定 HAPI 兼容版本。更换二进制不自动删除旧数据，也不主动迁移用户已有 `~/.hapi`。有活跃模型任务时先收尾再更新执行组件。
 
-备份前停止对应服务；备份 `config.yaml`、`agents/`、`server/`、`connections/` 和 `client.sqlite`。SQLite 使用 WAL，整个停止后的数据根一起备份最直接。恢复时使用匹配的 Runweft/HAPI 版本；本版业务数据库使用 schema v6，遇到更高 schema 会拒绝打开。回退必须符合目标版本的数据兼容要求，不承诺跨任意版本回退。npm 卸载只删除软件包，数据根需另行管理。
+备份前停止对应服务；备份 `config.yaml`、`agents/`、`server/`、`connections/` 和 `client.sqlite`。SQLite 使用 WAL，整个停止后的数据根一起备份最直接。恢复时使用匹配的 Runweft/HAPI 版本；当前源码业务库为 schema v7，新增身份与空间，旧 1.0.0 发行包的 v6 程序不能直接打开升级后的库。升级前保存 state.sqlite 及尚存的 WAL 文件；回退时停止服务并恢复完整升级前备份，不手工降低 user_version。npm 卸载只删除软件包，数据根需另行管理。
 
 有本机源仓库派生的 worktree 时，先等待所有轮次停止并完成收尾，再停止服务，同时备份源仓库及其 Git common directory、Runweft 数据和需要续接的原生历史。checkout 的 `.git` 指向源仓库，Git 对象/refs 不在 Runweft 数据根；只备份其中一侧不完整。远端诊断 worktree 指向执行机数据根内的 `workspaces/repositories/`，备份时同时保留该缓存、环境目录及中心基线记录/文件对象。按原路径恢复后检查 `git worktree list` 和对应记录；迁移路径涉及 Git 注册及持久环境记录，当前没有自动迁移命令，不能仅移动目录后直接续接。子模块对象和 LFS 实体也应一起保存。
 

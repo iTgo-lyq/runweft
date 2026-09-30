@@ -20,3 +20,10 @@
 - 验证：`bun run typecheck`、`bun run build` 通过；`RUNWEFT_SMOKE_CHROMIUM=/home/tiger/.cache/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-linux64/chrome-headless-shell bun run test:hub` 的 8 组检查通过。实际编译二进制启动专用 Hub，无 Runner/模型执行；Playwright 覆盖 1280px/390px、键盘入口、两个身份及角色改变、轮换响应丢失恢复。
 - 原始证据：`.dev-smoke/hub-identity-Pu5w40/evidence.json` 及 desktop/mobile.png；截图复核并修正窄屏按钮换行。环境默认 Playwright browser revision 缺失，显式采用已有 Chromium 后通过，不借用用户浏览器。
 - Commit：`hub-identities-and-spaces T2: add browser identity and space management`
+
+## T3 整体自动验收与规格同步
+
+- 结果：独立范围已自动验收，需求映射见 [验收](acceptance.md)。使用说明区分新身份入口与尚未迁移的原生协作，记录 v7 升级和恢复备份要求；开发说明提供可重复执行的浏览器验收命令。
+- 验证：类型检查、编译、179 项仓库测试及 8 组真实服务/Playwright 检查通过；未变更的已通过检查不重复执行。临时服务已停止，当前已部署 Hub 保持原版本。
+- 关闭：按用户已授权的本地自动验收进入 Specs 同步与独立归档；后续领域仍按交付拆分推进。
+- Commit：`hub-identities-and-spaces T3: accept identity and space workflows`

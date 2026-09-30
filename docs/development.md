@@ -1,5 +1,7 @@
 # Runweft 开发与自动验收
 
+`bun run test:hub` 使用已构建的 `dist/runweft` 与 `dist/hapi`，在专用数据根启动无 Runner 的 Hub，执行 Playwright 身份/空间流程、真实 HAPI 新旧凭据双向拒绝和秘密扫描，不调用模型。需要可用的 Chromium；可用 `RUNWEFT_SMOKE_CHROMIUM` 指定已安装的浏览器程序。证据位于 `.dev-smoke/hub-identity-*`，脚本结束停止自建服务，下载的身份备份也只保留于该专用目录。
+
 ```sh
 git submodule update --init hapi
 bun install --frozen-lockfile
