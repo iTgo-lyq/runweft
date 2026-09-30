@@ -1,16 +1,16 @@
 # 项目文档
 
-基础入口的安装、配置、部署与数据维护见[使用说明](usage.md)；完整协作功能仍按下列 Change 推进。
+Runweft 1.0.0 已完成十二个 Change 的实现、自动验收、Specs 同步与归档。安装、配置、部署与数据维护见[使用说明](usage.md)，源码构建和验证见[开发说明](development.md)。
 
-[统一 CLI 与部署](project/archive/2026-09-29-unified-cli-and-deployment/execution.md#t5-实际平台与整体验收)已验收归档，macOS 与 Linux 的 arm64/x64 已通过真实安装和服务验证；[HAPI 执行契约](project/archive/2026-09-29-hapi-subagent-foundation/execution.md#t4-配套构建与整体验收)已完成两种 runtime 的本地真实执行验收，[宿主 MCP 适配](project/archive/2026-09-29-host-mcp-adapter/execution.md#t4-配套构建与宿主整体验收)通过真实安装、身份及子工具禁用验收，[全局资源登记](project/archive/2026-09-29-execution-resource-registry/execution.md#t4-配套注册整体验收)通过配套 CLI、原生探测、离线与恢复验收。[Agent 定义](project/archive/2026-09-29-agent-definition/execution.md#t3-配套定义验收与使用说明)已通过作用域、个人绑定与真实 Hub/Runner 解析验收。[本地共享委派](project/archive/2026-09-29-delegation-lifecycle/acceptance.md)已通过两宿主 × 两 runtime 的 local/同机 Hub 真实协作、续接、控制与候选包安装验收。[本地独立工作区](project/archive/2026-09-29-local-workspace-execution/acceptance.md)已通过真实 CLI/MCP 准备、封存、续接、清理和候选安装验收。[任务附件交付](project/archive/2026-09-29-task-artifact-delivery/acceptance.md)已通过两宿主 × 两 runtime 的 local/同机 Hub 输入、成果、补交、续接及候选安装验收。[远端工作区准备](project/archive/2026-09-30-remote-workspace-preparation/acceptance.md)已通过固定基线、共享缓存、诊断 CLI、显式释放、两 runtime 各两轮原生执行及候选安装验收；[远端代码回收](project/archive/2026-09-30-remote-result-delivery/acceptance.md)已通过两宿主 × 两 runtime 原生 MCP 两轮、离线取回/合入、显式成果/缓存释放及候选安装验收。[协作看板](project/archive/2026-09-30-subagent-dashboard/acceptance.md)已通过 Playwright、候选安装及真实 HAPI 历史导航验收；真实跨物理机器未执行，最终发行仍在推进。本地验收由 agent 自动完成，真实远端验收单独记录。先读[项目能力边界与讨论地图](project/architecture.md)，查看模块分工和 Change 依赖。
+[最终交付验收](project/archive/2026-09-30-integrated-release/acceptance.md)汇总四平台产物、校验和、需求对应及原始证据。Linux x64 完成真实安装、20 组核心协作、8 组附件、2 组 MCP 控制、原生历史重建、升级回退和 Playwright；Mac 实机由用户验证，Linux arm64 为 QEMU CLI/配置验证，物理远端延期。远端功能已通过同机独立 Hub/多 Runner 真实链路。早期四平台基础安装证据不代替最终原生协作。
 
 实现以当前 HAPI 为第一依据，Runweft 尽量只做上层流程封装与 MCP；旧工程技术方案不直接沿用。
 
-当前整体方案已由 iclaude 辅助评审，主 agent 的[复核与采纳记录](project/architecture-review.md)保留事实修正和前置验证安排。
+整体方案与各 Change 均完成 iclaude 辅助评审；[整体复核记录](project/architecture-review.md)和各归档的 Execution 保存采纳依据。模块分工与依赖见[项目架构](project/architecture.md)。
 
-最终目标是交付完整可运行版本，不以 MVP 或演示链路结项。当前十一个领域 Change 加一个集成与发布 Change，按[六阶段交付结构](project/delivery-structure.md)推进；完整交付标准与尚需落实的技术架构见[项目架构](project/architecture.md#完整版本的交付目标)。
+本次按[六阶段交付结构](project/delivery-structure.md)完成十一个领域 Change 和一个集成发行 Change；当前事实见 Specs，历史需求和验收见下列归档。
 
-原初始 Change 已按独立交付结果拆分；各 Requirement 内声明前置能力与验收边界，已确认结论继续有效：
+全部 Change 按独立交付结果拆分并声明依赖，归档入口如下：
 
 | Change | 需求入口 | 方案与依据 |
 | --- | --- | --- |
@@ -25,19 +25,20 @@
 | 全局机器与 Runtime 注册（已归档） | [Requirement](project/archive/2026-09-29-execution-resource-registry/requirement.md) | [Technical](project/archive/2026-09-29-execution-resource-registry/technical.md)、[Plan](project/archive/2026-09-29-execution-resource-registry/plan.md)、[Research](project/archive/2026-09-29-execution-resource-registry/research.md) |
 | Agent 定义（已归档） | [Requirement](project/archive/2026-09-29-agent-definition/requirement.md) | [Technical](project/archive/2026-09-29-agent-definition/technical.md)、[Plan](project/archive/2026-09-29-agent-definition/plan.md)、[Research](project/archive/2026-09-29-agent-definition/research.md) |
 | Subagent 看板（已归档） | [Requirement](project/archive/2026-09-30-subagent-dashboard/requirement.md) | [验收](project/archive/2026-09-30-subagent-dashboard/acceptance.md)、[规格](project/specs/dashboard/subagents/spec.md) |
-| 完整版本集成与发布 | [Requirement](project/changes/integrated-release/requirement.md) | 组合验收、正式安装及完整交付证据 |
+| 完整版本集成与发布（已归档） | [Requirement](project/archive/2026-09-30-integrated-release/requirement.md) | [验收](project/archive/2026-09-30-integrated-release/acceptance.md)、[发行规格](project/specs/release/distribution/spec.md)、[验证范围](project/specs/release/acceptance/spec.md) |
 
-各 Change 的实际状态以其 Requirement/Technical/Plan 为准；用户已授权按顺序自主落实，每个 Change 的 Plan 经一次 iclaude 评审后执行。`design.md` 保存前期讨论，不代替正式 Technical 或 Plan。
+当前没有未关闭 Change。每个 Change 均经一次 iclaude Plan 评审、逐任务实现提交、自动本地验收及 Specs 同步后归档；明确由用户承担或延期的实测范围见最终验收。`design.md` 保存前期讨论，不代替正式 Technical 或 Plan。
 
 按照 [project-workflow](../.agents/skills/project-workflow/SKILL.md)：
 
-- `project/changes/` 保存未关闭的目标、技术方案和计划。
+- 新的未关闭目标、技术方案和计划放在 `project/changes/`；当前无活跃变更。
 - 已验收 Specs：[CLI 安装](project/specs/installation/cli/spec.md)、[MCP 安装](project/specs/installation/mcp/spec.md)、[宿主 MCP](project/specs/host-mcp/spec.md)、[部署与数据](project/specs/deployment/spec.md)、[工作区绑定](project/specs/workspaces/bindings/spec.md)、[执行事实](project/specs/execution/lifecycle/spec.md)、[执行恢复](project/specs/execution/recovery/spec.md)、[执行兼容](project/specs/execution/compatibility/spec.md)、[机器](project/specs/resources/machines/spec.md)、[Runtime](project/specs/resources/runtimes/spec.md)、[资源范围](project/specs/resources/scope/spec.md)、[Agent 定义](project/specs/agents/definition/spec.md)、[来源与绑定](project/specs/agents/scope/spec.md)、[原生继承边界](project/specs/agents/inheritance/spec.md)。
 - 已验收协作 Specs：[委派入口](project/specs/delegation/interface/spec.md)、[持久协调](project/specs/delegation/lifecycle/spec.md)、[业务轮次](project/specs/delegation/rounds/spec.md)、[结果与等待](project/specs/delegation/results/spec.md)、[上下文](project/specs/delegation/context/spec.md)、[本机共享工作区](project/specs/local-workspace/shared/spec.md)。
 - 已验收附件 Specs：[持久文件](project/specs/artifacts/spec.md)、[启动前输入](project/specs/artifacts/inputs/spec.md)、[输出交付](project/specs/artifacts/delivery/spec.md)、[留存与清理](project/specs/artifacts/retention/spec.md)。
 - 已验收独立工作区 Specs：[模式](project/specs/local-workspace/mode/spec.md)、[准备与启动](project/specs/local-workspace/readiness/spec.md)、[成果与留存](project/specs/local-workspace/finish/spec.md)、[机器 Git 生命周期](project/specs/git-workspace/lifecycle/spec.md)。
 - 已验收远端准备 Specs：[诊断入口](project/specs/remote-workspace/spec.md)、[固定基线](project/specs/remote-workspace/baseline/spec.md)、[独立环境与留存](project/specs/remote-workspace/isolation/spec.md)、[启动校验](project/specs/remote-workspace/readiness/spec.md)。
 - 已验收代码回收 Specs：[固定成果](project/specs/remote-results/snapshot/spec.md)、[中心交付](project/specs/remote-results/delivery/spec.md)、[取回合入](project/specs/remote-results/fetch/spec.md)、[恢复留存](project/specs/remote-results/retention/spec.md)。
+- 已验收交付 Specs：[全局看板](project/specs/dashboard/subagents/spec.md)、[发行产物](project/specs/release/distribution/spec.md)、[组合验收范围](project/specs/release/acceptance/spec.md)。
 - `project/archive/` 保存已关闭 Change 的完整过程与验收记录。
 
 新仓库不迁入旧实现、旧 Changes 或运行认证。历史证据定位到 [runweft-archive](https://github.com/iTgo-lyq/runweft-archive)。

@@ -68,3 +68,7 @@
 - 文档：当前入口、Specs 与本 Change 共 49 个 Markdown 文件、242 个本地链接及标题锚点通过检查，证据 `.dev-smoke/c12-doc-links.json`；结构和 diff 检查通过。归档移动后再次核对引用。
 - 结论：沿用户持续授权自动验收通过，Mac 实机由用户验证、物理跨机延期；Linux arm64 仿真边界、当前 CI 未触发、Nginx 未运行及上游环境性失败均已记录。没有新增需要用户执行的其他本地验收任务，未公开发布或改动用户客户端配置。
 - Commit：`integrated-release T4: finalize release evidence and deliverable`
+
+## 自动验收与关闭
+
+T1–T4 分别提交为 `ebd69e8`、`fdfe9fd`、`22adb9b`、`f424c1c`。沿用户授权完成本地自动验收，结论与例外见 [Acceptance](acceptance.md)。新增 `release/distribution`、`release/acceptance` Specs，更新 `installation/cli` 的正式包与直接安装事实；同步项目入口的完成状态和实际验证范围后，归档为 `2026-09-30-integrated-release`，另作关闭提交。其余领域契约与冻结发行产物均未改变。

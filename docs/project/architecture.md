@@ -1,7 +1,7 @@
 # 项目能力边界与讨论地图
 
-> 更新：2026-09-29
-> 本文组织目标、Change 依赖和讨论顺序，不是已实现 Specs，也不表示各 Change 的需求或技术方案已经整体确认。
+> 更新：2026-09-30
+> 本文保存产品决策、职责边界和 Change 依赖；十二个 Change 已完成并归档，当前实现事实以 Specs 为准，验证范围见最终交付验收。
 
 ## 产品边界
 
@@ -11,7 +11,7 @@
 
 **HAPI 已有能力优先复用。** 技术方案按“当前入口 → 是否足够 → 最小缺口”推导；已有会话、消息、状态、恢复、审批、文件与 UI 不重复实现。旧工程只参考交互和历史证据，不能完全照搬其 daemon、状态机、认证锁或补丁；具体边界见[执行基础需求](archive/2026-09-29-hapi-subagent-foundation/requirement.md#已确认的架构决策)。
 
-协作服务的运行位置已在[统一 CLI 技术方案](archive/2026-09-29-unified-cli-and-deployment/technical.md#服务与数据归属)中落实：Runweft 服务与原有 HAPI Hub 同机部署，共用 HTTP 入口和 HAPI 认证；本地模式部署在本机，Hub 模式部署在所选中心。只补父子关联、角色分流、工作区准备与成果交付，不复制 HAPI 原生会话库。基础安装与部署已通过四个平台验收并归档，当前行为见[部署 Spec](specs/deployment/spec.md)；本机业务委派及独立工作区已验收，当前行为见[委派入口](specs/delegation/interface/spec.md)和[工作区模式](specs/local-workspace/mode/spec.md)；附件和远端协作继续由后续 Change 实现。
+协作服务的运行位置已在[统一 CLI 技术方案](archive/2026-09-29-unified-cli-and-deployment/technical.md#服务与数据归属)中落实：Runweft 服务与原有 HAPI Hub 同机部署，共用 HTTP 入口和 HAPI 认证；本地模式部署在本机，Hub 模式部署在所选中心。只补父子关联、角色分流、工作区准备与成果交付，不复制 HAPI 原生会话库。当前行为见[部署](specs/deployment/spec.md)、[委派入口](specs/delegation/interface/spec.md)、[工作区模式](specs/local-workspace/mode/spec.md)、[附件](specs/artifacts/spec.md)和[远端成果](specs/remote-results/delivery/spec.md)。
 
 ## 完整版本的交付目标
 
@@ -21,9 +21,9 @@
 
 复用 HAPI 的详情、审批、机器管理及默认权限属于完整方案，不要求重写。简单全局看板就是本轮目标；正式工作台、集中 skill/MCP 管理、主宿主退出后的恢复和 runtime 插件平台继续不在范围内。
 
-验收必须同时具有原生交互和安装部署证据：覆盖两种宿主、两种内置 runtime、本地/远端工作模式、任务续接、失败与交付重试，以及 macOS 正式安装。本地验收由 agent 自动完成，不要求用户亲自测试或逐项批准；真实远端协作需要机器/访问条件时才请用户参与。源码、模拟测试、单机多进程或 Git 原语实验不能独自替代这些证据。真实运行所需的专用环境与授权需落实，未验证项不能通过减少声明来冒充完整交付。
+验收同时要求原生交互和安装部署证据，覆盖两种宿主、两种内置 runtime、本地/远端工作模式、任务续接、失败与交付重试。本地验收由 agent 自动完成；2026-09-30 用户明确允许 Playwright，并接手 Mac 实机验证，Mac 双架构仍须一并构建。物理远端验证按用户授权延期，同机多 Runner 的真实链路与物理跨机分别记录。源码、模拟测试和交叉构建不能代替对应实机证据，最终范围见[完整验收](archive/2026-09-30-integrated-release/acceptance.md)。
 
-## 当前 Changes
+## 交付模块与依赖
 
 拆分审查、六个阶段的验收出口和唯一职责见 [Change 边界与分阶段交付](delivery-structure.md)。本次调整复用已有目录；下表为调整后的依赖，不再让本地执行依赖远端准备，或让宿主身份反向依赖委派。
 
@@ -36,11 +36,11 @@
 | [Agent 定义（已完成）](archive/2026-09-29-agent-definition/requirement.md) | 可发现、校验及解析的全局/项目定义，引用 runtime | 统一 CLI、全局资源注册 |
 | [委派生命周期（已完成）](archive/2026-09-29-delegation-lifecycle/requirement.md) | CLI/MCP 本地共享目录的完整协作与统一查询 | 统一 CLI、HAPI 执行契约、宿主适配、Agent 定义、全局资源注册 |
 | [本地工作区执行（已完成）](archive/2026-09-29-local-workspace-execution/requirement.md) | 独立本地协作及公共 Git 准备/封存/保留能力 | HAPI 执行契约、委派生命周期 |
-| [任务附件交付](archive/2026-09-29-task-artifact-delivery/requirement.md) | 独立文件交付及既有任务的输入/输出接入 | 统一 CLI、委派生命周期 |
-| [远端工作区准备](archive/2026-09-30-remote-workspace-preparation/requirement.md) | 跨机基线与输入落地，复用公共工作区启动校验 | HAPI 执行契约、本地工作区、任务附件 |
+| [任务附件交付（已完成）](archive/2026-09-29-task-artifact-delivery/requirement.md) | 独立文件交付及既有任务的输入/输出接入 | 统一 CLI、委派生命周期 |
+| [远端工作区准备（已完成）](archive/2026-09-30-remote-workspace-preparation/requirement.md) | 跨机基线与输入落地，复用公共工作区启动校验 | HAPI 执行契约、本地工作区、任务附件 |
 | [远端代码回收（已完成）](archive/2026-09-30-remote-result-delivery/requirement.md) | 真实远端协作至主仓库取得成果的完整链路 | 远端准备、本地工作区、委派生命周期、任务附件 |
-| [Subagent 看板](archive/2026-09-30-subagent-dashboard/requirement.md) | 基于统一查询的全局概览，详情复用 HAPI | 委派生命周期、统一 CLI |
-| [集成与发布](changes/integrated-release/requirement.md) | 全部能力组成同一可安装版本及完整实测证据 | 以上十一个领域 Change |
+| [Subagent 看板（已完成）](archive/2026-09-30-subagent-dashboard/requirement.md) | 基于统一查询的全局概览，详情复用 HAPI | 委派生命周期、统一 CLI |
+| [集成与发布（已完成）](archive/2026-09-30-integrated-release/requirement.md) | 全部能力组成同一可安装版本及完整实测证据 | 以上十一个领域 Change |
 
 ```mermaid
 flowchart TD
@@ -61,7 +61,7 @@ flowchart TD
     B --> F
 ```
 
-图省略传递依赖，完整直接前置以表格及各 Requirement 为准。前置表示实现与验收所需能力，不限制只读调查。统一 CLI、HAPI 执行契约、宿主适配、全局资源注册与 Agent 定义已验收归档，其余 Change 待逐项细化，既有确认继续有效；design.md 和阶段说明不代替正式 Technical/Plan。
+图省略传递依赖，完整直接前置以表格及各 Requirement 为准。前置表示实现与验收所需能力，不限制只读调查。全部 Change 已完成正式 Technical/Plan、各一次 iclaude 评审、实现与自动验收，并同步 Specs 归档；design.md 保留讨论过程。
 
 ## 本轮已经收敛的范围
 
@@ -121,30 +121,30 @@ sequenceDiagram
 
 Runweft 只补必要协作与交付关联，原生会话/执行事实优先读取 HAPI，不复制成另一套会话库。CLI 和 MCP 复用同一上层流程，已有重试与消息去重沿 HAPI 实现。
 
-## 下一步技术调查
+## 技术验证结论
 
-| 事项 | 当前证据与下一步 |
+| 事项 | 当前证据 |
 | --- | --- |
 | 宿主身份与工具禁用 | 两宿主身份、Claude clear/resume、全局安装及 HAPI 子执行启动/续接的工具禁用已实测，见[宿主验收](archive/2026-09-29-host-mcp-adapter/execution.md#t4-配套构建与宿主整体验收)；原生子 agent 不管控 |
 | 子进程关闭与 session 续接 | 两 runtime 已实测每轮停止和优先 resume，同一 delegation 保留原生记忆；定向关闭不影响共享 runtime 的兄弟会话 |
-| 配置继承 | 核对 HAPI 是否保留原生全局/项目配置与 cwd；远端不自动拥有发起机的全局 skill/MCP，ignored 项目配置不凭空随 Git 同步 |
+| 配置继承 | 最终原生组合已验证执行目录和工程指令/skill/其他 MCP；继承执行机器上的原生配置，远端不自动拥有发起机的全局 skill/MCP，ignored 项目配置不凭空随 Git 同步 |
 | 通知与结果进入上下文 | 两宿主通过实际 MCP wait/read 响应取得报告，等待游标保留未读轮次完成；不声明原生后台唤醒，不增加主宿主退出恢复目标 |
-| Git 成果方案 | 独立 worktree 自动 checkpoint 与默认 bundle 已确认；后续落实提交身份、hook/签名、对象保留及传输验证，不改动共享主目录 |
+| Git 成果方案 | 独立 worktree 自动 checkpoint、提交身份及 hooks/签名策略、固定 refs、bundle/LFS 传输与显式取回已验收；共享主目录不自动提交，见[Git 生命周期](specs/git-workspace/lifecycle/spec.md) |
 
-这些可调查事项继续进入对应 Research，不要求用户猜测技术事实。后续正式方案逐项列出 HAPI 复用点和确实需要新增的部分，不迁回旧实现框架。
+各领域 Research 保存 HAPI 复用点和已复现的缺口，Technical 记录最小补充，不迁回旧实现框架。最终组合证据与限制见[发行验收范围](specs/release/acceptance/spec.md)。
 
-## 实施就绪性
+## 实施结果
 
-2026-09-29 按完整版本目标复核：产品模块与职责边界已收敛，但技术方案尚不足以将全部剩余工作视为编码细节。没有正式 Technical/Plan 只是表面状态，实质缺口如下；这些可调查事项由工程侧落实，不让用户猜测接口或实现。
+2026-09-30 完成十二个 Change；原先的跨模块技术缺口均按契约归属落实，发行验收没有接收尚未完成的领域功能。
 
-| 技术缺口 | 完整交付前需落实的结论 |
+| 能力 | 已落实结果 |
 | --- | --- |
 | 协作逻辑的部署与存储 | serve 内中心协调已运行，schema v6 保存资源、任务/轮次、请求、文件清单、基线/导入/消费者/诊断及代码清单/取回记录；HAPI 保存中心字节和机器传输。重复接受、文件恢复及重启查询已验证 |
 | HAPI 原生执行契约 | 两种内置 runtime 的输入关联、原生结果、请求重查、定向中断、审批、停止与续接已通过真实验收；共享进程兄弟会话可继续执行，已证实缺口在 HAPI 原路径最小增补 |
 | 宿主身份与结果交互 | 身份、安装、工具禁用及真实派生/等待/续接/控制已通过两宿主 × 两 runtime、local/同机 Hub 验收；支持工具响应，不声明后台唤醒 |
 | 工作区与交付一致性 | 本机 shared/worktree、LFS/子模块、启动前输入、停止后 Git/文件收尾、续接及留存清理已验收；远端固定基线、独立环境、原生准备门禁和显式释放已验收；Git bundle/LFS/递归未变模块成果交付、主仓库取回及显式留存释放已验收 |
-| 发行与运行维护 | 基础包组织、版本固定、启停诊断与四平台安装已验收；完整业务版本的数据升级、组合验收和公开发行由集成 Change 落实 |
-| 真实验收条件 | 专用本地/远端机器、两种原生 CLI 的可用认证及 macOS 环境；只记录资源与授权状态，不读取或搬运凭据来替代配置 |
+| 发行与运行维护 | 1.0.0 四平台包与校验清单、Linux x64 独立安装/原生组合、schema v6 升级回退和备份恢复通过；公开发布未执行，见[发行产物](specs/release/distribution/spec.md) |
+| 真实验收条件 | 专用配置副本完成两宿主/两 runtime 自动验收及 Playwright；Mac 实机用户负责，Linux arm64 为 QEMU CLI/配置，物理远端延期，具体环境限制在验收中逐项保留 |
 
 2026-09-29 用户明确确认以下两项默认策略；轮次结束保留 worktree 的既有决策继续有效：
 
@@ -153,13 +153,11 @@ Runweft 只补必要协作与交付关联，原生会话/执行事实优先读�
 | 遗留代码如何形成成果 | 仅在 subagent 独立 worktree 内补 checkpoint，保留 agent 已有提交；共享主目录不自动提交，提交失败保留现场 | 遗留改动由程序封存，无改动不产生空提交 |
 | 未 push 的提交如何传输 | 输入基线与输出成果通过 Git bundle 传输，允许无 remote 或尚未 push 的提交；未提交的主工作区文件不自动传入 | 远端任务与成果取回不依赖 Git 托管平台；push/PR 仍由主 agent 按业务需要处理 |
 
-正式方案从[阶段 1](delivery-structure.md#阶段与可验收结果)的双模式安装与数据承载、全局资源注册、HAPI 执行和宿主接入开始。先固定跨 Change 的职责及必要契约，当前阶段落实其直接前置，不要求一次写完所有下游内部细节。后续能力仍在完整版本承诺内，按阶段逐项实现和验收；各领域不能把自己的核心功能留给最后的集成 Change。
-
-统一 CLI、HAPI 执行契约、宿主 MCP 适配、资源注册、Agent 定义、本地共享委派、本地独立工作区、任务附件、远端工作区准备和远端代码回收均完成正式 Technical/Plan、各一次 iclaude 评审、实现与验收，并同步 Specs 归档。基础安装通过四平台运行验证；当前能力完成四平台候选包构建，新增原生组合与安装证据来自 Linux x64，同机双 Runner 不替代真实跨机器验收。正式远端 worktree 委派与结果回收已开放；全局看板及完整发行仍待完成。
+实现沿[六阶段交付结构](delivery-structure.md#阶段与可验收结果)逐项完成，领域功能先独立验收，再以同一已安装候选完成组合。全局看板、远端 worktree 委派及结果回收均已开放，当前没有未关闭 Change。
 
 ## 调查与验证状态
 
 - HAPI/Multica 的源码与文档证据按主题保留在[执行基础调查](archive/2026-09-29-hapi-subagent-foundation/research.md)、[远端准备调查](archive/2026-09-30-remote-workspace-preparation/research.md)和[代码传输实验](archive/2026-09-30-remote-result-delivery/research.md)。
-- 已验证临时 Git 仓库的 bundle 传出、worktree 修改和结果取回；另已在 macOS/Linux arm64/x64 的专用环境通过候选 npm 包验证 Runweft/HAPI 服务、认证、Runner、协议代理与配置/工作区绑定，见[部署执行记录](archive/2026-09-29-unified-cli-and-deployment/execution.md)与[调查](archive/2026-09-29-unified-cli-and-deployment/research.md)。未运行真实远端 HAPI/agent 链路。
-- 正式验收须覆盖两类主客户端与两种内置 runtime 的本地/远端组合，以及 macOS 正式安装；分别由所属 Change 记录实际证据，不能相互代替。
+- 早期 macOS/Linux arm64/x64 基础安装证据见[部署执行记录](archive/2026-09-29-unified-cli-and-deployment/execution.md)与[调查](archive/2026-09-29-unified-cli-and-deployment/research.md)。最终版本新增 Linux x64 安装、20 组核心协作、8 组附件和 2 组 MCP 控制，远端使用同机独立 Hub/两个 Runner；早期证据不代替最终 Mac 实机运行。
+- 最终原生历史重建、审批/中断、备份升级回退及 Playwright 均通过；Mac 与物理跨机缺口沿用户决定保留，详见[完整交付验收](archive/2026-09-30-integrated-release/acceptance.md)。
 - 历史宿主调查使用 Claude Code `2.1.269`；正式宿主 MCP 验收使用 Codex `0.156.1`、iclaude/Claude Code `2.1.283`，覆盖专用 local/hub 连接、真实安装调用、clear/resume 和子工具禁用，见[宿主执行记录](archive/2026-09-29-host-mcp-adapter/execution.md)。评审进程与执行验收分开记录。
