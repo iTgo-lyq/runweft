@@ -6,7 +6,8 @@ import { randomUUID } from 'node:crypto';
 import { openState } from '../state';
 import { contentVersion } from '../agents/definitions';
 import type { WorkspaceSource } from '../../hapi/shared/src/workspaces';
-import type { ExecutionTarget } from '../resources/types';
+import type { Database } from 'bun:sqlite';
+import type { TaskTarget } from './types';
 import { pendingOutputs, type OutputItem, type OutputJob, type OutputManifest } from './output-types';
 import { parentKey, pendingPreparation, validateWorkspaceTarget, TaskError, type ArtifactAction, type ArtifactIntent, type InputFiles, type Acceptance, type AgentSnapshot, type Input, type Parent, type Round, type SendIntent, type SpawnIntent, type Task, type TaskBundle } from './types';
 
@@ -19,8 +20,9 @@ const semantic = (parent: Parent, intent: SpawnIntent | SendIntent) => {
 
 export class TaskStore {
     private readonly db;
-    constructor(path: string) { this.db = openState(path); }
-    close() { this.db.close(); }
+    constructor(path: string, private readonly options?: { db: Database; ownsScope: (namespace: string) => boolean; accepted: (task: Task) => void }) { this.db = options?.db ?? openState(path); }
+    close() { if (!this.options) this.db.close(); }
+    ownsScope(namespace: string) { return this.options?.ownsScope(namespace) ?? true; }
     require(namespace: string, id: string, parent?: Parent): TaskBundle {
         const row = this.db.query('SELECT data, revision, updatedAt FROM delegation_tasks WHERE namespace=? AND id=?').get(namespace, id) as TaskRow | null;
         if (!row) throw new TaskError(404, 'task_unknown', '当前连接中找不到此任务。', '运行 runweft task list --all 检查任务 ID。');
@@ -45,7 +47,7 @@ export class TaskStore {
         return ids.map(row => this.require(namespace, row.id));
     }
     pending(): { namespace: string; id: string }[] {
-        return this.db.query(`SELECT DISTINCT t.namespace, t.id FROM delegation_tasks t JOIN delegation_rounds r ON t.id=r.taskId
+        return (this.db.query(`SELECT DISTINCT t.namespace, t.id FROM delegation_tasks t JOIN delegation_rounds r ON t.id=r.taskId
             WHERE r.phase NOT IN ('finished', 'failed') OR json_extract(t.data, '$.environment.status')='deleting'
             OR json_extract(r.data, '$.artifactRetention.state')='releasing'
             OR json_extract(r.data, '$.codeRetention.state')='releasing'
@@ -55,7 +57,7 @@ export class TaskStore {
             OR (json_extract(r.data, '$.code.status')='available' AND json_extract(r.data, '$.code.sourceReleased')=0)
             OR EXISTS (SELECT 1 FROM delegation_code_fetches f WHERE f.taskId=t.id AND (f.status NOT IN ('failed', 'available') OR (f.status='available' AND json_extract(f.data, '$.released')=0)))
             OR (json_extract(r.data, '$.inputFiles.attempted')=1 AND json_extract(r.data, '$.inputFiles.intermediateReleased')=0)
-            OR EXISTS (SELECT 1 FROM json_each(r.data, '$.outputFiles.jobs') WHERE json_extract(value, '$.phase') <> 'complete')`).all() as { namespace: string; id: string }[];
+            OR EXISTS (SELECT 1 FROM json_each(r.data, '$.outputFiles.jobs') WHERE json_extract(value, '$.phase') <> 'complete')`).all() as { namespace: string; id: string }[]).filter(task => this.ownsScope(task.namespace));
     }
     lookup(namespace: string, parent: Parent, requestId: string, intent: SpawnIntent | SendIntent): Acceptance | null {
         const row = this.db.query('SELECT fingerprint, accepted FROM delegation_requests WHERE namespace=? AND requestId=?').get(namespace, requestId) as { fingerprint: string; accepted: string } | null;
@@ -90,7 +92,7 @@ export class TaskStore {
         this.db.query('UPDATE delegation_artifact_intents SET data=? WHERE namespace=? AND requestId=?').run(JSON.stringify(value), value.namespace, value.requestId);
     }
     pendingArtifactIntents(): ArtifactIntent[] {
-        return (this.db.query('SELECT data FROM delegation_artifact_intents WHERE taskId IS NULL').all() as { data: string }[]).map(read<ArtifactIntent>);
+        return (this.db.query('SELECT data FROM delegation_artifact_intents WHERE taskId IS NULL').all() as { data: string }[]).map(read<ArtifactIntent>).filter(intent => this.ownsScope(intent.namespace));
     }
     artifactIntentAccepted(value: ArtifactIntent) {
         const result = this.db.query('UPDATE delegation_artifact_intents SET taskId=(SELECT taskId FROM delegation_requests WHERE namespace=? AND requestId=?) WHERE namespace=? AND requestId=? AND EXISTS(SELECT 1 FROM delegation_requests WHERE namespace=? AND requestId=?)')
@@ -108,13 +110,16 @@ export class TaskStore {
         return { reference: value.reference, files: value.files, operationId: randomUUID(), attempted: false, status: 'pending', downloaded: [], paths: [], intermediateReleased: false };
     }
     assertCanDelegate(namespace: string, parent: Parent) {
-        const match = this.db.query(`SELECT taskId FROM delegation_sessions WHERE namespace=? AND
+        if (this.options && parent.hapiSessionId && this.db.query("SELECT 1 FROM hub_execution_objects WHERE kind='session' AND id=? AND taskId IS NOT NULL").get(parent.hapiSessionId)) {
+            throw new TaskError(403, 'subagent_delegation_denied', 'Runweft 子任务不能再次发起 Runweft 委派。');
+        }
+        const match = this.db.query(`SELECT taskId FROM delegation_sessions WHERE (?=1 OR namespace=?) AND
             ((?<>'' AND hapiId=?) OR (?<>'' AND flavor=? AND nativeId=?)) LIMIT 1`)
-            .get(namespace, parent.hapiSessionId ?? '', parent.hapiSessionId ?? '', parent.kind === 'mcp' ? parent.nativeSessionId : '',
+            .get(this.options ? 1 : 0, namespace, parent.hapiSessionId ?? '', parent.hapiSessionId ?? '', parent.kind === 'mcp' ? parent.nativeSessionId : '',
                 parent.kind === 'mcp' ? parent.host : '', parent.kind === 'mcp' ? parent.nativeSessionId : '');
         if (match) throw new TaskError(403, 'subagent_delegation_denied', 'Runweft 子任务不能再次发起 Runweft 委派。', '向主 agent 返回结果；原生内置 subagent 仍按原生规则使用。');
     }
-    accept(namespace: string, parent: Parent, requestId: string, intent: SpawnIntent, agent: AgentSnapshot, target: ExecutionTarget, source?: WorkspaceSource): Acceptance {
+    accept(namespace: string, parent: Parent, requestId: string, intent: SpawnIntent, agent: AgentSnapshot, target: TaskTarget, source?: WorkspaceSource): Acceptance {
         return this.db.transaction(() => {
             this.assertCanDelegate(namespace, parent);
             const previous = this.lookup(namespace, parent, requestId, intent);
@@ -123,11 +128,12 @@ export class TaskStore {
             const now = Date.now(), id = randomUUID(), roundId = randomUUID();
             if (intent.workspaceMode === 'worktree' && !source) throw new TaskError(409, 'workspace_source_missing', '独立任务缺少已解析的 Git 基线。');
             const task: Task = { version: 2, id, namespace, parent, agent, target,
+                ...(agent.hub ? { hub: { ownerId: agent.hub.actorId, spaceId: agent.hub.spaceId, hubRepositoryId: agent.hub.hubRepositoryId } } : {}),
                 environment: intent.workspaceMode === 'shared' ? { mode: 'shared', machineId: parent.machineId, cwd: parent.cwd }
                     : { mode: 'worktree', machineId: target.machineId, environmentId: id, source: source!, cwd: source!.sourcePath, status: 'retained',
                         ...(target.machineId === parent.machineId ? {} : { remote: { origin: source! } }) },
                 createdAt: now, updatedAt: now, revision: 1 };
-            const round: Round = { id: roundId, taskId: id, ordinal: 1, requestId, message: intent.message, phase: 'queued',
+            const round: Round = { id: roundId, taskId: id, ordinal: 1, requestId, message: intent.message, agent, phase: 'queued',
                 preparation: pendingPreparation(task.environment), inputFiles: this.inputFiles(namespace, requestId, intent), outputFiles: pendingOutputs(intent.outputs, requestId), ...(task.environment.mode === 'worktree' ? { git: { status: 'pending' as const, attempted: false } } : {}),
                 spawnRequestId: randomUUID(), spawnAttempted: false,
                 report: '', structuredMissing: true, stop: 'not_started', finish: 'pending', attention: null, createdAt: now, permissions: {} };
@@ -138,10 +144,11 @@ export class TaskStore {
             this.db.query('INSERT INTO delegation_inputs VALUES (?, ?, ?)').run(input.id, roundId, JSON.stringify(input));
             this.db.query('INSERT INTO delegation_requests VALUES (?, ?, ?, ?, ?, ?, ?)').run(namespace, requestId, semantic(parent, intent), id, roundId, JSON.stringify(accepted), now);
             this.db.query('UPDATE delegation_artifact_intents SET taskId=? WHERE namespace=? AND requestId=?').run(accepted.agent_id, namespace, requestId);
+            this.options?.accepted(task);
             return accepted;
         }).immediate();
     }
-    append(namespace: string, parent: Parent, requestId: string, intent: SendIntent): Acceptance {
+    append(namespace: string, parent: Parent, requestId: string, intent: SendIntent, agent?: AgentSnapshot): Acceptance {
         return this.db.transaction(() => {
             this.assertCanDelegate(namespace, parent);
             const previous = this.lookup(namespace, parent, requestId, intent);
@@ -153,6 +160,7 @@ export class TaskStore {
             if (bundle.task.environment.mode === 'worktree' && bundle.task.environment.status !== 'retained') throw new TaskError(409, 'workspace_not_retained', '工作区正在删除或已删除，无法继续委派。');
             if (intent.mode === 'next') {
                 round = { id: randomUUID(), taskId: intent.id, ordinal: bundle.rounds.at(-1)!.ordinal + 1, requestId, message: intent.message,
+                    agent: agent ?? bundle.rounds.at(-1)!.agent ?? bundle.task.agent,
                     phase: 'queued', preparation: pendingPreparation(bundle.task.environment), inputFiles: this.inputFiles(namespace, requestId, intent), outputFiles: pendingOutputs(intent.outputs, requestId),
                     ...(bundle.task.environment.mode === 'worktree' ? { git: { status: 'pending' as const, attempted: false } } : {}),
                     spawnRequestId: randomUUID(), spawnAttempted: false,

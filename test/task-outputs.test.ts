@@ -12,6 +12,7 @@ import type { WebAppEnv } from '../hapi/hub/src/web/middleware/auth';
 import { ArtifactClient } from '../src/artifacts/client';
 import { HapiClient } from '../src/hapi';
 import { TaskCoordinator } from '../src/tasks/coordinator';
+import { TaskOutputs } from '../src/tasks/outputs';
 import { taskOutputs } from '../src/tasks/commands';
 import { taskFixture, until } from './tasks-fixture';
 import { workspaces } from './workspaces-fixture';
@@ -126,6 +127,23 @@ test('declared outputs capture only after native stop and Git seal, publish part
     expect(h.operations.get(available.captureOperationId)?.retention).toBe('released');
     expect((await h.post('artifacts/show', { id: accepted.agent_id, roundId: accepted.round_id })).manifests).toEqual([done.artifacts.manifest]);
     expect(h.calls.spawn).toBe(1); expect(h.calls.send).toBe(1);
+});
+
+test('recovering published output cleanup releases grants only for verified available objects in the durable manifest', async () => {
+    const h = await harness(); h.sources.set('one', 'owned output');
+    const accepted = await h.spawn(['one', 'missing']), running = await h.started(accepted.agent_id);
+    h.complete(running.session_id); await h.finished(accepted.agent_id);
+    const { task, rounds } = h.tasks!.store.require('alpha', accepted.agent_id), round = rounds[0], job = round.outputFiles!.jobs[0];
+    job.phase = 'cleanup'; // Durable publication succeeded before a simulated process loss at grant release.
+    const released: string[][] = [];
+    const outputs = new TaskOutputs({ request: (path, options) => h.alpha.request(path, options), response: (path, options) => h.alpha.response(path, options),
+        releaseOutputs(ids) {
+            const manifest = h.tasks!.store.manifests(task.id, round.id)[0];
+            expect(ids).toEqual(manifest.items.filter(item => item.status === 'available').map(item => item.upload!.requestId));
+            expect(ids).toHaveLength(1); released.push(ids);
+        } }, h.tasks!.store);
+    await outputs.advance(task, round, () => h.tasks!.store.save(task, round, []));
+    expect(released).toHaveLength(1); expect(job).toMatchObject({ phase: 'complete' });
 });
 
 test('lost capture/delivery responses reconcile the same operations and keep the next native round queued until delivery is known', async () => {

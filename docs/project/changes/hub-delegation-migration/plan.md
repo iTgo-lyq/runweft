@@ -19,7 +19,7 @@
 
 ### T2 中心 Task/Round 接受与持续执行
 
-- 状态：进行中
+- 状态：已完成
 - 交付：TaskCoordinator/Store 的中心策略注入，owner/space/repository、每轮不可变配置、服务端解析、next/steer/停止/结果权限和撤权处理；独立 WorkspacePreparations 同步使用中心解析与归属。
 - 依赖：T1。
 - 验收：客户端快照不能伪造；接受后编辑不改变排队内容，next 用当前内容且不能换已有环境目标；不兼容启动参数重建历史；任务归属提交无半成状态；跨空间递归拒绝。

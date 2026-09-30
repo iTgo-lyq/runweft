@@ -2,7 +2,7 @@ import type { Machine } from '../../../hapi/shared/src/schemas';
 import { HapiRequestError } from '../../hapi';
 import { nativeMachines, nativeInspections } from '../../resources/native';
 import { RenameInput, ResourceError, invalidInput, eligibility, inspectionProblem, rejectProblem, type Inspection, type Problem } from '../../resources/types';
-import { NativeTransport, type RequestLease } from '../access/transport';
+import { NativeTransport, type AuthorizationLease as RequestLease } from '../access/transport';
 import { HAPI_EXECUTION_NAMESPACE, type Principal } from '../access/types';
 import { HubResourceStore } from './store';
 import { RuntimeInput, type MachineView, type MachineRecord, type RuntimeRecord, type RuntimeView, type PublicExecutionTarget, type Observation } from './types';

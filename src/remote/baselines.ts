@@ -37,23 +37,23 @@ export class RemoteBaselines {
             return consume(record);
         });
     }
-    async forTask(namespace: string, origin: WorkspaceSource, machine: string, taskId: string) {
+    async forTask(namespace: string, origin: WorkspaceSource, machine: string, taskId: string, client?: HapiHttp) {
         const previous = this.store.consumerForOwner(namespace, 'task', taskId);
         if (previous) {
             if (!previous.active || this.store.imported(previous.importId).machineId !== machine) throw new PreparationError(409, 'baseline_consumer_conflict', '任务基线已经释放或目标不一致。');
             return previous;
         }
         const existing = this.store.latest(namespace, origin);
-        if (existing?.phase === 'available') await this.checkTarget(existing, machine);
+        if (existing?.phase === 'available') await this.checkTarget(existing, machine, client);
         return this.forSource(namespace, origin, snapshot => this.store.consume(snapshot, machine, origin, 'task', taskId));
     }
-    async checkTarget(snapshot: BaselineSnapshot, machine: string) {
+    async checkTarget(snapshot: BaselineSnapshot, machine: string, client?: HapiHttp) {
         const previous = this.store.latestImport(snapshot.id, machine);
         if (!previous || previous.phase !== 'available' || previous.retention && previous.retention !== 'retained') return;
         await this.serial(`import:${previous.id}`, async () => {
             const record = this.store.imported(previous.id);
             try {
-                const receipt = await this.transport.repository(record.namespace, machine, { action: 'inspect', operationId: record.operationId });
+                const receipt = await (client ? new RepositoryTransfers(() => client) : this.transport).repository(record.namespace, machine, { action: 'inspect', operationId: record.operationId });
                 if (!stopped(receipt) || receipt.retention !== 'retained' || !isDeepStrictEqual(receipt.imported?.source, record.source)) throw new PreparationError(409, 'baseline_cache_unavailable', '目标缓存已不可用，需要重新导入。');
             } catch (error) {
                 if (uncertainPreparation(error)) throw error;

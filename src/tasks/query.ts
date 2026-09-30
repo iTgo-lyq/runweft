@@ -10,14 +10,14 @@ export const OverviewQuerySchema = z.strictObject({
     page: pageNumber.default(1), limit: pageNumber.pipe(z.number().max(100)).default(50),
 });
 export type OverviewQuery = z.infer<typeof OverviewQuerySchema>;
-export type TaskInventory = { machines: MachineView[]; error: Problem | null };
+export type TaskInventory = { machines: Pick<MachineView, 'id' | 'name' | 'online'>[]; error: Problem | null };
 const text = (value: string | undefined, max = 1000) => value?.slice(0, max) ?? null;
 function problem(value: Problem | null | undefined) {
     return value ? { code: text(value.code, 128), message: text(value.message), hint: text(value.hint) } : null;
 }
 
 /** Explicit read projection: prompts, definitions, native logs and file manifests stay in their domain. */
-export function taskOverview(bundles: TaskBundle[], runtimes: RuntimeRegistration[], inventory: TaskInventory, query: OverviewQuery) {
+export function taskOverview(bundles: TaskBundle[], runtimes: Pick<RuntimeRegistration, 'id' | 'name'>[], inventory: TaskInventory, query: OverviewQuery) {
     const machines = new Map(inventory.machines.map(machine => [machine.id, machine]));
     const names = new Map(runtimes.map(runtime => [runtime.id, runtime.name]));
     const workspace = query.workspace.toLowerCase(), parentSearch = query.parent.toLowerCase();

@@ -1,6 +1,6 @@
 import { contentVersion } from '../../agents/definitions';
 import { agentLaunchOptions, type AgentLaunchOptions } from '../../agents/launch';
-import type { RequestLease } from '../access/transport';
+import type { AuthorizationLease as RequestLease } from '../access/transport';
 import type { HubResourceService } from '../resources/service';
 import type { PublicExecutionTarget } from '../resources/types';
 import { AgentSelectionStore, type SelectedAgent } from './selections';

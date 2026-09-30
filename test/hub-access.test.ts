@@ -156,7 +156,7 @@ test('two processes cannot claim the same native object for different owners; to
 
 test('v7 migration preserves identities and existing resource rows without inferring execution ownership', () => {
     const h = setup(), db = new Database(h.path);
-    db.exec(`DROP TABLE hub_agent_selections; DROP TABLE hub_agent_blocks; DROP TABLE hub_agent_members; DROP TABLE hub_agent_versions; DROP TABLE hub_agents; DROP TABLE hub_checkouts; DROP TABLE hub_repository_aliases; DROP TABLE hub_repositories; DROP TABLE hub_resource_blocks; DROP TABLE hub_runtime_shares; DROP TABLE hub_resource_runtimes; DROP TABLE hub_machine_spaces; DROP TABLE hub_resource_machines; DROP TABLE hub_native_session_claims; DROP TABLE hub_file_reservations; DROP TABLE hub_execution_grants; DROP TABLE hub_execution_intents; DROP TABLE hub_execution_credentials;
+    db.exec(`DROP TABLE hub_delegation_scopes; DROP TABLE hub_agent_selections; DROP TABLE hub_agent_blocks; DROP TABLE hub_agent_members; DROP TABLE hub_agent_versions; DROP TABLE hub_agents; DROP TABLE hub_checkouts; DROP TABLE hub_repository_aliases; DROP TABLE hub_repositories; DROP TABLE hub_resource_blocks; DROP TABLE hub_runtime_shares; DROP TABLE hub_resource_runtimes; DROP TABLE hub_machine_spaces; DROP TABLE hub_resource_machines; DROP TABLE hub_native_session_claims; DROP TABLE hub_file_reservations; DROP TABLE hub_execution_grants; DROP TABLE hub_execution_intents; DROP TABLE hub_execution_credentials;
         DROP TABLE hub_execution_objects; INSERT INTO machine_registrations VALUES ('default', 'legacy', 1, 1, 1); PRAGMA user_version=7;`);
     const migrated = new AccessStore(h.path);
     try {

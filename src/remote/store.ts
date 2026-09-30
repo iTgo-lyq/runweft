@@ -1,3 +1,4 @@
+import type { Database } from 'bun:sqlite';
 import { randomUUID } from 'node:crypto';
 import type { WorkspaceSource } from '../../hapi/shared/src/workspaces';
 import { contentVersion } from '../agents/definitions';
@@ -10,8 +11,9 @@ const read = <T>(row: { data: string }): T => JSON.parse(row.data);
 const fingerprint = (parent: Parent, intent: PreparationIntent) => contentVersion({ parent: parentKey(parent), machineId: parent.machineId, cwd: parent.cwd, intent });
 export class BaselineStore {
     private readonly db;
-    constructor(path: string) { this.db = openState(path); }
-    close() { this.db.close(); }
+    constructor(path: string, private readonly options?: { db: Database; ownsScope: (namespace: string) => boolean }) { this.db = options?.db ?? openState(path); }
+    close() { if (!this.options) this.db.close(); }
+    private owns(namespace: string) { return this.options?.ownsScope(namespace) ?? true; }
     snapshot(id: string): BaselineSnapshot { return read(this.db.query('SELECT data FROM repository_snapshots WHERE id=?').get(id) as { data: string }); }
     latest(namespace: string, origin: WorkspaceSource): BaselineSnapshot | null {
         const row = this.db.query('SELECT data FROM repository_snapshots WHERE namespace=? AND repositoryId=? AND baseCommit=? ORDER BY generation DESC LIMIT 1')
@@ -27,14 +29,14 @@ export class BaselineStore {
     saveSnapshot(record: BaselineSnapshot) {
         record.updatedAt = Date.now(); this.db.query('UPDATE repository_snapshots SET phase=?, data=? WHERE id=?').run(record.phase, JSON.stringify(record), record.id);
     }
-    snapshots() { return (this.db.query('SELECT data FROM repository_snapshots').all() as { data: string }[]).map(read<BaselineSnapshot>); }
+    snapshots() { return (this.db.query('SELECT data FROM repository_snapshots').all() as { data: string }[]).map(read<BaselineSnapshot>).filter(row => this.owns(row.namespace)); }
     imported(id: string): BaselineImport { return read(this.db.query('SELECT data FROM repository_imports WHERE id=?').get(id) as { data: string }); }
     latestImport(snapshotId: string, machineId: string): BaselineImport | null {
         const row = this.db.query('SELECT data FROM repository_imports WHERE snapshotId=? AND machineId=? ORDER BY generation DESC LIMIT 1').get(snapshotId, machineId) as { data: string } | null;
         return row ? read(row) : null;
     }
     consumers(snapshotId: string) { return (this.db.query('SELECT data FROM repository_consumers WHERE snapshotId=? AND active=1').all(snapshotId) as { data: string }[]).map(read<BaselineConsumer>); }
-    imports() { return (this.db.query('SELECT data FROM repository_imports').all() as { data: string }[]).map(read<BaselineImport>); }
+    imports() { return (this.db.query('SELECT data FROM repository_imports').all() as { data: string }[]).map(read<BaselineImport>).filter(row => this.owns(row.namespace)); }
     saveImport(record: BaselineImport) {
         record.updatedAt = Date.now(); this.db.query('UPDATE repository_imports SET phase=?, data=? WHERE id=?').run(record.phase, JSON.stringify(record), record.id);
     }
@@ -99,6 +101,6 @@ export class BaselineStore {
     }
     preparations(namespace?: string, parent?: Parent, all = false): Preparation[] {
         return (this.db.query('SELECT data FROM workspace_preparations ORDER BY updatedAt DESC, id').all() as { data: string }[]).map(read<Preparation>)
-            .filter(record => (!namespace || record.namespace === namespace) && (!parent || parent.kind === 'cli' && all || parentKey(record.parent) === parentKey(parent)));
+            .filter(record => this.owns(record.namespace) && (!namespace || record.namespace === namespace) && (!parent || parent.kind === 'cli' && all || parentKey(record.parent) === parentKey(parent)));
     }
 }

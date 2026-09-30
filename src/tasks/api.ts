@@ -15,10 +15,10 @@ async function body(request: IncomingMessage) {
     try { return JSON.parse(Buffer.concat(chunks).toString('utf8')); }
     catch { throw new TaskError(400, 'invalid_task_request', '任务请求必须是 JSON 对象。'); }
 }
-const ListSchema = z.strictObject({ parent: ParentSchema, all: z.boolean().default(false) });
-const ReadSchema = z.strictObject({ parent: ParentSchema, id: z.uuid(), roundId: z.uuid().optional(),
+export const ListSchema = z.strictObject({ parent: ParentSchema, all: z.boolean().default(false) });
+export const ReadSchema = z.strictObject({ parent: ParentSchema, id: z.uuid(), roundId: z.uuid().optional(),
     offset: z.number().int().min(0).optional(), limit: z.number().int().min(1).max(64_000).optional() });
-const WaitSchema = z.strictObject({ parent: ParentSchema, ids: z.array(z.uuid()).min(1).max(8), timeoutMs: z.number().int().min(0).max(540_000).default(30_000),
+export const WaitSchema = z.strictObject({ parent: ParentSchema, ids: z.array(z.uuid()).min(1).max(8), timeoutMs: z.number().int().min(0).max(540_000).default(30_000),
     afterRevision: z.record(z.uuid(), z.number().int().min(0)).optional() });
 
 export async function handleTaskRequest(request: IncomingMessage, response: ServerResponse, namespace: string, coordinator: TaskCoordinator) {

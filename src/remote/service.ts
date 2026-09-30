@@ -4,6 +4,8 @@ import { HapiRequestError, type HapiHttp } from '../hapi';
 import { ResourceService } from '../resources/service';
 import { ResourceStore } from '../resources/store';
 import { TaskStore } from '../tasks/store';
+import type { ResolvedAcceptance } from '../tasks/coordinator';
+import type { PreparationIntent } from './types';
 import type { Parent } from '../tasks/types';
 import { TaskWorkspaces } from '../tasks/workspaces';
 import { RemoteBaselines, uncertainPreparation } from './baselines';
@@ -19,11 +21,12 @@ export class WorkspacePreparations {
     private readonly working = new Map<string, Promise<void>>();
     private timer?: ReturnType<typeof setInterval>;
     private closing = false;
-    constructor(path: string, private readonly clientFor: (namespace: string) => HapiHttp, private readonly pollMs = 1000) {
-        this.store = new BaselineStore(path); this.tasks = new TaskStore(path); this.resources = new ResourceStore(path);
+    constructor(path: string, private readonly clientFor: (namespace: string, preparation?: Preparation) => HapiHttp, private readonly pollMs = 1000, private readonly policy?: { store: NonNullable<ConstructorParameters<typeof TaskStore>[1]> }) {
+        this.store = new BaselineStore(path, policy?.store); this.tasks = new TaskStore(path, policy?.store); this.resources = new ResourceStore(path);
         this.baselines = new RemoteBaselines(this.store, namespace => this.client(namespace));
     }
-    private client(namespace: string) {
+    private client(namespace: string, preparation?: Preparation) {
+        if (this.policy) return this.clientFor(namespace, preparation);
         if (!this.clients.has(namespace)) this.clients.set(namespace, this.clientFor(namespace)); return this.clients.get(namespace)!;
     }
     private async serial<T>(key: string, action: () => Promise<T>) {
@@ -64,15 +67,26 @@ export class WorkspacePreparations {
     }
     async accept(namespace: string, raw: unknown) {
         const { parent, requestId, intent, agent } = parsePreparation(AcceptPreparationSchema, raw);
-        return this.serial(`accept:${namespace}:${requestId}`, async () => {
-            this.tasks.assertCanDelegate(namespace, parent);
-            const prior = this.store.lookup(namespace, parent, requestId, intent); if (prior) return this.view(prior);
+        if (this.policy) throw new PreparationError(400, 'central_agent_required', '中心准备必须由服务端解析 Agent。');
+        return this.acceptResolved(namespace, { parent, requestId, intent }, async () => {
             if (agent.namespace !== namespace || agent.id !== intent.agent) throw new PreparationError(409, 'agent_snapshot_mismatch', 'Agent 选择不属于当前准备请求。');
             const resources = new ResourceService(this.resources, namespace, (path, init) => this.client(namespace).request(path, init));
             const target = await resources.resolveExecutionTarget(agent.runtimeId);
             if (target.machineId !== agent.machineId || target.flavor !== agent.flavor) throw new PreparationError(409, 'agent_target_changed', 'Agent 的 runtime 绑定已变化，请重新解析。');
+            const client = this.client(namespace), source = await new TaskWorkspaces(client, parent.machineId).resolve(parent.cwd, intent.baseRef);
+            return { agent, target, source, client, check: () => {} };
+        });
+    }
+    async acceptResolved(namespace: string, input: { parent: Parent; requestId: string; intent: PreparationIntent },
+        resolve: () => Promise<Omit<ResolvedAcceptance, 'agent'> & { agent: Preparation['agent'] }>) {
+        const { parent, requestId, intent } = input;
+        return this.serial(`accept:${namespace}:${requestId}`, async () => {
+            this.tasks.assertCanDelegate(namespace, parent);
+            const prior = this.store.lookup(namespace, parent, requestId, intent); if (prior) return this.view(prior);
+            const { agent, target, source: origin, client, check } = await resolve();
+            if (!origin) throw new PreparationError(409, 'workspace_source_missing', '远端准备缺少真实 Git 基线。');
             if (target.machineId === parent.machineId) throw new PreparationError(409, 'local_workspace_task_required', '目标 runtime 在发起机上，无需远端准备。', '直接使用 runweft task spawn <agent> --workspace-mode worktree，或让主 agent 调度本机工作目录。');
-            const inventory = await this.client(namespace).request('/api/machines?includeOffline=true');
+            const inventory = await client.request('/api/machines?includeOffline=true');
             for (const [id, capability] of [[parent.machineId, 'repositoryExport'], [target.machineId, 'repositoryImport']] as const) {
                 const machine = inventory.machines?.find((item: { id: string }) => item.id === id);
                 if (!machine?.active) throw new PreparationError(409, 'machine_offline', '源或目标 Runner 不在线。', '在对应机器运行 runweft start。');
@@ -82,10 +96,9 @@ export class WorkspacePreparations {
                     throw new PreparationError(409, 'runner_upgrade_required', '源或目标 Runner 缺少仓库准备能力。', '更新两端配套 Runweft，然后 restart。');
                 }
             }
-            const origin = await new TaskWorkspaces(this.client(namespace), parent.machineId).resolve(parent.cwd, intent.baseRef);
             const existing = this.store.latest(namespace, origin);
-            if (existing?.phase === 'available') await this.baselines.checkTarget(existing, target.machineId);
-            const record = await this.baselines.forSource(namespace, origin, snapshot => this.store.accept(namespace, parent, requestId, intent, agent, origin, snapshot));
+            if (existing?.phase === 'available') await this.baselines.checkTarget(existing, target.machineId, client);
+            const record = await this.baselines.forSource(namespace, origin, snapshot => { check(); return this.store.accept(namespace, parent, requestId, intent, agent, origin, snapshot); });
             this.scan(); return this.view(record);
         });
     }
@@ -98,7 +111,7 @@ export class WorkspacePreparations {
         const baseline = this.baselines.result(record.consumerId); if (!baseline) return;
         try {
             const attempted = record.attempted; record.attempted = true; record.phase = 'preparing'; delete record.error; this.store.savePreparation(record);
-            const { operation, workspace } = await new TaskWorkspaces(this.client(namespace), record.agent.machineId).receipt({ action: 'prepare', environmentId: record.environmentId,
+            const { operation, workspace } = await new TaskWorkspaces(this.client(namespace, record), record.agent.machineId).receipt({ action: 'prepare', environmentId: record.environmentId,
                 preparationId: record.preparationId, roundId: record.id, source: baseline.targetSource, expectedHead: record.origin.baseCommit, inputs: [] }, attempted);
             if (operation.status === 'succeeded') {
                 const ready = workspace.preparations[record.preparationId];
@@ -129,7 +142,7 @@ export class WorkspacePreparations {
     }
     private async advanceRelease(namespace: string, id: string) {
         const record = this.store.preparation(namespace, id), release = record.release!;
-        const save = () => this.store.savePreparation(record), workspaces = new TaskWorkspaces(this.client(namespace), record.agent.machineId);
+        const save = () => this.store.savePreparation(record), workspaces = new TaskWorkspaces(this.client(namespace, record), record.agent.machineId);
         try {
             delete release.error; release.status = 'pending'; save();
             if (!release.environmentRemoved && record.attempted) {

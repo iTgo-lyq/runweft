@@ -75,6 +75,7 @@ export class SnapshotPublisher {
     async cleanup(record: SnapshotPublication, context: PublicationContext, complete: boolean) {
         const { namespace, machine, save } = context;
         try {
+            await this.client(namespace).releaseOutputs?.((record.files ?? []).filter(file => !file.reused && file.artifactId && file.pinned).map(file => file.requestId));
             for (const batch of record.batches ?? []) if (batch.deliveryStopped && !batch.released) {
                 const names = batch.names.filter(name => !batch.releasedNames.includes(name) && record.files!.some(file => file.name === name && file.artifactId && file.pinned));
                 if (!names.length) continue;

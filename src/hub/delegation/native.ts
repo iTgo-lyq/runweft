@@ -173,7 +173,7 @@ export class DelegationNativeClient implements HapiHttp {
     }
     private async sessionRequest(parts: string[], options: RequestInit, query: string) {
         const id = parts[2], suffix = parts.slice(3).join('/'), method = options.method ?? 'GET';
-        const observing = method === 'GET', stopping = method === 'POST' && suffix === 'archive';
+        const observing = method === 'GET' || method === 'POST' && suffix === 'messages/queued-state', stopping = method === 'POST' && suffix === 'archive';
         this.check(stopping ? 'stop' : observing ? 'observe' : 'work'); this.session(id, observing || stopping);
         const path = `/api/sessions/${encodeURIComponent(id)}${suffix ? '/' + parts.slice(3).map(encodeURIComponent).join('/') : ''}${query}`;
         if (suffix === 'resume' && method === 'POST') {

@@ -18,6 +18,16 @@ import { TaskWorkspaces, preparedReference } from './workspaces';
 import { TaskFiles, preparedFiles } from './files';
 import { TaskOutputs } from './outputs';
 import { TaskRetention } from './retention';
+import type { AgentSnapshot, SpawnIntent, TaskTarget } from './types';
+import type { WorkspaceSource } from '../../hapi/shared/src/workspaces';
+import { isDeepStrictEqual } from 'node:util';
+
+export type ResolvedAcceptance = { agent: AgentSnapshot; target: TaskTarget; source?: WorkspaceSource; resolveSource?: () => Promise<WorkspaceSource | undefined>; client: HapiHttp; check: () => void };
+export type CoordinatorPolicy = {
+    store: NonNullable<ConstructorParameters<typeof TaskStore>[1]>;
+    check: (task: Task, round: Round) => void;
+    target: (task: Task, round: Round) => Promise<TaskTarget>;
+};
 
 export class TaskCoordinator {
     readonly store: TaskStore;
@@ -28,11 +38,12 @@ export class TaskCoordinator {
     private readonly working = new Map<string, Promise<void>>();
     private timer?: ReturnType<typeof setInterval>;
     private closing = false;
-    constructor(path: string, private readonly clientFor: (namespace: string) => HapiHttp, private readonly pollMs = 1000, baselines?: RemoteBaselines) {
-        this.store = new TaskStore(path); this.resources = new ResourceStore(path); this.ownsBaselines = !baselines;
+    constructor(path: string, private readonly clientFor: (namespace: string, task?: Task, round?: Round) => HapiHttp, private readonly pollMs = 1000, baselines?: RemoteBaselines, private readonly policy?: CoordinatorPolicy) {
+        this.store = new TaskStore(path, policy?.store); this.resources = new ResourceStore(path); this.ownsBaselines = !baselines;
         this.baselines = baselines ?? new RemoteBaselines(new BaselineStore(path), namespace => this.client(namespace));
     }
-    private client(namespace: string) {
+    private client(namespace: string, task?: Task, round?: Round) {
+        if (this.policy) return this.clientFor(namespace, task, round);
         if (!this.clients.has(namespace)) this.clients.set(namespace, this.clientFor(namespace));
         return this.clients.get(namespace)!;
     }
@@ -84,31 +95,43 @@ export class TaskCoordinator {
     }
     async accept(namespace: string, value: unknown) {
         const { parent, requestId, intent, agent } = parseTask(AcceptSchema, value);
+        if (this.policy) throw new TaskError(400, 'central_agent_required', '中心任务只能通过服务端解析接受。');
+        return this.acceptResolved(namespace, { parent, requestId, intent }, async () => {
+            if (agent.namespace !== namespace || agent.id !== intent.agentType) throw new TaskError(409, 'agent_snapshot_mismatch', 'Agent 快照不属于当前请求或连接。');
+            const target = await this.resourceService(namespace).resolveExecutionTarget(agent.runtimeId);
+            if (agent.machineId !== target.machineId || agent.flavor !== target.flavor || (agent.definition.flavor && agent.definition.flavor !== target.flavor)) {
+                throw new TaskError(409, 'agent_target_changed', 'Agent 快照与当前 runtime 不一致。', '重新运行 agent check 后创建新任务。');
+            }
+            validateWorkspaceTarget(target.machineId, parent, intent);
+            const client = this.client(namespace);
+            const resolveSource = async () => intent.workspaceMode === 'worktree' ? new TaskWorkspaces(client, parent.machineId).resolve(parent.cwd, intent.baseRef ?? 'HEAD') : undefined;
+            return { agent, target, resolveSource, client, check: () => {} };
+        });
+    }
+    /** Trusted server resolution runs inside the existing acceptance lock, after replay lookup. */
+    async acceptResolved(namespace: string, input: { parent: Parent; requestId: string; intent: SpawnIntent }, resolve: () => Promise<ResolvedAcceptance>) {
+        const { parent, requestId, intent } = input;
         return this.serial(`accept:${namespace}:${requestId}`, async () => {
             if (this.closing) throw new TaskError(503, 'service_stopping', '服务正在停止；请用同一 request ID 查询接受结果。');
             this.store.assertCanDelegate(namespace, parent);
             const previous = this.store.lookup(namespace, parent, requestId, intent);
             if (previous) return previous;
-            if (agent.namespace !== namespace || agent.id !== intent.agentType) throw new TaskError(409, 'agent_snapshot_mismatch', 'Agent 快照不属于当前请求或连接。');
-            const target = await this.resourceService(namespace).resolveExecutionTarget(agent.runtimeId);
+            const { agent, target, source: resolvedSource, resolveSource, client, check } = await resolve();
             if (this.closing) throw new TaskError(503, 'service_stopping', '服务正在停止；请用同一 request ID 查询接受结果。');
-            if (agent.machineId !== target.machineId || agent.flavor !== target.flavor || (agent.definition.flavor && agent.definition.flavor !== target.flavor)) {
-                throw new TaskError(409, 'agent_target_changed', 'Agent 快照与当前 runtime 不一致。', '重新运行 agent check 后创建新任务。');
-            }
             validateWorkspaceTarget(target.machineId, parent, intent);
-            if (target.machineId !== parent.machineId) await this.requireRemoteCapabilities(namespace, parent.machineId, target.machineId);
-            if (intent.outputs?.length) await new TaskOutputs(this.client(namespace), this.store).requireSupported(target.machineId);
-            const source = intent.workspaceMode === 'worktree' ? await new TaskWorkspaces(this.client(namespace), parent.machineId).resolve(parent.cwd, intent.baseRef ?? 'HEAD') : undefined;
+            if (target.machineId !== parent.machineId) await this.requireRemoteCapabilities(client, parent.machineId, target.machineId);
+            if (intent.outputs?.length) await new TaskOutputs(client, this.store).requireSupported(target.machineId);
+            const source = resolvedSource ?? await resolveSource?.();
             if (this.closing) throw new TaskError(503, 'service_stopping', '服务正在停止；请用同一 request ID 查询接受结果。');
-            const accepted = await new TaskFiles(this.client(namespace)).accept(this.store, namespace, parent, requestId, intent,
-                () => this.store.accept(namespace, parent, requestId, intent, agent, target, source));
+            const accepted = await new TaskFiles(client).accept(this.store, namespace, parent, requestId, intent,
+                () => { check(); return this.store.accept(namespace, parent, requestId, intent, agent, target, source); });
             this.kick(namespace, accepted.agent_id);
             return accepted;
         });
     }
 
-    private async requireRemoteCapabilities(namespace: string, origin: string, target: string) {
-        const { machines } = await this.client(namespace).request('/api/machines?includeOffline=true');
+    private async requireRemoteCapabilities(client: HapiHttp, origin: string, target: string) {
+        const { machines } = await client.request('/api/machines?includeOffline=true');
         for (const [id, capabilities] of [[origin, ['repositoryExport', 'repositoryResults', 'artifactTransfers', 'artifactOutputs']],
             [target, ['repositoryImport', 'repositoryResults', 'artifactTransfers', 'artifactOutputs', 'managedWorkspaces', 'mcpToolFilter']]] as const) {
             const machine = machines.find((item: { id: string }) => item.id === id);
@@ -122,7 +145,7 @@ export class TaskCoordinator {
         const remote = environment.remote;
         try {
             if (!remote.consumerId) {
-                const consumer = await this.baselines.forTask(task.namespace, remote.origin, task.target.machineId, task.id);
+                const consumer = await this.baselines.forTask(task.namespace, remote.origin, task.target.machineId, task.id, this.client(task.namespace, task, round));
                 remote.consumerId = consumer.id; remote.snapshotId = consumer.snapshotId; save();
             }
             const consumer = this.baselines.store.consumer(remote.consumerId);
@@ -170,7 +193,7 @@ export class TaskCoordinator {
             if (roundId && !bundle.rounds.some(round => round.id === roundId)) throw new TaskError(404, 'round_unknown', '此任务中没有指定轮次。');
             const selected = bundle.rounds.filter(round => roundId ? round.id === roundId : ['finished', 'failed', 'finishing'].includes(round.phase));
             assertResultReleaseIdle(bundle, selected, discardPending);
-            const retention = new TaskResultRetention(this.client(namespace)), plans = [];
+            const retention = new TaskResultRetention(this.client(namespace, bundle.task, bundle.rounds.at(-1))), plans = [];
             for (const round of selected) plans.push({ roundId: round.id, retention: await retention.plan(bundle.task, round, this.store.codeFetches(id, round.id), discardPending) });
             const blocked = plans.some(plan => plan.retention.unpublished && !plan.retention.discardPending);
             if (apply && blocked) throw new TaskError(409, 'result_unpublished', '该轮代码尚未完整交付。', '先 retry；明确放弃时加 --discard-pending --apply。');
@@ -187,7 +210,7 @@ export class TaskCoordinator {
             const { task, rounds, inputs } = this.store.require(namespace, id, parent);
             const round = rounds.find(round => round.id === roundId);
             if (!round) throw new TaskError(404, 'round_unknown', '此任务中没有指定轮次。');
-            new TaskWorkspaces(this.client(namespace), task.target.machineId).retry(round);
+            new TaskWorkspaces(this.client(namespace, task, round), task.target.machineId).retry(round);
             this.store.save(task, round, inputs.filter(input => input.roundId === round.id));
             return { agent_id: id, round_id: roundId, status: 'retry_requested' as const };
         });
@@ -200,7 +223,7 @@ export class TaskCoordinator {
         this.kick(namespace, id);
         return { agent_id: id, environment: task.environment };
     }
-    async send(namespace: string, value: unknown) {
+    async send(namespace: string, value: unknown, resolve?: (task: Task, round: Round) => Promise<{ agent: AgentSnapshot; check: () => void }>) {
         const { parent, requestId, intent } = parseTask(SendSchema, value);
         if (this.closing) throw new TaskError(503, 'service_stopping', '服务正在停止；请查询已接受记录。');
         const accepted = await this.serial(`accept:${namespace}:${requestId}`, async () => {
@@ -208,11 +231,17 @@ export class TaskCoordinator {
             const previous = this.store.lookup(namespace, parent, requestId, intent);
             if (previous) return previous;
             const current = this.store.require(namespace, intent.id, parent);
-            if (intent.outputs?.length) await new TaskOutputs(this.client(namespace), this.store).requireSupported(current.task.target.machineId);
-            const accept = () => this.store.append(namespace, parent, requestId, intent);
+            const last = current.rounds.at(-1)!;
+            if (this.policy && intent.mode === 'next' && !resolve) throw new TaskError(400, 'central_agent_required', '续接需要重新解析中心 Agent。');
+            const selected = intent.mode === 'next' ? await resolve?.(current.task, last) : undefined;
+            const round = intent.mode === 'steer' ? current.rounds.find(item => item.id === intent.roundId) ?? last : last;
+            this.policy?.check(current.task, round);
+            const client = this.client(namespace, current.task, round);
+            if (intent.outputs?.length) await new TaskOutputs(client, this.store).requireSupported(current.task.target.machineId);
+            const accept = () => { selected?.check(); this.policy?.check(current.task, round); return this.store.append(namespace, parent, requestId, intent, selected?.agent); };
             // Only steer changes the active execution; new rounds have their own acceptance lock.
             return intent.mode === 'steer' ? this.serial(intent.id, accept)
-                : new TaskFiles(this.client(namespace)).accept(this.store, namespace, parent, requestId, intent, accept);
+                : new TaskFiles(client).accept(this.store, namespace, parent, requestId, intent, accept);
         });
         this.kick(namespace, intent.id);
         return accepted;
@@ -248,7 +277,7 @@ export class TaskCoordinator {
             if (bundle.rounds.some(round => !['finished', 'failed'].includes(round.phase) || round.outputFiles?.jobs.some(job => job.phase !== 'complete'))) {
                 throw new TaskError(409, 'artifact_release_active', '释放需要本任务所有轮次和文件操作结束。');
             }
-            const retention = new TaskRetention(this.client(namespace)), plans = [];
+            const retention = new TaskRetention(this.client(namespace, bundle.task, bundle.rounds.at(-1))), plans = [];
             for (const round of bundle.rounds.filter(round => !roundId || round.id === roundId)) {
                 plans.push({ roundId: round.id, retention: await retention.plan(bundle.task, round, this.store.manifests(id, round.id), discardPending) });
             }
@@ -274,7 +303,7 @@ export class TaskCoordinator {
             const { task, rounds, inputs } = this.store.require(namespace, id, parent);
             const round = rounds.find(round => !['finished', 'failed'].includes(round.phase));
             if (round?.id !== roundId || round.phase !== 'running' || round.cancellation || !round.sessionId) throw new TaskError(409, 'round_not_running', '权限请求不属于指定的活跃轮次。');
-            const execution = new ExecutionClient(this.client(namespace));
+            const execution = new ExecutionClient(this.client(namespace, task, round));
             const session = await execution.inspect(round.sessionId);
             if (!session.active || !session.agentState?.requests?.[requestId] || round.permissionBaseline?.includes(requestId)) throw new TaskError(409, 'permission_not_pending', '该原生权限请求已经处理或不属于当前轮次。');
             await execution.respondPermission(round.sessionId, requestId, decision, answers);
@@ -321,24 +350,36 @@ export class TaskCoordinator {
             const ready = agents.some(agent => agent.status !== 'running' && (after[agent.agent_id] === undefined
                 || (['completed', 'failed', 'interrupted'].includes(agent.status) ? Math.max(agent.completed_revision ?? 0, agent.artifacts_revision ?? 0, agent.code_revision ?? 0) > after[agent.agent_id] : agent.revision > after[agent.agent_id])));
             if (ready || Date.now() >= deadline) return { agents, timed_out: !ready };
-            await delay(Math.min(200, Math.max(1, deadline - Date.now())), undefined, { signal });
+            try { await delay(Math.min(200, Math.max(1, deadline - Date.now())), undefined, { signal }); }
+            catch (error) { signal?.throwIfAborted(); throw error; }
         }
     }
     private async advance(namespace: string, id: string) {
         const { task, rounds, inputs: allInputs } = this.store.require(namespace, id);
-        const workspaces = new TaskWorkspaces(this.client(namespace), task.target.machineId);
-        const files = new TaskFiles(this.client(namespace));
-        const outputs = new TaskOutputs(this.client(namespace), this.store);
-        const results = new TaskResults(this.client(namespace), this.store, this.baselines.store);
+        const active = rounds.find(item => !['finished', 'failed'].includes(item.phase));
+        const client = this.client(namespace, task, active ?? rounds.at(-1));
+        if (this.policy) {
+            const selected = active ?? rounds.at(-1)!;
+            try { if (active?.authorizationFailure) throw new TaskError(403, active.authorizationFailure.code, active.authorizationFailure.message); this.policy.check(task, selected); }
+            catch (error) {
+                if (active) await this.stopRevoked(task, active, allInputs.filter(input => input.roundId === active.id), client, error);
+                else { selected.attention = { ...errorDetails(error), stage: 'authorization' }; this.store.save(task, selected, []); }
+                return;
+            }
+        }
+        const workspaces = new TaskWorkspaces(client, task.target.machineId);
+        const files = new TaskFiles(client);
+        const outputs = new TaskOutputs(client, this.store);
+        const results = new TaskResults(client, this.store, this.baselines.store);
         for (const item of rounds) if (item.codeRetention?.state === 'releasing') {
-            await new TaskResultRetention(this.client(namespace)).advance(task, item, () => this.store.save(task, item, []));
+            await new TaskResultRetention(client).advance(task, item, () => this.store.save(task, item, []));
         }
         for (const previous of rounds.filter(item => ['finished', 'failed'].includes(item.phase))) {
             const savePrevious = () => this.store.save(task, previous, []);
             if (previous.code) await results.advance(task, previous, savePrevious);
             await outputs.advance(task, previous, savePrevious);
             await files.releaseAfterStop(task, previous, savePrevious);
-            await new TaskRetention(this.client(namespace)).advance(task, previous, savePrevious, () => {
+            await new TaskRetention(client).advance(task, previous, savePrevious, () => {
                 previous.artifactsRevision = this.store.require(namespace, id).task.revision + 1; savePrevious();
             });
         }
@@ -368,12 +409,12 @@ export class TaskCoordinator {
         if (!round) return;
         if (round.phase === 'queued' && rounds.some(item => item.outputFiles?.jobs.some(job => job.kind === 'collect' && !job.publishedVersion && job.phase !== 'complete'))) return;
         const inputs = allInputs.filter(input => input.roundId === round.id);
-        const execution = new ExecutionClient(this.client(namespace));
+        const execution = new ExecutionClient(client);
         const save = () => this.store.save(task, round, inputs);
         try {
             if (round.phase === 'queued') {
                 if (round.outputFiles?.declarations.length) await outputs.requireSupported(task.target.machineId);
-                const target = await this.resourceService(namespace).resolveExecutionTarget(task.target.runtimeId);
+                const target = this.policy ? await this.policy.target(task, round) : await this.resourceService(namespace).resolveExecutionTarget(task.target.runtimeId);
                 if (task.environment.mode === 'shared' && target.machineId !== task.parent.machineId) throw new TaskError(409, 'shared_target_required', '共享目录任务只能使用发起机上的 runtime。');
                 if (target.machineId !== task.target.machineId || target.flavor !== task.target.flavor) throw new TaskError(409, 'task_target_changed', '已接受任务的固定 runtime 目标不一致。');
                 if (!await this.prepareRemote(task, round, save)) return;
@@ -393,9 +434,11 @@ export class TaskCoordinator {
                 if (round.cancellation) this.finishUnstarted(task, round);
                 else {
                     const previous = [...rounds].reverse().find(item => item.ordinal < round.ordinal && item.sessionId && item.stop === 'stopped' && !item.startupFailure);
-                    if (previous) round.resume = { previousSessionId: previous.sessionId!, previousNativeSessionId: previous.nativeSessionId,
+                    const compatible = previous && isDeepStrictEqual(this.launch(task, previous), this.launch(task, round));
+                    if (previous && !compatible) round.reconstruction = historyContext({ task, rounds, inputs: allInputs }, round, 'launch_configuration_changed');
+                    if (compatible) round.resume = { previousSessionId: previous.sessionId!, previousNativeSessionId: previous.nativeSessionId,
                         candidateSessionId: previous.sessionId!, attempted: false, outcome: 'pending' };
-                    round.phase = previous ? 'resuming' : 'starting'; round.attention = null;
+                    round.phase = compatible ? 'resuming' : 'starting'; round.attention = null;
                 }
                 save();
             }
@@ -430,7 +473,7 @@ export class TaskCoordinator {
                 if (!round.sessionId) {
                     const attempted = round.spawnAttempted;
                     round.spawnAttempted = true; save();
-                    const definition = task.agent.definition;
+                    const definition = (round.agent ?? task.agent).definition;
                     const receipt = attempted ? await execution.lookupStart(task.target.machineId, round.spawnRequestId)
                         : await execution.start(task.target.machineId, {
                             requestId: round.spawnRequestId, directory: task.environment.cwd, agent: task.target.flavor,
@@ -584,6 +627,43 @@ export class TaskCoordinator {
             save();
         }
     }
+    private launch(task: Task, round: Round) {
+        const agent = round.agent ?? task.agent;
+        return { flavor: agent.flavor, model: agent.definition.model, effort: agent.definition.reasoningEffort };
+    }
+    /** Revocation permits observation and stop of the exact bound execution, never new machine work. */
+    private async stopRevoked(task: Task, round: Round, inputs: Input[], client: HapiHttp, error: unknown) {
+        const execution = new ExecutionClient(client), problem = errorDetails(error);
+        const save = () => this.store.save(task, round, inputs);
+        round.authorizationFailure ??= problem;
+        round.attention = { ...round.authorizationFailure, stage: 'authorization' }; save();
+        try {
+            if (!round.sessionId && round.spawnAttempted) {
+                const receipt = await execution.lookupStart(task.target.machineId, round.spawnRequestId);
+                if (!receipt) return; // A missing receipt does not prove that no child was started.
+                round.sessionId = receipt.sessionId;
+                if (receipt.response?.type === 'error' && receipt.response.childStarted === false) round.executionAbsent = true;
+                save();
+            }
+            if (!round.sessionId && round.resume?.attempted) round.sessionId = round.resume.candidateSessionId;
+            if (round.sessionId && !round.executionAbsent) {
+                const stopped = await execution.stop(round.sessionId);
+                if (stopped.outcome !== 'stopped') {
+                    round.stop = 'stopping'; round.attention = { ...stopped.error, code: 'task_stop_unknown', stage: 'authorization' }; save(); return;
+                }
+                round.stop = 'stopped';
+                for (const input of inputs.filter(item => item.delivery !== 'pending')) {
+                    this.observe(input, await execution.query(round.sessionId, input.id, round.cursor));
+                }
+                round.report = [...new Map(inputs.flatMap(input => input.output).map(output => [output.messageId, output.text])).values()].join('\n\n');
+                round.structuredReport = parseReport(round.report); round.structuredMissing = !round.structuredReport;
+            } else round.executionAbsent = true;
+            round.phase = 'failed'; round.completedAt = Date.now(); round.finish = 'complete'; round.permissions = {};
+            if (round.executionAbsent) round.startupFailure ??= round.authorizationFailure;
+            round.attention = { ...round.authorizationFailure, stage: 'authorization', hint: '调用权限已撤销；执行已停止或未启动。工作区和已保存结果保留，未完成的封存/传输不视为成功。' };
+            save();
+        } catch (failure) { round.attention = { ...errorDetails(failure), stage: 'authorization' }; save(); }
+    }
     private finishUnstarted(task: Task, round: Round) {
         round.executionAbsent = true;
         if (round.cancellation) round.cancellation.confirmed = true;
@@ -606,7 +686,8 @@ export class TaskCoordinator {
         if (observed.output.length) input.output = [...new Map([...input.output, ...observed.output].map(output => [output.messageId, output])).values()];
     }
     private prompt(task: Task, round: Round, input: Input) {
-        return [`你是 Runweft 委派的 ${task.agent.definition.name ?? task.agent.id}。`, task.agent.definition.description, task.agent.definition.instructions,
+        const agent = round.agent ?? task.agent;
+        return [`你是 Runweft 委派的 ${agent.definition.name ?? agent.id}。`, agent.definition.description, agent.definition.instructions,
             `工作目录：${task.environment.cwd}\n任务 ${task.id}，轮次 ${round.id}。`,
             task.environment.mode === 'shared' ? '模式：本机共享目录；共享写入由主 agent 调度。'
                 : `模式：独立 Git worktree；来源 ${(task.environment.remote?.origin ?? task.environment.source).sourcePath}，固定基线 ${task.environment.source.baseCommit}，本轮起点 ${round.preparation.mode === 'worktree' ? round.preparation.startHead : ''}。\n`

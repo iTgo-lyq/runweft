@@ -93,7 +93,7 @@ export async function resourceFixture(cleanups: (() => Promise<void> | void)[], 
         await client.request(`${resourcePrefix}/machines`, resourceWrite({ machineId }));
         return (await client.request(`${resourcePrefix}/runtimes`, resourceWrite({ machineId, flavor }))).runtime;
     };
-    return { home, config, statePath, url, alpha, beta, machines, inspections, calls, tokens, failures, hooks, register, get tasks() { return tasks; }, nativeUrl: native.url.origin,
+    return { home, config, statePath, url, alpha, beta, machines, inspections, calls, tokens, failures, hooks, register, key, get tasks() { return tasks; }, nativeUrl: native.url.origin,
         get preparations() { return preparations; },
         async restartPreparations() { await tasks?.close(); await preparations!.close(); preparations = new WorkspacePreparations(statePath, clientFor, 10); tasks = new TaskCoordinator(statePath, clientFor, 20, preparations.baselines); preparations.start(); },
         setInventorySupported(value: boolean) { inventorySupported = value; } };

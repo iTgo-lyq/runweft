@@ -13,6 +13,8 @@ import type { CodeRetention } from './result-retention';
 import type { CodeDelivery, CodeFetch } from './result-types';
 import type { OutputFiles } from './output-types';
 import { RunweftError } from '../errors';
+import type { ResolvedHubAgent } from '../hub/agents/resolver';
+import type { PublicExecutionTarget } from '../hub/resources/types';
 
 const identifier = z.string().min(1).max(512);
 const cwd = z.string().min(1).refine(isAbsolute, '工作目录必须是绝对路径');
@@ -30,7 +32,7 @@ export const SpawnIntentSchema = z.discriminatedUnion('workspaceMode', [
     z.strictObject({ ...spawnFields, workspaceMode: z.literal('shared') }),
     z.strictObject({ ...spawnFields, workspaceMode: z.literal('worktree'), baseRef: z.string().trim().min(1).optional() }),
 ]);
-export type SpawnIntent = z.infer<typeof SpawnIntentSchema>;
+export type SpawnIntent = Omit<z.infer<typeof SpawnIntentSchema>, 'agentType'> & { agentType: string; baseRef?: string; hubRequest?: unknown };
 export const SendIntentSchema = z.strictObject({ id: z.uuid(), message: z.string().trim().min(1).max(200_000), mode: z.enum(['next', 'steer']), roundId: z.uuid().optional(), inputs: fileInputs, outputs: ArtifactOutputsSchema.optional() })
     .refine(value => value.mode === 'steer' ? !!value.roundId : value.roundId === undefined, 'steer 必须指定 roundId；next 不接受 roundId')
     .refine(value => value.mode !== 'steer' || (!value.inputs?.length && !value.outputs?.length), '运行中追加不支持新附件；请使用 next 排队下一轮');
@@ -39,7 +41,9 @@ export const SnapshotSchema = z.strictObject({ id: AgentIdSchema, definition: De
     source: z.strictObject({ scope: ScopeSchema, path: z.string(), key: z.string(), linkTarget: z.string().nullable() }),
     definitionVersion: z.string().min(1), resolvedVersion: z.string().min(1), runtimeId: z.uuid(),
     machineId: identifier, flavor: z.enum(['codex', 'claude']), namespace: identifier });
-export type AgentSnapshot = z.infer<typeof SnapshotSchema>;
+export type AgentSnapshot = (z.infer<typeof SnapshotSchema> & { hub?: undefined }) | (Omit<z.infer<typeof SnapshotSchema>, 'source'> & {
+    source: { scope: 'global' | 'project'; hubId: string; repositoryId: string | null }; hub: ResolvedHubAgent;
+});
 export const AcceptSchema = z.strictObject({ parent: ParentSchema, requestId: z.uuid(), intent: SpawnIntentSchema, agent: SnapshotSchema });
 export const LookupSchema = z.strictObject({ parent: ParentSchema, requestId: z.uuid(), intent: SpawnIntentSchema });
 export const SendSchema = z.strictObject({ parent: ParentSchema, requestId: z.uuid(), intent: SendIntentSchema });
@@ -63,7 +67,9 @@ export type TaskEnvironment = { mode: 'shared'; machineId: string; cwd: string }
     | { mode: 'worktree'; machineId: string; environmentId: string; source: WorkspaceSource; cwd: string;
         remote?: { origin: WorkspaceSource; snapshotId?: string; consumerId?: string; release?: { state: 'pending' | 'released'; error?: Problem } };
         checkout?: string; branch?: string; status: 'retained' | 'deleting' | 'removed'; removal?: WorkspaceRemoval };
-export type Task = { version: 2; id: string; namespace: string; parent: Parent; agent: AgentSnapshot; target: ExecutionTarget;
+export type TaskTarget = ExecutionTarget | PublicExecutionTarget;
+export type Task = { version: 2; id: string; namespace: string; parent: Parent; agent: AgentSnapshot; target: TaskTarget;
+    hub?: { ownerId: string; spaceId: string; hubRepositoryId: string | null };
     environment: TaskEnvironment; createdAt: number; revision: number; updatedAt: number };
 export type Preparation = { mode: 'shared'; status: 'pending' | 'ready'; checkedAt?: number }
     | { mode: 'worktree'; preparationId: string; status: 'pending' | 'accepted' | 'ready' | 'failed' | 'unknown';
@@ -79,7 +85,7 @@ export type InputFiles = { reference: string; files: FrozenInput[]; operationId:
     status: 'pending' | 'accepted' | 'ready' | 'failed' | 'unknown'; downloaded: MaterializedInput[]; paths: MaterializedInput[];
     intermediateReleased: boolean; error?: Problem; cleanupError?: Problem };
 export type ArtifactIntent = { namespace: string; requestId: string; reference: string; requests: ArtifactInput[]; files?: FrozenInput[] };
-export type Round = { id: string; taskId: string; ordinal: number; requestId: string; message: string;
+export type Round = { id: string; taskId: string; ordinal: number; requestId: string; message: string; agent?: AgentSnapshot;
     phase: 'queued' | 'preparing' | 'starting' | 'resuming' | 'running' | 'stopping' | 'finishing' | 'finished' | 'failed';
     preparation: Preparation; git?: GitDelivery; inputFiles?: InputFiles; outputFiles?: OutputFiles; artifactRetention?: ArtifactRetention; artifactsRevision?: number; code?: CodeDelivery; codeRetention?: CodeRetention; codeRevision?: number; resultFetch?: Pick<CodeFetch, 'id' | 'requestId' | 'status' | 'error' | 'cleanupError'> & { ref?: string; head?: string };
     spawnRequestId: string; spawnAttempted: boolean; sessionId?: string; nativeSessionId?: string;
@@ -87,9 +93,9 @@ export type Round = { id: string; taskId: string; ordinal: number; requestId: st
     stop: 'not_started' | 'stopping' | 'stopped'; finish: 'pending' | 'complete';
     attention: Attention | null; createdAt: number; completedAt?: number; completedRevision?: number;
     observedAt?: number; permissions: NonNullable<SessionResponse['session']['agentState']>['requests'];
-    startupFailure?: Problem; executionAbsent?: true; hostPid?: number; permissionBaseline?: string[]; structuredReport?: StructuredReport;
+    authorizationFailure?: Problem; startupFailure?: Problem; executionAbsent?: true; hostPid?: number; permissionBaseline?: string[]; structuredReport?: StructuredReport;
     resume?: { previousSessionId: string; previousNativeSessionId?: string; attempted: boolean; candidateSessionId: string; outcome: 'pending' | 'resumed' | 'missing' | 'unknown' };
-    reconstruction?: { reason: 'native_session_missing'; sourceRoundIds: string[]; context: string };
+    reconstruction?: { reason: 'native_session_missing' | 'launch_configuration_changed'; sourceRoundIds: string[]; context: string };
     cancellation?: { requestedAt: number; controlAttempted?: boolean; confirmed?: boolean; error?: Problem } };
 export type Input = { id: string; roundId: string; kind: 'initial' | 'steer'; text: string;
     requestId?: string;

@@ -4,6 +4,8 @@ import { z } from 'zod';
 import { jsonResponse } from '../../proxy';
 import { HapiRequestError } from '../../hapi';
 import { ResourceError } from '../../resources/types';
+import { TaskError } from '../../tasks/types';
+import { PreparationError } from '../../remote/types';
 import { handleHubRequest } from '../api';
 import { hubPage } from '../page';
 import { HubStore } from '../store';
@@ -13,7 +15,7 @@ import { AccessAuthority } from './auth';
 import { NativeFiles, STREAMED } from './files';
 import { NativeSessions, type ExecutionPolicy } from './sessions';
 import { NativeTransport, RequestLease, inputError, pathParts, readJson, unavailable } from './transport';
-import type { Principal } from './types';
+import type { Principal, ExecutionObject } from './types';
 import { attachAccessSockets } from './sockets';
 import { NativeEvents } from './events';
 
@@ -30,6 +32,7 @@ export type AccessGatewayOptions = {
     host: string; port: number; target: string; rootToken: string; key: Uint8Array; statePath: string;
     health?: () => object;
     executionPolicy?: ExecutionPolicy;
+    sessionPolicy?: (binding: ExecutionObject, method: string, suffix: string) => void;
     business?: (request: IncomingMessage, response: ServerResponse, actor: Principal, lease: RequestLease) => Promise<boolean>;
 };
 
@@ -46,7 +49,7 @@ export async function createAccessGateway(options: AccessGatewayOptions) {
         void handle(request, response).catch(error => {
             if (response.destroyed) return;
             if (response.headersSent) { response.destroy(); return; }
-            const known = error instanceof HubError || error instanceof HapiRequestError || error instanceof ResourceError;
+            const known = error instanceof HubError || error instanceof HapiRequestError || error instanceof ResourceError || error instanceof TaskError || error instanceof PreparationError;
             jsonResponse(response, known ? error.status : 500, { error: known ? { code: error.code, message: error.message, hint: error.hint }
                 : { code: 'native_gateway_failed', message: '原生请求未能完成。', hint: '查询原任务或对象确认状态，不要盲目重发。' } });
         });
@@ -158,6 +161,7 @@ export async function createAccessGateway(options: AccessGatewayOptions) {
         if (actor.kind === 'machine' && !((method === 'GET' && ['', 'messages'].includes(suffix))
             || (method === 'POST' && ['messages', 'resume'].includes(suffix)))) throw unavailable();
         const checked = await sessions.checked(actor, id, method === 'GET' ? 'read' : 'write', signal);
+        if (options.sessionPolicy) lease.add(() => options.sessionPolicy!(checked.binding, method, suffix));
         const dropObjectGuard = lease.add(() => { store.require(actor, 'session', checked.binding.id, method === 'GET' ? 'read' : 'write'); });
         const needsBody = ['POST', 'PUT', 'PATCH'].includes(method);
         const body = needsBody ? await readJson(request, undefined, signal) : undefined;

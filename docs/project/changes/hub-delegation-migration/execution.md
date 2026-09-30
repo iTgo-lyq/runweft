@@ -24,3 +24,14 @@ WorkspacePreparations 的遗漏由主 agent 同步复核发现并已在评审结
 2026-10-01 用户明确项目尚未上线：破坏性更新直接清理历史，不为数据迁移过度编写逻辑，并清理过度封装。原 T6 的 YAML/多库归属转换、staging/journal、resume/rollback 设计撤销，改为简单历史清理和实现简化；相关 Requirement、Technical、Plan 与清理契约已同步。这一部分尚未实现，因此没有迁移代码需要保留。此前 iclaude 的迁移建议仅保留为历史评审事实，不再构成实施要求。
 
 用户另确认：整个第五阶段完成并归档后，在当前工作区驱动 traex（astra）接手整体第六、七阶段；确认启动后无需等待其完成，并结束本 goal。
+
+## T2 中心 Task/Round 与独立工作区准备
+
+- 结果：新增组合 DelegationGateway；服务器解析选择器、真实 Git 观察和中心 Agent，不接收客户端快照。每轮保存独立版本/内容；next 重取当前定义并保留显式 runtime，固定目标不兼容时拒绝；启动参数变化新建 session 并带业务历史，兼容配置复用已停止 session。任务记录与授权绑定共用同一 SQLite 事务。
+- 结果：TaskCoordinator 和 WorkspacePreparations 复用原执行/基线流程，通过可信上下文接原生桥接；schema 17 记录业务 scope，所有任务、输入意图、基线、导入和准备扫描隔离旧无中心归属数据。baseline 机器请求匹配持久 operation 与实际消费者，不授予公开机器 API。
+- 结果：后台用稳定 owner/space，token 轮换取消旧请求但不取消已接受任务；Agent/资源/成员撤回后停止准确 session，保留真实停止/未确认状态。历史读取不要求 Agent 仍共享。受管 session 的启动/输入/模型变更经任务入口，HAPI 原生读取与审批继续复用。递归查重跨业务 scope，并覆盖已经绑定、尚未回写业务状态的 HAPI session ID。
+- 结果：TaskOutputs 从持久发布清单释放可用输出授权，SnapshotPublisher 在恢复引用落盘后释放输出授权；未交付条目不假装可用。只读 queued-state 在撤权收尾时仍可查询，wait 取消保留原授权错误码。
+- 验证：typecheck、build 通过；全仓 243 pass/0 fail（36 文件、4955 断言、约 52 秒）。随后补充输出清单授权释放回归，中心与输出聚焦 22 pass/0 fail（594 断言）。中心 7 组覆盖双 runtime 快照/续接、配置并发与事务回滚、显式目标、丢回执、跨用户/空间、token 轮换长等待、撤权不确定停止、成员移除及旧数据扫描隔离。日志 `.dev-smoke/reviews/hub-delegation-migration/t2-*.log`。
+- 真实验证：编译 scripts/smoke-hub-delegation-preparation.ts 并运行，5 组通过；真实未改造 HAPI、两个独立 Runner、中心 Agent/仓库解析、已提交基线实际字节导出上传导入、独立 worktree、相同 owner/space 内复用及两端授权收回。证据 `.dev-smoke/hub-delegation-preparation-4796tH/evidence.json`。该 smoke 不启动模型；协调器会话行为本任务由可控原生 HTTP fixture 验证，完整真实模型组合由 T4/T7 验收。
+- 边界：默认 serve、CLI/MCP 尚未统一切换，按 T4/T5 顺序推进；旧数据按用户最新决策在 T6 清理/简化，不编写迁移框架。未修改在线服务、用户配置或 HAPI 子模块。
+- Commit：`hub-delegation-migration T2: resolve central task rounds and workspace preparations`。

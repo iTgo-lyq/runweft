@@ -5,6 +5,7 @@ import type { MaterializedInput } from '../../hapi/shared/src/artifactTransfers'
 import { AgentIdSchema } from '../agents/definitions';
 import { ParentSchema, type Parent } from '../tasks/types';
 import { RunweftError } from '../errors';
+import type { ResolvedHubAgent } from '../hub/agents/resolver';
 import type { Problem } from '../resources/types';
 
 export const PreparationIntentSchema = z.strictObject({ agent: AgentIdSchema, baseRef: z.string().trim().min(1) });
@@ -12,8 +13,8 @@ export const SelectionSchema = z.strictObject({ id: AgentIdSchema, definitionVer
     machineId: z.string().min(1), flavor: z.enum(['codex', 'claude']), namespace: z.string().min(1) });
 export const LookupPreparationSchema = z.strictObject({ parent: ParentSchema, requestId: z.uuid(), intent: PreparationIntentSchema });
 export const AcceptPreparationSchema = LookupPreparationSchema.extend({ agent: SelectionSchema });
-export type PreparationIntent = z.infer<typeof PreparationIntentSchema>;
-export type Selection = z.infer<typeof SelectionSchema>;
+export type PreparationIntent = z.infer<typeof PreparationIntentSchema> & { hubRequest?: unknown };
+export type Selection = z.infer<typeof SelectionSchema> & { hub?: ResolvedHubAgent };
 export type TransferBatch = { captureId: string; deliveryId: string; deliveryNames?: string[]; names: string[]; captured: boolean; delivered: boolean;
     captureAttempted: boolean; deliveryAttempted: boolean; deliveryStopped: boolean; released: boolean; releasedNames: string[] };
 export type SnapshotFile = RepositoryFile & { requestId: string; artifactId?: string; reused: boolean; pinned: boolean };

@@ -130,6 +130,10 @@ export class TaskOutputs {
                 this.store.publishArtifacts(task, round, job, items); this.attention(task, round); save();
             }
             if (job.phase === 'cleanup') {
+                if (this.hapi.releaseOutputs) {
+                    const manifest = this.store.manifests(task.id, round.id).find(item => item.jobId === job.id)!;
+                    await this.hapi.releaseOutputs(manifest.items.filter(item => item.status === 'available' && item.upload).map(item => item.upload!.requestId));
+                }
                 for (const cleanup of job.cleanup ?? []) if (!cleanup.done) {
                     const result = await this.machine(task, { action: 'release', operationId: cleanup.operationId, names: cleanup.names });
                     if (!cleanup.names.every(name => result.candidates?.some(file => file.name === name && file.status === 'captured' && file.retention === 'released'))) {

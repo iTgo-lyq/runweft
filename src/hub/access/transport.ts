@@ -72,6 +72,7 @@ export class NativeTransport {
     }
 }
 
+export type AuthorizationLease = Pick<RequestLease, 'actor' | 'signal' | 'add' | 'check'>;
 export class RequestLease {
     private readonly abort = new AbortController();
     private readonly timer: ReturnType<typeof setInterval>;
