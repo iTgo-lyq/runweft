@@ -1,10 +1,10 @@
 # Runweft 产品官网
 
-中文产品首页、安装下载、上手指南和完整命令参考。官网独立于 CLI/HAPI 的业务界面，没有服务端数据库、第三方脚本或外部字体请求。
+中文产品首页、Agent 优先接入、产品 Skill/平台包下载、上手指南和完整命令参考。官网独立于 CLI/HAPI 的业务界面，没有服务端数据库、第三方脚本或外部字体请求。
 
 ## 构建与预览
 
-在仓库根目录使用 Node.js 24（当前验证版本）。先准备已构建的 `dist/packages/`；从干净源码生成发行包的步骤见[开发说明](../docs/development.md)。不要为修改官网重新构建已经验证的 CLI 产物。
+在仓库根目录使用 Node.js 24。先准备当前源码构建的 `dist/packages/`；从干净源码生成发行包的步骤见[开发说明](../docs/development.md)。构建要求 `product: hub-console-v1` 和配套 Skill，拒绝把旧认证行为的包用于新版页面。纯页面修改不必重新构建未改变的程序。
 
 ```sh
 node website/build.mjs
@@ -18,12 +18,12 @@ node website/serve.mjs
 | 位置 | 用途 |
 | --- | --- |
 | `website/index.html` | 产品首页与平台安装入口 |
-| `website/guide.html` | 本地首次使用、资源配置、远端和排错 |
+| `website/guide.html` | 对话接入、安全身份交接、中心配置、委派和维护；折叠工程参考 |
 | `website/manual.html` | 使用说明的 UTF-8 HTML 原文参考模板 |
 | `website/assets/` | 样式、图标与少量原生 JavaScript |
 | `dist/website/` | 可独立部署的静态目录，包含四个平台包 |
 
-`build.mjs` 从发行索引读取版本、平台和原包路径，对照 SHA-512 与 SHA256SUMS；每个平台生成单文件 `.sha256` 和页面安装命令。构建失败保留之前的官网，成功才替换 `dist/website`。它不修改 CLI、发行包、用户配置或运行数据。
+`build.mjs` 从发行索引读取版本、源码、平台和原包路径，对照 SHA-512 与 SHA256SUMS；平台和 Skill 均生成单文件 `.sha256`。页面显示源码标识，`release.json` 保存来源。构建失败保留之前的官网，成功才替换 `dist/website`。它不修改 CLI、发行包、用户配置或运行数据。
 
 下载命令从 `assets/install.js` 统一生成，macOS 用 shasum，Linux 用 sha256sum；hash 内嵌到命令中，只下载自己的平台包就能校验。每个 `.sha256` 文件只引用相邻文件名。关闭 JavaScript 后仍能阅读指南、展开下载表和对应平台的安装命令。
 
@@ -47,6 +47,6 @@ bunx playwright install chromium
 node website/verify.mjs
 ```
 
-验收会真正下载四个平台包及一个子路径下载副本，检查 hash；覆盖桌面/手机、复制成功和拒绝、菜单、键盘、FAQ、无 JS、reduced motion 和所有站内链接。Linux x64 上从页面 DOM 原样取得安装命令，在 `.dev-smoke/website-*/install-home/` 执行到版本输出，验证无全局 Bun/Node/HAPI 依赖。专用 shell HOME 不改变用户主目录，也不安装用户 MCP 或启动模型。
+验收真正下载 Skill、四个平台包及一个子路径副本，检查 hash 和 Skill 内容；覆盖接入说明复制、桌面/手机、复制拒绝、菜单、键盘、FAQ、无 JS、reduced motion 和所有站内链接。Linux x64 从页面 DOM 原样取得安装命令，在 `.dev-smoke/website-*/install-home/` 执行到版本输出，验证无全局 Bun/Node/HAPI 依赖。专用 shell HOME 不改变用户主目录，也不安装用户 MCP 或启动模型。
 
 `verify.mjs` 当前包含 Linux x64 安装实测步骤，应在 Linux x64 上运行；不将它称为 Mac/arm64 实机验证。执行结束关闭本次浏览器和测试服务，证据、截图和下载留在 `.dev-smoke/website-*/`，可在确认无需保留后清理该次目录。

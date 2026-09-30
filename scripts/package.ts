@@ -44,11 +44,12 @@ try {
         copyFileSync('hapi/shared/tools/tunwg/LICENSE', join(directory, 'TUNWG-LICENSE'));
         copyFileSync(source, join(directory, 'hapi-source.tar.gz'));
         copyFileSync('docs/usage.md', join(directory, 'README.md'));
+        cpSync('skills/runweft', join(directory, 'skills/runweft'), { recursive: true });
         writeFileSync(join(directory, 'SOURCES.txt'), sourceInfo);
         writeFileSync(join(directory, 'package.json'), JSON.stringify({
             name, version: pkg.version, description: `Runweft and HAPI executables for ${platform.id}`,
             os: [platform.os], cpu: [platform.cpu], ...(platform.os === 'linux' ? { libc: ['glibc'] } : {}),
-            files: ['bin', 'README.md', 'HAPI-LICENSE', 'HAPI-NOTICE', 'tool-licenses', 'TUNWG-LICENSE', 'SOURCES.txt', 'hapi-source.tar.gz'],
+            files: ['bin', 'skills', 'README.md', 'HAPI-LICENSE', 'HAPI-NOTICE', 'tool-licenses', 'TUNWG-LICENSE', 'SOURCES.txt', 'hapi-source.tar.gz'],
             engines: { node: '>=20' }, runweft: { hapi: pkg.hapi },
         }, null, 2));
         await pack(directory, Object.fromEntries(['runweft', 'hapi'].map(name => [`bin/${name}`, hash(join(directory, 'bin', name))])));
@@ -58,9 +59,10 @@ try {
     copyFileSync('scripts/npm-launcher.cjs', join(main, 'bin', 'runweft.cjs'));
     chmodSync(join(main, 'bin', 'runweft.cjs'), 0o755);
     copyFileSync('docs/usage.md', join(main, 'README.md'));
+    cpSync('skills/runweft', join(main, 'skills/runweft'), { recursive: true });
     writeFileSync(join(main, 'package.json'), JSON.stringify({ name: 'runweft', version: pkg.version,
         description: 'One CLI for HAPI execution and Runweft collaboration', bin: { runweft: 'bin/runweft.cjs' },
-        files: ['bin', 'README.md'], engines: { node: '>=20' },
+        files: ['bin', 'skills', 'README.md'], engines: { node: '>=20' },
         optionalDependencies: Object.fromEntries(platforms.map(platform => [`runweft-${platform.id}`, pkg.version])),
     }, null, 2));
     await pack(main);
@@ -69,11 +71,14 @@ try {
         if (result.exitCode !== 0) throw new Error(`Cannot record release source: git ${args.join(' ')}`);
         return result.stdout.toString().trim();
     }
-    writeFileSync(join(output, 'index.json'), JSON.stringify({ version: pkg.version,
+    const skillFile = `runweft-skill-${pkg.version}.tgz`;
+    await command(['tar', '-czf', join(output, skillFile), '-C', 'skills', 'runweft']);
+    const skill = { tarball: skillFile, sha256: hash(join(output, skillFile)), sha512: hash(join(output, skillFile), 'sha512', 'base64') };
+    writeFileSync(join(output, 'index.json'), JSON.stringify({ version: pkg.version, product: 'hub-console-v1', skill,
         source: { revision: git(['rev-parse', 'HEAD']), dirty: git(['status', '--porcelain']) !== '' },
         bunVersion: Bun.version, hapi: pkg.hapi, packages,
     }, null, 2) + '\n');
-    writeFileSync(join(output, 'SHA256SUMS'), [...packages.map(entry => entry.tarball), 'index.json']
+    writeFileSync(join(output, 'SHA256SUMS'), [...packages.map(entry => entry.tarball), skillFile, 'index.json']
         .map(file => `${hash(join(output, file))}  ${file}\n`).join(''));
     // Replace only a fully built release; failed builds leave the previous packages available.
     const previous = `${output}.previous`;

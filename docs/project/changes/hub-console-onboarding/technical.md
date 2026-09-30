@@ -40,6 +40,8 @@ T4 核对 HAPI useSSE：原生 EventSource 把短 JWT 放在 query。页面适�
 
 产品 Skill 放在仓库 `skills/runweft`，随包和网站交付，不安装到开发者全局目录。主体说明安全接入顺序，references 保存完整命令、故障和维护流程；使用真实 begin/complete 加密交接，不让用户把 token 发给模型。Agent 经用户安装授权将 Skill 复制到 Codex `.agents/skills/runweft` 或 Claude `.claude/skills/runweft`，已有不同内容先备份/确认，卸载只删除确认受管的目录；MCP 仍用现有显式命令。升级下载校验配套包并重跑安装，不虚构自升级命令。官网主按钮提供可交给 Agent 的说明和 Skill 下载，Hub 提供填好当前地址的说明。阶段 6 使用当前编译程序/专用本地包验收，阶段 7 用最终同版四平台产物替换下载；不部署在线网站。
 
+发行索引增加 `product: hub-console-v1` 与独立 Skill tarball 的 SHA-256/SHA-512；主包/平台包均包含完整 Skill。官网拒绝旧认证包，显示源码 revision 和工作区候选标识，不用版本号推断代码相同。平台下载文案只声明构建事实，最终本批运行范围由阶段 7 的证据关联。复制安装命令用条件链，校验失败不得继续解包或改链接。
+
 任务停止、续接、结果取回与释放仍由 Agent/CLI 执行，Web 给出任务 ID 和操作说明；CLI 可凭当前用户/空间查询同一任务，不要求原主宿主存活，不因此恢复旧主会话。空间管理员不读取或直接处置他人任务，资源撤权由已验收协调器停止绑定执行。离开空间的 owner 以稳定 UUID 展示，不虚构显示名称。
 
 聚焦 API 测试覆盖角色、直接越权、计数隔离、短凭据到期和深链接；Playwright 使用专用 Hub/Runner 验证桌面/390px、资源操作、个人选择、成员和 HAPI 详情。Skill 接入使用专用 Codex/Claude 配置，验证安装/更新/卸载保留其他原生设置和首个任务。完整执行 typecheck、`bun test ./test`、build；失败证据与真实模型/协议替身分开记录。

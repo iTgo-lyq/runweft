@@ -468,3 +468,5 @@
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*:before,*:after{animation:none!important;transition:none!important}}
 
 .no-script-installs{margin-top:24px}.no-script-installs>p{font-size:14px}.no-script-installs pre{overflow:auto}
+.terminal pre .conversation-copy{white-space:pre-wrap;overflow-wrap:anywhere;font-family:var(--body);font-size:16px;line-height:1.9}
+.onboarding-actions{margin-top:24px;align-items:center}

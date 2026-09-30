@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { createReadStream } from 'node:fs';
-import { cp, mkdir, mkdtemp, readFile, readdir, writeFile } from 'node:fs/promises';
+import { cp, mkdir, mkdtemp, readFile, readdir, stat, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
@@ -43,11 +43,23 @@ try {
   assert.equal(await page.locator('#routing-label').textContent(), '通过 Hub 调度');
   assert((await page.locator('#map-description').textContent()).includes('远端示意'));
   await page.locator('[data-mode="local"]').click();
-  assert.equal(await page.locator('#routing-label').textContent(), '在本机调度');
+  assert.equal(await page.locator('#routing-label').textContent(), '本机 Hub 调度');
   check('Local / remote diagram is interactive and explicitly illustrative');
 
   // Download from browser clicks, then verify the actual bytes saved on disk.
   const downloads = join(evidenceRoot, 'downloads'); await mkdir(downloads);
+  await page.locator('[data-copy="onboarding-prompt"]').click();
+  assert.equal(await page.evaluate(() => navigator.clipboard.readText()), await page.locator('#onboarding-prompt').textContent());
+  const skillWaiting = page.waitForEvent('download');
+  await page.locator('#skill-download').click();
+  const skillDownload = await skillWaiting;
+  const skillFile = join(downloads, release.skill.filename);
+  await skillDownload.saveAs(skillFile);
+  assert.equal(await hash(skillFile), release.skill.sha256);
+  const skillEntries = await run('tar', ['-tzf', skillFile]);
+  for (const file of ['runweft/SKILL.md', 'runweft/references/onboarding.md', 'runweft/references/maintenance.md']) assert(skillEntries.stdout.includes(file));
+  evidence.skill = { filename: release.skill.filename, sha256: release.skill.sha256 };
+  check('Agent-first prompt copies correctly; actual Skill download is complete and matches its checksum');
   for (const item of release.platforms) {
     await page.locator(`[data-platform="${item.id}"]`).click();
     assert.equal(await page.locator(`#platform-${item.id}`).getAttribute('aria-selected'), 'true');
@@ -109,10 +121,12 @@ try {
   await page.locator('#menu-toggle').click();
   await page.locator('#site-nav a[href="guide.html"]').click();
   assert(page.url().endsWith('/guide.html'));
+  await page.locator('#mcp summary').click();
   await page.locator('[data-client="claude"]').click();
   assert.equal(await page.locator('#mcp-command').textContent(), 'runweft mcp install --client claude\nrunweft mcp check --client claude');
+  await page.locator('#resources summary').click();
   await page.locator('[data-runtime="claude"]').click();
-  assert((await page.locator('#runtime-command').textContent()).includes('runtime register claude'));
+  assert((await page.locator('#runtime-command').textContent()).includes('runtime register claude --machine <machineId>'));
   check('Mobile menu, Escape focus and guide client/runtime switches');
 
   // Follow every local document link under a non-root deployment prefix.
@@ -156,8 +170,13 @@ try {
   const installHome = join(evidenceRoot, 'install-home'); await mkdir(installHome);
   const environment = { ...process.env, HOME: installHome, RUNWEFT_HOME: join(installHome, '.runweft'), PATH: '/usr/bin:/bin' };
   delete environment.BASH_ENV; delete environment.ENV;
+  const corrupt = join(evidenceRoot, 'corrupt-download'); await mkdir(corrupt);
+  await writeFile(join(corrupt, release.platforms.find(item => item.id === 'linux-x64').filename), 'invalid download');
+  await assert.rejects(run('/bin/bash', ['--noprofile', '--norc', join(evidenceRoot, 'install-from-dom.sh')], { cwd: corrupt, env: environment, timeout: 10_000 }));
+  await assert.rejects(stat(join(installHome, '.local')), { code: 'ENOENT' });
+  check('Checksum failure stops the copied installation chain before creating directories or changing links');
   const installed = await run('/bin/bash', ['--noprofile', '--norc', join(evidenceRoot, 'install-from-dom.sh')], { cwd: downloads, env: environment, timeout: 120_000 });
-  assert.match(installed.stdout, /1\.0\.0\s*$/);
+  assert(installed.stdout.trim().endsWith(release.version));
   const binary = join(installHome, '.local/bin/runweft');
   const version = await run(binary, ['--version'], { env: environment }); assert.equal(version.stdout.trim(), release.version);
   const index = JSON.parse(await readFile(join(repository, 'dist/packages/index.json'), 'utf8'));

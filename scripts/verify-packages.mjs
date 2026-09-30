@@ -21,7 +21,12 @@ try {
     assert.deepEqual(index.packages.map(item => item.name).sort(), ['runweft', 'runweft-darwin-arm64', 'runweft-darwin-x64', 'runweft-linux-arm64', 'runweft-linux-x64']);
     assert.deepEqual(readdirSync(join(source, 'tarballs')).sort(), index.packages.map(item => item.tarball.split('/').at(-1)).sort());
     const checksums = readFileSync(join(source, 'SHA256SUMS'), 'utf8').trim().split('\n');
-    assert.equal(checksums.length, index.packages.length + 1);
+    assert.equal(checksums.length, index.packages.length + 2);
+    assert.equal(index.product, 'hub-console-v1');
+    assert.equal(hash(join(source, index.skill.tarball)), index.skill.sha256);
+    assert.equal(hash(join(source, index.skill.tarball), 'sha512', 'base64'), index.skill.sha512);
+    const skillBody = command('tar', ['-xOf', join(source, index.skill.tarball), 'runweft/SKILL.md']);
+    assert(skillBody.includes('hub connect begin/complete'));
     for (const line of checksums) {
         const [expected, file] = line.split('  ');
         assert.equal(hash(join(source, file)), expected);
@@ -35,6 +40,11 @@ try {
         assert.equal(manifest.version, index.version); assert.equal(manifest.name, entry.name);
         assert.notEqual(manifest.private, true);
         assert(readFileSync(join(directory, 'README.md'), 'utf8').includes('task result fetch'));
+        assert.equal(readFileSync(join(directory, 'skills/runweft/SKILL.md'), 'utf8'), skillBody);
+        for (const file of ['onboarding', 'configuration', 'delegation', 'maintenance']) {
+            assert.equal(readFileSync(join(directory, `skills/runweft/references/${file}.md`), 'utf8'),
+                command('tar', ['-xOf', join(source, index.skill.tarball), `runweft/references/${file}.md`]));
+        }
         if (entry.name === 'runweft') {
             assert(Object.values(manifest.optionalDependencies).every(value => value === index.version));
             continue;

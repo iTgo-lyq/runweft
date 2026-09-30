@@ -6,8 +6,7 @@ import { dirname, join, resolve } from 'node:path';
 import { freePort } from '../src/services';
 import { HubClient } from '../src/hub/client';
 import type { HapiHttp } from '../src/hapi';
-import { atomicWrite } from '../src/config';
-import { hubConnectionPaths } from '../src/hub/resources/connection';
+import { chromium } from 'playwright';
 import { configureSmokeCodexModel } from './fixtures/codex-model';
 import pkg from '../package.json';
 
@@ -155,13 +154,28 @@ try {
     cli(['init']); cli(['config', 'set', 'server.port', String(await freePort())]);
     const service = cli(['start']); started = true;
     const url = service.service.url;
-    cli(['config', 'set', 'hub.url', url]);
-    const response = await fetch(url + '/api/runweft/hub/identities', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: 'native MCP smoke' }) });
-    assert(response.ok); const user: any = await response.json(); token = user.token;
-    atomicWrite(hubConnectionPaths(home, url).identityConnection, JSON.stringify({ schemaVersion: 1, hub: url, ownerId: user.identity.id,
-        spaceId: user.personalSpace.id, token: user.token, requestId: crypto.randomUUID(), createdAt: Date.now() }));
+    const connection = cli(['hub', '--url', url, 'connect', 'begin', '--name', 'Native MCP acceptance']);
+    const browser = await chromium.launch({ headless: true, executablePath: process.env.RUNWEFT_SMOKE_CHROMIUM });
+    let spaceId: string;
+    try {
+        const page = await browser.newPage();
+        await page.goto(connection.confirmationUrl);
+        await page.waitForFunction(() => !document.querySelector<HTMLButtonElement>('#logout')?.disabled);
+        await page.locator('#new-name').fill('native MCP smoke');
+        await page.locator('#create-identity button').click();
+        await page.locator('#secret-dialog[open]').waitFor();
+        token = await page.locator('#secret-value').innerText();
+        await page.locator('#close-secret').click();
+        spaceId = await page.locator('#space-id').innerText();
+        await page.locator('#confirm-connection').click();
+        await page.waitForFunction(() => !document.querySelector<HTMLButtonElement>('#logout')?.disabled);
+        assert.equal(cli(['hub', '--url', url, 'connect', 'complete']).status, 'connected');
+        assert(cli(['hub', 'identity']).identity.id);
+        assert(!page.url().includes(token));
+        record('fresh browser identity and space connect through encrypted begin/complete before native host use');
+    } finally { await browser.close(); }
     hapi = new HubClient({ url, home, env }, 'hubDelegation', 'unavailable').http;
-    const machine = cli(['machine', 'enroll']); cli(['machine', 'associate', machine.machineId, user.personalSpace.id]);
+    const machine = cli(['machine', 'enroll']); cli(['machine', 'associate', machine.machineId, spaceId!]);
     cli(['runner', 'start']);
     const git = (...args: string[]) => { const result = spawnSync('git', ['-C', project, ...args], { env, encoding: 'utf8' }); assert.equal(result.status, 0, result.stderr); return result.stdout.trim(); };
     git('init', '-q'); git('config', 'user.name', 'smoke'); git('config', 'user.email', 'smoke@example.invalid'); git('config', 'commit.gpgsign', 'false');

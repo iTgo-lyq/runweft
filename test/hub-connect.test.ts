@@ -40,6 +40,15 @@ async function cli(home: string, url: string, args: string[]) {
     return { exit, stdout, stderr, result: stdout.trim() ? JSON.parse(stdout) : undefined, error: stderr.trim() ? JSON.parse(stderr).error : undefined };
 }
 
+test('fresh connection diagnostics distinguish an unselected Hub from an insecure origin', () => {
+    const home = fixture('unselected-hub');
+    try { new IdentityConnection(home, undefined as unknown as string); throw new Error('expected missing Hub rejection'); }
+    catch (error: any) { expect(error.code).toBe('hub_connection_required'); expect(error.hint).toContain('hub --url'); }
+    try { new IdentityConnection(home, 'http://remote.example'); throw new Error('expected insecure Hub rejection'); }
+    catch (error: any) { expect(error.code).toBe('hub_connect_https_required'); }
+    expect(existsSync(join(home, 'connections'))).toBe(false);
+});
+
 test('compiled CLI begins once, confirms encrypted identity and space, saves 0600 files and uses connection without printing credentials', async () => {
     const h = await hubResourceFixture(cleanups), home = join(h.home, 'client'), c = new IdentityConnection(home, h.url);
     const [a, b] = await Promise.all([cli(home, h.url, ['connect', 'begin', '--name', 'my agent']), cli(home, h.url, ['connect', 'begin', '--name', 'my agent'])]);

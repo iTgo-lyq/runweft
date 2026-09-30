@@ -53,6 +53,6 @@ export async function renderRepositories(target: HTMLElement, context: ConsoleCo
             fact('机器', checkout.machineId), fact('工作目录', checkout.cwd), fact('Git 公共目录', checkout.gitCommonDir));
         bindings.append(facts);
     }
-    if (!checkouts.length) bindings.append(empty('你还没有显式 checkout 关联。让 Agent 在项目中执行 repository current，再决定是否绑定；不要创建 Runweft YAML。'));
+    if (!checkouts.length) bindings.append(empty('你还没有显式 checkout 关联。让 Agent 在项目中执行 repository inspect，再按本机 ID 执行 repository match 或 bind；不要创建 Runweft YAML。'));
     target.append(bindings);
 }

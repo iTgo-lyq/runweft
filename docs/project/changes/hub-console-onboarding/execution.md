@@ -45,3 +45,14 @@
 - 验证边界：compiled CLI + 真实 HAPI/Runner；任务历史与原生会话 RPC 为明确的浏览器夹具，无模型或 OS PTY，不替代阶段七真实模型组合。原生页面各类失败均保留证据：tWDFU2 为夹具缺任务绑定；oK9Uaw/NRqhHB 为错误的消息封装；v3z6Ei/xLvnTY 为原生中文按钮选择器。最终修正夹具后通过，未放宽授权。
 - 工具偏差：试验 Bun.Transpiler exports.eliminate 在 Bun 1.4.2 触发 panic；没有使用该实验选项，改为移除已知空 default export 后生成同步 IIFE。最终构建与真实浏览器通过。
 - Commit：`hub-console-onboarding T4: deliver private task views and scoped native browser handoff`。
+
+## T5 产品 Skill 与 Agent 优先使用路径
+
+- 结果：`skills/runweft` 完整接入/中心配置/委派/维护 Skill，主包和四平台包携带相同内容，另有带校验的独立下载；官网主入口交给 Agent、浏览器确认身份、折叠工程参考，usage/development 移除旧 YAML/root 操作路径。发行索引明确新版产品与源码，官网拒绝旧包。复制安装命令校验失败立即停止，不继续解包。
+- 结果：独立场景暴露“新电脑 task CLI 仍需先 enroll”的说明缺口，已补正，第二个全新 Agent 给出正确的 Web 先查/CLI 先登记路径。独立安装验证发现未选 Hub 被误报 HTTPS 错误，修为 `hub_connection_required` 并增加测试；没有改变身份或网络权限。
+- 验证：Skill quick_validate、typecheck/build/diff-check 通过；聚焦 16 pass / 0 fail、252 断言，诊断补测 6 pass / 0 fail、108 断言；真实编译空连接诊断 `.dev-smoke/connect-diagnostic-PpicAr/evidence.json`。四平台候选构建成功，主包/四平台内全部 Skill 与源码逐文件一致；这不是最终发行验收。
+- 官网：`.dev-smoke/website-HnpBOQ/evidence.json`，success=true，11 组通过；真实下载 Skill/四平台/子路径、校验、错误校验不安装、320–1440px、键盘/复制/无 JS、DOM 原命令 Linux x64 安装。已查看桌面首页和手机指南截图。最后仅平台验证措辞改为构建事实，再构建通过；未部署。
+- 独立 Skill 执行：Astra 会话 `01a0f402-c011-7462-80dd-13e0cfee2590`，专用安装/重复更新/卸载，`.dev-smoke/runweft-install-cycle-KC3taFHW/evidence.json`；201 成功断言、12 项最终审计通过，其他 MCP/hooks/模型配置/Skill 保留。保留初次 bwrap 挂载失败、Claude 原生元数据迁移、Codex 尾空白与主程序重建导致 hash 改变的真实记录；固定副本复验通过，不声称完整文件字节全部恢复。未启动模型/Hub、未访问真实配置凭据。
+- 独立场景：Astra 会话 `01a0f406-be89-7c33-a4fe-f61379220ba6` 初稿 `.dev-smoke/skill-scenario-initial.md`；修订后新会话 `01a0f40a-7273-7402-a6d9-9bb6ee8440da` 的 `.dev-smoke/skill-scenario-final.md` 正确区分原身份交接、个人 override、旧任务和不确定结果。均仅提供真实场景与 Skill，没有传预期答案；结束后关闭 agent。
+- 真实接入/首任务：更新现有 native MCP smoke，改为浏览器主动身份与 begin/complete，不直接写 identity 文件。`.dev-smoke/hub-native-mcp-eZQ9jC/evidence.json`，success=true、cleanupErrors=[]；两宿主 × 两 runtime 四组实际 spawn/wait/read、65 秒等待（65008–65181 ms）、报告、子 CLI 递归拒绝、进程退出。原生权限仅批准专用 helper，未放宽产品默认权限。后续仅新增缺 URL 诊断分支，合法已连接执行路径未改变。
+- Commit：`hub-console-onboarding T5: ship product skill and agent-first onboarding documentation`。

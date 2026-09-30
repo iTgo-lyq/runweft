@@ -27,6 +27,7 @@ const invalid = () => new RunweftError('hub_connection_response_invalid', 'Hub �
 export class IdentityConnection {
     readonly paths: ReturnType<typeof hubConnectionPaths>;
     constructor(home: string, url: string) {
+        if (!url) throw new RunweftError('hub_connection_required', '尚未选择 Hub 地址。', '使用 hub --url <HTTPS或localhost根地址> connect begin；确认后 complete 会保存连接。');
         const parsed = connectionOrigin.safeParse(url);
         if (!parsed.success) throw new RunweftError('hub_connect_https_required', '凭据交接只支持 HTTPS 或 localhost。', '远端启用 HTTPS 或通过 SSH 隧道连接 localhost。');
         this.paths = hubConnectionPaths(home, parsed.data);

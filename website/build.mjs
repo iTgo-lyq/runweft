@@ -10,8 +10,8 @@ const repository = resolve(siteSource, '..');
 const platformInfo = [
   { id: 'darwin-arm64', label: 'macOS Apple Silicon', note: 'Mac 产物未签名、未公证；实机验证由使用者完成。', scope: '已构建；未实机验证' },
   { id: 'darwin-x64', label: 'macOS Intel', note: 'Mac 产物未签名、未公证；实机验证由使用者完成。', scope: '已构建；未实机验证' },
-  { id: 'linux-x64', label: 'Linux x64', note: 'glibc Linux；已完成真实安装、原生协作与浏览器验收。', scope: '原生安装与协作通过' },
-  { id: 'linux-arm64', label: 'Linux arm64', note: 'glibc Linux；已通过 QEMU CLI / 配置验证，未作原生完整协作验证。', scope: 'QEMU CLI / 配置通过' },
+  { id: 'linux-x64', label: 'Linux x64', note: 'glibc Linux；构建索引只证明产物来源，不代替本批运行验收。', scope: '已构建；运行范围另行验收' },
+  { id: 'linux-arm64', label: 'Linux arm64', note: 'glibc Linux；交叉构建不代表原生协作已验证。', scope: '已构建；运行范围另行验收' },
 ];
 const escape = value => String(value).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;');
 
@@ -26,6 +26,7 @@ async function hashes(path) {
 export async function buildSite({ packagesDirectory = join(repository, 'dist/packages'), outputDirectory = join(repository, 'dist/website') } = {}) {
   const index = JSON.parse(await readFile(join(packagesDirectory, 'index.json'), 'utf8'));
   if (!/^\d+\.\d+\.\d+$/.test(index.version)) throw new Error('发行版本无效；请先构建完整发行包。');
+  if (index.product !== 'hub-console-v1' || index.skill?.tarball !== `runweft-skill-${index.version}.tgz`) throw new Error('旧发行包不包含当前 Hub 后台与 Skill；请从当前源码重新构建。');
   const checksums = new Map((await readFile(join(packagesDirectory, 'SHA256SUMS'), 'utf8')).trim().split('\n').map(line => {
     const [hash, filename] = line.split(/\s{2}/);
     return [filename, hash];
@@ -51,14 +52,21 @@ export async function buildSite({ packagesDirectory = join(repository, 'dist/pac
       await writeFile(join(staging, 'downloads', `${filename}.sha256`), `${computed.sha256}  ${filename}\n`);
       release.platforms.push({ ...info, filename, sha256: computed.sha256, bytes: computed.bytes, size: `${(computed.bytes / 1024 / 1024).toFixed(1)} MiB` });
     }
+    const skill = await hashes(join(packagesDirectory, index.skill.tarball));
+    if (skill.sha256 !== index.skill.sha256 || skill.sha512 !== index.skill.sha512 || skill.sha256 !== checksums.get(index.skill.tarball)) throw new Error('产品 Skill 校验失败。');
+    await cp(join(packagesDirectory, index.skill.tarball), join(staging, 'downloads', index.skill.tarball));
+    await writeFile(join(staging, 'downloads', `${index.skill.tarball}.sha256`), `${skill.sha256}  ${index.skill.tarball}\n`);
+    release.skill = { filename: index.skill.tarball, ...skill };
     const first = release.platforms[0];
     const manual = await readFile(join(repository, 'docs/usage.md'), 'utf8');
     await writeFile(join(staging, 'downloads/usage.md'), manual);
-    await writeFile(join(staging, 'downloads/SHA256SUMS'), release.platforms.map(item => `${item.sha256}  ${item.filename}\n`).join(''));
+    await writeFile(join(staging, 'downloads/SHA256SUMS'), [...release.platforms, release.skill].map(item => `${item.sha256}  ${item.filename}\n`).join(''));
     const replacements = {
       VERSION: index.version,
       DEFAULT_ARCHIVE: first.filename,
       DEFAULT_SIZE: first.size,
+      SKILL_ARCHIVE: index.skill.tarball,
+      SOURCE_REVISION: escape(index.source.revision.slice(0, 12) + (index.source.dirty ? ' · 工作区候选' : '')),
       DEFAULT_INSTALL: escape(installationCommands(first.id, index.version, first.sha256)),
       RELEASE_DATA: JSON.stringify(release).replaceAll('<', '\\u003c'),
       MANUAL_TEXT: escape(manual),
