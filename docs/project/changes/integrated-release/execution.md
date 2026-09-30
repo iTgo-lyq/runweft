@@ -49,3 +49,13 @@
 - 范围：远端是同机独立 Hub/两个 Runner；Mac 实机、物理跨机和当前 GitHub CI 未执行。看板故障/分页的合成条目与真实已完成任务分开记录。
 - 检查：新增测试参数的实际两宿主调用通过；`bun run typecheck`、`git diff --check` 通过。本任务未修改产品代码，无需重建或重复已通过的根测试。
 - Commit：`integrated-release T2: verify complete native collaboration on installed release`
+
+## T3 原生异常恢复与版本升级回退
+
+- 原生重建：将研究实验整理为 `scripts/smoke-reconstruction.ts`，可接收已安装的配套程序，并沿 T2 的专用 Codex 模型参数。`.dev-smoke/reconstruction-6TyBJ0/evidence.json` 全部通过：两 runtime 各两轮，首轮完成并关闭后切换到空历史配置目录；精确 missing 触发新 HAPI/native ID，来源 round ID 与记忆正确，新输入在原生 JSONL 仅一次，原历史 hash 不变，四个会话归档且进程退出。原生审计已合入脚本，不再依靠单独研究命令补证据。
+- 原生控制：`.dev-smoke/task-controls-umpAxX/evidence.json` 通过两 runtime 的真实模型/推理参数、session 续接、权限批准/拒绝及定向中断；Codex 追加输入也通过。只在专用配置显式制造审批，产品仍继承原生默认权限。两份证据 cleanupErrors 均为空。
+- 升级与回退：`scripts/smoke-upgrade.ts` 使用保留的 C11 最终 0.1.0 程序和冻结 1.0.0（相同 HAPI hash），对 C10 真实两轮远端任务的原路径工作副本自动验证。`.dev-smoke/upgrade-muFxBk/evidence.json` success、originalRestored=true、cleanupErrors=[]。旧程序先写入附件、Agent 定义及工作区绑定；新 CLI 对仍运行旧服务显示 version=0.1.0、installedVersion=1.0.0、restartRequired=true，doctor 失败项明确指向程序版本。停服备份完整现场后升级，旧任务/报告/原生 ID/附件/Git refs/index/配置/机器/runtime/连接凭据与绑定保留；1.0.0 新增文件和定义后，0.1.0 在 schema v6 下仍可读取。再次恢复停服备份，数据库与对象字节一致，备份后新增记录不存在。
+- 原件保护：旧现场先整体保存，在原绝对路径创建工作副本，避免把路径迁移冒充恢复。测试结束归还原件，1292 项路径、权限和字节指纹相同；没有调用模型或修改用户正式数据。升级后的工作副本与备份留在 `.dev-smoke/upgrade-muFxBk/`。0.1.0 仅为未公开发布的测试基线，本结论不承诺任意版本回退。
+- 失败路径：复用冻结产品在 T1 已通过的 173 项根测试：`tasks.test.ts` 的丢失接受/输入、未知状态及重启不重发；`task-outputs.test.ts`/`task-results.test.ts` 的固定候选重试、补交/补收不重跑模型；`task-workspaces.test.ts`/`remote-tasks.test.ts` 的准备失败、封存失败与现场保留；`resources.test.ts` 的 schema 7 拒绝及保留。这里是故障 fixture 证据，与上述真实原生和升级验证区分。
+- 检查：新增脚本 typecheck 与 diff 检查通过；冻结 Runweft/HAPI hash 未变化，不重建或重跑无关测试。
+- Commit：`integrated-release T3: verify native recovery and version upgrade rollback`

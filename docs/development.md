@@ -73,3 +73,7 @@ bun run test:worktree-tasks
 `bun run test:dashboard` 使用 Playwright headless Chromium；首次运行先 `bunx playwright install chromium`，也可通过 `RUNWEFT_SMOKE_CHROMIUM` 指定已有 Chromium。它复制已完成任务数据，以页面操作验证登录、筛选、故障恢复、移动布局和 HAPI 详情跳转，不重新派生任务。
 
 安装与产品操作见[使用说明](usage.md)，当前验收范围以[项目文档](README.md)为准。
+
+`RUNWEFT_SMOKE_CODEX_MODEL=<可用模型> RUNWEFT_SMOKE_CODEX_EFFORT=<推理级别> bun scripts/smoke-reconstruction.ts <runweft程序> <配套hapi程序>` 验证两种 runtime 的真实历史缺失重建。先在专用原生目录各完成一轮，再保留同一业务库/机器身份并切换到只有配置与认证的空历史目录；核对精确 missing、新原生 ID、历史记忆、原生输入仅一次和旧历史 hash 不变。使用已有模型认证副本，会调用模型。仅当失败证据明确所有首轮已完成、没有接受后续输入且清理成功时，才可追加该 evidence.json 继续；其他失败先检查原记录，不盲目重跑。
+
+`bun scripts/smoke-upgrade.ts <旧版runweft> <旧版hapi> <新版runweft> <新版hapi> <已完成远端验收evidence.json>` 只接受 `.dev-smoke/` 中全部轮次结束、服务停止的专用现场。它先保存原件，在原绝对路径放置工作副本（保持 Git/worktree 引用有效），验证旧程序写入、运行版本差异、升级、schema v6 回退以及完整停服备份恢复。结束时归还原件并核对整树路径/权限/字节指纹；不调用模型，不用于用户正式数据或任意版本兼容推断。0.1.0 是保留的本地验收基线，未作为已发布历史版本推荐。
