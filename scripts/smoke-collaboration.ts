@@ -7,6 +7,7 @@ import { freePort } from '../src/services';
 import { HapiClient } from '../src/hapi';
 import { codexMcpDefinition, replaceCodexMcp } from '../src/mcp/toml';
 import { codexCatalog } from './fixtures/codex-catalog';
+import { configureSmokeCodexModel } from './fixtures/codex-model';
 import pkg from '../package.json';
 
 type Flavor = 'codex' | 'claude';
@@ -34,6 +35,7 @@ const nativeClaude = process.env.RUNWEFT_SMOKE_CLAUDE || Bun.which('iclaude') ||
 assert(nativeClaude && Bun.which('codex'), 'Both native clients and existing model authentication are required');
 function copy(source: string, target: string) { if (existsSync(source)) { mkdirSync(dirname(target), { recursive: true, mode: 0o700 }); copyFileSync(source, target); chmodSync(target, 0o600); } }
 for (const file of ['config.toml', 'auth.json']) copy(join(process.env.CODEX_HOME ?? join(homedir(), '.codex'), file), join(codexHome, file));
+const codexModel = configureSmokeCodexModel(join(codexHome, 'config.toml'));
 const sourceClaude = process.env.CLAUDE_CONFIG_DIR ?? join(homedir(), '.claude');
 copy(process.env.CLAUDE_CONFIG_DIR ? join(sourceClaude, '.claude.json') : join(homedir(), '.claude.json'), join(claudeHome, '.claude.json'));
 for (const file of ['settings.json', '.credentials.json']) copy(join(sourceClaude, file), join(claudeHome, file));
@@ -51,7 +53,7 @@ nativeConfig(['add', 'keep_probe', '--env', `RUNWEFT_SMOKE_PROBE_LOG=${probeLog}
 const prefs = existsSync(claudePath) ? JSON.parse(readFileSync(claudePath, 'utf8')) : {};
 prefs.mcpServers = { keep_probe: { type: 'stdio', ...probe } }; writeFileSync(claudePath, JSON.stringify(prefs), { mode: 0o600 });
 const evidence: { [key: string]: any; cases: any[]; cleanupErrors: string[] } = {
-    root, executable, hapiRevision: pkg.hapi.revision, selected, controls, worktree, remote, retryFinish, startedAt: new Date().toISOString(), success: false, cases: [], cleanupErrors: [],
+    root, executable, hapiRevision: pkg.hapi.revision, codexModel, selected, controls, worktree, remote, retryFinish, startedAt: new Date().toISOString(), success: false, cases: [], cleanupErrors: [],
 };
 let token: string | undefined, hapi: HapiClient | undefined;
 const homes: string[] = [], pids = new Set<number>();

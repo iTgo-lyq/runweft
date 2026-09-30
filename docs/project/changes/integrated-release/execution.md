@@ -27,3 +27,25 @@
 - CI：build job 在 types/tests 前安装 HAPI 依赖；install jobs 安装 smoke 使用的根 SDK；新增包校验与 SHA256SUMS 归档。未 push 或触发 CI，不声明这些修改已在 GitHub 执行。
 - 最终 T1 产物验证：`.dev-smoke/release-packages-34ZPVm/evidence.json`、`.dev-smoke/install-KbTOKB/evidence.json` 和 `.dev-smoke/release-arm64/case-x4hsbvk7/evidence.json` 全部 success；服务证据 `.dev-smoke/install-KbTOKB/services/service-Ly0ir7/evidence.json`。早期通过的同类记录保留，最终两种 Linux 程序 hash 与当前四平台索引一致。Mac 只完成格式/架构/包检查，未作实机运行断言。
 - Commit：`integrated-release T1: build four-platform release and verify installation`
+
+## T2 正式候选的完整协作组合
+
+- 候选：来自 T1 提交 `ebd69e8c424ae25aec1e33379ec01f4c87b8992a` 的干净源码，固定于 `.dev-smoke/c12-final-candidate.json`。正式安装 `.dev-smoke/install-fsi0Hn/evidence.json` 通过，实际安装程序 SHA-256 为 Runweft `e681e8f801c81c31de0788b8901609d2a6b1576d4715cb6485b5348033bc4de3`、HAPI `e8cd31cd6d36e56a9b99143d7e7a752f65b6f4c30b5b72d03862651236d52b17`。四平台程序与 T1 最终验证一致，复用格式、独立服务及 arm64 仿真证据；本次 tarball/index 的 SHA256SUMS 重新通过核对。
+- 结果：核心 20 组、附件 8 组及 MCP 控制 2 组全部通过；每组开始/结束绑定上述程序 hash，使用专用配置与认证副本。汇总 `.dev-smoke/c12-matrix/completed.json`，各组 cleanupErrors 为空。
+
+| 实际验收 | 证据 |
+| --- | --- |
+| shared 8/8：local/Hub × 两宿主 × 两 runtime，同 session 续接、原生工具过滤、进程退出和两种宿主真实连接中断 | `.dev-smoke/collaboration-uJirbo/evidence.json` |
+| 本地 worktree 8/8：工程指令/skill/其他 MCP、固定基线、封存、显式 cherry-pick、现场留存和连接中断 | `.dev-smoke/worktree-mcp-ok0yFo/evidence.json` |
+| 远端 worktree 4/4：启动前准备，两轮输入/输出、递归子模块与 Git/LFS、MCP fetch、执行端离线后再取回和显式 merge | `.dev-smoke/remote-mcp-bLWnpq/evidence.json` |
+| 附件 8/8：实际 MCP 上传、输入、输出、补交/补收、下载及第二轮；Hub 两个交叉组合使用 worktree | `.dev-smoke/artifact-mcp-IJ8Mx6/evidence.json` |
+| Codex：MCP steer 追加与定向 interrupt，4 个业务轮次 | `.dev-smoke/collaboration-es37sR/evidence.json` |
+| Claude：明确 steer_unsupported，定向 interrupt；未伪称支持追加 | `.dev-smoke/collaboration-DNLp57/evidence.json` |
+| 无模型远端回收：重启中心/发起端，四任务两轮查询/下载/取回，目标离线，原生 session 清单不增加 | `.dev-smoke/remote-package-L4LYn9/evidence.json` |
+| 无模型附件回收：重启服务后，8 组两轮的报告、原生 ID、清单及输出 hash 不变，worktree 保留 | `.dev-smoke/artifact-package-nKiP8c/evidence.json` |
+| Playwright：同一安装候选、真实任务历史，登录/恢复、筛选分页、失败恢复、375/1200 布局、HAPI 详情；pageErrors/cleanupErrors 为空，截图已目视检查 | `.dev-smoke/dashboard-ntKUUm/evidence.json` |
+
+- 环境修正：首轮四个矩阵均在任何 MCP 调用/任务派生前失败；原生 JSONL 明确返回当前账户不支持继承的 `gpt-6.1-sol`。无任务轮次、cleanupErrors 为空，失败原件 `.dev-smoke/c12-matrix-initial-unavailable-model/`。按原生模型目录和 C10 实测，仅在测试副本显式选择 `gpt-6-astra` / xhigh 后重开；两个脚本新增可选测试参数与实际模型记录，不修改用户配置或冻结产品，不重放未知任务。
+- 范围：远端是同机独立 Hub/两个 Runner；Mac 实机、物理跨机和当前 GitHub CI 未执行。看板故障/分页的合成条目与真实已完成任务分开记录。
+- 检查：新增测试参数的实际两宿主调用通过；`bun run typecheck`、`git diff --check` 通过。本任务未修改产品代码，无需重建或重复已通过的根测试。
+- Commit：`integrated-release T2: verify complete native collaboration on installed release`

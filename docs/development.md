@@ -61,6 +61,8 @@ bun run test:worktree-tasks
 
 `test:artifact-mcp` 使用同样的两宿主 × 两 runtime × local/同机 Hub 八组，实际通过 MCP 上传、带输入派生、读取输出、重试/补收并下载，第二轮续接同一原生会话。Hub 的两个交叉 runtime 组合使用独立 worktree，其余使用 shared；可用 `RUNWEFT_SMOKE_CASE` 选择单组。证据在 `.dev-smoke/artifact-mcp-*`，测试配置与数据独立保存，结束后关闭自建服务。
 
+`test:collaboration` 和 `test:artifact-mcp` 默认继承配置副本中的 Codex 模型；如当前账户不支持该模型，可显式设置 `RUNWEFT_SMOKE_CODEX_MODEL` 与 `RUNWEFT_SMOKE_CODEX_EFFORT`。覆盖仅写入专用副本，同时影响测试宿主与执行端，证据记录实际值；产品的默认继承规则和用户配置不变。
+
 
 ## 发行验证补充
 
