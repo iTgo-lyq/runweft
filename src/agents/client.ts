@@ -1,4 +1,6 @@
 import { z } from 'zod';
+import { agentLaunchOptions, type AgentLaunchOptions } from './launch';
+export type { AgentLaunchOptions } from './launch';
 import { connectionName, type ResolvedConfig } from '../config';
 import { errorDetails, RunweftError } from '../errors';
 import { hapiClient, type HapiClient } from '../hapi';
@@ -9,7 +11,6 @@ import { contentVersion, listAgents, readAgent, type AgentDocument, type AgentSc
 
 export type AgentConnection = { name: string; namespace: string };
 export type AgentSelection = { runtimeId: string; source: 'binding' | 'definition' };
-export type AgentLaunchOptions = { agent: Flavor; model?: string; effort?: string; modelReasoningEffort?: string; disabledMcpServers: string[] };
 export type ResolvedAgent = AgentDocument & {
     connection: AgentConnection; selection: AgentSelection; target: ExecutionTarget; launchOptions: AgentLaunchOptions; resolvedVersion: string;
     modelAuthentication: 'not_checked'; modelCompatibility: 'not_checked'; execution: 'not_checked';
@@ -27,12 +28,7 @@ function matchFlavor(agent: AgentDocument, flavor: Flavor) {
 }
 function snapshot(agent: AgentDocument, connection: AgentConnection, selected: AgentSelection, target: ExecutionTarget): ResolvedAgent {
     matchFlavor(agent, target.flavor);
-    const launchOptions: AgentLaunchOptions = { agent: target.flavor, disabledMcpServers: ['runweft'] };
-    if (agent.definition.model) launchOptions.model = agent.definition.model;
-    if (agent.definition.reasoningEffort) {
-        if (target.flavor === 'codex') launchOptions.modelReasoningEffort = agent.definition.reasoningEffort;
-        else launchOptions.effort = agent.definition.reasoningEffort;
-    }
+    const launchOptions = agentLaunchOptions(agent.definition, target.flavor);
     return structuredClone({ ...agent, connection, selection: selected, target, launchOptions,
         resolvedVersion: contentVersion({ definitionVersion: agent.definitionVersion, connection, selection: selected, machineId: target.machineId, flavor: target.flavor }),
         modelAuthentication: 'not_checked', modelCompatibility: 'not_checked', execution: 'not_checked',

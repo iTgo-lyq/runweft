@@ -16,6 +16,7 @@ export class HubClient {
     private readonly identityToken: string;
     private readonly expectedIdentity?: string;
     private ready = false;
+    private capabilities: Record<string, number> = {};
     private jwt?: string;
     private expiresAt = 0;
 
@@ -53,7 +54,11 @@ export class HubClient {
         if (health?.service !== 'runweft' || health?.capabilities?.[this.capability] !== 1 || health?.capabilities?.hubAccess !== 1) {
             throw new RunweftError(this.unavailableCode, '目标服务尚未启用当前命令所需的 Hub 能力。', '升级配套 Hub；不会回退到旧 HAPI token 或本地配置。');
         }
-        this.ready = true;
+        this.capabilities = health.capabilities; this.ready = true;
+    }
+    protected async requireCapability(capability: string, code: string) {
+        await this.checkHub();
+        if (this.capabilities[capability] !== 1) throw new RunweftError(code, '目标 Hub 尚未启用此功能。', '升级配套 Hub 后重试；不会回退本地配置。');
     }
     private async send(path: string, options: RequestInit, extraSecrets: string[] = []) {
         try { await this.checkHub(); return await fetchJson(this.url + path, { ...options, redirect: 'error' }); }

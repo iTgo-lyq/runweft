@@ -29,7 +29,7 @@ Hub 持有明确的 Repository、中心 Agent 版本与本人选择；同一仓�
 
 ### T3 个人选择、授权交集与固定解析
 
-- 状态：待开始
+- 状态：已完成
 - 交付：user × space × repository 选择和 runtime override，确定优先级与来源；复用资源解析、原生参数映射及同步提交判定；HTTP/CLI preview/resolve。
 - 依赖：T2。
 - 验收：无确定项不按名字挑选；失效仓库选择不偷偷回退；Agent/runtime 两权限交集；探测期间改配置/撤销/退出被识别，不能输出混合版本；返回快照不随编辑改变。

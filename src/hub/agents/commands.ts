@@ -28,4 +28,13 @@ export function addAgentCommands(hub: Command, output: (value: unknown, human: s
     read(group.command('block <id>').description('管理员禁用；不改写或取得私有内容'), (c, id) => c.block(id, true));
     read(group.command('unblock <id>'), (c, id) => c.block(id, false));
     read(group.command('versions <id>').description('仅所有者可读完整历史版本'), (c, id) => c.versions(id));
+    read(group.command('select <id>').description('保存本人的仓库或空间默认选择；不修改 Agent 定义')
+        .option('--repository <id>', '仓库 UUID；省略表示空间默认').option('--runtime <id>', '本人的执行目标 override'),
+        (c, id, opts) => c.select(id, opts.repository ?? null, opts.runtime ?? null));
+    read(group.command('selection').description('列出本人在当前空间的已保存选择，包括已失效引用'), c => c.selections());
+    read(group.command('unselect').option('--repository <id>', '仓库 UUID；省略删除空间默认'), (c, opts) => c.unselect(opts.repository ?? null));
+    read(group.command('resolve').description('解析固定配置与当前执行目标；只探测工具，不启动模型')
+        .option('--agent <id>', '本次显式 Agent UUID').option('--repository <id>', 'Hub 配置仓库 UUID').option('--runtime <id>', '本次显式 runtime UUID'),
+        (c, opts) => c.resolve({ agentId: opts.agent, hubRepositoryId: opts.repository ?? null, runtimeId: opts.runtime }));
+
 }

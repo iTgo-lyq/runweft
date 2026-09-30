@@ -26,7 +26,7 @@ Runtime 选择顺序：本次显式 runtimeId → 与已选 Agent 相同的本�
 
 先确定 Agent 和固定版本，检查当前调用权、owner 成员资格、登记/治理、仓库范围；再选择 runtime，复用资源领域同步授权与实际探测。共享 Agent 不自动开放私有 runtime；返回目标未授权原因，不泄漏未开放的机器配置。
 
-异步探测前后重查同一 Agent 版本、调用权、Repository 和 runtime；版本改变返回 agent_configuration_changed，不把一次请求中旧 instructions 与新目标拼在一起。成功返回只读序列化快照：Agent ID/整数版本/内容摘要、定义、身份/空间/hubRepositoryId、选择来源、裁剪后的 runtime 目标、原生 launchOptions、resolvedVersion。Codex 映射 modelReasoningEffort，Claude 映射 effort；固定 disabledMcpServers=['runweft']，其他原生权限使用默认。
+异步探测前后重查同一 Agent 版本、调用权、Repository 和 runtime；版本或本次决定层的个人选择改变返回 agent_configuration_changed，不把一次请求中旧 instructions 与新目标拼在一起；当前授权或上下文已失效时保留其具体失效原因。成功返回只读序列化快照：Agent ID/整数版本/内容摘要、定义、身份/空间/hubRepositoryId、选择来源、裁剪后的 runtime 目标、原生 launchOptions、resolvedVersion。Codex 映射 modelReasoningEffort，Claude 映射 effort；固定 disabledMcpServers=['runweft']，其他原生权限使用默认。
 
 版本历史不随后续编辑改变；调用者不能提交旧快照冒充当前授权。导出同步 invocable/validateSelection 供阶段 5 在接受、派发、新轮次时复核，任务保存自己的不可变快照与访问范围。本阶段解析不创建 HAPI session 或 Task/Round。
 
@@ -36,3 +36,7 @@ Runtime 选择顺序：本次显式 runtimeId → 与已选 Agent 相同的本�
 - `/agent-selections`：GET 本人记录、PUT 当前空间/仓库选择、DELETE 删除；严格限制字段，不能指定另一个 userId。
 - `/agent-resolution`：POST 解析配置与执行目标，失败保留可操作 code/message，不自动启动执行。
 - `hub agent create/list/show/update/register/unregister/access/block/unblock/versions`；`hub agent select/selection/unselect/resolve`。创建/编辑从显式 JSON 文件读取业务字段，文件只是一次输入，不是持续权威配置；提供 request-id/expected-version 控制重复与并发。列表不触发模型或默认选择。
+
+## 下游使用边界
+
+validateSelection 用于一次解析跨异步调用的固定选择检查；任务接收端须自己解析，不能接收客户端提交的旧快照作为权威。任务已被服务端接受后，其快照仍保留原内容/目标；后续纯内容编辑不改写或重定向它。派发前对已持久化快照调用当前 invocable 与资源 usable，重新核对成员、共享、登记、治理、仓库适用范围及固定 runtime；新轮次再解析当前定义。任务状态和续接细节仍由阶段 5 接线，本阶段不创建执行。

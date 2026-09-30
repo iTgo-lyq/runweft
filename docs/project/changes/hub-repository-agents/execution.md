@@ -25,3 +25,13 @@
 - 验证：typecheck/build 通过；全仓 223 pass、0 fail、4547 expectations、33 文件（`t2-tests.log`）。编译 CLI 验证并发创建和版本 CAS、分享/治理/历史权限；API 覆盖私有摘要、严格字段/体积、角色撤销、成员退出/重入、v13 升级和旧 Agent 路径回归。共享客户端内部认证方法与业务 access 同名冲突在类型检查中发现，已改为 userJwt 并经真实 HTTP/CLI 回归。
 - 证据：`.dev-smoke/reviews/hub-repository-agents/t2-*.log`。无模型调用、用户配置或 HAPI 源码更改。
 - Commit：`hub-repository-agents T2: version owned Agent definitions and enforce sharing governance`
+
+## T3 个人选择、授权交集与固定解析
+
+- 实现：v15 个人选择按 user/space/COALESCE(repositoryId, '') 唯一；成员移除在同事务通过 FK 删除选择。显式 Agent、仓库选择、空间默认按固定顺序；runtime override 仅用于同一 Agent，选中项失效不回退。
+- 解析：先检查中心 Agent 当前权限/仓库/版本，再复用 HubResourceService 的当前 native 探测。RequestLease 在探测期间重查内容、决定层选择和授权；版本变化返回 agent_configuration_changed，撤销返回当前具体原因。输出固定内容摘要/版本、来源、裁剪目标与原生参数，不创建 Task/session，不代管模型认证。
+- 复用：Codex/Claude launchOptions 纯映射供旧和新路径共用；继续移除 Runweft MCP、使用原生权限默认值。完整解析能力 hubAgents:1 正式声明，CLI select/selection/unselect/resolve 与管理共用 Hub 身份；不接受他人的 userId 或客户端伪造快照。
+- 消费者边界：同次异步解析使用 validateSelection；已被服务端接受的任务保留原内容/目标，在派发时复核当前 invocable/usable，而不因编辑偷偷重定向。任务接收、新轮次和持久快照由阶段 5 实装。
+- 验证：typecheck/build 通过；全仓 230 pass、0 fail、4724 expectations、34 文件（`t3-tests.log`）。编译 CLI 并发 PUT 空间默认始终一行；覆盖确定选择、失效不回退、类型匹配、两用户选择隔离、私有 runtime/Agent 权限交集与模型未调用。7 种探测期间变更均拒绝过时结果；固定快照和 resolvedVersion 不受探测时间影响。
+- 证据：`.dev-smoke/reviews/hub-repository-agents/t3-*.log`。旧 Agent 原生映射测试保留并通过；真实 Runner/组合 smoke 在 T4。
+- Commit：`hub-repository-agents T3: resolve personal choices with fixed Agent snapshots and current access`

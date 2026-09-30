@@ -248,3 +248,23 @@ test('compiled Agent CLI creates private definitions, fences concurrent versions
     expect(readFileSync(path, 'utf8')).toContain('private initial'); // input is not replaced or made into a file authority
     expect(h.calls).toEqual([]);
 }, 20_000);
+
+test('compiled selection CLI keeps one personal default and resolves fixed central snapshots without creating sessions', async () => {
+    const h = await hubResourceFixture(cleanups, true), space = h.a.personalSpace.id, file = backup(h.home, h.url, h.a), home = join(h.home, 'selection-client');
+    const run = (args: string[]) => cli(home, h.url, file, ['agent', ...args], space);
+    const machine = (await cli(home, h.url, file, ['machine', 'enroll'])).result.machineId; h.connect(machine);
+    await cli(home, h.url, file, ['machine', 'associate', machine, space]);
+    const runtime = (await cli(home, h.url, file, ['runtime', 'register', 'codex', '--machine', machine], space)).result.runtime.id;
+    const path = join(h.home, 'role.json'); writeFileSync(path, JSON.stringify({ name: 'Role', instructions: 'do work', flavor: 'codex', model: 'configured model', reasoningEffort: 'high' }));
+    const id = (await run(['create', '--request-id', randomUUID(), '--file', path])).result.agent.id;
+    expect((await run(['resolve'])).error.code).toBe('agent_selection_required');
+    const results = await Promise.all([run(['select', id, '--runtime', runtime]), run(['select', id, '--runtime', runtime])]);
+    expect(results.map(r => r.exit)).toEqual([0, 0]); expect((await run(['selection'])).result.selections).toHaveLength(1);
+    const resolution = (await run(['resolve'])).result.resolution;
+    expect(resolution).toMatchObject({ agentId: id, version: 1, selection: { agent: 'space', runtime: 'space' },
+        target: { runtimeId: runtime }, launchOptions: { agent: 'codex', model: 'configured model', modelReasoningEffort: 'high', disabledMcpServers: ['runweft'] } });
+    const explicit = await run(['resolve', '--agent', id, '--runtime', runtime]); expect(explicit.result.resolution.selection).toEqual({ agent: 'explicit', runtime: 'explicit' });
+    expect((await run(['unselect'])).result.removed).toBe(true);
+    expect((await run(['resolve'])).error.code).toBe('agent_selection_required');
+    expect(h.calls.some(call => call.includes('/sessions'))).toBe(false);
+}, 20_000);

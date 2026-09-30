@@ -4,7 +4,7 @@ import { dirname } from 'node:path';
 import { ensureDirectory } from './config';
 import { ResourceError } from './resources/types';
 
-export const STATE_SCHEMA_VERSION = 14;
+export const STATE_SCHEMA_VERSION = 15;
 
 /** One additive schema for the central business database; native history stays in HAPI. */
 export function openState(path: string) {
@@ -276,6 +276,17 @@ export function openState(path: string) {
                     agentId TEXT PRIMARY KEY REFERENCES hub_agents(id), actorId TEXT NOT NULL REFERENCES hub_users(id), createdAt INTEGER NOT NULL
                 );
                 PRAGMA user_version=14;
+            `);
+            if (version < 15) db.exec(`
+                CREATE TABLE hub_agent_selections (
+                    userId TEXT NOT NULL, spaceId TEXT NOT NULL, repositoryId TEXT, agentId TEXT NOT NULL,
+                    runtimeId TEXT REFERENCES hub_resource_runtimes(id), createdAt INTEGER NOT NULL, updatedAt INTEGER NOT NULL,
+                    FOREIGN KEY(spaceId, userId) REFERENCES hub_memberships(spaceId, userId) ON DELETE CASCADE,
+                    FOREIGN KEY(repositoryId, spaceId) REFERENCES hub_repositories(id, spaceId),
+                    FOREIGN KEY(agentId, spaceId) REFERENCES hub_agents(id, spaceId)
+                );
+                CREATE UNIQUE INDEX hub_agent_selection_scope ON hub_agent_selections(userId, spaceId, COALESCE(repositoryId, ''));
+                PRAGMA user_version=15;
             `);
         }).immediate();
         return db;
