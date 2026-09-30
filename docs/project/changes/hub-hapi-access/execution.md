@@ -32,3 +32,11 @@
 - 验证：`bun run typecheck`、聚焦授权测试 11 pass / 104 expectations 通过；全套仓库测试 190 pass / 0 fail / 3883 expectations，原始记录 `.dev-smoke/reviews/hub-hapi-access/t3-tests.log`。新增默认/未知 namespace 和 upgrade 测试为 1 pass / 9 expectations。最终真实 HAPI smoke：`.dev-smoke/hub-realtime-fXFDM4/evidence.json` 10 组通过；HTTP/文件 smoke 改为使用外部 Socket 网关后 `.dev-smoke/hub-access-YZglPw/evidence.json` 10 组通过。
 - 真实范围：编译且未改造的 Runner 完成登记、心跳和目录 RPC；原生 HAPI 的终端 registry、SSE、Claude fork/bootstrap、Codex 共享 fork/clear 完成协议 fixture 验证；含真实 45 秒心跳失效后的同 host 回退拦截、12.5 MiB SSE 背压撤销、身份轮换与成员移除。未使用真实模型或 PTY；两个 runtime 的模型回归仍在阶段 5。HAPI 子模块无修改。
 - Commit：`hub-hapi-access T3: authorize native sockets and event streams`
+
+## T4 整体验证与下阶段接口交付
+
+- 结果：完整授权矩阵验收通过，新增同 tag 的机器隔离、嵌套 scratchlist 附件 ID 隔离和无明文凭据日志检查。新网关以可组合服务及两套可重复 smoke 交付，保留默认 serve 的接入迁移边界。
+- 验证：类型检查、全套 191 tests / 3892 expectations / 28 files、`bun run build`、Change 结构和 diff 检查通过。网关模块另随两个 smoke 编译成独立程序，实际运行各完成 12/10 组真实 HAPI 验证。详情和原始路径见 [验收](acceptance.md)。
+- 交付接口：`createAccessGateway` 返回可信 store、sessions、files/native 服务；阶段 3 创建资源归属和机器凭据，阶段 5 在受控派生前保存意图、签发文件输出许可和方向性 grants。业务 HTTP 回调只收到重新验证的用户主体，仍须按其领域规则校验对象并处理异步提交前撤销。
+- 限制：未切换旧服务；模型、真实 PTY、最终多平台产物按后续阶段组合验收。未使用新 runtime adapter 或修改 HAPI fork。
+- Commit：`hub-hapi-access T4: verify compiled authorization gateway`

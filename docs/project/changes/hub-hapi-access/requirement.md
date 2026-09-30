@@ -1,6 +1,6 @@
 # HAPI 通道的身份与对象授权
 
-> 状态：进行中
+> 状态：待验收
 > 规模：大型
 > 前置：[身份与空间](../../archive/2026-09-30-hub-identities-and-spaces/requirement.md)
 > 更新：2026-09-30

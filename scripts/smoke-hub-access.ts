@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
-import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, writeFileSync, readFileSync } from 'node:fs';
 import { get as httpGet } from 'node:http';
 import { join, resolve } from 'node:path';
 import { Database } from 'bun:sqlite';
@@ -102,6 +102,14 @@ try {
     await api('/api/sessions?namespace=runweft', bj, undefined, 'GET', 400);
     check('public spawn generates scoped request IDs and identical retry keeps one native session; forged machine/namespace is rejected');
 
+    const sameTag = (await api('/cli/sessions', mc.token, { tag: 'native-a', metadata: { path: root, host: 'same-host', flavor: 'codex', machineId: 'machine-c' } })).session.id;
+    assert.notEqual(sameTag, sa);
+    const attachment = (await api(`/api/sessions/${sa}/scratchlist/upload`, aj, { filename: 'owned.txt', content: Buffer.from('owned scratch file').toString('base64'), mimeType: 'text/plain' })).attachment;
+    await api(`/api/sessions/${sa}/scratchlist`, aj, { text: 'owned', attachments: [attachment] });
+    await api(`/api/sessions/${sb}/scratchlist`, bj, { text: 'forged reference', attachments: [attachment] }, 'POST', 400);
+    await api(`/api/sessions/${sb}/scratchlist/attachments/${attachment.id}`, bj, undefined, 'GET', 404);
+    check('matching tags stay machine-scoped; nested scratchlist attachment IDs cannot cross session ownership');
+
     const childSocket = await connect({ token: ma.token, sessionId: sb });
     childSocket.emit('message', { sid: sb, message: { role: 'agent', content: { type: 'text', text: 'owned-report' } }, localId: randomUUID() });
     await new Promise<void>(yes => childSocket.emit('ping', yes));
@@ -197,6 +205,12 @@ try {
     const replacement = createIdentityToken(); hub.rotate(b.identity, b.token, replacement);
     await api(`/api/sessions/${sb}`, bj, undefined, 'GET', 401);
     check('rotation rejects previously issued API JWTs');
+    for (const path of ['hapi-out.log', 'hapi-err.log']) {
+        const log = readFileSync(join(root, path), 'utf8');
+        for (const secret of [rootToken, a.token, b.token, c.token, ma.token, mc.token]) assert(!log.includes(secret), 'credentials must not enter service logs');
+    }
+    check('service logs contain no root, identity or machine credentials');
+
     evidence.success = true;
 } catch (error) { evidence.error = error instanceof Error ? error.message : String(error); throw error; }
 finally {
