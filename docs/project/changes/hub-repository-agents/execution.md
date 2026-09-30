@@ -15,3 +15,13 @@
 - 验证：真实 Git clone/worktree、insteadOf、本机先脱敏、SCP/SSH 用户/路径区别、跨路径规范键、HTTP 权限、跨进程编译 CLI 创建重放及无隐式原生调用。typecheck/build 通过；聚焦 35 pass，原资源客户端和凭据回归通过。全仓首次发现两处旧迁移夹具未删除新表；修正后相关 12 项通过，完整复跑 216 pass、0 fail、4436 expectations、32 文件通过（`t1-tests-final.log`）。
 - 证据：`.dev-smoke/reviews/hub-repository-agents/t1-*.log`；HAPI 子模块无修改。未启动模型或默认新服务，原生 Runner 组合验收在 T4。
 - Commit：`hub-repository-agents T1: centralize repository aliases and private checkout association`
+
+## T2 中心 Agent 版本、共享与治理
+
+- 实现：v14 增量表保存稳定 Agent、不可变定义版本、成员授权与独立治理禁用。完整 definition 条件更新、创建请求去重和回执不会重写后续版本、登记或分享；同名不同 owner 保持独立 ID。
+- 授权：仅 owner 改写/登记/分享/读取历史；分享者可读当前内容；非 owner 管理员只见显式治理字段，不含 instructions、model、runtime 或内容摘要。当前空间角色实时查询，降级立即失去治理权限。
+- 退出：删除成员时 FK 同事务清除对其显式分享；其本人 Agent 撤回所有共享为 private，保留内容版本、登记与治理事实；重入不自动恢复旧分享。runtime 新绑定同步复用资源授权，原绑定失效仍允许修改指令，解析权限交集留给 T3。
+- 接口：独立 Hub `/agents` 与 `hub agent` 管理命令；JSON 文件仅本次完整定义输入。管理能力 hubAgentDefinitions:1 独立可用，完整解析 hubAgents:1 尚未声明。
+- 验证：typecheck/build 通过；全仓 223 pass、0 fail、4547 expectations、33 文件（`t2-tests.log`）。编译 CLI 验证并发创建和版本 CAS、分享/治理/历史权限；API 覆盖私有摘要、严格字段/体积、角色撤销、成员退出/重入、v13 升级和旧 Agent 路径回归。共享客户端内部认证方法与业务 access 同名冲突在类型检查中发现，已改为 userJwt 并经真实 HTTP/CLI 回归。
+- 证据：`.dev-smoke/reviews/hub-repository-agents/t2-*.log`。无模型调用、用户配置或 HAPI 源码更改。
+- Commit：`hub-repository-agents T2: version owned Agent definitions and enforce sharing governance`

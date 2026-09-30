@@ -64,7 +64,7 @@ export class HubClient {
             throw new HapiRequestError(error instanceof HapiRequestError ? error.status : 503, clean(error.code)!, clean(error.message)!, clean(error.hint));
         }
     }
-    private async access() {
+    private async userJwt() {
         if (this.jwt && this.expiresAt > Date.now() + 30_000) return this.jwt;
         const reply = await this.send('/api/auth', { method: 'POST', headers: { 'content-type': 'application/json' },
             body: JSON.stringify({ accessToken: this.identityToken, ...(this.spaceId ? { spaceId: this.spaceId } : {}) }) });
@@ -76,7 +76,7 @@ export class HubClient {
         this.jwt = reply.token; this.expiresAt = claims.exp * 1000; return this.jwt!;
     }
     protected async request<T>(path: string, method = 'GET', body?: object): Promise<T> {
-        const jwt = await this.access();
+        const jwt = await this.userJwt();
         return this.send(path, { method, headers: { authorization: `Bearer ${jwt}`, ...(body ? { 'content-type': 'application/json' } : {}) },
             ...(body ? { body: JSON.stringify(body) } : {}) }, body && 'token' in body ? [String(body.token)] : []);
     }

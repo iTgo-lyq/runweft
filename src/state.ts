@@ -4,7 +4,7 @@ import { dirname } from 'node:path';
 import { ensureDirectory } from './config';
 import { ResourceError } from './resources/types';
 
-export const STATE_SCHEMA_VERSION = 13;
+export const STATE_SCHEMA_VERSION = 14;
 
 /** One additive schema for the central business database; native history stays in HAPI. */
 export function openState(path: string) {
@@ -250,6 +250,32 @@ export function openState(path: string) {
                     FOREIGN KEY(repositoryId, spaceId) REFERENCES hub_repositories(id, spaceId)
                 );
                 PRAGMA user_version=13;
+            `);
+            if (version < 14) db.exec(`
+                CREATE TABLE hub_agents (
+                    id TEXT PRIMARY KEY, ownerId TEXT NOT NULL REFERENCES hub_users(id), spaceId TEXT NOT NULL REFERENCES hub_spaces(id),
+                    repositoryId TEXT, currentVersion INTEGER NOT NULL, registered INTEGER NOT NULL CHECK(registered IN (0, 1)),
+                    accessMode TEXT NOT NULL CHECK(accessMode IN ('private', 'members', 'space')),
+                    requestId TEXT NOT NULL, fingerprint TEXT NOT NULL, createdAt INTEGER NOT NULL, updatedAt INTEGER NOT NULL,
+                    UNIQUE(ownerId, requestId), UNIQUE(id, spaceId),
+                    FOREIGN KEY(repositoryId, spaceId) REFERENCES hub_repositories(id, spaceId)
+                );
+                CREATE INDEX hub_agent_space ON hub_agents(spaceId);
+                CREATE TABLE hub_agent_versions (
+                    agentId TEXT NOT NULL REFERENCES hub_agents(id), version INTEGER NOT NULL,
+                    definition TEXT NOT NULL, contentHash TEXT NOT NULL, createdAt INTEGER NOT NULL,
+                    PRIMARY KEY(agentId, version)
+                );
+                CREATE TABLE hub_agent_members (
+                    agentId TEXT NOT NULL, spaceId TEXT NOT NULL, userId TEXT NOT NULL,
+                    PRIMARY KEY(agentId, userId),
+                    FOREIGN KEY(agentId, spaceId) REFERENCES hub_agents(id, spaceId),
+                    FOREIGN KEY(spaceId, userId) REFERENCES hub_memberships(spaceId, userId) ON DELETE CASCADE
+                );
+                CREATE TABLE hub_agent_blocks (
+                    agentId TEXT PRIMARY KEY REFERENCES hub_agents(id), actorId TEXT NOT NULL REFERENCES hub_users(id), createdAt INTEGER NOT NULL
+                );
+                PRAGMA user_version=14;
             `);
         }).immediate();
         return db;

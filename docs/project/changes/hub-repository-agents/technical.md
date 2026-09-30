@@ -25,7 +25,7 @@ HAPI 缺少的是上述业务目录与选择，不缺执行、会话或工具探
 
 新增 `/api/runweft/repositories`、`/api/runweft/checkouts`、`/api/runweft/agents`、`/api/runweft/agent-selections`，以及 `/api/runweft/agent-resolution`。均要求用户短 JWT 和明确选定空间。健康能力新增 hubRepositories:1、hubAgents:1；通用 Hub 客户端抽取为独立连接基类，资源客户端保留原契约。
 
-组合网关以显式 capability 参数累加领域能力，不丢失已交付资源/身份能力；尚未接入的 Agent 接口不提前声明可用。“全局 Agent”仅表示所选空间内跨仓库，不提供未选空间或跨全部空间的配置。
+组合网关以显式 capability 参数累加领域能力，不丢失已交付资源/身份能力；尚未接入的 Agent 接口不提前声明可用。T2 的定义管理独立声明 hubAgentDefinitions:1；T3 完成解析后再声明 hubAgents:1，客户端分别检查对应能力。“全局 Agent”仅表示所选空间内跨仓库，不提供未选空间或跨全部空间的配置。
 
 创建 Repository/Agent 使用 owner 作用域的 UUID requestId 与规范内容摘要，响应丢失可查询同一请求，重放不产生第二个对象或覆盖之后的编辑。CLI 创建显式接收 `--request-id`；Web 后续按一次操作保存一个 requestId。更新定义用 expectedVersion 条件写，冲突 409，不静默覆盖。对象 owner/space/稳定 ID 不接受修改字段。
 

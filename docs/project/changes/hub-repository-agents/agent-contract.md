@@ -2,7 +2,7 @@
 
 ## 定义与访问
 
-Agent 使用 Hub 分配的稳定 UUID，固定 owner/space；名称可重复。适用范围是当前空间跨仓库（repositoryId=null）或一个 Repository；可以更新范围但生成新定义版本。业务字段为 name/description/instructions、可空 runtimeId/flavor/model/reasoningEffort；不保存任意启动命令、环境变量、MCP/skill 安装配置或模型凭据。模型/推理参数非空时必须指明 codex/claude；最终目标必须匹配 flavor。
+Agent 使用 Hub 分配的稳定 UUID，固定 owner/space；名称可重复。适用范围是当前空间跨仓库（repositoryId=null）或一个 Repository；可以更新范围但生成新定义版本。业务字段为 name/description/instructions、可空 runtimeId/flavor/model/reasoningEffort；不保存任意启动命令、环境变量、MCP/skill 安装配置或模型凭据。模型/推理参数非空时必须指明 codex/claude；最终目标必须匹配 flavor。name 最多 80、description 4096、instructions 32768、model/reasoningEffort 各 256 个字符，控制请求仍受 64 KiB 限制。编辑提交完整 definition 与 expectedVersion，缺少 name 或含未知字段均拒绝，不把部分输入当作覆盖补丁。
 
 每次内容编辑以 expectedVersion 条件写入，递增整数版本并追加不可变定义行；对象登记状态、分享和治理分别保存，不让治理修改所有者的内容。创建 requestId 与初始内容摘要去重；恢复登记不另建 ID。历史版本仅 owner 可查，不能以过去的分享关系读取旧 instructions。
 

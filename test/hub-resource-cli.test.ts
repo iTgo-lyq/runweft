@@ -217,3 +217,34 @@ test('compiled repository CLI serializes replay, matches real Git worktrees, rep
     expect((await run(['show', repo.id])).result.repository.id).toBe(repo.id);
     expect(h.calls).toEqual([]); // metadata does not probe or start the native runtime
 }, 20_000);
+
+test('compiled Agent CLI creates private definitions, fences concurrent versions, and separates owner sharing from administrator governance', async () => {
+    const h = await hubResourceFixture(cleanups, true), space = h.a.personalSpace.id, file = backup(h.home, h.url, h.a), otherFile = backup(h.home, h.url, h.b, 'admin.txt');
+    const home = join(h.home, 'agent-client'), path = join(h.home, 'definition.json'), next = join(h.home, 'next.json'), alternative = join(h.home, 'alternative.json');
+    writeFileSync(path, JSON.stringify({ name: 'Reviewer', instructions: 'private initial', flavor: 'codex', model: 'private model' }));
+    writeFileSync(next, JSON.stringify({ name: 'Reviewer', instructions: 'update one' }));
+    writeFileSync(alternative, JSON.stringify({ name: 'Reviewer', instructions: 'update two' }));
+    const run = (args: string[], identity = file) => cli(home, h.url, identity, ['agent', ...args], space);
+    const requestId = randomUUID(), args = ['create', '--request-id', requestId, '--file', path];
+    const [one, two] = await Promise.all([run(args), run(args)]);
+    expect(one.exit).toBe(0); expect(two.exit).toBe(0); const id = one.result.agent.id;
+    expect(two.result.agent.id).toBe(id); expect(one.result.agent.accessMode).toBe('private');
+    const summary = await run(['show', id], otherFile); expect(summary.result.agent.view).toBe('governance'); expect(summary.stdout).not.toContain('private initial'); expect(summary.stdout).not.toContain('private model');
+    expect((await run(['update', id, '--expected-version', '1', '--file', next], otherFile)).error.code).toBe('agent_owner_required');
+    const edited = await Promise.all([run(['update', id, '--expected-version', '1', '--file', next]), run(['update', id, '--expected-version', '1', '--file', alternative])]);
+    expect(edited.map(x => x.exit).sort()).toEqual([0, 1]); expect(edited.find(x => x.exit === 1)!.error.code).toBe('agent_version_conflict');
+    expect((await run(['versions', id])).result.versions.map((v: any) => v.version)).toEqual([1, 2]);
+    expect((await run(['versions', id], otherFile)).error.code).toBe('agent_owner_required');
+    expect((await run(args)).result.agent.version).toBe(2); expect((await run(['request', requestId])).result.agent.id).toBe(id);
+    expect((await run(['access', id, 'members', '--member', h.b.identity.id])).result.agent.memberIds).toEqual([h.b.identity.id]);
+    expect((await run(['show', id], otherFile)).result.agent.view).toBe('definition');
+    expect((await run(['versions', id], otherFile)).error.code).toBe('agent_owner_required');
+    expect((await run(['block', id], otherFile)).result.agent.blocked).toBe(true);
+    expect((await run(['unregister', id])).result.agent.registered).toBe(false);
+    expect((await run(['register', id])).result.agent.blocked).toBe(true);
+    expect((await run(['access', id, 'space'])).result.agent.blocked).toBe(true);
+    expect((await run(['unblock', id], otherFile)).result.agent.blocked).toBe(false);
+    expect((await run(['list'])).result.agents).toHaveLength(1);
+    expect(readFileSync(path, 'utf8')).toContain('private initial'); // input is not replaced or made into a file authority
+    expect(h.calls).toEqual([]);
+}, 20_000);
