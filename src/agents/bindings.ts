@@ -6,7 +6,7 @@ export type AgentBinding = { sourceKey: string; connectionName: string; namespac
 const table = 'agent_runtime_bindings';
 
 export function agentBindings(c: ResolvedConfig, sourceKey?: string): AgentBinding[] {
-    const path = dataPaths(c).bindings;
+    const path = dataPaths(c).clientState;
     if (!existsSync(path)) return [];
     const db = new Database(path, { readonly: true });
     try {
@@ -18,7 +18,7 @@ export function agentBindings(c: ResolvedConfig, sourceKey?: string): AgentBindi
 }
 export function saveAgentBinding(c: ResolvedConfig, sourceKey: string, namespace: string, runtimeId: string) {
     ensureDirectory(c.home);
-    const path = dataPaths(c).bindings, db = new Database(path, { create: true });
+    const path = dataPaths(c).clientState, db = new Database(path, { create: true });
     try {
         chmodSync(path, 0o600);
         db.exec(`PRAGMA journal_mode=WAL; PRAGMA busy_timeout=5000;
@@ -31,7 +31,7 @@ export function saveAgentBinding(c: ResolvedConfig, sourceKey: string, namespace
 }
 export function removeAgentBinding(c: ResolvedConfig, sourceKey: string, namespace: string) {
     if (!agentBindings(c, sourceKey).some(binding => binding.namespace === namespace)) return false;
-    const db = new Database(dataPaths(c).bindings);
+    const db = new Database(dataPaths(c).clientState);
     try {
         db.exec('PRAGMA busy_timeout=5000;');
         return db.query(`DELETE FROM ${table} WHERE sourceKey=? AND connectionName=? AND namespace=?`).run(sourceKey, connectionName(c.config), namespace).changes > 0;

@@ -2,7 +2,6 @@ import type { Command } from 'commander';
 import { z } from 'zod';
 import type { Artifact } from '../../hapi/shared/src/artifacts';
 import type { ResolvedConfig } from '../config';
-import { hapiClient } from '../hapi';
 import { RunweftError } from '../errors';
 import { ArtifactClient, type TransferProgress } from './client';
 
@@ -20,9 +19,9 @@ async function transfer<T>(program: Command, action: (signal: AbortSignal, progr
     } finally { process.off('SIGINT', stop); process.off('SIGTERM', stop); }
 }
 export function addArtifactCommands(program: Command, context: () => ResolvedConfig, output: (value: unknown, human: string) => void,
-    client = () => new ArtifactClient(hapiClient(context()))) {
+    client: () => ArtifactClient) {
     const command = program.command('artifact').description('上传、下载与管理当前中心的持久文件；无需活跃 agent');
-    command.command('limits').description('查看服务端文件限制与 namespace 用量').action(async () => {
+    command.command('limits').description('查看服务端文件限制与 身份/空间用量').action(async () => {
         const result = await client().limits(); output(result, `单文件：${result.limits.maxFileBytes} 字节\n已预约/保留：${result.usedBytes} / ${result.limits.namespaceQuotaBytes} 字节\n已发布：${result.usage.availableBytes} 字节；待上传：${result.usage.reservedBytes} 字节；删除中：${result.usage.deletingBytes} 字节\n引用保留：${result.usage.referencedCount} 个对象 / ${result.usage.referencedBytes} 字节\n未引用文件按发布时间满 ${result.limits.unreferencedDays} 天、未引用预约按创建时间满 ${result.limits.pendingHours} 小时可清理。\n这些限制来自当前所连服务；用 artifact prune 预览。`);
     });
     command.command('prune').description('预览已过期且无引用的文件；--apply 才删除字节')
@@ -50,7 +49,7 @@ export function addArtifactCommands(program: Command, context: () => ResolvedCon
         });
     command.command('show <id>').description('查看对象状态和完整性信息').action(async id => { const result = await client().show(id); output(result, text(result)); });
     command.command('lookup <request-id>').description('按原请求 ID 查询上传接受/发布结果').action(async requestId => { const result = await client().lookup(requestId); output(result, text(result)); });
-    command.command('list').description('列出当前 namespace 文件与删除记录').option('--offset <n>', '分页偏移', '0').option('--limit <n>', '每页数量，最多 200', '50')
+    command.command('list').description('列出当前身份/空间文件与删除记录').option('--offset <n>', '分页偏移', '0').option('--limit <n>', '每页数量，最多 200', '50')
         .action(async options => { const result = await client().list(Number(options.offset), Number(options.limit)); output(result,
             result.artifacts.map(text).join('\n\n') + (result.nextOffset === null ? '' : `\n下一页：runweft artifact list --offset ${result.nextOffset}`) || '尚无文件。'); });
     command.command('download <id>').description('校验后保存到目标；默认不覆盖')

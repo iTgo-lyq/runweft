@@ -52,7 +52,7 @@ test('agent target snapshots preserve native defaults and flavor mapping without
     expect((await h.client.resolve('coder')).resolvedVersion).not.toBe(coder.resolvedVersion);
     expect(coder.definition.instructions).toBe('Task instructions');
     expect(h.calls.slice(boundary).every(call => call.method === 'GET')).toBe(true);
-    expect(existsSync(dataPaths(h.c).bindings)).toBe(false);
+    expect(existsSync(dataPaths(h.c).clientState)).toBe(false);
     expect(existsSync(dataPaths(h.c).state)).toBe(false);
 });
 
@@ -61,7 +61,7 @@ test('bindings take precedence, preserve shared files and existing client tables
     const codex = await h.register(), claude = await h.register('own', 'claude'), betaRuntime = await h.register('beta-machine', 'codex', h.beta);
     const path = h.define('review', { runtime: codex.id });
     const original = readFileSync(path, 'utf8');
-    const db = new Database(dataPaths(h.c).bindings, { create: true });
+    const db = new Database(dataPaths(h.c).clientState, { create: true });
     db.exec('CREATE TABLE claude_mcp_calls (callId TEXT); INSERT INTO claude_mcp_calls VALUES (\'existing\')'); db.close();
     const first = await h.client.resolve('review');
     await h.client.bind('review', claude.id);
@@ -87,7 +87,7 @@ test('bindings take precedence, preserve shared files and existing client tables
     expect((await h.client.resolve('review')).target.runtimeId).toBe(codex.id);
     expect((await h.client.unbind('review', 'global')).declaredRuntime).toBe(codex.id);
     expect((await h.client.resolve('review', 'global')).selection.source).toBe('definition');
-    const check = new Database(dataPaths(h.c).bindings, { readonly: true });
+    const check = new Database(dataPaths(h.c).clientState, { readonly: true });
     expect(check.query('SELECT callId FROM claude_mcp_calls').get()).toEqual({ callId: 'existing' }); check.close();
 });
 

@@ -15,7 +15,7 @@ type ClaudeCall = { callId: string; sessionId: string; cwd: string; agentId: str
 
 function store(c: ResolvedConfig, now: number) {
     ensureDirectory(c.home);
-    const path = dataPaths(c).bindings;
+    const path = dataPaths(c).clientState;
     const db = new Database(path, { create: true });
     chmodSync(path, 0o600);
     db.exec('PRAGMA journal_mode=WAL; PRAGMA busy_timeout=5000;');
@@ -44,7 +44,7 @@ export function recordClaudeCall(c: ResolvedConfig, input: unknown, now = Date.n
 
 export function consumeClaudeCall(c: ResolvedConfig, callId: string, now = Date.now()): ClaudeCall {
     const missing = () => new RunweftError('claude_hook_missing', '未找到本次 Claude 调用对应的 hook 身份。', '运行 runweft mcp install --client claude，并重新发起调用；已消费或超过 24 小时的记录不可复用。');
-    if (!existsSync(dataPaths(c).bindings)) throw missing();
+    if (!existsSync(dataPaths(c).clientState)) throw missing();
     const db = store(c, now);
     try {
         const call = db.query('DELETE FROM claude_mcp_calls WHERE callId = ? RETURNING *').get(callId) as ClaudeCall | null;

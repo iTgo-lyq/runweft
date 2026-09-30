@@ -3,6 +3,7 @@ import { Command, CommanderError } from 'commander';
 import { stringify } from 'yaml';
 import pkg from '../package.json';
 import { configPath, dataPaths, initializeConfig, loadConfig, setConfig, type ResolvedConfig } from './config';
+import { resetData } from './reset';
 import { errorDetails } from './errors';
 import { addServiceCommands } from './service-commands';
 import { addMcpCommands } from './mcp/commands';
@@ -44,6 +45,14 @@ export function createProgram() {
                 `${result.created ? '已创建' : '保留已有'}配置：${result.file}\n模式：${result.config.mode}\n${result.config.mode === 'hub' ? '下一步：runweft hub connect begin，在 Web 确认后 complete。' : '下一步：runweft start，然后 runweft open。'}\n查看生效配置：runweft config show`);
         });
 
+    program.command('data').description('未上线版本的数据维护').command('reset')
+        .description('预览当前数据根的历史清理；保留 worktree 和原生模型配置')
+        .option('--apply', '确认清理列出的配置、业务历史和中心附件；必须先停服')
+        .action(options => {
+            const result = resetData(program.opts().home, !!options.apply);
+            output(result, `${result.applied ? '已清理' : '仅预览'}：${result.dataRoot}\n${result.remove.join('\n')}\n${result.consequences}\n${result.retained}`);
+        });
+
     const config = program.command('config').description('查看、检查或编辑全局配置');
     config.command('path').description('显示配置文件位置').action(() => {
         const file = configPath(program.opts().home); output({ path: file }, file);
@@ -67,7 +76,7 @@ export function createProgram() {
         output(paths, [
             `数据根：${paths.home}`, `配置：${paths.config}`, `Hub 数据：${paths.server}`,
             `本机中心业务库：${paths.state}${c.config.mode === 'hub' ? '（当前为 Hub 客户端，权威资源库位于所连中心）' : ''}`,
-            `当前连接 HAPI 数据：${paths.hapiClient}`, `身份连接：${paths.identityConnection}`, `待确认连接：${paths.pendingConnection}`,
+            `当前连接 HAPI 数据：${paths.hapiClient}`, `本机调用与连接协调：${paths.clientState}`, `身份连接：${paths.identityConnection}`, `待确认连接：${paths.pendingConnection}`,
             `当前连接的机器接入记录：${paths.machineConnection}`,
             `当前连接的本机任务工作区：${paths.taskWorkspaces}`,
             `当前连接的仓库缓存：${paths.repositoryCaches}`, `基线/成果导出候选与回执：${paths.repositoryExports}`, `基线导入回执：${paths.repositoryImports}`, `成果取回回执与中间副本：${paths.repositoryFetches}`,

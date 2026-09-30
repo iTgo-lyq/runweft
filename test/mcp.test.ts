@@ -93,7 +93,7 @@ test('discovery is static and side-effect-free; tool responses carry identity an
         x.c.config.server.port = port.port!; await port.stop(true);
         const response = await x.client.callTool({ name: 'runweft_status', arguments: {}, _meta: meta('a') });
         expect(response).toMatchObject({ structuredContent: { identity: { nativeSessionId: 'a', cwd: x.cwd }, connection: { connected: false }, backgroundWake: false } });
-        expect(existsSync(join(x.c.home, 'client.sqlite'))).toBe(true);
+        expect(existsSync(join(x.c.home, 'client.sqlite'))).toBe(false);
         expect(existsSync(join(x.c.home, 'server'))).toBe(false);
     } finally { await x.client.close(); await x.server.close(); }
 });

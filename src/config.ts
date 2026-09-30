@@ -163,7 +163,7 @@ export function setConfig(resolved: ResolvedConfig, key: string, value: string) 
     return loadConfig(resolved.home, resolved.env);
 }
 
-export function connectionName(config: Pick<Config, 'mode' | 'hub'>): string {
+export function connectionName(config: Pick<Config, 'hub'>): string {
     const url = config.hub.url;
     if (!url) return 'unconnected';
     const label = new URL(url).hostname.replace(/[^a-zA-Z0-9.-]/g, '-');
@@ -178,7 +178,7 @@ export function dataPaths(resolved: ResolvedConfig) {
     const server = join(home, 'server');
     const connection = join(home, 'connections', connectionName(config)), hapiClient = join(connection, 'hapi');
     return {
-        home, config: resolved.file, agents: join(home, 'agents'),
+        home, config: resolved.file,
         server, hapiServer: join(server, 'hapi'), runweftServer: join(server, 'runweft'),
         state: join(server, 'runweft', 'state.sqlite'),
         hapiClient, taskWorkspaces: join(hapiClient, 'workspaces', 'environments'),
@@ -187,7 +187,7 @@ export function dataPaths(resolved: ResolvedConfig) {
         repositoryCaches: join(hapiClient, 'workspaces', 'repositories'), repositoryExports: join(hapiClient, 'workspaces', 'exports'), repositoryImports: join(hapiClient, 'workspaces', 'imports'),
         repositoryFetches: join(hapiClient, 'workspaces', 'fetches'),
         artifacts: join(server, 'hapi', 'artifacts'), artifactTransfers: join(hapiClient, 'artifact-transfers'),
-        bindings: join(home, 'client.sqlite'), process: join(server, 'process.json'),
+        clientState: join(home, 'client.sqlite'), process: join(server, 'process.json'),
         logs: join(home, 'logs'), backups: join(home, 'backups'), cache: join(home, 'cache'), temporary: join(home, 'tmp'),
         nativeCodex: resolved.env.CODEX_HOME || join(homedir(), '.codex'),
         nativeClaude: resolved.env.CLAUDE_CONFIG_DIR || join(homedir(), '.claude'),

@@ -16,7 +16,6 @@ import { pendingCode } from '../src/tasks/results';
 import { TaskClient } from '../src/tasks/client';
 import type { AgentSnapshot, Parent } from '../src/tasks/types';
 import { taskTools } from '../src/mcp/tasks';
-import { bindWorkspace } from '../src/workspaces';
 import type { TaskCoordinator } from '../src/tasks/coordinator';
 
 /** No-model probe: only actual HAPI prepare/finalize receipts enter the task result coordinator. */
@@ -123,7 +122,7 @@ export async function taskResultsProbe(p: { root: string; center: string; source
         assert.equal(cli(p.sourceHome, ['task', 'result', 'fetch', bundle.task.id, '--round', rounds[0]!, '--request-id', requestId], repo).result_operation_id, pending.result_operation_id);
         await until(() => client.result(bundle.task.id, rounds[0]), value => { const fetch = value.fetches.at(-1); if (fetch?.status === 'failed') throw new Error(JSON.stringify(fetch.error)); return fetch?.status === 'available' && fetch.released; });
         const mcp = taskTools().find(tool => tool.name === 'fetch_result')!;
-        const mcpResult = await mcp.run({ id: bundle.task.id, round_id: rounds[1], request_id: randomUUID() }, { config, identity, workspace: bindWorkspace(config, repo), signal: new AbortController().signal });
+        const mcpResult = await mcp.run({ id: bundle.task.id, round_id: rounds[1], request_id: randomUUID() }, { config, identity, workspace: { path: repo }, signal: new AbortController().signal });
         assert.equal(mcpResult.round_id, rounds[1]); assert(!('manifests' in mcpResult)); assert(!('fetches' in mcpResult));
         const final = await until(() => client.result(bundle.task.id, rounds[1]), value => { const fetch = value.fetches.at(-1); if (fetch?.status === 'failed') throw new Error(JSON.stringify(fetch.error)); return fetch?.status === 'available' && fetch.released; });
         assert.deepEqual([readFileSync(join(repo, '.git/index')), readFileSync(join(repo, '.git/config')), readFileSync(join(repo, 'app/note'))], protectedBefore);

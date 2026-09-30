@@ -49,7 +49,7 @@ test('agent reads are side effect free; whole project override is explicit and s
     h.put('project', 'review', { description: 'Changed' });
     expect(readAgent(h.c, h.project, 'review').definitionVersion).not.toBe(first);
     expect(item.definition.description).toBe('Project review');
-    expect(existsSync(dataPaths(h.c).bindings)).toBe(false);
+    expect(existsSync(dataPaths(h.c).clientState)).toBe(false);
 });
 
 test('bad selected files never fall back; unrelated and shadowed errors do not disable valid agents', () => {

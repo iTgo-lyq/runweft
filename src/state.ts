@@ -15,7 +15,7 @@ export function openState(path: string) {
         db.exec('PRAGMA busy_timeout=5000; PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON;');
         db.transaction(() => {
             const { user_version: version } = db.query('PRAGMA user_version').get() as { user_version: number };
-            if (version > STATE_SCHEMA_VERSION) throw new ResourceError(503, 'state_version_newer', '业务数据版本高于当前程序。', '使用创建该数据的新版 Runweft；不要删除数据库。');
+            if (version > STATE_SCHEMA_VERSION) throw new ResourceError(503, 'state_version_newer', '业务数据版本高于当前程序。', '使用配套版本，或确认无需历史后停服并运行 runweft data reset --apply；先查看预览。');
             if (version < 1) db.exec(`
                 CREATE TABLE machine_registrations (
                     namespace TEXT NOT NULL, machineId TEXT NOT NULL, registered INTEGER NOT NULL,

@@ -2,12 +2,12 @@ import type { Command } from 'commander';
 import { randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { z } from 'zod';
-import { targetUrl, type ResolvedConfig } from '../config';
+import { type ResolvedConfig } from '../config';
 import { ArtifactOutputsSchema, type ArtifactOutput } from '../../hapi/shared/src/artifactTransfers';
 import type { OutputManifest } from './output-types';
 import { RunweftError } from '../errors';
 import { ArtifactInputSchema, parseTask, type ArtifactInput } from './types';
-import { TaskClient, type TaskOperations } from './client';
+import { type TaskOperations } from './client';
 import type { overview } from './views';
 
 type Summary = ReturnType<typeof overview>;
@@ -56,8 +56,8 @@ export function announceRequest(program: Command, requested?: string) {
     return id;
 }
 export function addTaskCommands(program: Command, context: () => ResolvedConfig, output: (value: unknown, human: string) => void,
-    hub?: { client: () => TaskOperations; url: () => string }) {
-    const client = hub?.client ?? (() => new TaskClient(context(), process.cwd()));
+    hub: { client: () => TaskOperations; url: () => string }) {
+    const client = hub.client;
     const task = program.command('task').description('派生、续接与控制本机共享或本机/远端独立任务');
     task.command('workspace').description('管理保留的独立工作区').command('remove <id>').description('显式删除已结束任务的工作区；远端需已交付或明确放弃代码')
         .option('--discard-ignored', '明确丢弃 ignored 依赖和文件；默认存在时拒绝删除')
@@ -68,7 +68,7 @@ export function addTaskCommands(program: Command, context: () => ResolvedConfig,
                 + `\n查询工作区及缓存释放：runweft task show ${id}`);
         });
     const result = task.command('result').description('查看、取回或重试独立工作区代码成果');
-    const resultText = (value: Awaited<ReturnType<TaskClient['result']>>) => {
+    const resultText = (value: Awaited<ReturnType<TaskOperations['result']>>) => {
         const fetch = value.fetches.at(-1), ref = fetch?.fetched?.ref ?? fetch?.localRef ?? value.code.ref;
         return `代码成果：${value.code.status}\n轮次：${value.round_id}`
             + (value.code.bytes ? `\n传输：上传 ${value.code.bytes.uploaded} 字节，复用 ${value.code.bytes.reused} 字节；中心保留 ${value.code.bytes.retained} 字节` : '')
@@ -130,7 +130,7 @@ export function addTaskCommands(program: Command, context: () => ResolvedConfig,
             output(accepted, `文件操作已接受：${accepted.artifact_operation_id}\n查看：runweft task artifacts show ${id} --round ${options.round}\n等待更新：runweft task wait ${id} --after-revision '${JSON.stringify({ [id]: accepted.revision })}' `);
         });
     }
-    const spawn = task.command(hub ? 'spawn [agent]' : 'spawn <agent>').description('接受新任务后立即返回；执行由服务继续推进')
+    const spawn = task.command('spawn [agent]').description('接受新任务后立即返回；执行由服务继续推进')
         .option('--message <text>', '任务描述').option('--message-file <path>', '从文件读取任务；- 读取 stdin')
         .option('--request-id <uuid>', '相同请求重试时复用 ID').option('--workspace-mode <shared|worktree>', '共享当前目录或准备独立 Git worktree', 'shared')
         .option('--base <ref>', 'worktree 的已提交基线；本机默认 HEAD，远端必填；不包含未提交内容')
@@ -139,12 +139,12 @@ export function addTaskCommands(program: Command, context: () => ResolvedConfig,
         .action(async (agent, options) => {
             const message = taskMessage(options), id = announceRequest(program, options.requestId);
             const result = await client().spawn(agent, message, id, options.workspaceMode, undefined, options.base, taskInputs(options.input), taskOutputs(options.output),
-                hub ? { runtimeId: options.runtime, remote: options.remote } : undefined);
+                { runtimeId: options.runtime, remote: options.remote });
             output(result, `任务已接受：${result.agent_id}\n轮次：${result.round_id}\n原生执行尚待确认。\n等待：runweft task wait ${result.agent_id}`);
         });
-    if (hub) spawn.option('--runtime <id>', '本次显式 runtime UUID').option('--remote <name>', '显式选择工作区 fetch remote');
-    task.command('list').description('列出当前发起目录的任务').option('--all', '查看当前 namespace 全部任务').action(async options => {
-        const result = await client().list(options.all); output(result, result.agents.map(taskText).join('\n\n') || '尚无任务。用 runweft agent list --check 查看可选定义。');
+    spawn.option('--runtime <id>', '本次显式 runtime UUID').option('--remote <name>', '显式选择工作区 fetch remote');
+    task.command('list').description('列出当前发起目录的任务').option('--all', '查看当前身份/空间全部任务').action(async options => {
+        const result = await client().list(options.all); output(result, result.agents.map(taskText).join('\n\n') || '尚无任务。用 runweft agent list 查看可选定义。');
     });
     task.command('send <id>').description('默认排队下一轮；--steer 追加到指定活跃 Codex 轮次')
         .option('--message <text>', '任务描述').option('--message-file <path>', '从文件读取任务；- 读取 stdin')
@@ -182,7 +182,7 @@ export function addTaskCommands(program: Command, context: () => ResolvedConfig,
             const permissions = Object.entries(result.permissions ?? {}).map(([requestId, request]) => `\n待审批：${requestId} · ${request.tool}\n参数：${JSON.stringify(request.arguments).slice(0, 1200)}\n`
                 + `响应：runweft task permission ${id} --round ${result.round_id} --request ${requestId} --decision <approved|denied|abort>`).join('\n');
             output(result, taskText(result) + `\n原生会话：${result.session_id ?? '未建立'}\n执行关闭：${result.stop} · 收尾：${result.finish}`
-                + (result.session_id ? `\nHAPI 详情：${hub?.url() ?? targetUrl(context().config)}/sessions/${encodeURIComponent(result.session_id)}` : '') + permissions
+                + (result.session_id ? `\nHAPI 详情：${hub.url()}/sessions/${encodeURIComponent(result.session_id)}` : '') + permissions
                 + (result.input_files?.paths.map(file => `\n输入 ${file.name}：${file.path}`).join('') ?? ''));
         });
     task.command('wait <ids...>').description('等待完成或需要处理；超时和取消不终止任务').option('--timeout <ms>', '等待毫秒数（0–540000）', '30000')

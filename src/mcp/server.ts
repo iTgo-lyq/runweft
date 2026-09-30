@@ -6,14 +6,13 @@ import pkg from '../../package.json';
 import { targetUrl, type ResolvedConfig } from '../config';
 import { RunweftError, errorDetails } from '../errors';
 import { fetchJson, hapiClient } from '../hapi';
-import { bindWorkspace, type Workspace } from '../workspaces';
 import { resolveHostIdentity, type HostClient, type HostIdentity } from './identity';
 import { taskTools } from './tasks';
 import { artifactTools } from './artifacts';
 import { HubClient, type HubConnectionOptions } from '../hub/client';
 import { HubTaskClient } from '../hub/delegation/client';
 
-export type McpCallContext = { identity: HostIdentity; workspace: Workspace; config: ResolvedConfig; signal: AbortSignal; hub?: HubConnectionOptions };
+export type McpCallContext = { identity: HostIdentity; workspace: { path: string }; config: ResolvedConfig; signal: AbortSignal; hub?: HubConnectionOptions };
 export type McpTool = {
     name: string;
     description: string;
@@ -97,7 +96,7 @@ export function createMcpServer(options: {
             if (!parsed.success) throw new RunweftError('invalid_tool_arguments', '工具参数不符合声明的格式。', '按工具 inputSchema 修正参数。');
             const config = options.config();
             const identity = resolveHostIdentity(options.client, request.params._meta, options.cwd, config);
-            const workspace = bindWorkspace(config, identity.cwd);
+            const workspace = { path: identity.cwd };
             const value = await tool.run(parsed.data, { identity, workspace, config, signal, hub: hubConnection(config) });
             signal.throwIfAborted();
             return result(value);

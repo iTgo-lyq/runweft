@@ -64,3 +64,11 @@ WorkspacePreparations 的遗漏由主 agent 同步复核发现并已在评审结
 - 验证：typecheck、build、git diff --check 通过；全仓 248 pass/0 fail，38 文件、5092 断言，约 52 秒。集中消费测试改为编译 CLI/MCP 默认入口；淘汰旧 YAML/root CLI 验收，保留领域回归。日志 `.dev-smoke/t5/all-tests-final.log`；聚焦 5 pass/0 fail。
 - 真实验证：`scripts/smoke-hub-service.ts` 在专用目录通过 4 组，实际编译产品启动原 HAPI、两个 Runner、本地与 Hub 模式、root 拒绝、空登记、无秘密入口、失效凭据/轮换和托管重启，停止清理无错误。证据 `.dev-smoke/hub-service-PjYffV/evidence.json`。修正托管 Runner 正常停止误报意外退出的顺序，复测成功；未修改在线服务、用户配置或 HAPI 子模块。
 - Commit：`hub-delegation-migration T5: switch default services and consumers to Hub identity`。
+
+## T6 历史清理与实现简化
+
+- 结果：`data reset` 默认预览固定清理清单，`--apply` 在首次删除前核对托管 Hub、所有连接 Runner 和路径链接；不依赖可解析旧配置。清除配置、旧全局 Agent、中心业务/原生库/附件、身份和机器记录；保留 workspaces 全树、Git 对象、未交付文件、原生配置与 MCP 备份。清理后重新 init/连接/登记，无导入、映射、journal、继续或回退框架。
+- 结果：删除旧 Agent/资源 CLI 命令生成器、消费命令中的旧客户端回退，以及 MCP 调用的本机工作区绑定持久化。paths 用 clientState 表示实际的 hook/连接协调库，不再宣称本地 Agent 配置权威。纯业务协调器及原生 HTTP fixture 的领域回归保留。
+- 验证：typecheck、build 通过；全仓 249 pass/0 fail，38 文件、5143 断言，约 49 秒。新增 3 组清理测试覆盖预览/重复执行、进程拒绝、符号链接、损坏旧配置和保留字节。最后进行路径字段统一并复查 MCP/Agent 领域聚焦测试，21 pass/0 fail、484 断言，typecheck/build 再次通过。日志 `.dev-smoke/t5/t6-*.log`。
+- 真实验证：编译 CLI + 原 HAPI/Runner 的 5 组通过，`.dev-smoke/hub-service-MI3IfS/evidence.json` success=true、cleanupErrors=[]；先启动验证运行中清理拒绝，再停服清理，保留 worktree 字节，重新启动领取身份并登记新机器，旧身份被拒绝。本任务不启动模型；清理后新委派在 T7 验证。
+- Commit：`hub-delegation-migration T6: reset prerelease records and simplify consumer entry points`。

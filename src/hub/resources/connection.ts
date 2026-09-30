@@ -21,7 +21,7 @@ const changed = () => new RunweftError('machine_connection_changed', '机器接�
 
 export function hubConnectionPaths(home: string, url: string) {
     const hub = hubOrigin.safeParse(url); if (!hub.success) throw new RunweftError('hub_url_invalid', '请填写 Hub HTTP(S) 根地址。');
-    const root = expandPath(home), connection = join(root, 'connections', connectionName({ mode: 'hub', hub: { url: hub.data } }));
+    const root = expandPath(home), connection = join(root, 'connections', connectionName({ hub: { url: hub.data } }));
     return { hub: hub.data, home: root, connection, identityConnection: join(connection, 'identity.json'), pendingConnection: join(connection, 'connect.json'),
         machineConnection: join(connection, 'machine.json'), clientState: join(root, 'client.sqlite') };
 }

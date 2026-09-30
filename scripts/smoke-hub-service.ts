@@ -31,6 +31,7 @@ try {
     await cli(home, ['init']); await cli(home, ['config', 'set', 'server.port', String(port)]);
     const initial = await cli(home, ['start']); assert(initial.service.running); assert(!initial.runner.running); assert(!initial.connection.connected);
     await cli(home, ['task', 'list'], 'hub_connection_required');
+    await cli(home, ['data', 'reset', '--apply'], 'reset_service_running');
     const paths = await cli(home, ['paths']), state = JSON.parse(readFileSync(paths.process, 'utf8'));
     assert.equal((await cli(home, ['start'])).service.running, true); assert.equal(JSON.parse(readFileSync(paths.process, 'utf8')).pid, state.pid);
     const rootToken = JSON.parse(readFileSync(join(paths.hapiServer, 'settings.json'), 'utf8')).cliApiToken; secrets.push(rootToken);
@@ -72,6 +73,21 @@ try {
     const restart = await cli(home, ['start']); assert(restart.runner.online); assert(restart.connection.connected);
     assert.equal(JSON.parse(readFileSync(join(localPaths.hapiClient, 'runner.state.json'), 'utf8')).startedWithVersionHandoffDisabled, true);
     check('explicit enrolled Runner supervision survives Hub restart; identity and machine remain stable');
+    await cli(remote, ['stop']); await cli(home, ['stop']);
+    const retained = join(localPaths.taskWorkspaces, 'retained-fixture', 'checkout', 'keep.txt'); atomicWrite(retained, 'KEEP');
+    assert((await cli(home, ['data', 'reset', '--apply'])).applied); assert.equal(readFileSync(retained, 'utf8'), 'KEEP');
+    await cli(home, ['init']); await cli(home, ['config', 'set', 'server.port', String(port)]);
+    assert((await cli(home, ['start'])).service.running);
+    assert.equal((await fetch(url + '/api/auth', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ accessToken: user.token }) })).status, 401);
+    const fresh = await json('/api/runweft/hub/identities', { name: 'after reset' }); secrets.push(fresh.token);
+    assert.notEqual(fresh.identity.id, user.identity.id);
+    await cli(home, ['config', 'set', 'hub.url', url]);
+    atomicWrite(hubConnectionPaths(home, url).identityConnection, JSON.stringify({ schemaVersion: 1, hub: url, ownerId: fresh.identity.id,
+        spaceId: fresh.personalSpace.id, token: fresh.token, requestId: randomUUID(), createdAt: Date.now() }));
+    const freshMachine = await cli(home, ['machine', 'enroll']); assert.notEqual(freshMachine.machineId, enrolled.machineId);
+    secrets.push(JSON.parse(readFileSync(freshMachine.credentialFile, 'utf8')).active.token);
+    assert((await cli(home, ['runner', 'start'])).online);
+    check('stopped prerelease reset preserves worktree bytes; fresh Hub rejects old identity and registers a new machine');
     evidence.success = true;
 } catch (error) { evidence.error = error instanceof Error ? error.message : String(error); throw error; }
 finally {
