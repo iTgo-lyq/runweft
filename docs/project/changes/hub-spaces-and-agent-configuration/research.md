@@ -52,7 +52,7 @@
 
 需要区分另一层：[agent_ready.go](https://github.com/multica-ai/multica/blob/43b0571f992567a919c7f1f699ff160922594b94/server/internal/service/agent_ready.go#L155)判断私有 runtime 时比较的是 Agent owner 与 runtime owner。**源码推断：** 同 owner 的 Agent 可以被分享给其他成员调用，并不等于这些成员能直接绑定该私有 runtime。本次没有实测其所有触发路径，不能宣称一个字段即可概括全部共享语义。
 
-**Runweft 草案差异：** 私有配置是否允许空间管理员编辑需要用户选择；建议共享 Agent 的调用还要求调用者被 runtime 所有者允许，避免隐式扩大执行范围。这两项是 Runweft 提案，不冒充 Multica 现状。
+**Runweft 差异：** 已确认私有 Agent 仅所有者可修改/分享，非所有者的空间管理员可禁用，不能改写。另建议共享 Agent 的调用还要求调用者被 runtime 所有者允许，避免隐式扩大执行范围；这项交集规则仍是提案。两者都不冒充 Multica 现状。
 
 ## Multica 账户与 CLI 授权
 
@@ -60,7 +60,7 @@
 
 [凭据文档](https://multica.ai/docs/auth-tokens)区分浏览器会话、用户 PAT 与任务凭据。CLI 可以经浏览器完成登录，用户 PAT 按账户访问空间，任务凭据绑定执行上下文；日志退出与服务端撤销并非同一动作。对应 [auth middleware](https://github.com/multica-ai/multica/blob/43b0571f992567a919c7f1f699ff160922594b94/server/internal/middleware/auth.go)校验凭据并设置实际身份，再由空间/对象规则继续授权。
 
-**采用建议：** 复用“账户登录 → CLI 获得本人授权 → 空间与资源检查”的交互；不要求用户学习 HAPI token，不把用户级/Hub 根凭据放进 subagent prompt。具体登录提供方和邮件依赖需在部署方案中落实。
+**Runweft 已确认选择：** 当前不采用邮箱登录、注册服务或 OAuth；任何可访问 Hub 的人可领取独立身份 token 并自行保存。复用的是“识别当前身份 → 空间与资源检查”的分层；身份创建不授予已有空间访问权。token 与 HAPI 内部根凭据分开，不放入 subagent prompt。Multica 的邮件和登录服务不是 Runweft 的部署前置。
 
 ## 仓库关联与保留边界
 
@@ -70,6 +70,6 @@
 
 ## 结论与技术验证范围
 
-当前可直接确定产品需要账户、成员、资源 owner、集中配置及仓库身份；不能把这些说成现有 namespace 已提供。既有 HAPI 执行、工作区和成果能力可继续使用，但多用户访问的连接方式尚未验证。
+当前可直接确定产品需要独立 token 身份、成员、资源 owner、集中配置及仓库身份；不能把这些说成现有 namespace 已提供。既有 HAPI 执行、工作区和成果能力可继续使用，但多用户访问的连接方式尚未验证。
 
 后续 Technical 应针对原生 HTTP、SSE、Socket.IO/终端、Runner 注册与回报分别列出当前鉴权入口和最小缺口，决定网关封装是否足够。若必须补 HAPI 通用认证入口，按独立仓库维护；不将其扩大为重写 runtime launcher。此判断须先完成小范围验证，再排实现计划。

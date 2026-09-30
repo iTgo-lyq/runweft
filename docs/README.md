@@ -2,7 +2,7 @@
 
 Runweft 1.0.0 核心重构与产品官网均已完成，实现、自动验收和 Specs 见下列归档。安装、配置、部署与数据维护见[使用说明](usage.md)，源码构建和验证见[开发说明](development.md)。
 
-当前正在设计 [Hub 空间、账户与集中 Agent 配置](project/changes/hub-spaces-and-agent-configuration/requirement.md)：委派必须连接 Hub，项目设置关联 Git 仓库，用户通过 Agent/Skill 操作、通过 Web 查看配置与任务。该 Change 处于需求草稿阶段，尚未进入实现；[产品模型](project/changes/hub-spaces-and-agent-configuration/product-design.md)、[授权边界](project/changes/hub-spaces-and-agent-configuration/access-design.md)和 [Multica 调查](project/changes/hub-spaces-and-agent-configuration/research.md)分别维护。
+当前正在设计 [Hub 空间、身份与集中 Agent 配置](project/changes/hub-spaces-and-agent-configuration/requirement.md)：委派必须连接 Hub，项目设置关联 Git 仓库，用户通过 Agent/Skill 操作、通过 Web 查看配置与任务。身份采用访客可领取并自行保存的独立 token，无需登录/注册服务；共享限空间成员，私有 Agent 仅所有者可修改/分享。该 Change 处于需求草稿阶段，尚未进入实现；[产品模型](project/changes/hub-spaces-and-agent-configuration/product-design.md)、[授权边界](project/changes/hub-spaces-and-agent-configuration/access-design.md)和 [Multica 调查](project/changes/hub-spaces-and-agent-configuration/research.md)分别维护。
 
 [最终交付验收](project/archive/2026-09-30-integrated-release/acceptance.md)汇总四平台产物、校验和、需求对应及原始证据。Linux x64 完成真实安装、20 组核心协作、8 组附件、2 组 MCP 控制、原生历史重建、升级回退和 Playwright；Mac 实机由用户验证，Linux arm64 为 QEMU CLI/配置验证，物理远端延期。远端功能已通过同机独立 Hub/多 Runner 真实链路。早期四平台基础安装证据不代替最终原生协作。
 
