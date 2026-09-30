@@ -1,4 +1,7 @@
 import { renderResources } from './resources-page.js';
+import { renderAgents } from './agents-page.js';
+import { renderRepositories } from './repositories-page.js';
+import { renderSelections } from './selections-page.js';
 
 export default '';
 export type ConsoleContext = {
@@ -24,6 +27,7 @@ export function field(label: string, value = '', options: { required?: boolean; 
 }
 export function selectField(label: string, choices: { value: string; label: string }[], value = '') {
     const node = element('label', label), input = element('select');
+    input.setAttribute('aria-label', label);
     choices.forEach(choice => input.add(new Option(choice.label, choice.value)));
     input.value = value; node.append(input); return { node, input };
 }
@@ -47,6 +51,39 @@ export function resourceCard(name: string, id: string, ownerId: string, context:
 }
 export function empty(message: string) { return element('p', message, 'empty-state'); }
 
+export async function createResource(context: ConsoleContext, path: string, payload: unknown) {
+    const key = `runweft.create:${context.userId}:${context.spaceId}:${path}`;
+    const bytes = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(JSON.stringify(payload)));
+    const fingerprint = Array.from(new Uint8Array(bytes), value => value.toString(16).padStart(2, '0')).join('');
+    const saved = sessionStorage.getItem(key);
+    const pending: { requestId: string; fingerprint: string } = saved ? JSON.parse(saved) : { requestId: crypto.randomUUID(), fingerprint };
+    const receipt = () => context.request(`${path}/requests/${pending.requestId}`);
+    if (saved) {
+        try { const result = await receipt(); sessionStorage.removeItem(key); return result; }
+        catch (error) {
+            if (!(error && typeof error === 'object' && 'status' in error && error.status === 404)) throw error;
+            if (pending.fingerprint !== fingerprint) {
+                if (await context.confirm(`Hub 未找到上次创建请求 ${pending.requestId}。表单已改变；放弃本地待确认记录？放弃不会删除 Hub 上的资源，请先刷新核对。`)) sessionStorage.removeItem(key);
+                throw new Error('请核对资源列表后重新提交。未自动创建新资源。');
+            }
+            if (!await context.confirm(`Hub 未找到请求 ${pending.requestId}。使用同一请求 ID 与相同参数重试？`)) throw new Error('创建尚未确认；已保留原请求 ID。');
+        }
+    }
+    sessionStorage.setItem(key, JSON.stringify(pending));
+    try {
+        const result = await context.request(path, { ...payload as object, requestId: pending.requestId });
+        sessionStorage.removeItem(key); return result;
+    } catch (error) {
+        if (error && typeof error === 'object' && 'status' in error && typeof error.status === 'number'
+            && error.status >= 400 && error.status < 500 && error.status !== 408) sessionStorage.removeItem(key);
+        else {
+            try { const result = await receipt(); sessionStorage.removeItem(key); return result; }
+            catch { context.notice(`创建结果未确认，已保留请求 ${pending.requestId}。再次提交时先查询原回执，不会自动新建。`, true); }
+        }
+        throw error;
+    }
+}
+
 let generation = 0;
 let active = 'machines';
 export function clearConsole() {
@@ -58,7 +95,8 @@ export async function mountConsole(context: ConsoleContext) {
     const epoch = ++generation;
     const content = document.getElementById('console-content')!, navigation = document.getElementById('console-navigation')!;
     const members = document.getElementById('members-panel')!;
-    const modes = [{ id: 'machines', label: '机器' }, { id: 'runtimes', label: 'Runtime' }, { id: 'members', label: '成员' }];
+    const modes = [{ id: 'machines', label: '机器' }, { id: 'runtimes', label: 'Runtime' }, { id: 'agents', label: 'Agent' },
+        { id: 'repositories', label: '仓库' }, { id: 'selections', label: '我的选择' }, { id: 'members', label: '成员' }];
     async function render() {
         if (epoch !== generation) return;
         content.replaceChildren(); members.hidden = active !== 'members'; content.hidden = active === 'members';
@@ -67,7 +105,10 @@ export async function mountConsole(context: ConsoleContext) {
         content.append(element('p', '正在读取当前权限与资源…', 'muted'));
         const target = element('div');
         try {
-            await renderResources(target, context, active === 'runtimes' ? 'runtimes' : 'machines', render);
+            if (active === 'agents') await renderAgents(target, context, render);
+            else if (active === 'repositories') await renderRepositories(target, context, render);
+            else if (active === 'selections') await renderSelections(target, context, render);
+            else await renderResources(target, context, active === 'runtimes' ? 'runtimes' : 'machines', render);
             if (epoch === generation) content.replaceChildren(target);
         } catch (error) {
             if (epoch !== generation) return;

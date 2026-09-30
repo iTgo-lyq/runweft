@@ -28,3 +28,11 @@
 - 验证：typecheck/build/diff-check 通过；24 pass / 0 fail、514 断言。已有加密连接 Playwright 5 组再次通过，证据 `.dev-smoke/hub-connect-XvCyry/evidence.json`。
 - 真实浏览器：`scripts/smoke-hub-console.ts` 使用编译 CLI、专用 HAPI/Runner、真实 Codex 工具探测，3 组通过；加密接入、机器改名、runtime 登记/分享/停用/恢复、最后 owner 和退出清空全部核对。证据 `.dev-smoke/hub-console-RdO1wb/evidence.json`，success=true、cleanupErrors=[]；桌面与 390px 截图人工视觉核对，无水平溢出。没有调用模型，不声称执行已就绪。
 - Commit：`hub-console-onboarding T2: build resource console and machine runtime management`。
+
+## T3 Agent、仓库与本人选择
+
+- 结果：完整 Agent 表单、版本条件更新与历史、指定成员/全空间分享、登记和管理员概要治理；仓库名称/别名/登记与本人 checkout 只读；个人空间/仓库选择、Runtime override、显式解析和清除。失效选项保留原 ID，不静默替换或回退。
+- 结果：Agent/仓库创建保留标签页请求 ID 与内容摘要；网络响应不确定先查回执，同一内容显式重试沿用请求 ID，切换页面后仍可查询，不保存业务指令副本。
+- 验证：typecheck、build、diff-check 通过；16 pass / 0 fail、268 断言。扩展现有 compiled CLI + HAPI/Runner Playwright，共 8 组通过，证据 `.dev-smoke/hub-console-urmu1Q/evidence.json`，success=true、cleanupErrors=[]。覆盖创建丢响应、完整编辑、并发版本冲突、历史、私有数据不可见、管理员不能改私有定义、个人选择隔离、真实目标解析、分享撤回、仓库失效不回退及显式恢复。没有模型调用。
+- 视觉与返修：已查看桌面 Agent 与 390px 个人选择截图，无水平溢出。初次 smoke 因 select 的隐含名称包含 option 文本而超时；补显式 aria-label 后重跑通过，失败证据 `.dev-smoke/hub-console-wjvOCu/evidence.json` 保留。
+- Commit：`hub-console-onboarding T3: manage central agents repositories and personal selections`。

@@ -5,9 +5,14 @@ import browser from './app' with { type: 'text' };
 import nativeBrowser from './native-page' with { type: 'text' };
 import consoleBrowser from './console' with { type: 'text' };
 import resourcesBrowser from './resources-page' with { type: 'text' };
+import agentsBrowser from './agents-page' with { type: 'text' };
+import repositoriesBrowser from './repositories-page' with { type: 'text' };
+import selectionsBrowser from './selections-page' with { type: 'text' };
 
 const scripts: Record<string, string> = { '/hub/app.js': browser as unknown as string, '/hub/native.js': nativeBrowser as unknown as string,
-    '/hub/console.js': consoleBrowser as unknown as string, '/hub/resources-page.js': resourcesBrowser as unknown as string };
+    '/hub/console.js': consoleBrowser as unknown as string, '/hub/resources-page.js': resourcesBrowser as unknown as string,
+    '/hub/agents-page.js': agentsBrowser as unknown as string, '/hub/repositories-page.js': repositoriesBrowser as unknown as string,
+    '/hub/selections-page.js': selectionsBrowser as unknown as string };
 const compiled = new Map<string, string>();
 export function hubPage(request: IncomingMessage, response: ServerResponse): boolean {
     const path = new URL(request.url ?? '/', 'http://localhost').pathname;
