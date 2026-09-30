@@ -15,8 +15,11 @@ export async function hubDelegationFixture(cleanups: (() => void | Promise<void>
     const gateway = await createDelegationGateway({ host: '127.0.0.1', port: 0, target: h.nativeUrl, rootToken: 'test-', key: h.key, statePath: h.statePath, pollMs: 10 });
     cleanups.push(() => gateway.close());
     const space = owner.personalSpace.id, actor = gateway.store.authenticate(owner.token, space), outsider = gateway.store.authenticate(other.token, space);
+    const machineConnections = new Map<string, { token: string; requestId: string; credentialId: string }>();
     const machine = (who = actor) => {
-        const { machineId } = gateway.resources.store.enroll(who, { requestId: randomUUID(), token: `rw_mc_${randomBytes(32).toString('base64url')}` });
+        const requestId = randomUUID(), token = `rw_mc_${randomBytes(32).toString('base64url')}`;
+        const { machineId, credential } = gateway.resources.store.enroll(who, { requestId, token });
+        machineConnections.set(machineId, { requestId, token, credentialId: credential.id });
         gateway.resources.store.associate(who, machineId, space, true);
         const value = structuredClone(h.machines[0]); value.id = machineId; value.namespace = 'runweft';
         value.runnerState!.capabilities = { ...value.runnerState!.capabilities, mcpToolFilter: true, managedWorkspaces: 1, artifactTransfers: 1, artifactOutputs: 1, repositoryExport: 1, repositoryImport: 1, repositoryResults: 1 };
@@ -39,6 +42,6 @@ export async function hubDelegationFixture(cleanups: (() => void | Promise<void>
         if (result.status !== 200) throw Object.assign(new Error(result.body.error?.message), result.body.error, { status: result.status });
         return result.body;
     }
-    return { ...h, hub, gateway, owner, other, actor, outsider, space, machine, machineId, runtime, agent, definition, parent, payload, token, request, post,
+    return { ...h, url, hub, gateway, owner, other, actor, outsider, space, machine, machineId, machineConnections, runtime, agent, definition, parent, payload, token, request, post,
         async use(identity: string, spaceId = space) { jwt = await token(identity, spaceId); } };
 }

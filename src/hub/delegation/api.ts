@@ -36,7 +36,8 @@ export async function handleDelegationRequest(request: IncomingMessage, response
             else if (action === 'inspect') { const input = parseTask(Inspect, value); result = { preparation: service.preparations.inspect(namespace, parent, input.id) }; }
             else if (action === 'release') { const input = parseTask(Release, value); result = { preparation: await service.preparations.release(namespace, parent, input.id, input.discardIgnored) }; }
             else throw new TaskError(404, 'not_found', '没有此工作区准备接口。');
-        } else if (action === 'spawn') result = await service.spawn(lease, value);
+        } else if (action === 'context') { parseTask(z.object({ parent: ParentSchema }).strict(), value); result = { canDelegate: true }; }
+        else if (action === 'spawn') result = await service.spawn(lease, value);
         else if (action === 'lookup') result = { accepted: service.lookup(lease, value) };
         else if (action === 'send') result = await service.send(lease, value);
         else if (action === 'list') { const input = parseTask(ListSchema, value); result = coordinator.list(namespace, parent, input.all); }

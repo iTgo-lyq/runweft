@@ -2,37 +2,20 @@ import type { ArtifactOutput } from '../../hapi/shared/src/artifactTransfers';
 import { AgentClient } from '../agents/client';
 import type { ResolvedConfig } from '../config';
 import { RunweftError } from '../errors';
-import { hapiClient, type HapiClient } from '../hapi';
+import { hapiClient, type HapiClient, type HapiHttp } from '../hapi';
 import { hostDirectory, type HostIdentity } from '../mcp/identity';
 import { ResourceClient } from '../resources/client';
 import type { TaskCoordinator } from './coordinator';
 import { SpawnIntentSchema, parseTask, validateWorkspaceTarget, type Acceptance, type ArtifactInput, type Parent, type SendIntent } from './types';
 
-export class TaskClient {
-    readonly parent: Parent;
-    constructor(private readonly config: ResolvedConfig, cwd: string, host?: HostIdentity, private readonly hapi: HapiClient = hapiClient(config)) {
-        const directory = hostDirectory(host?.cwd ?? cwd);
-        const machineId = new ResourceClient(config, hapi).localMachineId()!;
-        this.parent = host ? { kind: 'mcp', host: host.host, nativeSessionId: host.nativeSessionId, machineId, cwd: directory, hapiSessionId: host.hapiSessionId }
-            : { kind: 'cli', machineId, cwd: directory, hapiSessionId: config.env.HAPI_SESSION_ID || undefined };
-    }
-    private request(path: string, value: object, signal?: AbortSignal) {
+export abstract class TaskOperations {
+    constructor(readonly parent: Parent, protected readonly hapi: HapiHttp) {}
+    protected request(path: string, value: object, signal?: AbortSignal) {
         return this.hapi.request(`/api/runweft/tasks/${path}`, { method: 'POST', headers: { 'content-type': 'application/json' },
             body: JSON.stringify({ parent: this.parent, ...value }), signal });
     }
-    async spawn(agentType: string, message: string, requestId: string, workspaceMode = 'shared', signal?: AbortSignal, baseRef?: string, inputs?: ArtifactInput[], outputs?: ArtifactOutput[]): Promise<Acceptance> {
-        if (!['shared', 'worktree'].includes(workspaceMode)) throw new RunweftError('capability_unavailable', '支持本机 shared 和本机/远端 worktree 模式。');
-        const intent = parseTask(SpawnIntentSchema, { agentType, message, workspaceMode, ...(inputs?.length ? { inputs } : {}), ...(outputs?.length ? { outputs } : {}), ...(baseRef === undefined ? {} : { baseRef }) });
-        const previous = await this.request('lookup', { requestId, intent }, signal);
-        if (previous.accepted) return previous.accepted;
-        const resolved = await new AgentClient(this.config, this.parent.cwd, this.hapi).resolve(agentType, undefined, signal);
-        validateWorkspaceTarget(resolved.target.machineId, this.parent, intent);
-        const agent = { id: resolved.id, definition: resolved.definition, source: resolved.source, definitionVersion: resolved.definitionVersion,
-            resolvedVersion: resolved.resolvedVersion, runtimeId: resolved.target.runtimeId, machineId: resolved.target.machineId,
-            flavor: resolved.target.flavor, namespace: resolved.connection.namespace };
-        const { namespace: _, ...accepted } = await this.request('spawn', { requestId, intent, agent }, signal);
-        return accepted;
-    }
+    abstract spawn(agentType: string | undefined, message: string, requestId: string, workspaceMode?: string, signal?: AbortSignal,
+        baseRef?: string, inputs?: ArtifactInput[], outputs?: ArtifactOutput[], selection?: { runtimeId?: string; remote?: string }): Promise<Acceptance>;
     async list(all = false, signal?: AbortSignal): Promise<ReturnType<TaskCoordinator['list']>> { return this.request('list', { all }, signal); }
     async send(id: string, message: string, requestId: string, options: { mode?: SendIntent['mode']; roundId?: string; inputs?: ArtifactInput[]; outputs?: ArtifactOutput[] } = {}, signal?: AbortSignal): Promise<Acceptance> {
         const { namespace: _, ...accepted } = await this.request('send', { requestId, intent: { id, message, mode: options.mode ?? 'next', roundId: options.roundId, ...(options.inputs?.length ? { inputs: options.inputs } : {}), ...(options.outputs?.length ? { outputs: options.outputs } : {}) } }, signal);
@@ -74,5 +57,29 @@ export class TaskClient {
     async wait(ids: string[], timeoutMs = 30_000, afterRevision?: Record<string, number>, signal?: AbortSignal): Promise<Awaited<ReturnType<TaskCoordinator['wait']>>> {
         const timeout = AbortSignal.timeout(timeoutMs + 15_000);
         return this.request('wait', { ids, timeoutMs, afterRevision }, signal ? AbortSignal.any([signal, timeout]) : timeout);
+    }
+}
+
+/** Legacy consumer retained until the default service and clients switch together. */
+export class TaskClient extends TaskOperations {
+    constructor(private readonly config: ResolvedConfig, cwd: string, host?: HostIdentity, private readonly legacyHapi: HapiClient = hapiClient(config)) {
+        const directory = hostDirectory(host?.cwd ?? cwd);
+        const machineId = new ResourceClient(config, legacyHapi).localMachineId()!;
+        const parent: Parent = host ? { kind: 'mcp', host: host.host, nativeSessionId: host.nativeSessionId, machineId, cwd: directory, hapiSessionId: host.hapiSessionId }
+            : { kind: 'cli', machineId, cwd: directory, hapiSessionId: config.env.HAPI_SESSION_ID || undefined };
+        super(parent, legacyHapi);
+    }
+    async spawn(agentType: string | undefined, message: string, requestId: string, workspaceMode = 'shared', signal?: AbortSignal, baseRef?: string, inputs?: ArtifactInput[], outputs?: ArtifactOutput[]): Promise<Acceptance> {
+        if (!['shared', 'worktree'].includes(workspaceMode)) throw new RunweftError('capability_unavailable', '支持本机 shared 和本机/远端 worktree 模式。');
+        const intent = parseTask(SpawnIntentSchema, { agentType, message, workspaceMode, ...(inputs?.length ? { inputs } : {}), ...(outputs?.length ? { outputs } : {}), ...(baseRef === undefined ? {} : { baseRef }) });
+        const previous = await this.request('lookup', { requestId, intent }, signal);
+        if (previous.accepted) return previous.accepted;
+        const resolved = await new AgentClient(this.config, this.parent.cwd, this.legacyHapi).resolve(intent.agentType, undefined, signal);
+        validateWorkspaceTarget(resolved.target.machineId, this.parent, intent);
+        const agent = { id: resolved.id, definition: resolved.definition, source: resolved.source, definitionVersion: resolved.definitionVersion,
+            resolvedVersion: resolved.resolvedVersion, runtimeId: resolved.target.runtimeId, machineId: resolved.target.machineId,
+            flavor: resolved.target.flavor, namespace: resolved.connection.namespace };
+        const { namespace: _, ...accepted } = await this.request('spawn', { requestId, intent, agent }, signal);
+        return accepted;
     }
 }

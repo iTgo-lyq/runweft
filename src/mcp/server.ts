@@ -10,8 +10,10 @@ import { bindWorkspace, type Workspace } from '../workspaces';
 import { resolveHostIdentity, type HostClient, type HostIdentity } from './identity';
 import { taskTools } from './tasks';
 import { artifactTools } from './artifacts';
+import { HubClient, type HubConnectionOptions } from '../hub/client';
+import { HubTaskClient } from '../hub/delegation/client';
 
-export type McpCallContext = { identity: HostIdentity; workspace: Workspace; config: ResolvedConfig; signal: AbortSignal };
+export type McpCallContext = { identity: HostIdentity; workspace: Workspace; config: ResolvedConfig; signal: AbortSignal; hub?: HubConnectionOptions };
 export type McpTool = {
     name: string;
     description: string;
@@ -27,10 +29,14 @@ const diagnostic: McpTool = {
     input: z.strictObject({}),
     annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
     timeoutMs: 10_000,
-    async run(_args, { identity, workspace, config, signal }) {
-        const url = targetUrl(config.config);
+    async run(_args, { identity, workspace, config, signal, hub }) {
+        const url = hub?.url ?? targetUrl(config.config);
         let connection: Record<string, unknown>;
         try {
+            if (hub) {
+                connection = { connected: true, ...await new HubClient(hub, 'hubDelegation', 'hub_delegation_unavailable').connection(signal) };
+                return { identity, workspace, connection, dataRoot: config.home, resultChannel: 'tool-response', backgroundWake: false };
+            }
             const health = await fetchJson(`${url}/api/runweft/health`, { signal });
             if (health?.service !== 'runweft' || health.protocolVersion !== 1) {
                 throw new RunweftError('runweft_unavailable', '目标未提供兼容的 Runweft 服务。', '检查 hub.url；Hub 端需运行 runweft serve。');
@@ -45,24 +51,41 @@ const diagnostic: McpTool = {
     },
 };
 
-export function productTools(): McpTool[] { return [diagnostic, ...taskTools(), ...artifactTools()]; }
+export function productTools(hub = false): McpTool[] { return [diagnostic, ...taskTools(hub), ...artifactTools()]; }
 
 function result(value: Record<string, unknown>, isError = false): CallToolResult {
     return { content: [{ type: 'text', text: JSON.stringify(value) }], structuredContent: value, ...(isError ? { isError: true } : {}) };
 }
 
 export function createMcpServer(options: {
-    client: HostClient; cwd: string; config: () => ResolvedConfig; tools?: McpTool[];
+    client: HostClient; cwd: string; config: () => ResolvedConfig; tools?: McpTool[]; hub?: () => HubConnectionOptions;
 }) {
     const connection = new AbortController();
-    const tools = options.tools ?? productTools();
+    const hubConnection = (config: ResolvedConfig) => {
+        const hub = options.hub?.(); return hub ? { ...hub, env: { ...config.env, ...hub.env } } : undefined;
+    };
+    const tools = options.tools ?? productTools(!!options.hub);
     const server = new Server({ name: 'runweft', version: pkg.version }, { capabilities: { tools: {} } });
     server.onclose = () => connection.abort(new RunweftError('host_disconnected', '宿主 MCP 连接已关闭。'));
     server.onerror = () => { if (!connection.signal.aborted) console.error('Runweft MCP 协议错误；检查原生客户端与 Runweft 版本。'); };
-    server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools: tools.map(tool => ({
-        name: tool.name, description: tool.description, annotations: tool.annotations,
-        inputSchema: z.toJSONSchema(tool.input) as Tool['inputSchema'],
-    })) }));
+    server.setRequestHandler(ListToolsRequestSchema, async () => {
+        if (options.hub) {
+            const config = options.config(), hub = hubConnection(config)!;
+            if (config.env.HAPI_SESSION_ID) {
+                try { await new HubTaskClient(hub, options.cwd).context(AbortSignal.timeout(10_000)); }
+                catch (error) {
+                    if (errorDetails(error).code === 'subagent_delegation_denied') return { tools: [] };
+                    // A managed execution without a verifiable connection cannot publish delegation tools.
+                    return { tools: tools.filter(tool => tool.name === diagnostic.name).map(tool => ({ name: tool.name, description: tool.description,
+                        inputSchema: z.toJSONSchema(tool.input) as Tool['inputSchema'] })) };
+                }
+            }
+        }
+        return { tools: tools.map(tool => ({
+            name: tool.name, description: tool.description, annotations: tool.annotations,
+            inputSchema: z.toJSONSchema(tool.input) as Tool['inputSchema'],
+        })) };
+    });
     server.setRequestHandler(CallToolRequestSchema, async (request, extra) => {
         const tool = tools.find(tool => tool.name === request.params.name);
         if (!tool) return result({ error: { code: 'unknown_tool', message: 'Runweft 没有此工具。' } }, true);
@@ -75,7 +98,7 @@ export function createMcpServer(options: {
             const config = options.config();
             const identity = resolveHostIdentity(options.client, request.params._meta, options.cwd, config);
             const workspace = bindWorkspace(config, identity.cwd);
-            const value = await tool.run(parsed.data, { identity, workspace, config, signal });
+            const value = await tool.run(parsed.data, { identity, workspace, config, signal, hub: hubConnection(config) });
             signal.throwIfAborted();
             return result(value);
         } catch (error) {
@@ -88,8 +111,8 @@ export function createMcpServer(options: {
     return server;
 }
 
-export async function serveMcp(client: HostClient, config: () => ResolvedConfig) {
-    const server = createMcpServer({ client, cwd: process.cwd(), config });
+export async function serveMcp(client: HostClient, config: () => ResolvedConfig, hub?: () => HubConnectionOptions) {
+    const server = createMcpServer({ client, cwd: process.cwd(), config, hub });
     const transport = new StdioServerTransport();
     const signals: NodeJS.Signals[] = ['SIGINT', 'SIGTERM', 'SIGHUP'];
     let done!: () => void;

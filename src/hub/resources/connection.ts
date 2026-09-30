@@ -35,18 +35,23 @@ export function connectionFileLock<T>(paths: ReturnType<typeof hubConnectionPath
     } finally { db.close(); }
 }
 
+export function readMachineConnection(home: string, url: string): MachineConnectionRecord | undefined {
+    const paths = hubConnectionPaths(home, url);
+    if (!existsSync(paths.machineConnection)) return;
+    try {
+        const record = RecordSchema.parse(JSON.parse(readFileSync(paths.machineConnection, 'utf8')));
+        if (record.hub !== paths.hub) throw new Error(); return record;
+    } catch { throw recordError(); }
+}
+
 /** Secrets live in one predictable file; short SQLite write locks serialize file updates and release on process death. */
 export class MachineConnection {
     readonly paths: ReturnType<typeof hubConnectionPaths>;
     constructor(home: string, readonly client: HubResourceClient) { this.paths = hubConnectionPaths(home, client.url); }
     private read(ownerId: string): MachineConnectionRecord | undefined {
-        if (!existsSync(this.paths.machineConnection)) return;
-        let parsed: ReturnType<typeof RecordSchema.safeParse>;
-        try { parsed = RecordSchema.safeParse(JSON.parse(readFileSync(this.paths.machineConnection, 'utf8'))); }
-        catch { throw recordError(); }
-        if (!parsed.success || parsed.data.hub !== this.client.url) throw recordError();
-        if (parsed.data.ownerId !== ownerId) throw new RunweftError('machine_connection_owner_mismatch', '此 Hub 的机器记录属于另一个身份。', '使用原身份，或为新身份选择独立 --home；不会覆盖或复用原机器凭据。');
-        return parsed.data;
+        const record = readMachineConnection(this.paths.home, this.client.url);
+        if (record && record.ownerId !== ownerId) throw new RunweftError('machine_connection_owner_mismatch', '此 Hub 的机器记录属于另一个身份。', '使用原身份，或为新身份选择独立 --home；不会覆盖或复用原机器凭据。');
+        return record;
     }
     private update(ownerId: string, change: (record: MachineConnectionRecord | undefined) => MachineConnectionRecord): MachineConnectionRecord {
         return connectionFileLock(this.paths, () => {

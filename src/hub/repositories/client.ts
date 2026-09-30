@@ -18,7 +18,7 @@ export class HubRepositoryClient extends HubClient {
         const body = !add && typeof alias === 'string' && /^[a-f0-9]{64}$/.test(alias) ? { canonicalKey: alias } : { alias: repositoryAlias(alias).descriptor };
         return this.request<{ repository: Repository }>(`${prefix}/${part(id)}/aliases`, add ? 'PUT' : 'DELETE', body);
     }
-    match(machineId: string, observation: Observation, remote?: string) { return this.request<RepositoryMatch>('/api/runweft/checkouts', 'POST', { machineId, observation, remote }); }
+    match(machineId: string, observation: Observation, remote?: string, signal?: AbortSignal) { return this.request<RepositoryMatch>('/api/runweft/checkouts', 'POST', { machineId, observation, remote }, signal); }
     bind(machineId: string, observation: Observation, repositoryId: string) { return this.request<{ checkout: Checkout }>('/api/runweft/checkouts', 'PUT', { machineId, observation, repositoryId }); }
     unbind(machineId: string, observation: Observation) { return this.request<{ removed: boolean }>('/api/runweft/checkouts', 'DELETE', { machineId, observation }); }
     checkouts() { return this.request<{ checkouts: Checkout[] }>('/api/runweft/checkouts'); }

@@ -45,3 +45,13 @@ WorkspacePreparations 的遗漏由主 agent 同步复核发现并已在评审结
 - 浏览器验证：scripts/smoke-hub-connect.ts 通过 5 组，使用开发机已有 Chromium 与真实 Hub 身份 API/SQLite、WebCrypto、编译 CLI；桌面/窄屏、选择空间、退出/重入、取消和假 origin，检查输出/URL/控制台无秘密。证据 `.dev-smoke/hub-connect-fJ61eZ/evidence.json` 及同目录截图；未启动模型或修改用户配置。Playwright 默认浏览器版本缺失，改用已有的 headless shell；首次组合脚本缺少资源网关能力，接入实际 ResourceGateway 后重跑通过。
 - 边界：此任务只接独立安全网关和 hub 命令。默认 serve 与任务/MCP 消费端仍按 T4/T5 切换，不宣称默认产品已完成集中身份接入。
 - Commit：`hub-delegation-migration T3: hand off Hub identity securely through Web confirmation`。
+
+## T4 CLI/MCP 与领域消费入口
+
+- 结果：HubClient 提供既有 HapiHttp 形状的用户/空间 transport，支持取消和流式文件；能力探测后换取短期 JWT，业务响应不确定时不自动重发，拒绝跨 origin。HubTaskClient/HubPreparationClient 使用持久身份、独立机器记录和实际 Git 观察，只提交选择器；原任务读写/等待/审批/成果方法共用 TaskOperations，工作区和附件继续使用现有流程。
+- 结果：显式 hub task/artifact/workspace 与 hub mcp serve 已可使用集中身份；默认 root 命令暂留原接线，T5 一次切换。任务可省略 Agent 使用本人仓库/空间选择，支持显式 runtime/remote。MCP 保留 Codex 元数据与 Claude 精确 hook 身份，已知受管 HAPI 子会话返回空工具列表，服务端递归拒绝仍覆盖直接工具调用和跨 scope；原生内置子会话不被泛化拒绝。
+- 验证：typecheck、build、git diff --check 通过；全仓 252 pass/0 fail（38 文件、5307 断言、约 60 秒）。新增编译消费端 3 组覆盖两宿主 × 两 runtime、默认选择/版本更新/原请求重放、父会话隔离、子工具隐藏与绕过列表拒绝、连接/空间缺失、跨 origin 和取消长等待。最后补充机器未登记提示，聚焦 3 组再次通过。完整日志 `.dev-smoke/reviews/hub-delegation-migration/t4-*.log`。
+- 真实验证：scripts/smoke-hub-consumers.ts 使用编译 CLI、未修改 HAPI、两个独立 Runner、专用模型配置副本。`.dev-smoke/hub-consumers-azHhRQ/evidence.json` 前三组通过，包含 Codex 两轮共享执行/原生 session 复用及本机 worktree 成果 ref；该次整体 success=false，因为脚本把 Claude 正常审批误作失败，已如实保留。
+- 真实验证：修正脚本先处理专用验收审批后，仅重跑远端部分，`.dev-smoke/hub-consumers-AENAkD/evidence.json` 全部通过。真实 Claude 独立工作区、启动前输入、输出实际字节、机器 owner 用户不能读任务 owner 文件、Git bundle 取回专用 ref、主 HEAD/工作文件未改变，未 push/合并。额外 `.dev-smoke/hub-consumers-B9eHnL/evidence.json` 全部通过：编译工作区诊断准备/重放/列表/查询/释放，不启动模型。各运行 cleanupErrors 均为空。
+- 边界：MCP 本任务通过真实编译 stdio 协议加原生 HTTP fixture 验证元数据组合；真实模型执行通过编译 CLI 接入。原生宿主自身发起 MCP 的完整组合在 T7 验收。此处的远端指同一物理 Linux 机器上的独立 Runner，未冒充物理远端。未改在线服务、原用户模型配置或 HAPI 源码。
+- Commit：`hub-delegation-migration T4: connect CLI and MCP consumers to central Hub delegation`。

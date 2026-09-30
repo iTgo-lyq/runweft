@@ -4,7 +4,7 @@ import { decodeJwt } from 'jose';
 import { z } from 'zod';
 import { configPath, expandPath, hubOrigin } from '../config';
 import { RunweftError } from '../errors';
-import { fetchJson, HapiRequestError } from '../hapi';
+import { fetchJson, fetchResponse, HapiRequestError, type HapiHttp } from '../hapi';
 import { IdentityToken, type Identity } from './types';
 import { readIdentityConnection } from './connect/record';
 
@@ -56,31 +56,39 @@ export class HubClient {
         if (!IdentityToken.safeParse(token).success) throw missingIdentity();
         this.identityToken = token!;
     }
-    private async checkHub() {
+    private async checkHub(signal?: AbortSignal) {
         if (this.ready) return;
-        const health = await fetchJson(this.url + '/api/runweft/health', { redirect: 'error' });
+        const health = await fetchJson(this.url + '/api/runweft/health', { redirect: 'error', signal });
         if (health?.service !== 'runweft' || health?.capabilities?.[this.capability] !== 1 || health?.capabilities?.hubAccess !== 1) {
             throw new RunweftError(this.unavailableCode, '目标服务尚未启用当前命令所需的 Hub 能力。', '升级配套 Hub；不会回退到旧 HAPI token 或本地配置。');
         }
         this.capabilities = health.capabilities; this.ready = true;
     }
-    protected async requireCapability(capability: string, code: string) {
-        await this.checkHub();
+    protected async requireCapability(capability: string, code: string, signal?: AbortSignal) {
+        await this.checkHub(signal);
         if (this.capabilities[capability] !== 1) throw new RunweftError(code, '目标 Hub 尚未启用此功能。', '升级配套 Hub 后重试；不会回退本地配置。');
     }
-    private async send(path: string, options: RequestInit, extraSecrets: string[] = []) {
-        try { await this.checkHub(); return await fetchJson(this.url + path, { ...options, redirect: 'error' }); }
+    private async sendResponse(path: string, options: RequestInit, extraSecrets: string[] = []) {
+        if (!path.startsWith('/') || new URL(path, this.url).origin !== this.url) throw new RunweftError('hub_request_path_invalid', 'Hub 请求必须使用当前服务的路径。');
+        try { await this.checkHub(options.signal ?? undefined); return await fetchResponse(this.url + path, { ...options, redirect: 'error' }); }
         catch (error) {
+            options.signal?.throwIfAborted();
             if (!(error instanceof RunweftError)) throw new RunweftError('hub_request_failed', 'Hub 请求未能完成。', '先查询原对象或请求结果，不要重复创建。');
             const clean = (text?: string) => text && [this.identityToken, this.jwt, ...extraSecrets].filter((s): s is string => !!s)
                 .reduce((result, secret) => result.split(secret).join('[redacted]'), text);
             throw new HapiRequestError(error instanceof HapiRequestError ? error.status : 503, clean(error.code)!, clean(error.message)!, clean(error.hint));
         }
     }
-    private async userJwt() {
+    private async send(path: string, options: RequestInit, extraSecrets: string[] = []) {
+        const response = await this.sendResponse(path, options, extraSecrets);
+        try { return await response.json(); }
+        catch { throw new RunweftError('hub_response_invalid', 'Hub 返回了无法解析的响应。'); }
+    }
+    private async userJwt(signal?: AbortSignal) {
+        signal?.throwIfAborted();
         if (this.jwt && this.expiresAt > Date.now() + 30_000) return this.jwt;
         const reply = await this.send('/api/auth', { method: 'POST', headers: { 'content-type': 'application/json' },
-            body: JSON.stringify({ accessToken: this.identityToken, ...(this.spaceId ? { spaceId: this.spaceId } : {}) }) });
+            body: JSON.stringify({ accessToken: this.identityToken, ...(this.spaceId ? { spaceId: this.spaceId } : {}) }), signal });
         const claims = decodeJwt(reply.token);
         if (claims.kind !== 'user' || typeof claims.sub !== 'string' || !z.uuid().safeParse(claims.sub).success
             || claims.space !== this.spaceId || typeof claims.exp !== 'number' || (this.expectedIdentity && this.expectedIdentity !== claims.sub)) {
@@ -88,21 +96,33 @@ export class HubClient {
         }
         this.jwt = reply.token; this.expiresAt = claims.exp * 1000; return this.jwt!;
     }
-    protected async request<T>(path: string, method = 'GET', body?: object): Promise<T> {
-        const jwt = await this.userJwt();
+    protected async request<T>(path: string, method = 'GET', body?: object, signal?: AbortSignal): Promise<T> {
+        const jwt = await this.userJwt(signal);
         return this.send(path, { method, headers: { authorization: `Bearer ${jwt}`, ...(body ? { 'content-type': 'application/json' } : {}) },
-            ...(body ? { body: JSON.stringify(body) } : {}) }, body && 'token' in body ? [String(body.token)] : []);
+            ...(body ? { body: JSON.stringify(body) } : {}), signal }, body && 'token' in body ? [String(body.token)] : []);
     }
-    async identity(): Promise<Identity> {
-        const reply = await this.send('/api/runweft/hub/identity', { headers: { authorization: `Bearer ${this.identityToken}` } });
+    /** Existing task/file helpers use the same authenticated Hub transport, including streaming and cancellation. */
+    readonly http: HapiHttp = {
+        request: async (path, options = {}) => {
+            const response = await this.http.response(path, options);
+            try { return await response.json(); } catch { throw new RunweftError('hub_response_invalid', 'Hub 返回了无法解析的响应。'); }
+        },
+        response: async (path, options = {}) => {
+            if (!this.spaceId) throw new RunweftError('hub_space_required', '此操作需要选择 Hub 空间。', '通过 Web 确认连接或显式指定 --space。');
+            const jwt = await this.userJwt(options.signal ?? undefined);
+            return this.sendResponse(path, { ...options, headers: { ...Object.fromEntries(new Headers(options.headers)), authorization: `Bearer ${jwt}` } });
+        },
+    };
+    async identity(signal?: AbortSignal): Promise<Identity> {
+        const reply = await this.send('/api/runweft/hub/identity', { headers: { authorization: `Bearer ${this.identityToken}` }, signal });
         const parsed = z.object({ id: z.uuid(), name: z.string(), createdAt: z.number() }).safeParse(reply.identity);
         if (!parsed.success || (this.expectedIdentity && this.expectedIdentity !== parsed.data.id)) throw new RunweftError('hub_identity_response_invalid', 'Hub 返回的身份与当前备份不一致。');
         return parsed.data;
     }
-    async connection() {
+    async connection(signal?: AbortSignal) {
         if (!this.spaceId) throw new RunweftError('hub_space_required', '尚未选择 Hub 空间。', '通过 Web 确认连接，或使用 --space 指定已加入的空间。');
-        await this.userJwt();
-        return { hub: this.url, ownerId: (await this.identity()).id, spaceId: this.spaceId };
+        await this.userJwt(signal);
+        return { hub: this.url, ownerId: (await this.identity(signal)).id, spaceId: this.spaceId };
     }
     async verifyMachine(token: string, credentialId: string): Promise<void> {
         const reply = await this.send('/api/auth', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ accessToken: token }) }, [token]);

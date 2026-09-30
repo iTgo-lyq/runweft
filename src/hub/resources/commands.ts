@@ -2,11 +2,20 @@ import type { Command } from 'commander';
 import { addRepositoryCommands } from '../repositories/commands';
 import { addAgentCommands } from '../agents/commands';
 import { dirname } from 'node:path';
-import { configPath } from '../../config';
+import { configPath, loadConfig } from '../../config';
 import { FlavorSchema, invalidInput } from '../../resources/types';
 import { HubResourceClient } from './client';
 import { hubConnectionPaths, MachineConnection } from './connection';
 import { IdentityConnection } from '../connect/client';
+import { addTaskCommands } from '../../tasks/commands';
+import { addArtifactCommands } from '../../artifacts/commands';
+import { addPreparationCommands } from '../../remote/commands';
+import { ArtifactClient } from '../../artifacts/client';
+import { HubClient } from '../client';
+import { HubTaskClient, HubPreparationClient } from '../delegation/client';
+import { hostClientSchema } from '../../mcp/identity';
+import { serveMcp } from '../../mcp/server';
+import { RunweftError } from '../../errors';
 
 export function addHubCommands(program: Command, output: (value: unknown, human: string) => void) {
     const hub = program.command('hub').description('通过明确 Hub 身份管理中心资源；不会启动本地服务')
@@ -18,6 +27,17 @@ export function addHubCommands(program: Command, output: (value: unknown, human:
     const client = () => new HubResourceClient(hub.opts());
     const home = () => dirname(configPath(program.opts().home));
     hub.hook('preAction', () => { hub.setOptionValue('home', home()); });
+    const context = () => loadConfig(home());
+    // Explicit Hub consumers are available before the default service is switched in T5.
+    addTaskCommands(hub, context, output, { client: () => new HubTaskClient(hub.opts(), process.cwd()), url: () => hub.opts().url });
+    addArtifactCommands(hub, context, output, () => new ArtifactClient(new HubClient(hub.opts(), 'hubAccess', 'hub_access_unavailable').http));
+    addPreparationCommands(hub.command('workspace').description('通过中心配置诊断独立 Git 工作区'), hub, context, output, () => new HubPreparationClient(hub.opts(), process.cwd()));
+    hub.command('mcp').description('以显式 Hub 连接启动 MCP').command('serve').requiredOption('--client <codex|claude>', '接入的原生客户端')
+        .action(async options => {
+            const host = hostClientSchema.safeParse(options.client);
+            if (!host.success) throw new RunweftError('unsupported_host', 'MCP 接入仅支持 codex 或 claude。');
+            await serveMcp(host.data, context, () => hub.opts());
+        });
     function show(connection: HubResourceClient, result: object, message?: string) {
         const value = { connection: { hub: connection.url, spaceId: connection.spaceId }, ...result };
         output(value, `Hub：${connection.url}${connection.spaceId ? `\n空间：${connection.spaceId}` : ''}\n${message ?? JSON.stringify(result, null, 2)}`);

@@ -8,7 +8,7 @@ export class HubAgentClient extends HubClient {
     constructor(options: HubConnectionOptions) { super(options, 'hubAgentDefinitions', 'hub_agents_unavailable'); }
     create(requestId: string, definition: unknown) { return this.request<{ agent: AgentView }>(prefix, 'POST', { requestId, definition }); }
     receipt(requestId: string) { return this.request<{ agent: AgentView }>(`${prefix}/requests/${part(requestId)}`); }
-    list() { return this.request<{ agents: AgentView[] }>(prefix); }
+    list(signal?: AbortSignal) { return this.request<{ agents: AgentView[] }>(prefix, 'GET', undefined, signal); }
     agent(id: string) { return this.request<{ agent: AgentView }>(`${prefix}/${part(id)}`); }
     update(id: string, expectedVersion: number, definition: unknown) { return this.request<{ agent: AgentView }>(`${prefix}/${part(id)}`, 'PATCH', { expectedVersion, definition }); }
     register(id: string, registered: boolean) { return this.request<{ agent: AgentView }>(`${prefix}/${part(id)}${registered ? '/register' : ''}`, registered ? 'POST' : 'DELETE', {}); }
@@ -24,9 +24,9 @@ export class HubAgentClient extends HubClient {
         await this.requireCapability('hubAgents', 'hub_agent_resolution_unavailable');
         return this.request<{ removed: boolean }>('/api/runweft/agent-selections', 'DELETE', { repositoryId });
     }
-    async resolve(input: Partial<ResolveInput> = {}) {
-        await this.requireCapability('hubAgents', 'hub_agent_resolution_unavailable');
-        return this.request<{ resolution: ResolvedHubAgent }>('/api/runweft/agent-resolution', 'POST', input);
+    async resolve(input: Partial<ResolveInput> = {}, signal?: AbortSignal) {
+        await this.requireCapability('hubAgents', 'hub_agent_resolution_unavailable', signal);
+        return this.request<{ resolution: ResolvedHubAgent }>('/api/runweft/agent-resolution', 'POST', input, signal);
     }
 
 }

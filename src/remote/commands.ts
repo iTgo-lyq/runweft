@@ -4,6 +4,7 @@ import { z } from 'zod';
 import type { ResolvedConfig } from '../config';
 import { RunweftError } from '../errors';
 import { PreparationClient, type PreparationView } from './client';
+import type { HubPreparationClient } from '../hub/delegation/client';
 
 const phases: Record<string, string> = { exporting: '固定基线导出中', uploading: '中心发布中', importing: '目标导入中', preparing: '工作树准备中', ready: '已就绪', failed: '失败', unknown: '等待原操作确认', releasing: '释放中', released: '已释放' };
 const stages: Record<string, string> = { export: '固定基线导出', publish: '中心文件发布', download: '目标下载', import: '目标缓存导入', worktree: '独立工作树准备', complete: '准备完成', release_worktree: '检查并移除诊断工作树', release_baseline: '释放缓存与恢复引用', released: '释放完成' };
@@ -19,17 +20,22 @@ export function preparationText(view: PreparationView) {
         + view.cleanup.errors.map(error => `\n中间副本清理待处理：${error!.message}`).join('')
         + `\n${view.next}`;
 }
-export function addPreparationCommands(workspace: Command, program: Command, context: () => ResolvedConfig, output: (value: unknown, human: string) => void) {
-    const client = () => new PreparationClient(context(), process.cwd());
-    workspace.command('prepare').description('诊断远端 Git 环境；固定基线并准备 worktree，不启动模型')
-        .requiredOption('--agent <name>', '使用现有 Agent 的 runtime 绑定').requiredOption('--base <ref>', '明确已提交基线，可用 HEAD；排除未提交内容')
+export function addPreparationCommands(workspace: Command, program: Command, context: () => ResolvedConfig, output: (value: unknown, human: string) => void,
+    hubClient?: () => HubPreparationClient) {
+    const client = hubClient ?? (() => new PreparationClient(context(), process.cwd()));
+    const prepare = workspace.command('prepare').description('诊断远端 Git 环境；固定基线并准备 worktree，不启动模型')
+        .requiredOption('--base <ref>', '明确已提交基线，可用 HEAD；排除未提交内容')
         .option('--request-id <uuid>', '响应丢失时以相同 ID 和参数重试')
         .action(async options => {
             const requestId = options.requestId ?? randomUUID();
             if (!z.uuid().safeParse(requestId).success) throw new RunweftError('invalid_request_id', 'request ID 必须是 UUID。');
-            console.error(program.opts().json ? JSON.stringify({ event: 'workspace_request', request_id: requestId }) : `请求 ID：${requestId}（响应丢失时使用 --request-id ${requestId} 重试相同准备）`);
-            const preparation = await client().prepare(options.agent, options.base, requestId); output({ preparation }, preparationText(preparation));
+            console.error(program.optsWithGlobals().json ? JSON.stringify({ event: 'workspace_request', request_id: requestId }) : `请求 ID：${requestId}（响应丢失时使用 --request-id ${requestId} 重试相同准备）`);
+            const preparation = hubClient ? await hubClient().prepare(options.agent, options.base, requestId, { runtimeId: options.runtime, remote: options.remote })
+                : await client().prepare(options.agent, options.base, requestId);
+            output({ preparation }, preparationText(preparation));
         });
+    if (hubClient) prepare.option('--agent <id>', '显式 Agent UUID；省略使用本人默认选择').option('--runtime <id>', '显式 runtime UUID').option('--remote <name>', '明确 fetch remote');
+    else prepare.requiredOption('--agent <name>', '使用现有 Agent 的 runtime 绑定');
     workspace.command('preparations').description('列出当前目录的远端诊断准备').option('--all', '查看当前 namespace 全部准备记录')
         .action(async options => { const preparations = await client().list(!!options.all); output({ preparations }, preparations.length ? preparations.map(item => `${item.id} · ${phases[item.phase]} · ${item.agent.id} · ${item.origin.baseCommit.slice(0, 12)}`).join('\n') : '尚无远端准备记录。需要检查远端环境时运行 workspace prepare --agent <name> --base <ref>。'); });
     workspace.command('inspect <id>').description('查询原准备的基线、进度、工作目录和错误')
