@@ -1,6 +1,6 @@
 # Hub 1.1.0 完整版本验收
 
-> 状态：同候选功能自动验收全部通过；完整交付装配待T5。
+> 结论：阶段六、七全部本地实现与自动验收通过，按用户持续授权关闭；Mac实机和物理跨机边界明确保留。
 > 执行：2026-10-01，TraeX `01a0f3d9-1ed7-7b33-a2f6-146c5e371e55`，GPT-6-Astra / xhigh。用户已授权本地自动验收、逐任务提交与归档。
 
 ## 唯一候选
@@ -18,7 +18,7 @@ Linux x64 的真实registry安装位于 `.dev-smoke/install-0iuvhf/prefix/lib/no
 
 | 父需求 | 可观察结果与证据 |
 | --- | --- |
-| 无注册独立身份、同token用于Web/CLI/MCP | 已安装连接Playwright五组主动创建、选择空间、RSA/WebCrypto交接；原生MCP矩阵另核对真实宿主使用 |
+| 无注册独立身份、同token用于Web/CLI/MCP | 已安装连接Playwright五组主动创建、选择空间、RSA/WebCrypto交接；十二组原生MCP核对真实宿主使用 |
 | 刷新/401不新建，保存导入可恢复、不认领旧资源 | 后台多身份导入/刷新/过期，服务显式reset后旧身份401、新身份/机器不同；根身份测试覆盖轮换/所有权 |
 | 私有Agent与个人选择隔离，直接接口同样拒绝 | 后台十二组及hub-agent/hub-consumers根测试，成员/管理员API拒绝，CLI/MCP使用相同中心授权 |
 | 管理员仅概要治理，空间外不可使用 | 后台私有Agent卡片不含内容/模型/绑定、仅禁用；根resources/agents/access覆盖跨空间ID和分享撤回 |
@@ -32,7 +32,7 @@ Linux x64 的真实registry安装位于 `.dev-smoke/install-0iuvhf/prefix/lib/no
 | HAPI会话/审批/文件/terminal/SSE/Socket/Runner受限 | 后台真实HAPI消息/审批/文件和header-SSE，多标签JWT；原生RPC/任务历史为明确夹具，根access/sockets覆盖撤回/派生/拒绝；真实模型矩阵另列 |
 | 只做有界reset、保留Git/worktree/模型配置 | 已安装轻量Node服务与Hub服务五组，运行中拒绝、停服保留文件、重新接入；root reset测试覆盖未知进程/符号链接/边界 |
 | 同源码四平台及完整Linux x64协作 | 四平台包内容/格式/hash、registry、QEMU、Playwright与同安装程序；消费者十组、原生十二组全部通过 |
-| 完整源码/包/Skill/官网/可读证据本地交付 | 平台/Skill/官网已生成；完整装配待T5；Mac/物理远端边界如下，不发布或更新在线服务 |
+| 完整源码/包/Skill/官网/可读证据本地交付 | 完整发行归档、五包/Skill/官网、对应两仓库源码及离线Git bundle、脱敏证据/说明均交付并验证；不发布或更新在线服务 |
 
 ## 当前验证结果
 
@@ -53,6 +53,18 @@ Linux x64 的真实registry安装位于 `.dev-smoke/install-0iuvhf/prefix/lib/no
 | 真实消费者 | `hub-consumers-J9qXud/evidence.json` 十组：独立登记、远端prepare/replay/release，共享两轮、确切missing新session重建、本地worktree、跨所有者远端Claude输入/附件/bundle取回及显式清理，两runtime精确停止/旧轮次拒绝/原session记忆续接，Hub重启读取原报告与ID、不重跑 |
 
 产品Skill自阶段六归档 `9f85353` 后内容完全相同，`git diff`与最终包逐文件检查一致；因此独立Agent判断场景复用 `.dev-smoke/skill-scenario-final.md` 和 `.dev-smoke/runweft-install-cycle-KC3taFHW/evidence.json`，不把其旧程序安装当成新候选运行证据。
+
+## 完整交付
+
+本机 `dist/runweft-1.1.0-release/` 与 `dist/runweft-1.1.0-release.tar.gz` 是完整交付，旁置 `.tar.gz.sha256`；内含37个受校验文件及 `SHA256SUMS`。精确整包hash以旁置清单及本Change的execution.md为准，避免归档内容自引用hash。
+
+- `packages/`：五个npm tarball、独立Skill、index.json及原始SHA256SUMS。
+- `website/`：可独立静态部署的官网、平台/Skill真实下载、说明、逐包校验；本地源码入口也可用 `node website/serve.mjs` 预览，未部署在线站点。
+- `USAGE.md`、`README.md`：整包/平台安装、Agent/Skill接入与使用路径。平台程序保持相邻HAPI；没有公共npm发布。
+- `source/`：候选revision对应Runweft与固定HAPI源码归档，及两个离线Git bundle。按source/README.md恢复原Git身份和子模块，避免源码解包丢失pin验证所需Git信息；依赖下载仍需registry。
+- `validation/`：本验收说明及脱敏evidence.json，绑定源码、程序/hash、真实组合、原始证据路径/摘要及边界；不携带模型配置、原生日志、完整prompt或浏览器storage。程序源码与后续验收提交区分记录。
+
+装配初版的整包SHA和全部37项解包校验通过；从该归档再提取平台程序，版本1.1.0，`.dev-smoke/service-WMK1he/evidence.json` 五组真实服务通过，cleanupErrors=[]。离线bundle重建于 `.dev-smoke/final-release/rebuild/runweft`，两仓库revision准确、工作区干净，两处frozen install与typecheck通过。随后仅更新验收元数据重新装配，程序/包/网站内容不变，并再次校验最终归档；具体日志为 `reviews/hub-final-release/t5-{assemble,source,unpack,extracted-service,final-assemble,final-verify}.log`。
 
 ## 失败与边界
 

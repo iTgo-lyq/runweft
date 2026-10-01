@@ -12,7 +12,7 @@
 | 4 [仓库与中心 Agent 配置（已完成）](../../archive/2026-10-01-hub-repository-agents/requirement.md) | 同仓库不同用户有独立定义/偏好，中心版本快照及目标解析 | 1、3 |
 | 5 [委派接入及配置切换（已完成）](../../archive/2026-10-01-hub-delegation-migration/requirement.md) | MCP/CLI 必连 Hub，按身份与空间委派；旧试验历史直接清理 | 2、3、4 |
 | 6 [Web 管理及 Agent 接入 Skill（已完成）](../../archive/2026-10-01-hub-console-onboarding/requirement.md) | 完整资源后台、Agent 执行安装接入流程、官网与诊断一致 | 3、4、5 |
-| 7 本 Change：集成发行 | 同一版本的首次接入、多人权限、两宿主/两 runtime、本地及远端链路、四平台构建 | 以上全部 |
+| 7 本 Change：集成发行（已完成） | 1.1.0同一安装程序的首次接入、多人权限、十二组MCP、十组消费者与维护，四平台/Skill/官网/对应源码完整交付；见[验收](acceptance.md) | 以上全部 |
 
 ## 共享契约归属
 
@@ -27,7 +27,7 @@
 
 同一工作区串行实现；每个 Change 的 Technical 依据实际代码形成、Plan 经 iclaude 评审后落实。只因额度耗尽改用新 subagent。自动验收使用专用目录，网页使用 Playwright；物理远端条件缺失则如实保留缺口，Mac 双架构产物照常构建。既有在线 Hub 的部署更新不随开发自动执行。
 
-身份/空间的完整独立 API 和 Web 流程已验收归档。HAPI 多用户桥接在阶段 2 验证，阶段 1 不把新 token 翻译成原有 root 凭据。默认入口和连接配置已在阶段 5 切换并验收；阶段 6 已完成后台、Skill 与官网，阶段 7 继续完成同候选整体发行。
+身份/空间的完整独立 API 和 Web 流程已验收归档。HAPI 多用户桥接在阶段 2 验证，阶段 1 不把新 token 翻译成原有 root 凭据。默认入口和连接配置已在阶段 5 切换并验收；阶段 6 后台/Skill与阶段 7 同候选整体发行均已完成。全部本地验收由Agent执行，Mac实机与物理远端边界见Acceptance。
 
 ## 后续执行交接
 

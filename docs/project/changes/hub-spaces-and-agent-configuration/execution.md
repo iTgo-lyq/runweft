@@ -49,3 +49,11 @@ iclaude 首次进程因变长 `--mcp-config` 参数吞入末尾 prompt，在模�
 - 验证：同源码typecheck/build，256 pass / 0 fail / 5244断言 / 41文件；服务smoke移除最后的开发HAPI override并增加hash/清理失败标记后typecheck及五组实际服务再次通过。无产品输入修改，冻结核对通过。根/Skill/源码对象路径扫描未发现凭据或原生数据文件入Git；不据此宣称全历史安全审计。
 - 证据：`.dev-smoke/final-release/evidence.json` 筛选运行结果、版本/hash、任务/原生ID和现场摘要，不复制prompt、原生日志、密钥或浏览器storage。全部本批真实链路success=true、cleanupErrors=[]；最终矩阵没有非预期审批。对应原始路径与夹具边界见Acceptance。
 - Commit：`hub-spaces-and-agent-configuration T4: accept the frozen 1.1.0 integration candidate`。
+
+## T5 完整交付与关闭验收
+
+- 交付：`dist/runweft-1.1.0-release/`、`dist/runweft-1.1.0-release.tar.gz`（1,775,732,179字节）及 `.tar.gz.sha256`，SHA256 `33ec535fbb06d7c382dd2704045c74267df28455bd5c67dcf96b825d54690dab`。含五包/独立Skill、完整静态网站、37项文件校验、使用说明、对应两仓库源码归档与离线Git bundle、可读验收及脱敏证据。未发布、未推送、未更新在线服务。
+- 验证：最终整包校验、再次全量解包和37项hash、网站/候选索引/验收说明逐字一致通过，日志 `reviews/hub-final-release/t5-{final-assemble,final-verify}.log`。初版仅验收元数据尚未收尾，保留 `.dev-smoke/final-release/initial-assembly/`；其解包平台程序五组服务 `service-WMK1he/evidence.json` success=true/cleanupErrors=[]，最终程序及包字节未变。
+- 验证：离线bundle真正克隆Runweft并从本地HAPI bundle初始化子模块，revision分别为候选657550f与固定3ac8b08；两处frozen install和typecheck通过、两仓库干净，日志 `t5-source.log`。根历史对象路径无原生凭据/数据文件命中；脱敏索引未含token/privateKey/prompt/message/instructions字段，不把此有界检查称为全历史安全审计。
+- 验收：父需求15项逐项映射至已安装程序/根夹具/真实模型或构建证据，见Acceptance；所有本地工作由主Agent完成。阶段六/七没有残留本地门禁。Mac实机、物理跨机、原生arm64模型和远程CI未执行，如实保留，不影响用户授权的本地交付关闭。
+- Commit：`hub-spaces-and-agent-configuration T5: deliver complete verified 1.1.0 source and release`。
