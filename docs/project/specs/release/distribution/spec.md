@@ -28,11 +28,15 @@ HAPI 固定版本和协议见[执行兼容](../../execution/compatibility/spec.m
 
 五包绑定 GitHub 仓库 `iTgo-lyq/runweft` 的 `npm-publish.yml`，包含直接发布权限 createPackage，不设置 environment。授权范围是仓库工作流，不限制分支；仓库写权限可修改发布行为。托管 runner 使用 Node 24/npm 11.19.0、id-token:write 和 npm audience `npm:registry.npmjs.org`，不保存 npm token secret。逐包 OIDC 交换返回成功且含 token 才继续；token 不打印或持久化。私有仓库支持发布，当前无自动 provenance。
 
-正式上传仅接受 push 事件的严格稳定版本标签，标签、源码版本与冻结索引必须一致。普通 main/codex 分支的发布流程变更及手动入口只预演；手动入口须默认分支含工作流。发布依赖复用 CLI 工作流的根检查、四平台构建/包内容与真实安装检查，使用同一构建候选；正式步骤要求索引源码干净且等于 github.sha，并检查五包 manifest、主包精确依赖及 tarball 完整性。
+正式上传仅接受 push 事件的规范版本标签：vX.Y.Z → latest，vX.Y.Z-beta.N → beta，整数无前导零且 N 非负；标签、源码版本与冻结索引必须一致，其他预发布格式拒绝。普通 main/codex 分支的发布流程变更及手动入口只预演；手动入口须默认分支含工作流。发布依赖复用 CLI 工作流的根检查、四平台构建/包内容与真实安装检查，使用同一构建候选；正式步骤要求索引源码干净且等于 github.sha，并检查五包 manifest、主包精确依赖及 tarball 完整性。
+
+Beta 上传前必须高于每包当前 beta 与 latest，稳定版只与 latest 比较；按三段版本、同核心 stable 高于 beta、Beta 数值序号比较，同版本仅恢复原候选。
 
 正式上传前检查全部五包公开版本；同版本不同完整性在首个上传前停止，已公开且完整性相同的包跳过。新版本逐个平台上传并等待公开确认，主包须等四平台全部确认。上传前持久化未知状态回执；成功接受后有界等待后台处理，未知失败不盲目重发。预演可检查已存在版本的候选，明确 published=false，正式发版仍须升版本。
 
-发布工作流串行且不中途取消，候选按 build run_attempt 唯一命名，候选与回执保留三十天；失败恢复只重跑同一 run 的失败 job，读取原 build 输出指向的候选及最新回执。重跑整个 run 不视作相同候选。[可信发布验收](../../../archive/2026-10-01-npm-trusted-publishing/acceptance.md)证明五包真实授权和预演；首次验收只执行预演；后续 v1.1.1 原 run 36915690489 已通过真实五包上传，当前公开候选绑定 `36257dfb3aae2da85289539b11ba8ac857bdbb10`，携带当前 npm Skill。原离线整包未重组，新候选不继承旧模型组合证据，见[新版本验收](../../../archive/2026-10-02-npm-patch-release/acceptance.md)。
+回执记录 channel、latestBefore 和实际 distTags，恢复要求来源、版本、通道与完整性匹配。全部版本公开后读取本通道标签确认目标版本，Beta 同时确认每包 latest 保持上传前值；传播延迟仅有界等待，标签被推进或 latest 变化失败并提示检查，不自动调整标签。新格式只用于同一 run 的恢复，不对历史 run 加兼容分支。
+
+发布工作流串行且不中途取消，候选按 build run_attempt 唯一命名，候选与回执保留三十天；失败恢复只重跑同一 run 的失败 job，读取原 build 输出指向的候选及最新回执。重跑整个 run 不视作相同候选。[可信发布验收](../../../archive/2026-10-01-npm-trusted-publishing/acceptance.md)证明五包真实授权与首次预演；后续 v1.1.1 原 run 36915690489 已通过真实五包上传，当前公开候选绑定 `36257dfb3aae2da85289539b11ba8ac857bdbb10`，携带当前 npm Skill。原离线整包未重组，新候选不继承旧模型组合证据，见[新版本验收](../../../archive/2026-10-02-npm-patch-release/acceptance.md)。
 
 ## 升级与保留
 

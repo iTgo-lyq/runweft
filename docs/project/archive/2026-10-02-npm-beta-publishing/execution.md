@@ -18,4 +18,6 @@
 
 ## T3 自动验收、Specs 同步与归档
 
-- 结果：同步已验证配置与证据范围；文档推送触发的稳定官网部署按既有流程核对。
+- 结果：用户持续授权下自动验收，需求映射配置、聚焦夹具与真实稳定 CI；同步发行/验收/官网 Specs 和项目入口，完整归档，不修改历史。文档追加 production run 36922124955 成功，原回执与唯一/正式域名八文件再次一致。
+- 验证：Change 结构、文档链接、git diff 与原 tag 包输入检查通过，任务提交推送 main；独立工作区干净，原工作区审计改动保留。验收明确 Beta 全候选/实际 tag/upload 与新版正式标签回执尚未真实执行。
+- Commit：`npm-beta-publishing T3: sync verified workflow specs and archive`

@@ -41,6 +41,12 @@ Linux x64 通过真实官网 DOM 命令匿名安装 1.1.1；安装后的两程�
 
 此轮验证发布、安装与官网，没有新候选模型、物理跨机、arm64 模型组合或新离线整包验收。旧 1.1.0 组合证据保留原版本范围。
 
+## Beta 发布配置与证据范围
+
+[npm 配置 CI](https://github.com/iTgo-lyq/runweft/actions/runs/36921038560)验证干净源码 492bda5bbc1a4b5befe16215347b4cbd1843f14e：四平台构建/内容/原生安装、五包 OIDC HTTP 201 和 channel=latest 的预演通过，version=1.1.1、success=true、published=false。根 CI 272 pass、2 skip、0 fail、5369 断言、43 文件；两项 MCP 配置测试因无 Codex CLI 跳过。独立 [CLI CI](https://github.com/iTgo-lyq/runweft/actions/runs/36921038282)四平台也通过，官网稳定生产成功，五包公开完整性/latest=1.1.1 保持。
+
+本地 typecheck、274 项根测试（5391 断言、43 文件、零跳过/失败）、17 项发布测试和 actionlint 通过。Node 24 的 Beta tag 门禁、实际 npm 11.19.0 --tag=beta --dry-run 最小包，以及稳定/Beta 源版本环境各 14 项官网检查使用专用夹具；新版通道回执、前后 dist-tags 和恢复保护通过聚焦模拟验证。没有真实 Beta tag/workflow、完整 Beta 四平台候选或公开上传，也没有新版脚本正式上传后的真实标签回执；[配置验收](../../../archive/2026-10-02-npm-beta-publishing/acceptance.md)明确保留这些缺口，不将稳定预演或夹具当作 Beta 公开。
+
 ## 尚未取得的证据
 
 - 原公共 1.1.0 候选的 macOS 两架构完成构建、格式/架构及包内容校验；最终模型/用户实机验证尚未执行。新 CI 候选另有托管 macOS 安装/服务证据。
