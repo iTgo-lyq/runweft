@@ -32,7 +32,14 @@ runweft --version
 
 先检查安装目录/链接归属；未知已有文件不能覆盖。Linux 可用 `sha256sum -c SHA256SUMS`，平台名为 `linux-x64` 或 `linux-arm64`，Intel Mac 为 `darwin-x64`。把 `~/.local/bin` 加入新终端的 PATH。Mac 产物未签名、公证；核对来源后按系统安全提示允许，交叉构建不代表实机运行。
 
-当前不公开 npm 发布。有提供同批完整包的私有 registry 时可用 Node.js 20+、`npm install -g runweft@<版本> --registry <地址> --include=optional`；只有主包 tarball 不足以安装平台依赖。
+使用 npm 主入口需要 Node.js 20+。公共 npm 提供本版本的主包和四个平台依赖后，可直接安装：
+
+```sh
+npm install -g runweft@1.1.0 --registry=https://registry.npmjs.org/ --include=optional
+runweft --version
+```
+
+npm 自动选择当前平台包，随包提供相邻 HAPI 和 `skills/runweft`。使用私有 registry 时将 `--registry` 替换为实际地址；该 registry 必须提供同版本五包，只有主包 tarball 不足以安装平台依赖。
 
 ## Hub、身份与空间
 
