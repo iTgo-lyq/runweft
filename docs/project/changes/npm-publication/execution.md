@@ -20,6 +20,7 @@ iclaude 在当前工作区完成一次只读评审，会话 `991da989-689b-478a-
 - 验证：`bun run test:packages` 通过，证据 `.dev-smoke/release-packages-VHeUaX/evidence.json`；五个解包 README 逐字等于更新后的说明，公共 npm 命令正确，证据 `.dev-smoke/npm-publication/readme-checks.json`。
 - 验证：`bun run test:install` 通过，专用 registry 安装、服务/信号/reset、重装、缺依赖诊断、卸载与数据保留；证据 `.dev-smoke/install-WW8ijy/evidence.json`。这是本地 registry，尚非公共 npm 安装。
 - 验证：新五包 `npm publish --dry-run --ignore-scripts --json` 均通过，SHA-512 与新索引一致，证据 `.dev-smoke/npm-publication/preflight.json`。专用命令确认 registry 为 `https://registry.npmjs.org/`；未执行真实 publish。
-- 阻塞：隔离配置的 `npm whoami` 返回 ENEEDAUTH。已发起官方网页登录；此前请求未完成后停止了回退的密码提示，新网页登录仍等待用户。密码/验证码只在官方页面输入，不收进聊天。
-- 恢复入口：`.dev-smoke/npm-publication/npm-isolated.mjs` 提供固定 registry/专用配置；登录成功后在 TTY 运行 `node .dev-smoke/npm-publication/publish.mjs`，五包逐个核验后再执行 `node .dev-smoke/npm-publication/public-install.mjs`。实际发布期间若需额外认证，继续官方 CLI 浏览器流程。认证配置权限 0600，目录 0700，均不提交。
-- 未完成：真实发布、公共下载/安装、Specs 同步和归档；T2 保持已阻塞，T3 未开始。
+- 认证：隔离配置起初返回 ENEEDAUTH；官方网页登录已成功，`npm whoami` 为 `itgo-lyq`。首个平台 `runweft-linux-x64@1.1.0` 的真实 publish 请求得到官方发布验证提示，已将浏览器验证入口交给用户，当前等待完成。密码/验证码只在官方页面输入，不收进聊天。
+- 外部事实：该请求尚无成功回执，公共 `/runweft-linux-x64/1.1.0` 和 `/runweft/1.1.0` 仍为 404，不认定任何包发布成功，也尚不能判定 registry 接受包体积。
+- 恢复入口：`.dev-smoke/npm-publication/npm-isolated.mjs` 提供固定 registry/专用配置；`node .dev-smoke/npm-publication/publish.mjs` 已在 TTY 会话 50283 中运行，先读取其结果，不并发重启或盲目重发。五包逐个核验后再执行 `node .dev-smoke/npm-publication/public-install.mjs`；额外认证继续官方 CLI 浏览器流程。认证配置权限 0600，目录 0700，均不提交，保留到发布完成后清理。
+- 未完成：真实发布、公共下载/安装、Specs 同步和归档；T2 已阻塞于发布验证，T3 未开始。
