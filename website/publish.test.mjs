@@ -155,6 +155,42 @@ test('unique deployment verifies all bytes and MIME after same-host HTML redirec
   assert.equal(pauses, 1);
 });
 
+test('first deployment can remain temporarily unreachable beyond one minute without uploading again', async () => {
+  let calls = 0, pauses = 0;
+  const result = await verifyDeployment(online, { fetchImpl: async url => {
+    calls++;
+    if (calls <= 13) throw Object.assign(new Error('fixture'), { cause: { code: 'ENOTFOUND' } });
+    return serveFixture(url);
+  }, pause: async () => { pauses++; } });
+  assert.equal(result.success, true);
+  assert.equal(pauses, 13);
+  assert.equal(calls, 21);
+});
+
+test('verification failure retains uploaded URL/environment receipt without credentials', async () => {
+  const working = join(temporary, 'failed-verification');
+  const evidence = join(working, '.dev-smoke/website-pages');
+  await mkdir(evidence, { recursive: true });
+  await buildSite({ outputDirectory: join(working, 'dist/website') });
+  await writeFile(join(evidence, 'prepare.json'), JSON.stringify({ mode: 'preview', branch: 'codex/test', subdomain: project.subdomain }));
+  const preload = join(working, 'unavailable-page.mjs');
+  await writeFile(preload, "globalThis.fetch = async () => new Response('{}', {headers:{'content-type':'application/json'}});\n");
+  const child = spawnSync(process.execPath, ['--import', preload, resolve('website/publish.mjs'), 'verify'], { cwd: working, env: {
+    ...process.env, PAGES_DEPLOYMENT_URL: online.url, PAGES_ENVIRONMENT: 'preview',
+    CLOUDFLARE_API_TOKEN: 'fixture-secret-never-recorded', GITHUB_SHA: 'a'.repeat(40),
+  }, encoding: 'utf8' });
+  assert.equal(child.status, 1);
+  assert.match(child.stderr, /MIME/);
+  const raw = await readFile(join(evidence, 'deployment.json'), 'utf8');
+  const receipt = JSON.parse(raw);
+  assert.equal(receipt.url, online.url);
+  assert.equal(receipt.uploaded, true);
+  assert.equal(receipt.success, false);
+  assert.equal(receipt.pagesEnvironment, 'preview');
+  assert.equal(receipt.sourceRevision, 'a'.repeat(40));
+  assert(!raw.includes('fixture-secret-never-recorded'));
+});
+
 test('wrong deployment, Access redirect, wrong MIME/content and propagation failure cannot pass', async () => {
   for (const change of [{ url: 'https://evil.invalid/' }, { pagesEnvironment: 'production' }, { url: 'https://abc.runweft-test.pages.dev/downloads/' }]) {
     await assert.rejects(verifyDeployment({ ...online, ...change }, { fetchImpl: () => { throw new Error('unexpected request'); } }));

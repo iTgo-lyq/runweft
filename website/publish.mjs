@@ -55,7 +55,11 @@ export async function validateSite(directory) {
 
 async function request(url, options, fetchImpl) {
   try { return await fetchImpl(url, { ...options, signal: AbortSignal.timeout(30_000) }); }
-  catch { throw new Error('网络请求失败或超时；请检查服务状态和访问条件。'); }
+  catch (error) {
+    const code = error.cause?.code ?? error.code ?? error.name;
+    const detail = /^[A-Z][A-Z0-9_]{0,79}$/.test(code ?? '') ? `（${code}）` : '';
+    throw new Error(`网络请求失败或超时${detail}；请检查服务状态和访问条件。`);
+  }
 }
 
 export async function checkNpmRelease(release, fetchImpl = fetch) {
@@ -114,14 +118,20 @@ export async function ensurePagesProject({ accountId, apiToken, projectName }, f
   return { project: project.name, subdomain: project.subdomain, created };
 }
 
-export async function verifyDeployment({ url, subdomain, mode, pagesEnvironment, site }, {
-  fetchImpl = fetch, pause = () => new Promise(done => setTimeout(done, 5000)), attempts = 12,
-} = {}) {
+function deploymentReference({ url, subdomain, mode, pagesEnvironment }) {
   assert.equal(pagesEnvironment, mode, 'Pages 实际生产/预览环境不匹配。');
   const deployment = new URL(url);
   const validHost = host => host === subdomain || host.endsWith(`.${subdomain}`);
   assert(deployment.protocol === 'https:' && validHost(deployment.hostname) && !deployment.username && !deployment.password
     && deployment.pathname === '/' && !deployment.search && !deployment.hash, '部署 URL 必须来自当前 Pages 项目。');
+  return { deployment, validHost };
+}
+
+export async function verifyDeployment(target, {
+  fetchImpl = fetch, pause = () => new Promise(done => setTimeout(done, 5000)), attempts = 36,
+} = {}) {
+  const { deployment, validHost } = deploymentReference(target);
+  const { mode, site } = target;
   const deadline = Date.now() + 180_000;
   for (const file of site.files) {
     let confirmed = false;
@@ -191,8 +201,14 @@ async function main() {
     case 'verify': {
       const site = await validateSite(directory);
       const prepared = JSON.parse(await readFile('.dev-smoke/website-pages/prepare.json', 'utf8'));
-      const result = await verifyDeployment({ url: env.PAGES_DEPLOYMENT_URL, subdomain: prepared.subdomain,
-        mode: prepared.mode, pagesEnvironment: env.PAGES_ENVIRONMENT, site });
+      const target = { url: env.PAGES_DEPLOYMENT_URL, subdomain: prepared.subdomain,
+        mode: prepared.mode, pagesEnvironment: env.PAGES_ENVIRONMENT, site };
+      const { deployment } = deploymentReference(target);
+      await save('deployment', { success: false, uploaded: true, url: deployment.href, mode: prepared.mode,
+        pagesEnvironment: env.PAGES_ENVIRONMENT, branch: prepared.branch, sourceRevision: env.GITHUB_SHA,
+        verification: 'pending' });
+      await summary(`Pages 已上传 ${prepared.mode}：[${deployment.href}](${deployment.href})，正在校验在线内容。`);
+      const result = await verifyDeployment(target);
       await save('deployment', { ...result, branch: prepared.branch, sourceRevision: env.GITHUB_SHA });
       await summary(`**已部署并验证 ${result.mode}**：[${result.url}](${result.url})，npm ${result.version}，分支 ${prepared.branch}。`);
       console.log(`Pages ${result.mode} 在线校验通过：${result.url}`);

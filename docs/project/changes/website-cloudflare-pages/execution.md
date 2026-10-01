@@ -20,5 +20,9 @@
 
 ## T3 接通账户并验证真实预览
 
-- 结果：已阻塞，缺 CLOUDFLARE_ACCOUNT_ID、CLOUDFLARE_API_TOKEN；已向用户提供 Secrets 页面与最小权限说明。
-- 未解决：实际 Pages API、唯一 URL 和在线内容/MIME 尚未验证。凭证就绪后重跑最新官网 run，先核对项目再上传；不需要修改 npm 信任或用户本地配置。
+- 结果：用户自行保存 Token，Agent 将提供的账户 ID 写入 Repository secret；两名称齐全。真实 Pages API 明确不存在后创建 Direct Upload runweft/main 项目，上传当前 codex 分支；唯一 URL 为 https://9d1bff6b.runweft.pages.dev/。
+- 验证：run 36904295244 attempt 2 的项目准备与上传成功，随后在线检查因网络异常失败，12 次重试实际约一分钟。保留原部署并独立 GET 核对三页/元数据/四资源共八文件 SHA-256 与 MIME，全部一致，公共 npm 1.1.0。root runweft.pages.dev 尚无生产部署返回 404，与未合码边界一致。此次独立 HTTP 输入按项目 main 与实际上传 codex 参数推定 preview，未读取 action environment 输出，不代替 T3.1。
+- 修正：默认重试改为 36 次、保留整体三分钟上限；记录有限网络错误码；HTTP 校验前保存唯一 URL 和 provider environment 回执，即使校验失败也能定位既有上传。
+- 验证补充：Node 聚焦测试 13 pass，包括超过一分钟暂时不可达和失败回执；actionlint、validate-change、diff 检查通过。不重跑未修改的 CLI 根测试/构建；T1 的 265 项证据保留。
+- 未解决：修正后的托管整体 CI 和 action 实际 preview 输出待 T3.1；生产需 main 后续合码。
+- Commit：`website-cloudflare-pages T3: deploy preview and preserve verification receipts`
