@@ -1,0 +1,67 @@
+name: npm publishing
+
+on:
+  push:
+    branches: [main, 'codex/**']
+    tags: ['v*']
+    paths: ['.github/workflows/npm-publish.yml', '.github/workflows/cli-install.yml', 'scripts/npm-publish.mjs', 'scripts/check-npm-trust.mjs', 'test/npm-publish.test.js']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: npm-publish
+  cancel-in-progress: false
+
+jobs:
+  candidate:
+    uses: ./.github/workflows/cli-install.yml
+    with:
+      candidate-name: npm-candidate-${{ github.run_id }}-${{ github.run_attempt }}
+      retention-days: 30
+
+  publish:
+    needs: candidate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 50
+    permissions:
+      contents: read
+      actions: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '24'
+      - run: npm install --global npm@11.19.0 --registry=https://registry.npmjs.org/ --ignore-scripts
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: ${{ needs.candidate.outputs.candidate-name }}
+          path: dist/packages
+      - name: Restore partial publication receipt
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          receipt_exists=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/artifacts" --jq 'any(.artifacts[]; .name == "npm-publication")')
+          if [ "$receipt_exists" = true ]; then
+            gh run download "$GITHUB_RUN_ID" --repo "$GITHUB_REPOSITORY" --name npm-publication --dir .dev-smoke/npm-publish
+          fi
+      - name: Verify five package OIDC bindings
+        run: node scripts/check-npm-trust.mjs
+      - name: Preflight or publish release tag
+        run: node scripts/npm-publish.mjs
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: npm-publication
+          path: |
+            .dev-smoke/npm-publish/publication.json
+            .dev-smoke/npm-publish/preflight.json
+            .dev-smoke/npm-publish/oidc.json
+          include-hidden-files: true
+          overwrite: true
+          if-no-files-found: ignore
+          retention-days: 30
