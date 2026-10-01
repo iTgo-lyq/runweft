@@ -97,4 +97,6 @@ main/codex 分支的发布流程文件变更只检查授权和预演；普通产
 
 网站使用独立 `website-pages.yml`：官网相关 main 推送发布生产，codex 分支推送发布预览，PR 只检查；操作和 Secrets 见[官网说明](../website/README.md#cloudflare-pages-自动部署)。当前 main 没有产品代码，生产、PR 和手动触发须合码后实测；本轮只验证当前开发分支推送。
 
+两个凭证已保存为 Repository secrets；[当前预览](https://codex-cli-foundation.runweft.pages.dev/)与[托管验收](project/archive/2026-10-02-website-cloudflare-pages/acceptance.md)已完成。首次上传后的网络异常曾导致约一分钟检查失败，原 URL 随后独立核对通过；现有工作流扩大重试窗口、先保存上传回执，修正后的真实 CI 全部通过。该恢复不涉及程序发版或覆盖 npm 1.1.0。
+
 发版顺序为更新稳定版本并验收、推送匹配版本 tag、等待五个 npm 包发布通过、运行最新分支的官网工作流。npm 未公开时官网检查停止属于预期；Pages 不自动触发 npm 发布。生产部署拒绝旧 main SHA，不能通过重跑旧任务恢复旧官网；确需回退时先提交明确的源代码/版本回退。

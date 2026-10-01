@@ -16,4 +16,14 @@ website/build.mjs 读取根 package.json 的稳定版本、网站源码和当前
 
 website/serve.mjs 提供 loopback GET/HEAD 预览，只能读取站点目录。生产可使用常规静态托管；构建和部署说明见[官网说明](../../../../../website/README.md)。站点不含账号系统、遥测或第三方脚本/字体请求。
 
-移动菜单、键盘焦点和 reduced motion 可用。复制失败选中命令并提示手动复制；禁用 JavaScript 后同一 npm 命令和指南仍可读取。Linux x64 已从实际 DOM 执行公共 npm 安装与 Skill 目录命令，三个页面、320–1440px、子路径、复制及失败链路通过，见[本次验收](../../../archive/2026-10-02-website-npm-installation/acceptance.md)。当前站点未在线部署；历史下载型网站副本仍保存在原离线整包中。
+移动菜单、键盘焦点和 reduced motion 可用。复制失败选中命令并提示手动复制；禁用 JavaScript 后同一 npm 命令和指南仍可读取。Linux x64 已从实际 DOM 执行公共 npm 安装与 Skill 目录命令，三个页面、320–1440px、子路径、复制及失败链路通过，见[npm 安装验收](../../../archive/2026-10-02-website-npm-installation/acceptance.md)。历史下载型网站副本仍保存在原离线整包中。
+
+## 已验证的 Cloudflare Pages 预览
+
+website-pages.yml 已通过真实 codex/cli-foundation 推送完成托管 runner 构建、公共 npm 检查、Direct Upload 项目创建和分支预览上传，后续读取同一项目未再次创建。生产分支元数据为 main；本轮实际部署属于 preview，action 返回环境与请求模式匹配。分支地址为 [codex-cli-foundation.runweft.pages.dev](https://codex-cli-foundation.runweft.pages.dev/)，完整证据见[Pages 验收](../../../archive/2026-10-02-website-cloudflare-pages/acceptance.md)。
+
+准备步骤和官方上传 action 使用 Repository secrets 的 CLOUDFLARE_ACCOUNT_ID/CLOUDFLARE_API_TOKEN；凭证不写入静态站点或验收 JSON。主包/四平台包的公开版本、SHA-512 字段、精确可选依赖和 tarball HEAD 均通过；不下载程序、不调用 npm 发布。静态输出为八文件白名单，拒绝链接、隐藏文件、归档和未知文件。
+
+首次上传已确认成功但网络校验失败后，同一 URL 独立 HTTP 校验通过；修正后的真实 CI 全部通过。校验前保存唯一 URL 与实际环境回执，在约三分钟窗口内重试暂时不可达请求，错误只记录有限网络错误码。在线验证跟随项目域内 HTML 重定向，核对三个页面、release.json、四个资源的 MIME 与 SHA-256；不使用可能变化的分支别名作为验收来源。
+
+部署脚本的路由、未公开 npm/错误依赖、Pages 权限/已有配置拒绝、缺凭证与失败回执通过 13 项聚焦测试。main 生产、手动和 PR 的真实触发尚未执行，配置和后续合码前提见官网说明；此预览证据不代替这些实测。

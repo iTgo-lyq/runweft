@@ -38,7 +38,7 @@ node website/serve.mjs
 
 相关路径为 website/**、package.json、docs/usage.md、scripts/npm-publish.mjs 和该工作流。当前默认 main 尚无产品代码与工作流，生产、PR、手动入口已配置但未实测；合码后生效。当前开发分支可由推送触发预览。
 
-在[仓库 Actions Secrets](https://github.com/iTgo-lyq/runweft/settings/secrets/actions)保存：
+在[仓库 Actions Secrets](https://github.com/iTgo-lyq/runweft/settings/secrets/actions)的 **Repository secrets** 保存，不需要 Environment secrets：
 
 - `CLOUDFLARE_ACCOUNT_ID`：Cloudflare 目标账户的 32 位 ID。
 - `CLOUDFLARE_API_TOKEN`：该账户下 Account → Cloudflare Pages → Edit 权限的 API Token，不需要 npm token。
@@ -49,7 +49,7 @@ Pages 项目默认 `runweft`；已有专用项目可在同一设置的 Variables
 
 上传前验证静态文件白名单、npm 元数据、五包完整性字段/精确平台依赖及公开 tarball HEAD；此检查不代替各平台真实安装验收。npm 版本尚未公开时停止；发布完成后运行最新分支对应的工作流，合码后可从最新 main 手动运行。不要重跑旧生产提交。
 
-上传后仅使用 action 返回的唯一部署 URL，确认 preview/production 分类；跟随同一项目域内的 HTML 规范化重定向，有界等待传播并核对全部八个文件的字节摘要与 MIME。Access 保护、错误页面或版本不一致均失败。`website-pages-evidence` 和 `website-static` Actions 产物保留七天，不含凭证或程序包；部署 URL 在 job summary 和 deployment.json 中。
+上传后仅使用 action 返回的唯一部署 URL，确认 preview/production 分类；在 HTTP 校验前保存已上传 URL 与环境回执，成功后更新 success。跟随同一项目域内的 HTML 规范化重定向，在约三分钟重试窗口内等待传播并核对全部八个文件的字节摘要与 MIME；单次网络请求最多三十秒。Access 保护、错误页面或版本不一致均失败。`website-pages-evidence` 和 `website-static` Actions 产物保留七天，不含凭证或程序包；部署 URL 在 job summary 和 deployment.json 中。
 
 上传结果未知或在线检查失败时，先检查 Cloudflare 控制台和该唯一 URL，核对当前 run 的产物，避免盲目重发；修正后从最新提交运行。无需修改既有 npm 的标签发布规则。
 
@@ -69,7 +69,7 @@ node website/build.mjs
 node website/publish.mjs check
 ```
 
-最后一步访问公共 npm；API/路由失败路径用专用夹具测试，真实 Cloudflare 部署需 GitHub Secrets 就绪。尚未有实际 Pages 上线证据。
+最后一步访问公共 npm；API/路由失败路径用专用夹具测试。当前 [codex 分支在线预览](https://codex-cli-foundation.runweft.pages.dev/)已部署，唯一验收 URL 为 [4c68856f.runweft.pages.dev](https://4c68856f.runweft.pages.dev/)，[真实 CI](https://github.com/iTgo-lyq/runweft/actions/runs/36909619770)全部通过；验收范围见[记录](../docs/project/archive/2026-10-02-website-cloudflare-pages/acceptance.md)。13 项部署测试和在线八文件摘要/MIME 通过；生产/手动/PR 的真实触发仍待 main 合码。分支别名会跟随后续预览变化，验收使用唯一 URL。
 
 根测试中的独立网站夹具不含 dist/packages，验证无下载产物、非法版本和模板失败保留旧输出。Playwright 使用根工程依赖，在 Linux x64 执行网页与真实 npm 安装验收：
 

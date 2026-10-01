@@ -194,5 +194,37 @@
     "upload": "skipped",
     "onlineVerification": "skipped",
     "attempt": 1
+  },
+  "publicBrowser": {
+    "success": true,
+    "url": "https://4c68856f.runweft.pages.dev/",
+    "pages": [
+      {
+        "route": "",
+        "status": 200,
+        "url": "https://4c68856f.runweft.pages.dev/",
+        "title": "Runweft — 让你的 Agent 协作起来",
+        "heading": "一个工作区，一支 Agent 团队。",
+        "cssLoaded": true
+      },
+      {
+        "route": "guide.html",
+        "status": 200,
+        "url": "https://4c68856f.runweft.pages.dev/guide",
+        "title": "上手指南 — Runweft",
+        "heading": "你选择目标，Agent 完成接入。",
+        "cssLoaded": true
+      },
+      {
+        "route": "manual.html",
+        "status": 200,
+        "url": "https://4c68856f.runweft.pages.dev/manual",
+        "title": "完整命令参考 — Runweft",
+        "heading": "完整命令参考",
+        "cssLoaded": true
+      }
+    ],
+    "errors": [],
+    "browser": "153.0.8010.12"
   }
 }

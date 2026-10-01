@@ -33,3 +33,10 @@
 - 验证：托管 runner 的 13 项测试、构建、公共 npm 五包与 HEAD、项目准备、上传和在线校验全部 success；下载最终 evidence/static，八文件 SHA-256 与 check/deployment 回执完全一致，源提交 9d22f23c712ba2ba509db8f06517ce98f366986a。已核对前次已上传 URL 后才从修正提交运行，未盲目重复未知上传。
 - 未解决：main 生产、手动/PR 真实触发仍待未来合码；不阻碍本轮预览配置验收。
 - Commit：`website-cloudflare-pages T3.1: verify hosted preview deployment`
+
+## T4 同步规格与归档
+
+- 结果：官网/根 README/开发与项目入口说明同步当前预览、Repository secrets 和合码边界；只将实际验证的 Pages 预览与发布检查写入 website/product Spec。验收记录、脱敏证据和完整 Change 归档。
+- 验证：Chromium 153.0.8010.12 专用公开页面导航通过，三页 200/CSS 加载/固定 npm/无下载/零错误；validate-change、文档链接与 diff 检查通过。浏览器已关闭，不重复既有 CLI 安装或未修改根测试。
+- 未解决：生产、手动与 PR 的真实触发仍需未来 main 合码，按 Requirement 声明为本轮外的实测范围。
+- Commit：`website-cloudflare-pages T4: sync specs and archive Pages deployment`
