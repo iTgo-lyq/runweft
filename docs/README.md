@@ -4,7 +4,7 @@ Runweft 1.1.0 已完成 Hub 集中配置七阶段、完整后台/Skill与同候�
 
 [Hub 空间、身份与集中 Agent 配置](project/archive/2026-10-01-hub-spaces-and-agent-configuration/requirement.md)已按[七阶段交付](project/archive/2026-10-01-hub-spaces-and-agent-configuration/delivery.md)完成：独立身份/空间、HAPI对象授权、机器/runtime所有权、仓库/中心Agent、必连Hub委派、后台/Skill及最终发行。用户通过Agent/Skill操作、Web维护配置与任务；共享限空间成员，管理员不取得他人私有内容。产品设计和研究保存在同一归档，当前事实以Specs为准。
 
-完整交付为 `dist/runweft-1.1.0-release/`、`dist/runweft-1.1.0-release.tar.gz` 及 `.sha256`：四平台/主包、Skill、静态官网、对应源码/离线Git bundle、可读验收和脱敏证据。Linux x64真实安装通过十二组原生MCP、十组消费者、后台/连接Playwright、升级与清理；256项根测试通过。具体hash、位置及边界见[1.1.0完整验收](project/archive/2026-10-01-hub-spaces-and-agent-configuration/acceptance.md)。原离线候选保留不覆盖；公共 npm 五包现已发布，匿名下载和 Linux x64 专用安装通过，见[npm 发布验收](project/archive/2026-10-01-npm-publication/acceptance.md)。官网现已部署分支预览；在线 Hub/Merlin 未更新。
+完整交付为 `dist/runweft-1.1.0-release/`、`dist/runweft-1.1.0-release.tar.gz` 及 `.sha256`：四平台/主包、Skill、静态官网、对应源码/离线Git bundle、可读验收和脱敏证据。Linux x64真实安装通过十二组原生MCP、十组消费者、后台/连接Playwright、升级与清理；256项根测试通过。具体hash、位置及边界见[1.1.0完整验收](project/archive/2026-10-01-hub-spaces-and-agent-configuration/acceptance.md)。原离线候选保留不覆盖；公共 npm 五包现已发布，匿名下载和 Linux x64 专用安装通过，见[npm 发布验收](project/archive/2026-10-01-npm-publication/acceptance.md)。官网现已部署生产与分支预览；在线 Hub/Merlin 未更新。
 
 [原版最终交付验收](project/archive/2026-09-30-integrated-release/acceptance.md)汇总当时的四平台产物、校验和、需求对应及原始证据。Linux x64 完成真实安装、20 组核心协作、8 组附件、2 组 MCP 控制、原生历史重建、升级回退和 Playwright；Mac 实机由用户验证，Linux arm64 为 QEMU CLI/配置验证，物理远端延期。远端功能已通过同机独立 Hub/多 Runner 真实链路。早期四平台基础安装证据不代替最终原生协作。
 
@@ -14,9 +14,9 @@ Runweft 1.1.0 已完成 Hub 集中配置七阶段、完整后台/Skill与同候�
 
 核心重构按[六阶段交付结构](project/delivery-structure.md)完成十一个领域 Change 和一个集成发行 Change；当前事实见 Specs，历史需求和验收见下列归档。
 
-产品官网已统一为 npm 安装，Skill 从 npm 包内接入；静态构建无下载归档，实际 DOM 命令安装与网页自动验收通过，见[本次验收](project/archive/2026-10-02-website-npm-installation/acceptance.md)。已部署 [Cloudflare 分支预览](https://codex-cli-foundation.runweft.pages.dev/)；构建与预览见[官网说明](../website/README.md)。
+产品官网已统一为 npm 安装，Skill 从 npm 包内接入；静态构建无下载归档，实际 DOM 命令安装与网页自动验收通过，见[本次验收](project/archive/2026-10-02-website-npm-installation/acceptance.md)。已部署[正式官网](https://runweft.pages.dev/)与 [Cloudflare 分支预览](https://codex-cli-foundation.runweft.pages.dev/)；构建与预览见[官网说明](../website/README.md)。
 
-[Cloudflare Pages 自动部署](project/archive/2026-10-02-website-cloudflare-pages/acceptance.md)已完成当前 codex 分支预览：两个 Repository secrets、项目创建、真实上传及三页/资源自动校验通过。main 生产、手动和 PR 的真实触发待未来合码；本轮未自动合码或改变 npm 发布规则。
+[Cloudflare Pages 自动部署](project/archive/2026-10-02-website-cloudflare-pages/acceptance.md)已完成 codex 分支预览：两个 Repository secrets、项目创建、真实上传及三页/资源自动校验通过。产品现已快进合入 main，[生产部署 CI](https://github.com/iTgo-lyq/runweft/actions/runs/36912561909)、正式域名八文件摘要/MIME 与三页 Playwright 检查通过；手动和 PR 的真实触发仍未实测。npm 发布仍由匹配稳定版本的 tag 触发。
 
 已交付 Change 按独立交付结果拆分并声明依赖，归档入口如下：
 

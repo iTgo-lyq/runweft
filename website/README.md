@@ -36,7 +36,7 @@ node website/serve.mjs
 | pull_request 的官网相关变更 | 聚焦测试、构建和公共 npm 检查，不上传 |
 | workflow_dispatch | 所选 main/codex 分支按同一规则部署；tag/其他分支只检查 |
 
-相关路径为 website/**、package.json、docs/usage.md、scripts/npm-publish.mjs 和该工作流。当前默认 main 尚无产品代码与工作流，生产、PR、手动入口已配置但未实测；合码后生效。当前开发分支可由推送触发预览。
+相关路径为 website/**、package.json、docs/usage.md、scripts/npm-publish.mjs 和该工作流。默认分支 main 已包含产品与工作流，生产和 codex 预览推送均已实测；PR 和手动入口的真实触发尚未实测。
 
 在[仓库 Actions Secrets](https://github.com/iTgo-lyq/runweft/settings/secrets/actions)的 **Repository secrets** 保存，不需要 Environment secrets：
 
@@ -47,7 +47,7 @@ Pages 项目默认 `runweft`；已有专用项目可在同一设置的 Variables
 
 无凭证的开发推送仍完成检查，summary 明确标为“未部署”并提示缺失名称；生产和手动部署缺凭证会失败。Token 仅进入 Pages 准备步骤与官方上传 action，Wrangler 4.146.0 在 runner 临时目录的独立 npm 工程安装，不写入根工程或上传目录。
 
-上传前验证静态文件白名单、npm 元数据、五包完整性字段/精确平台依赖及公开 tarball HEAD；此检查不代替各平台真实安装验收。npm 版本尚未公开时停止；发布完成后运行最新分支对应的工作流，合码后可从最新 main 手动运行。不要重跑旧生产提交。
+上传前验证静态文件白名单、npm 元数据、五包完整性字段/精确平台依赖及公开 tarball HEAD；此检查不代替各平台真实安装验收。npm 版本尚未公开时停止；发布完成后从最新 main 手动运行官网工作流。不要重跑旧生产提交。
 
 上传后仅使用 action 返回的唯一部署 URL，确认 preview/production 分类；在 HTTP 校验前保存已上传 URL 与环境回执，成功后更新 success。跟随同一项目域内的 HTML 规范化重定向，在约三分钟重试窗口内等待传播并核对全部八个文件的字节摘要与 MIME；单次网络请求最多三十秒。Access 保护、错误页面或版本不一致均失败。`website-pages-evidence` 和 `website-static` Actions 产物保留七天，不含凭证或程序包；部署 URL 在 job summary 和 deployment.json 中。
 
@@ -69,7 +69,9 @@ node website/build.mjs
 node website/publish.mjs check
 ```
 
-最后一步访问公共 npm；API/路由失败路径用专用夹具测试。当前 [codex 分支在线预览](https://codex-cli-foundation.runweft.pages.dev/)已部署，唯一验收 URL 为 [4c68856f.runweft.pages.dev](https://4c68856f.runweft.pages.dev/)，[真实 CI](https://github.com/iTgo-lyq/runweft/actions/runs/36909619770)全部通过；验收范围见[记录](../docs/project/archive/2026-10-02-website-cloudflare-pages/acceptance.md)。13 项部署测试和在线八文件摘要/MIME 通过；生产/手动/PR 的真实触发仍待 main 合码。分支别名会跟随后续预览变化，验收使用唯一 URL。
+最后一步访问公共 npm；API/路由失败路径用专用夹具测试。[正式官网](https://runweft.pages.dev/)已由 main 推送部署，[生产 CI](https://github.com/iTgo-lyq/runweft/actions/runs/36912561909)全部通过，唯一部署 URL 为 [bea1f782.runweft.pages.dev](https://bea1f782.runweft.pages.dev/)。13 项部署测试、唯一 URL 与正式域名的八文件摘要/MIME，以及正式域名三页 Playwright 检查通过；产物为 91,064 字节，安装版本为 npm 1.1.0。
+
+[codex 分支在线预览](https://codex-cli-foundation.runweft.pages.dev/)仍可访问，预览验收范围见[归档记录](../docs/project/archive/2026-10-02-website-cloudflare-pages/acceptance.md)。生产/分支别名会跟随后续部署变化，固定构建验收使用唯一 URL；手动和 PR 的真实触发尚未实测。
 
 根测试中的独立网站夹具不含 dist/packages，验证无下载产物、非法版本和模板失败保留旧输出。Playwright 使用根工程依赖，在 Linux x64 执行网页与真实 npm 安装验收：
 
