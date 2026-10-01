@@ -12,4 +12,6 @@ iclaude 在当前工作区完成一次只读评审，会话 `1acf298d-b9fb-435b-
 
 ## T2 配置五包信任并验证真实授权
 
-- 结果：等待专用 npm 登录与可信发布本人认证，工作流将在 T1 推送后运行。
+- 结果：工作流已推送，真实 run `36864700225` 的构建与四平台安装全部通过。专用 npm 网页登录轮询最后返回 404 并转入传统登录提示，已停止；whoami 明确 ENEEDAUTH，尚未读取或修改五包绑定。
+- 验证：官方 CLI 信任创建 dry-run 返回目标仓库/工作流和 createPackage 权限；这不是实际绑定。CI 的授权 job 正常请求 GitHub OIDC，首包 runweft-linux-x64 交换返回 npm HTTP 404，预演/上传步骤因此未执行；run 结论 failure 不写成整体通过。权限检查回执位于 `.dev-smoke/npm-trusted-publishing/ci/oidc.json`。
+- 未解决：用户本人完成有效的 npm 官方登录/额外 2FA；随后运行专用 bind.mjs 查询/添加/再次核对，再重跑当前 run 的失败授权 job。专用认证目录 `.dev-smoke/npm-trusted-publishing/`，不要读取或打印 npmrc。
