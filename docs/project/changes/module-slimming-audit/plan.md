@@ -37,8 +37,8 @@
 
 ### T3 工作区与输入输出保障迁中心
 
-- 状态：待开始
-- 交付：task-workspaces、task-files、task-outputs、artifact-mcp；保留 seal/准备/停止证明、输入 pin、capture/deliver 丢回执、路径限制、retry/collect、取消清理和重启。
+- 状态：已完成
+- 交付：task-workspaces、task-files、task-outputs、artifact-mcp；保留 seal/准备/停止证明、输入 pin、capture/deliver 丢回执、路径限制、retry/collect、取消清理和重启；窄修当前worktree指纹的baseRef键序，使本机省略/显式HEAD在spawn及lookup等价，不改远端显式基线要求或旧hash兼容。
 - 依赖：T2。
 - 验收：工作区/文件唯一故障窗口与两runtime原断言保留；上传路径/符号链接限制、固定候选重试、停止证明及删除续轮互斥通过。
 - 验证：对应测试及 hub-delegation-native grants、workspaces；两 runtime 和删除/续轮互斥仍执行。

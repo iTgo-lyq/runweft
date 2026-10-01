@@ -1,3 +1,4 @@
+import { fixtureCleanup } from './fixture-cleanup';
 import { afterEach, expect, test } from 'bun:test';
 import { createHash, randomUUID } from 'node:crypto';
 import { rmSync } from 'node:fs';
@@ -11,106 +12,111 @@ import { createArtifactRoutes } from '../hapi/hub/src/web/routes/artifacts';
 import type { WebAppEnv } from '../hapi/hub/src/web/middleware/auth';
 import { ArtifactClient } from '../src/artifacts/client';
 import { HapiClient } from '../src/hapi';
-import { TaskCoordinator } from '../src/tasks/coordinator';
+import { HubClient } from '../src/hub/client';
+import { hubConnectionPaths } from '../src/hub/resources/connection';
 import { TaskOutputs } from '../src/tasks/outputs';
 import { taskOutputs } from '../src/tasks/commands';
-import { taskFixture, until } from './tasks-fixture';
+import { hubWorkspaceFixture } from './hub-workspace-fixture';
+import { until } from './helpers';
 import { workspaces } from './workspaces-fixture';
 import { fixture } from './helpers';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
-import { atomicWrite, dataPaths, loadConfig } from '../src/config';
-import { initAgent } from '../src/agents/definitions';
+import { atomicWrite, loadConfig } from '../src/config';
 import { createMcpServer } from '../src/mcp/server';
 import { recordClaudeCall } from '../src/mcp/claude-hook';
 
-const cleanup: Array<() => void | Promise<void>> = [];
-afterEach(async () => { for (const fn of cleanup.splice(0).reverse()) await fn(); });
+const cleanupOwner = fixtureCleanup([]), cleanup = cleanupOwner.resources;
+afterEach(() => cleanupOwner.close());
 async function harness(worktree = false) {
-    const root = fixture('task-outputs'), store = new Store(join(root, 'hapi.db'));
-    cleanup.push(() => { store.close(); rmSync(root, { recursive: true, force: true }); });
-    const service = new ArtifactService(store.artifacts, join(root, 'artifacts'), ARTIFACT_DEFAULT_LIMITS);
-    const sources = new Map<string, string>(), capturedBytes = new Map<string, string>(), operations = new Map<string, ArtifactTransfer>(), git = workspaces();
-    const faults = { captureLost: false, deliverLost: false, publishLost: false, holdCapture: false, holdDeliver: false, failName: '', cleanupLost: false, inputCleanupLost: false, holdUnpin: false, unpinLost: false };
-    const calls = { capture: 0, deliver: 0, release: 0 };
-    const h = await taskFixture(cleanup, 'codex', worktree ? git.handler : undefined, async (request, namespace) => {
-        const path = new URL(request.url).pathname;
-        if (path.startsWith('/api/artifacts')) {
-            const app = new Hono<WebAppEnv>(); app.use('*', async (c, next) => { c.set('namespace', namespace); await next(); });
-            app.route('/api', createArtifactRoutes(service));
-            if (request.method === 'DELETE' && path.includes('/references/') && faults.holdUnpin) return new Response('', { status: 503 });
-            const response = await app.fetch(request);
-            if (request.method === 'DELETE' && path.includes('/references/') && faults.unpinLost) { faults.unpinLost = false; return new Response('', { status: 502 }); }
-            return response;
-        }
-        if (!/\/api\/machines\/[^/]+\/artifacts$/.test(path)) return;
-        const body = await request.json() as ArtifactTransferRequest;
-        let operation = operations.get(body.operationId);
-        if (body.action === 'capture' || body.action === 'deliver') {
-            calls[body.action]++;
-            if (operation) expect(operation.request).toEqual(body);
-            else {
-                if (body.action === 'capture') {
-                    expect([...h.sessions.values()].every(native => !native.session.active)).toBe(true);
-                    if (worktree) expect(git.calls.some(call => call.action === 'finalize')).toBe(true);
+    const owned = fixtureCleanup(cleanup);
+    try {
+        const root = fixture('task-outputs'); owned.resources.push(() => rmSync(root, { recursive: true, force: true }));
+        const store = new Store(join(root, 'hapi.db')); owned.resources.push(() => store.close());
+        const service = new ArtifactService(store.artifacts, join(root, 'artifacts'), ARTIFACT_DEFAULT_LIMITS);
+        const sources = new Map<string, string>(), capturedBytes = new Map<string, string>(), operations = new Map<string, ArtifactTransfer>(), git = workspaces();
+        const faults = { captureLost: false, deliverLost: false, publishLost: false, holdCapture: false, holdDeliver: false, failName: '', cleanupLost: false, inputCleanupLost: false, holdUnpin: false, unpinLost: false };
+        const calls = { capture: 0, deliver: 0, release: 0 };
+        const h = await hubWorkspaceFixture(owned.resources, 'codex', worktree ? git.handler : undefined, async (request, namespace) => {
+            const path = new URL(request.url).pathname;
+            if (path.startsWith('/api/artifacts')) {
+                const app = new Hono<WebAppEnv>(); app.use('*', async (c, next) => { c.set('namespace', namespace); await next(); });
+                app.route('/api', createArtifactRoutes(service));
+                if (request.method === 'DELETE' && path.includes('/references/') && faults.holdUnpin) return new Response('', { status: 503 });
+                const response = await app.fetch(request);
+                if (request.method === 'DELETE' && path.includes('/references/') && faults.unpinLost) { faults.unpinLost = false; return new Response('', { status: 502 }); }
+                return response;
+            }
+            if (!/\/api\/machines\/[^/]+\/artifacts$/.test(path)) return;
+            const body = await request.json() as ArtifactTransferRequest;
+            let operation = operations.get(body.operationId);
+            if (body.action === 'capture' || body.action === 'deliver') {
+                calls[body.action]++;
+                if (operation) expect(operation.request).toEqual(body);
+                else {
+                    if (body.action === 'capture') {
+                        expect([...h.sessions.values()].every(native => !native.session.active)).toBe(true);
+                        if (worktree) expect(git.calls.some(call => call.action === 'finalize')).toBe(true);
+                    }
+                    operation = { version: 1, request: body, status: 'accepted', createdAt: Date.now(), updatedAt: Date.now(), files: [], retention: 'retained', sessions: [] };
+                    operations.set(body.operationId, operation);
                 }
-                operation = { version: 1, request: body, status: 'accepted', createdAt: Date.now(), updatedAt: Date.now(), files: [], retention: 'retained', sessions: [] };
+                if (body.action === 'capture' && faults.captureLost) { faults.captureLost = false; return new Response('', { status: 502 }); }
+                if (body.action === 'deliver' && faults.deliverLost) { faults.deliverLost = false; return new Response('', { status: 502 }); }
+            }
+            if (body.action === 'materialize' && !operation) {
+                operation = { version: 1, request: body, status: 'succeeded', retention: 'retained', files: body.files.map(file => ({ ...file, path: `/inputs/${body.operationId}/${file.name}` })), sessions: [], createdAt: Date.now(), updatedAt: Date.now() };
                 operations.set(body.operationId, operation);
             }
-            if (body.action === 'capture' && faults.captureLost) { faults.captureLost = false; return new Response('', { status: 502 }); }
-            if (body.action === 'deliver' && faults.deliverLost) { faults.deliverLost = false; return new Response('', { status: 502 }); }
-        }
-        if (body.action === 'materialize' && !operation) {
-            operation = { version: 1, request: body, status: 'succeeded', retention: 'retained', files: body.files.map(file => ({ ...file, path: `/inputs/${body.operationId}/${file.name}` })), sessions: [], createdAt: Date.now(), updatedAt: Date.now() };
-            operations.set(body.operationId, operation);
-        }
-        if (!operation) return Response.json({ code: 'artifact_operation_missing' }, { status: 409 });
-        if (body.action === 'release') {
-            calls.release++;
-            if (operation.request.action === 'materialize') {
-                operation.retention = 'released';
-                if (faults.inputCleanupLost) { faults.inputCleanupLost = false; return new Response('', { status: 502 }); }
-            }
-            for (const file of operation.candidates ?? []) if (file.status === 'captured' && (!body.names || body.names.includes(file.name))) file.retention = 'released';
-            if (operation.candidates?.every(file => file.status === 'failed' || file.retention === 'released')) operation.retention = 'released';
-            if (faults.cleanupLost) { faults.cleanupLost = false; return new Response('', { status: 502 }); }
-        }
-        if (body.action === 'inspect' && operation.status === 'accepted') {
-            const original = operation.request;
-            if (original.action === 'capture' && !faults.holdCapture) {
-                operation.candidates = original.files.map(file => {
-                    const bytes = sources.get(file.relativePath);
-                    if (bytes === undefined) return { ...file, status: 'failed' as const, error: { code: 'artifact_output_missing', message: 'Missing fixture output' } };
-                    capturedBytes.set(`${body.operationId}:${file.name}`, bytes);
-                    return { ...file, status: 'captured' as const, path: `/spool/${body.operationId}/${file.name}`, size: Buffer.byteLength(bytes),
-                        sha256: createHash('sha256').update(bytes).digest('hex'), capturedAt: Date.now(), retention: 'retained' as const };
-                });
-                operation.status = operation.candidates.some(file => file.status === 'failed') ? 'failed' : 'succeeded';
-            } else if (original.action === 'deliver' && !faults.holdDeliver) {
-                operation.deliveries = [];
-                for (const input of original.files) {
-                    const candidate = operations.get(original.captureOperationId)!.candidates!.find(file => file.name === input.name)!;
-                    expect(candidate.status).toBe('captured'); if (candidate.status !== 'captured') throw new Error('No candidate');
-                    if (input.name === faults.failName) {
-                        operation.deliveries.push({ name: input.name, status: 'failed', error: { code: 'artifact_quota_exceeded', message: 'Fixture quota exhausted' } }); continue;
-                    }
-                    const object = service.reserve(namespace, { requestId: input.requestId, filename: input.name, mimeType: 'application/octet-stream', size: candidate.size,
-                        sha256: candidate.sha256, reference: input.reference });
-                    const published = await service.upload(namespace, object.id, new Response(capturedBytes.get(`${original.captureOperationId}:${input.name}`)!).body);
-                    if (faults.publishLost) { faults.publishLost = false; operation.deliveries.push({ name: input.name, status: 'failed', error: { code: 'connection_failed', message: 'Lost upload response' } }); }
-                    else operation.deliveries.push({ name: input.name, status: 'available', artifact: published });
+            if (!operation) return Response.json({ code: 'artifact_operation_missing' }, { status: 409 });
+            if (body.action === 'release') {
+                calls.release++;
+                if (operation.request.action === 'materialize') {
+                    operation.retention = 'released';
+                    if (faults.inputCleanupLost) { faults.inputCleanupLost = false; return new Response('', { status: 502 }); }
                 }
-                operation.status = operation.deliveries.some(file => file.status === 'failed') ? 'failed' : 'succeeded';
+                for (const file of operation.candidates ?? []) if (file.status === 'captured' && (!body.names || body.names.includes(file.name))) file.retention = 'released';
+                if (operation.candidates?.every(file => file.status === 'failed' || file.retention === 'released')) operation.retention = 'released';
+                if (faults.cleanupLost) { faults.cleanupLost = false; return new Response('', { status: 502 }); }
             }
-        }
-        return Response.json({ operation });
-    });
-    h.machines[0].runnerState!.capabilities!.artifactOutputs = 1;
-    const artifacts = new ArtifactClient(h.alpha);
-    const spawn = (names: string[]) => h.post('spawn', { ...h.payload(), intent: { ...h.intent, workspaceMode: worktree ? 'worktree' : 'shared', outputs: names.map(name => ({ name, relativePath: name })) } });
-    async function started(id: string, roundId?: string) { return until(() => h.post('read', { id, roundId }), value => value.inputs[0]?.observation?.phase === 'accepted'); }
-    async function finished(id: string, roundId?: string) { return until(() => h.post('read', { id, roundId }), value => ['completed', 'failed'].includes(value.status) && !value.artifacts.pending.length); }
-    return { ...h, service, store, artifacts, operations, sources, callsFiles: calls, faultsFiles: faults, git, spawn, started, finished };
+            if (body.action === 'inspect' && operation.status === 'accepted') {
+                const original = operation.request;
+                if (original.action === 'capture' && !faults.holdCapture) {
+                    operation.candidates = original.files.map(file => {
+                        const bytes = sources.get(file.relativePath);
+                        if (bytes === undefined) return { ...file, status: 'failed' as const, error: { code: 'artifact_output_missing', message: 'Missing fixture output' } };
+                        capturedBytes.set(`${body.operationId}:${file.name}`, bytes);
+                        return { ...file, status: 'captured' as const, path: `/spool/${body.operationId}/${file.name}`, size: Buffer.byteLength(bytes),
+                            sha256: createHash('sha256').update(bytes).digest('hex'), capturedAt: Date.now(), retention: 'retained' as const };
+                    });
+                    operation.status = operation.candidates.some(file => file.status === 'failed') ? 'failed' : 'succeeded';
+                } else if (original.action === 'deliver' && !faults.holdDeliver) {
+                    operation.deliveries = [];
+                    for (const input of original.files) {
+                        const candidate = operations.get(original.captureOperationId)!.candidates!.find(file => file.name === input.name)!;
+                        expect(candidate.status).toBe('captured'); if (candidate.status !== 'captured') throw new Error('No candidate');
+                        if (input.name === faults.failName) {
+                            operation.deliveries.push({ name: input.name, status: 'failed', error: { code: 'artifact_quota_exceeded', message: 'Fixture quota exhausted' } }); continue;
+                        }
+                        const machineId = new URL(request.url).pathname.split('/')[3], runner = new HapiClient(h.url, h.machineConnections.get(machineId)!.token);
+                        const object = (await runner.request('/api/artifacts', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ requestId: input.requestId, filename: input.name, mimeType: 'application/octet-stream', size: candidate.size, sha256: candidate.sha256, reference: input.reference }) })).artifact;
+                        const published = (await runner.request(`/api/artifacts/${object.id}/content`, { method: 'PUT', headers: { 'content-type': 'application/octet-stream' }, body: capturedBytes.get(`${original.captureOperationId}:${input.name}`)! })).artifact;
+                        if (faults.publishLost) { faults.publishLost = false; operation.deliveries.push({ name: input.name, status: 'failed', error: { code: 'connection_failed', message: 'Lost upload response' } }); }
+                        else operation.deliveries.push({ name: input.name, status: 'available', artifact: published });
+                    }
+                    operation.status = operation.deliveries.some(file => file.status === 'failed') ? 'failed' : 'succeeded';
+                }
+            }
+            return Response.json({ operation });
+        });
+        h.machines.find(machine => machine.id === h.machineId)!.runnerState!.capabilities!.artifactOutputs = 1;
+        const http = () => new HubClient({ url: h.url, space: h.space, env: { RUNWEFT_IDENTITY_TOKEN: h.owner.token } }, 'hubAccess', 'hub_access_unavailable').http;
+        const artifacts = new ArtifactClient({ request: (path, options) => http().request(path, options), response: (path, options) => http().response(path, options) });
+        const spawn = (names: string[]) => h.post('spawn', { ...h.payload(), intent: { ...h.payload().intent, workspaceMode: worktree ? 'worktree' : 'shared', outputs: names.map(name => ({ name, relativePath: name })) } });
+        async function started(id: string, roundId?: string) { return until(() => h.post('read', { id, roundId }), value => value.inputs[0]?.observation?.phase === 'accepted'); }
+        async function finished(id: string, roundId?: string) { return until(() => h.post('read', { id, roundId }), value => ['completed', 'failed'].includes(value.status) && !value.artifacts.pending.length); }
+        return Object.assign(h, { service, store, artifacts, operations, sources, callsFiles: calls, faultsFiles: faults, git, spawn, started, finished });
+    } catch (error) { return owned.failed(error); }
 }
 
 test('declared outputs capture only after native stop and Git seal, publish partial immutable manifests and protect successful objects', async () => {
@@ -133,17 +139,22 @@ test('recovering published output cleanup releases grants only for verified avai
     const h = await harness(); h.sources.set('one', 'owned output');
     const accepted = await h.spawn(['one', 'missing']), running = await h.started(accepted.agent_id);
     h.complete(running.session_id); await h.finished(accepted.agent_id);
-    const { task, rounds } = h.tasks!.store.require('alpha', accepted.agent_id), round = rounds[0], job = round.outputFiles!.jobs[0];
+    const { task, rounds } = h.gateway.delegation.coordinator.store.require(h.namespace, accepted.agent_id), round = rounds[0], job = round.outputFiles!.jobs[0];
     job.phase = 'cleanup'; // Durable publication succeeded before a simulated process loss at grant release.
-    const released: string[][] = [];
-    const outputs = new TaskOutputs({ request: (path, options) => h.alpha.request(path, options), response: (path, options) => h.alpha.response(path, options),
-        releaseOutputs(ids) {
-            const manifest = h.tasks!.store.manifests(task.id, round.id)[0];
-            expect(ids).toEqual(manifest.items.filter(item => item.status === 'available').map(item => item.upload!.requestId));
-            expect(ids).toHaveLength(1); released.push(ids);
-        } }, h.tasks!.store);
-    await outputs.advance(task, round, () => h.tasks!.store.save(task, round, []));
-    expect(released).toHaveLength(1); expect(job).toMatchObject({ phase: 'complete' });
+    const native = h.gateway.delegation.taskClient(task, round);
+    // Restore the real persisted delivery grant using its original request, not a fabricated grant.
+    await native.request(`/api/machines/${task.target.machineId}/artifacts`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(job.deliveries![0].request) });
+    const manifest = h.gateway.delegation.coordinator.store.manifests(task.id, round.id)[0];
+    const available = manifest.items.filter(item => item.status === 'available');
+    expect(available).toHaveLength(1); expect(manifest.items.some(item => item.status === 'failed')).toBe(true);
+    const credential = h.gateway.store.authenticate(h.machineConnections.get(h.machineId)!.token);
+    expect(h.gateway.store.can(credential, 'artifact', available[0].artifactId!, 'write')).toBe(true);
+    const outputs = new TaskOutputs(native, h.gateway.delegation.coordinator.store);
+    await outputs.advance(task, round, () => h.gateway.delegation.coordinator.store.save(task, round, []));
+    expect(job).toMatchObject({ phase: 'complete' });
+    expect(h.gateway.store.can(credential, 'artifact', available[0].artifactId!, 'read')).toBe(false);
+    expect(h.gateway.store.can(credential, 'artifact', available[0].artifactId!, 'write')).toBe(false);
+
 });
 
 test('lost capture/delivery responses reconcile the same operations and keep the next native round queued until delivery is known', async () => {
@@ -182,19 +193,18 @@ test('retry uploads only the frozen failed candidate and wait consumes completed
 test('both MCP hosts retry fixed candidates and collect new versions with native call idempotency and no model replay', async () => {
     for (const host of ['codex', 'claude'] as const) {
         const h = await harness(); h.sources.set('one', 'ORIGINAL'); h.faultsFiles.failName = 'one';
-        const config = loadConfig(h.home, { GIT_CEILING_DIRECTORIES: h.home }); config.config.server.port = Number(new URL(h.url).port);
-        atomicWrite(join(dataPaths(config).hapiClient, 'settings.json'), JSON.stringify({ machineId: 'own' }));
-        atomicWrite(join(dataPaths(config).hapiServer, 'settings.json'), JSON.stringify({ cliApiToken: 'test-alpha' }));
-        initAgent(config, h.cwd, 'files', { runtime: h.runtime.id });
-        const server = createMcpServer({ client: host, cwd: h.cwd, config: () => config }), client = new Client({ name: 'file-recovery', version: '1' });
+        const cwd = '/', config = loadConfig(h.home, {}), paths = hubConnectionPaths(h.home, h.url), credential = h.machineConnections.get(h.machineId)!;
+        atomicWrite(paths.identityConnection, JSON.stringify({ schemaVersion: 1, hub: h.url, ownerId: h.owner.identity.id, spaceId: h.space, token: h.owner.token, requestId: randomUUID(), createdAt: Date.now() }));
+        atomicWrite(paths.machineConnection, JSON.stringify({ schemaVersion: 1, hub: h.url, ownerId: h.owner.identity.id, requestId: credential.requestId, machineId: h.machineId, active: { token: credential.token, credentialId: credential.credentialId }, createdAt: Date.now() }));
+        const server = createMcpServer({ client: host, cwd, config: () => config, hub: () => ({ url: h.url, home: h.home, env: config.env }) }), client = new Client({ name: 'file-recovery', version: '1' });
+        cleanup.push(() => server.close(), () => client.close());
         const [left, right] = InMemoryTransport.createLinkedPair(); await server.connect(left); await client.connect(right);
-        cleanup.push(async () => { await client.close(); await server.close(); });
         const call = async (name: string, args: Record<string, unknown>, callId = randomUUID(), parent = 'file-parent') => {
-            if (host === 'claude') recordClaudeCall(config, { hook_event_name: 'PreToolUse', tool_name: `mcp__runweft__${name}`, tool_use_id: callId, session_id: parent, cwd: h.cwd });
+            if (host === 'claude') recordClaudeCall(config, { hook_event_name: 'PreToolUse', tool_name: `mcp__runweft__${name}`, tool_use_id: callId, session_id: parent, cwd });
             const result = await client.callTool({ name, arguments: args, _meta: host === 'codex' ? { threadId: parent, sessionId: parent, callId } : { 'claudecode/toolUseId': callId } });
             return result.structuredContent as Record<string, any>;
         };
-        const first = await call('spawn_agent', { agent_type: 'files', message: 'Files', outputs: [{ name: 'one', relativePath: 'one' }] });
+        const first = await call('spawn_agent', { agent_type: h.agent.id, message: 'Files', outputs: [{ name: 'one', relativePath: 'one' }] });
         const running = await until(() => call('read_agent', { id: first.agent_id }), value => value.inputs?.[0]?.observation?.phase === 'accepted');
         h.complete(running.session_id);
         const failed = await until(() => call('read_agent', { id: first.agent_id }), value => value.status === 'completed' && !value.artifacts.pending.length);
@@ -223,22 +233,21 @@ test('collect records a later capture and resumes on a completed round after coo
     const before = await h.finished(first.agent_id); h.sources.set('late', 'late content'); h.faultsFiles.holdCapture = true;
     const request = { id: first.agent_id, roundId: first.round_id, requestId: randomUUID(), action: 'collect', files: [{ name: 'late', relativePath: 'late' }] };
     const accepted = await h.post('artifacts/action', request); expect(await h.post('artifacts/action', request)).toEqual(accepted);
-    await until(() => h.callsFiles.capture, value => value === 2); await h.tasks!.close();
-    const restarted = new TaskCoordinator(h.statePath, ns => new HapiClient(h.nativeUrl, `test-${ns}`), 20); cleanup.push(() => restarted.close());
-    expect(restarted.store.pending()).toContainEqual({ namespace: 'alpha', id: first.agent_id });
-    h.faultsFiles.holdCapture = false; restarted.start();
-    const after = await until(() => restarted.read('alpha', h.parent, first.agent_id), value => value.artifacts.manifest?.version === 2 && !value.artifacts.pending.length);
+    await until(() => h.callsFiles.capture, value => value === 2);
+    expect(h.gateway.delegation.coordinator.store.pending()).toContainEqual({ namespace: h.namespace, id: first.agent_id });
+    await h.restart(); h.faultsFiles.holdCapture = false;
+    const after = await until(() => h.post('read', { id: first.agent_id }), value => value.artifacts.manifest?.version === 2 && !value.artifacts.pending.length);
     expect(after.completed_revision).toBe(before.completed_revision); expect(after.artifacts.manifest!.kind).toBe('collect');
     expect(after.artifacts.manifest!.items[0].capturedAt).toBeGreaterThanOrEqual(before.completedAt ?? before.artifacts.manifest.createdAt);
-    expect(restarted.artifactManifests('alpha', h.parent, first.agent_id, first.round_id).manifests[0]).toEqual(before.artifacts.manifest);
+    expect((await h.post('artifacts/show', { id: first.agent_id, roundId: first.round_id })).manifests[0]).toEqual(before.artifacts.manifest);
     expect(h.callsFiles.capture).toBe(2); expect(h.calls.spawn).toBe(1); expect(h.calls.send).toBe(1);
 });
 
 test('rejects unsupported runners, active/foreign collection, steer outputs, and unsafe declarations before file side effects', async () => {
-    const h = await harness(); delete h.machines[0].runnerState!.capabilities!.artifactOutputs;
+    const h = await harness(); delete h.machines.find(machine => machine.id === h.machineId)!.runnerState!.capabilities!.artifactOutputs;
     await expect(h.spawn(['one'])).rejects.toMatchObject({ code: 'runner_upgrade_required' }); expect(h.calls.spawn).toBe(0);
-    h.machines[0].runnerState!.capabilities!.artifactOutputs = 1;
-    const parent = { kind: 'mcp', host: 'codex', nativeSessionId: 'parent-one', cwd: h.cwd, machineId: 'own' };
+    h.machines.find(machine => machine.id === h.machineId)!.runnerState!.capabilities!.artifactOutputs = 1;
+    const parent = { kind: 'mcp', host: 'codex', nativeSessionId: 'parent-one', cwd: h.cwd, machineId: h.machineId };
     const first = await h.post('spawn', { ...h.payload(), parent });
     const collect = { parent, id: first.agent_id, roundId: first.round_id, requestId: randomUUID(), action: 'collect', files: [{ name: 'one', relativePath: 'one' }] };
     await expect(h.post('artifacts/action', collect)).rejects.toMatchObject({ code: 'artifact_round_pending' });
@@ -340,14 +349,12 @@ test('release resumes its persisted intent after coordinator restart and blocks 
     expect(notice.timed_out).toBe(false); expect(notice.agents[0].artifacts.retention.state).toBe('releasing');
     expect(failedRelease.completed_revision).toBe(done.completed_revision);
     await expect(h.post('send', { requestId: randomUUID(), intent: { id: first.agent_id, message: 'next', mode: 'next' } })).rejects.toMatchObject({ code: 'artifact_release_pending' });
-    await h.tasks!.close();
-    const restarted = new TaskCoordinator(h.statePath, ns => new HapiClient(h.nativeUrl, `test-${ns}`), 20); cleanup.push(() => restarted.close());
-    expect(restarted.store.pending()).toContainEqual({ namespace: 'alpha', id: first.agent_id });
-    h.faultsFiles.holdUnpin = false; restarted.start();
-    await until(() => restarted.read('alpha', h.parent, first.agent_id), value => value.artifacts.retention.state === 'released');
+    expect(h.gateway.delegation.coordinator.store.pending()).toContainEqual({ namespace: h.namespace, id: first.agent_id });
+    await h.restart(); h.faultsFiles.holdUnpin = false;
+    await until(() => h.post('read', { id: first.agent_id }), value => value.artifacts.retention.state === 'released');
     expect((await h.artifacts.refs(done.artifacts.manifest.items[0].artifactId)).references).toEqual([]);
-    const next = await restarted.send('alpha', { parent: h.parent, requestId: randomUUID(), intent: { id: first.agent_id, message: 'new explicit round', mode: 'next' } });
-    const resumed = await until(() => restarted.read('alpha', h.parent, first.agent_id, { roundId: next.round_id }), value => value.inputs[0]?.observation?.phase === 'accepted');
+    const next = await h.post('send', { requestId: randomUUID(), intent: { id: first.agent_id, message: 'new explicit round', mode: 'next' } });
+    const resumed = await until(() => h.post('read', { id: first.agent_id, roundId: next.round_id }), value => value.inputs[0]?.observation?.phase === 'accepted');
     expect(resumed.session_id).toBe(running.session_id); expect(resumed.artifacts.retention.state).toBe('retained');
     expect(h.calls.spawn).toBe(1); expect(h.calls.resume).toBe(1);
 });
@@ -356,7 +363,7 @@ test('release rejects active rounds and foreign parents, while a missing uncaptu
     const h = await harness(); const first = await h.spawn(['missing']);
     await expect(h.post('artifacts/release', { id: first.agent_id, apply: true })).rejects.toMatchObject({ code: 'artifact_release_active' });
     const running = await h.started(first.agent_id); h.complete(running.session_id); await h.finished(first.agent_id);
-    await expect(h.post('artifacts/release', { id: first.agent_id, parent: { kind: 'mcp', host: 'codex', nativeSessionId: 'foreign', cwd: h.cwd, machineId: 'own' }, apply: true })).rejects.toMatchObject({ code: 'task_parent_mismatch' });
+    await expect(h.post('artifacts/release', { id: first.agent_id, parent: { kind: 'mcp', host: 'codex', nativeSessionId: 'foreign', cwd: h.cwd, machineId: h.machineId }, apply: true })).rejects.toMatchObject({ code: 'task_parent_mismatch' });
     expect((await h.post('artifacts/release', { id: first.agent_id })).can_release).toBe(true);
     await h.post('artifacts/release', { id: first.agent_id, apply: true });
     const done = await until(() => h.post('read', { id: first.agent_id }), value => value.artifacts.retention.state === 'released');
@@ -367,9 +374,9 @@ test('release rejects active rounds and foreign parents, while a missing uncaptu
 
 test('recovering input-copy cleanup preserves a simultaneous incomplete output warning', async () => {
     const h = await harness();
-    const input = h.service.reserve('alpha', { requestId: randomUUID(), filename: 'input.txt', mimeType: 'text/plain', size: 1, sha256: createHash('sha256').update('x').digest('hex') });
-    await h.service.upload('alpha', input.id, new Response('x').body);
-    const first = await h.post('spawn', { ...h.payload(), intent: { ...h.intent, inputs: [{ artifactId: input.id }], outputs: [{ name: 'missing', relativePath: 'missing' }] } });
+    const input = (await h.artifacts.hapi.request('/api/artifacts', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ requestId: randomUUID(), filename: 'input.txt', mimeType: 'text/plain', size: 1, sha256: createHash('sha256').update('x').digest('hex') }) })).artifact;
+    await h.artifacts.hapi.request(`/api/artifacts/${input.id}/content`, { method: 'PUT', headers: { 'content-type': 'application/octet-stream' }, body: 'x' });
+    const first = await h.post('spawn', { ...h.payload(), intent: { ...h.payload().intent, inputs: [{ artifactId: input.id }], outputs: [{ name: 'missing', relativePath: 'missing' }] } });
     const running = await h.started(first.agent_id); h.faultsFiles.inputCleanupLost = true; h.complete(running.session_id);
     const done = await until(() => h.post('read', { id: first.agent_id }), value => value.status === 'completed' && value.input_files.download_retention === 'released');
     expect(done.artifacts.status).toBe('incomplete'); expect(done.attention.code).toBe('artifacts_incomplete');

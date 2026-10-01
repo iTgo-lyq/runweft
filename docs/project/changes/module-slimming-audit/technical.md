@@ -63,3 +63,5 @@ T14格式核验先做WAL/SHM与并发创建定向实验，禁止将readonly打�
 T14 启动入口补充：services.serve 在 serverToken 创建、目录初始化和 HAPI 启动之前预检已有 Runweft state；不能先启动 HAPI 再拒绝旧业务格式。编译 CLI 的旧格式拒绝验收同时检查业务库与 HAPI 数据不变。页面的旧 Agent 版本显示回退一并按当前 DTO 核对；外来原生对象不认领仍是权限边界。用户长期约束同步 AGENTS.md，不改独立 HAPI 实现。
 
 T2 迁接线实际复现中心 overview 库存请求没有原入口的3秒截止时间：`hub/delegation/api.ts`直接用request lease请求库存，原`tasks/coordinator.ts`另设3秒截止；真实RequestLease无deadline，显式signal覆盖fetch默认timeout，库存挂起可一直等待断联。经主agent确认，T2允许窄修复：`resources.machines`内部可选signal默认lease.signal，overview传入lease.signal与3秒timeout的组合；继续保留库存完成与失败降级后的lease.check，撤权/断联不能转换为成功降级。不新增重试或通用deadline框架。
+
+T3 中心接线复现本机省略baseRef/显式HEAD同requestId冲突：TaskStore.semantic虽然补HEAD，但Hub绕过旧AcceptSchema重排，taskIntent中hubRequest在baseRef之前或之后；contentVersion按JSON键序摘要，因此同值得到不同指纹。主agent确认窄修semantic：worktree先取出baseRef，按固定同一位置重建含baseRef ?? HEAD的意图。保留本机spawn/lookup等价与远端缺显式base拒绝，不改通用hash/validateWorkspaceTarget、不兼容旧hash、不迁移历史指纹；最终schema19仅新格式。

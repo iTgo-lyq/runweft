@@ -38,6 +38,8 @@ export async function nativeFixture(cleanups: (() => Promise<void> | void)[], op
             if (url.pathname === '/api/auth') {
                 const { accessToken } = await request.json() as { accessToken: string };
                 const ns = accessToken.replace('test-', '').replace(/^:/, '');
+                // NativeTransport uses the HAPI root:namespace exchange for owner-scoped byte storage.
+                if (accessToken.startsWith('test-:') && ns && !tokens.has(ns)) tokens.set(ns, await new SignJWT({ uid: 1, ns }).setProtectedHeader({ alg: 'HS256' }).setExpirationTime('1h').sign(key));
                 return tokens.has(ns) ? Response.json({ token: tokens.get(ns) }) : Response.json({ error: 'unauthorized' }, { status: 401 });
             }
             const authorization = request.headers.get('authorization') ?? '';

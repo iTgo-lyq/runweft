@@ -14,7 +14,12 @@ import { parentKey, pendingPreparation, validateWorkspaceTarget, TaskError, type
 type TaskRow = { data: string; revision: number; updatedAt: number };
 const read = <T>(row: { data: string }): T => JSON.parse(row.data);
 const semantic = (parent: Parent, intent: SpawnIntent | SendIntent) => {
-    const normalized = { ...intent }; if ('workspaceMode' in normalized && normalized.workspaceMode === 'worktree') normalized.baseRef ??= 'HEAD'; if (!normalized.inputs?.length) delete normalized.inputs; if (!normalized.outputs?.length) delete normalized.outputs;
+    let normalized = { ...intent };
+    if ('workspaceMode' in normalized && normalized.workspaceMode === 'worktree') {
+        const { baseRef, ...fields } = normalized;
+        normalized = { ...fields, baseRef: baseRef ?? 'HEAD' };
+    }
+    if (!normalized.inputs?.length) delete normalized.inputs; if (!normalized.outputs?.length) delete normalized.outputs;
     return contentVersion({ parentKey: parentKey(parent), machineId: parent.machineId, cwd: parent.cwd, intent: normalized });
 };
 

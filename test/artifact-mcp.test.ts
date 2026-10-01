@@ -1,3 +1,4 @@
+import { fixtureCleanup } from './fixture-cleanup';
 import { randomUUID } from 'node:crypto';
 import { atomicWrite } from '../src/config';
 import { hubConnectionPaths } from '../src/hub/resources/connection';
@@ -6,61 +7,61 @@ import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { mkdir, mkdtemp, readFile, readdir, rm, symlink, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
-import { SignJWT } from 'jose';
 import { Hono } from '../hapi/hub/node_modules/hono';
 import { Store } from '../hapi/hub/src/store';
 import { ArtifactService } from '../hapi/hub/src/artifacts/service';
 import { createArtifactRoutes } from '../hapi/hub/src/web/routes/artifacts';
-import { createAuthMiddleware, type WebAppEnv } from '../hapi/hub/src/web/middleware/auth';
+import { type WebAppEnv } from '../hapi/hub/src/web/middleware/auth';
 import { ARTIFACT_DEFAULT_LIMITS } from '../hapi/shared/src/artifacts';
 import { loadConfig } from '../src/config';
 import { createMcpServer } from '../src/mcp/server';
 import { recordClaudeCall } from '../src/mcp/claude-hook';
-import { until } from './tasks-fixture';
+import { until } from './helpers';
+import { hubWorkspaceFixture } from './hub-workspace-fixture';
 
-const cleanup: Array<() => void | Promise<void>> = [];
-afterEach(async () => { for (const close of cleanup.splice(0).reverse()) await close(); });
+const cleanupOwner = fixtureCleanup([]), cleanup = cleanupOwner.resources;
+afterEach(() => cleanupOwner.close());
 async function fixture(host: 'codex' | 'claude') {
-    await mkdir('.dev-smoke/tests', { recursive: true });
-    const root = await mkdtemp(resolve('.dev-smoke/tests/artifact-mcp-')), cwd = join(root, 'project'), outside = join(root, 'outside'), home = join(root, 'home');
-    for (const path of [cwd, outside, home]) await mkdir(path);
-    const store = new Store(join(root, 'hapi.db'));
-    cleanup.push(async () => { store.close(); await rm(root, { recursive: true, force: true }); });
-    const service = new ArtifactService(store.artifacts, join(root, 'artifacts'), ARTIFACT_DEFAULT_LIMITS);
-    const secret = new TextEncoder().encode('mcp-artifact-test-only');
-    const owner = randomUUID(), space = randomUUID(), identityToken = 'rw_id_' + 'a'.repeat(43);
-    const token = await new SignJWT({ uid: 1, ns: 'default', kind: 'user', sub: owner, space }).setProtectedHeader({ alg: 'HS256' }).setExpirationTime('1h').sign(secret);
-    const app = new Hono<WebAppEnv>();
-    app.get('/api/runweft/health', c => c.json({ service: 'runweft', capabilities: { hubAccess: 1 } }));
-    app.get('/api/runweft/hub/identity', c => c.json({ identity: { id: owner, name: 'fixture', createdAt: 1 } }));
-    app.post('/api/auth', c => c.json({ token })); app.use('/api/*', createAuthMiddleware(secret)); app.route('/api', createArtifactRoutes(service));
-    const faults = { loseUpload: false, stallDownload: false, started: false, writes: 0 };
-    const http = Bun.serve({ hostname: '127.0.0.1', port: 0, async fetch(request) {
-        if (faults.stallDownload && request.method === 'GET' && request.url.endsWith('/content')) {
-            faults.started = true;
-            return new Response(new ReadableStream({ start(controller) { controller.enqueue(new Uint8Array([1])); } }));
-        }
-        const result = await app.fetch(request);
-        if (request.method === 'PUT' && request.url.endsWith('/content')) {
-            faults.writes++;
-            if (faults.loseUpload) { faults.loseUpload = false; return new Response('lost response', { status: 502 }); }
-        }
-        return result;
-    } });
-    cleanup.push(() => http.stop(true));
-    await writeFile(join(home, 'config.yaml'), `mode: hub\nhub:\n  url: ${http.url.origin}\n`);
-    atomicWrite(hubConnectionPaths(home, http.url.origin).identityConnection, JSON.stringify({ schemaVersion: 1, hub: http.url.origin, ownerId: owner, spaceId: space, token: identityToken, requestId: randomUUID(), createdAt: Date.now() }));
-    const config = loadConfig(home, { ARTIFACT_MCP_TOKEN: 'test-only', GIT_CEILING_DIRECTORIES: root });
-    const server = createMcpServer({ client: host, cwd, config: () => config, hub: () => ({ url: http.url.origin, home, env: {} }) }), client = new Client({ name: 'file-test', version: '1' });
-    const [left, right] = InMemoryTransport.createLinkedPair(); await server.connect(left); await client.connect(right);
-    cleanup.push(async () => { await client.close(); await server.close(); });
-    const call = async (name: string, args: Record<string, unknown>, callId = crypto.randomUUID(), signal?: AbortSignal) => {
-        if (host === 'claude') recordClaudeCall(config, { hook_event_name: 'PreToolUse', tool_name: `mcp__runweft__${name}`, tool_use_id: callId, session_id: 'parent', cwd });
-        const result = await client.callTool({ name, arguments: args, _meta: host === 'codex' ? { threadId: 'parent', sessionId: 'parent', callId } : { 'claudecode/toolUseId': callId } }, undefined, { signal });
-        expect(result.content).toEqual([{ type: 'text', text: JSON.stringify(result.structuredContent) }]);
-        return result.structuredContent as Record<string, any>;
-    };
-    return { cwd, outside, client, faults, call };
+    const owned = fixtureCleanup(cleanup);
+    try {
+        await mkdir('.dev-smoke/tests', { recursive: true });
+        const root = await mkdtemp(resolve('.dev-smoke/tests/artifact-mcp-')); owned.resources.push(() => rm(root, { recursive: true, force: true }));
+        const cwd = join(root, 'project'), outside = join(root, 'outside');
+        for (const path of [cwd, outside]) await mkdir(path);
+        const store = new Store(join(root, 'hapi.db'));
+        owned.resources.push(() => store.close());
+        const service = new ArtifactService(store.artifacts, join(root, 'artifacts'), ARTIFACT_DEFAULT_LIMITS);
+        const faults = { loseUpload: false, stallDownload: false, started: false, writes: 0 };
+        const h = await hubWorkspaceFixture(owned.resources, host, undefined, async (request, namespace) => {
+            if (!new URL(request.url).pathname.startsWith('/api/artifacts')) return;
+            const app = new Hono<WebAppEnv>(); app.use('*', async (c, next) => { c.set('namespace', namespace); await next(); });
+            app.route('/api', createArtifactRoutes(service));
+            if (faults.stallDownload && request.method === 'GET' && request.url.endsWith('/content')) {
+                faults.started = true;
+                return new Response(new ReadableStream({ start(controller) { controller.enqueue(new Uint8Array([1])); } }));
+            }
+            const result = await app.fetch(request);
+            if (request.method === 'PUT' && request.url.endsWith('/content')) {
+                faults.writes++;
+                if (faults.loseUpload) { faults.loseUpload = false; return new Response('lost response', { status: 502 }); }
+            }
+            return result;
+        });
+        const home = h.home;
+        await writeFile(join(home, 'config.yaml'), `mode: hub\nhub:\n  url: ${h.url}\n`);
+        atomicWrite(hubConnectionPaths(home, h.url).identityConnection, JSON.stringify({ schemaVersion: 1, hub: h.url, ownerId: h.owner.identity.id, spaceId: h.space, token: h.owner.token, requestId: randomUUID(), createdAt: Date.now() }));
+        const config = loadConfig(home, {});
+        const server = createMcpServer({ client: host, cwd, config: () => config, hub: () => ({ url: h.url, home, env: {} }) }), client = new Client({ name: 'file-test', version: '1' });
+        owned.resources.push(() => server.close(), () => client.close());
+        const [left, right] = InMemoryTransport.createLinkedPair(); await server.connect(left); await client.connect(right);
+        const call = async (name: string, args: Record<string, unknown>, callId = crypto.randomUUID(), signal?: AbortSignal) => {
+            if (host === 'claude') recordClaudeCall(config, { hook_event_name: 'PreToolUse', tool_name: `mcp__runweft__${name}`, tool_use_id: callId, session_id: 'parent', cwd });
+            const result = await client.callTool({ name, arguments: args, _meta: host === 'codex' ? { threadId: 'parent', sessionId: 'parent', callId } : { 'claudecode/toolUseId': callId } }, undefined, { signal });
+            expect(result.content).toEqual([{ type: 'text', text: JSON.stringify(result.structuredContent) }]);
+            return result.structuredContent as Record<string, any>;
+        };
+        return { cwd, outside, client, faults, call };
+    } catch (error) { return owned.failed(error); }
 }
 
 test('both host identities transfer only workspace files, preserve request identity and publish no bytes to context', async () => {

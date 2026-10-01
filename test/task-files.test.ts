@@ -1,3 +1,4 @@
+import { fixtureCleanup } from './fixture-cleanup';
 import { afterEach, expect, test } from 'bun:test';
 import { randomUUID } from 'node:crypto';
 import { writeFileSync, rmSync } from 'node:fs';
@@ -10,68 +11,72 @@ import { ArtifactService } from '../hapi/hub/src/artifacts/service';
 import { createArtifactRoutes } from '../hapi/hub/src/web/routes/artifacts';
 import type { WebAppEnv } from '../hapi/hub/src/web/middleware/auth';
 import { ArtifactClient } from '../src/artifacts/client';
-import { HapiClient } from '../src/hapi';
-import { TaskCoordinator } from '../src/tasks/coordinator';
+import { HubClient } from '../src/hub/client';
 import { taskInputs } from '../src/tasks/commands';
-import { taskFixture, until } from './tasks-fixture';
+import { hubWorkspaceFixture } from './hub-workspace-fixture';
+import { until } from './helpers';
 import { workspaces } from './workspaces-fixture';
 import { fixture } from './helpers';
 
-const cleanup: Array<() => void | Promise<void>> = [];
-afterEach(async () => { for (const action of cleanup.splice(0).reverse()) await action(); });
+const cleanupOwner = fixtureCleanup([]), cleanup = cleanupOwner.resources;
+afterEach(() => cleanupOwner.close());
 async function harness(worktree = false) {
-    const root = fixture('task-files'), store = new Store(join(root, 'hapi.db'));
-    cleanup.push(() => { store.close(); rmSync(root, { recursive: true, force: true }); });
-    const service = new ArtifactService(store.artifacts, join(root, 'artifacts'), ARTIFACT_DEFAULT_LIMITS);
-    const operations = new Map<string, ArtifactTransfer>(), requests: string[] = [], git = workspaces();
-    const faults = { pinResponse: false, hold: false, transferFailure: false, transferResponse: false, inspectUnknown: false, releaseLost: false };
-    const h = await taskFixture(cleanup, 'codex', worktree ? git.handler : undefined, async (request, namespace) => {
-        const path = new URL(request.url).pathname;
-        if (path.startsWith('/api/artifacts')) {
-            const app = new Hono<WebAppEnv>(); app.use('*', async (c, next) => { c.set('namespace', namespace); await next(); });
-            app.route('/api', createArtifactRoutes(service)); const response = await app.fetch(request);
-            if (request.method === 'PUT' && path.includes('/references/') && faults.pinResponse) { faults.pinResponse = false; return new Response('', { status: 502 }); }
-            return response;
-        }
-        if (!/\/api\/machines\/[^/]+\/artifacts$/.test(path)) return;
-        const body = await request.json() as MaterializeRequest & { action: string };
-        requests.push(body.action);
-        let operation = operations.get(body.operationId);
-        if (!operation && body.action !== 'materialize') return Response.json({ code: 'artifact_operation_missing' }, { status: 409 });
-        if (body.action === 'materialize') {
-            if (operation) expect(operation.request).toEqual(body);
-            else {
-                operation = { version: 1, request: body, status: 'accepted', createdAt: Date.now(), updatedAt: Date.now(), retention: 'retained', files: [], sessions: [] };
-                operations.set(body.operationId, operation);
+    const owned = fixtureCleanup(cleanup);
+    try {
+        const root = fixture('task-files'); owned.resources.push(() => rmSync(root, { recursive: true, force: true }));
+        const store = new Store(join(root, 'hapi.db')); owned.resources.push(() => store.close());
+        const service = new ArtifactService(store.artifacts, join(root, 'artifacts'), ARTIFACT_DEFAULT_LIMITS);
+        const operations = new Map<string, ArtifactTransfer>(), requests: string[] = [], git = workspaces();
+        const faults = { pinResponse: false, hold: false, transferFailure: false, transferResponse: false, inspectUnknown: false, releaseLost: false };
+        const h = await hubWorkspaceFixture(owned.resources, 'codex', worktree ? git.handler : undefined, async (request, namespace) => {
+            const path = new URL(request.url).pathname;
+            if (path.startsWith('/api/artifacts')) {
+                const app = new Hono<WebAppEnv>(); app.use('*', async (c, next) => { c.set('namespace', namespace); await next(); });
+                app.route('/api', createArtifactRoutes(service)); const response = await app.fetch(request);
+                if (request.method === 'PUT' && path.includes('/references/') && faults.pinResponse) { faults.pinResponse = false; return new Response('', { status: 502 }); }
+                return response;
             }
-            if (faults.transferResponse) { faults.transferResponse = false; return new Response('', { status: 502 }); }
-        } else if (body.action === 'release') {
-            expect([...h.sessions.values()].filter(native => native.session.metadata?.preparedFiles?.operationId === body.operationId).every(native => !native.session.active)).toBe(true);
-            operation!.retention = 'released';
-            if (faults.releaseLost) { faults.releaseLost = false; return new Response('', { status: 502 }); }
-        }
-        else if (body.action === 'inspect') {
-            if (faults.inspectUnknown) { faults.inspectUnknown = false; operation!.status = 'unknown'; }
-            else if (!faults.hold) {
-                operation!.status = faults.transferFailure ? 'failed' : 'succeeded';
-                if (faults.transferFailure) operation!.error = { code: 'artifact_input_mismatch', message: 'Fixture checksum mismatch' };
-                else if (operation!.request.action === 'materialize') operation!.files = operation!.request.files.map(input => ({ ...input, path: `/prepared-files/${body.operationId}/${input.name}` }));
+            if (!/\/api\/machines\/[^/]+\/artifacts$/.test(path)) return;
+            const body = await request.json() as MaterializeRequest & { action: string };
+            requests.push(body.action);
+            let operation = operations.get(body.operationId);
+            if (!operation && body.action !== 'materialize') return Response.json({ code: 'artifact_operation_missing' }, { status: 409 });
+            if (body.action === 'materialize') {
+                if (operation) expect(operation.request).toEqual(body);
+                else {
+                    operation = { version: 1, request: body, status: 'accepted', createdAt: Date.now(), updatedAt: Date.now(), retention: 'retained', files: [], sessions: [] };
+                    operations.set(body.operationId, operation);
+                }
+                if (faults.transferResponse) { faults.transferResponse = false; return new Response('', { status: 502 }); }
+            } else if (body.action === 'release') {
+                expect([...h.sessions.values()].filter(native => native.session.metadata?.preparedFiles?.operationId === body.operationId).every(native => !native.session.active)).toBe(true);
+                operation!.retention = 'released';
+                if (faults.releaseLost) { faults.releaseLost = false; return new Response('', { status: 502 }); }
             }
+            else if (body.action === 'inspect') {
+                if (faults.inspectUnknown) { faults.inspectUnknown = false; operation!.status = 'unknown'; }
+                else if (!faults.hold) {
+                    operation!.status = faults.transferFailure ? 'failed' : 'succeeded';
+                    if (faults.transferFailure) operation!.error = { code: 'artifact_input_mismatch', message: 'Fixture checksum mismatch' };
+                    else if (operation!.request.action === 'materialize') operation!.files = operation!.request.files.map(input => ({ ...input, path: `/prepared-files/${body.operationId}/${input.name}` }));
+                }
+            }
+            return Response.json({ operation });
+        });
+        const http = () => new HubClient({ url: h.url, space: h.space, env: { RUNWEFT_IDENTITY_TOKEN: h.owner.token } }, 'hubAccess', 'hub_access_unavailable').http;
+        const artifacts = new ArtifactClient({ request: (path, options) => http().request(path, options), response: (path, options) => http().response(path, options) });
+        async function upload(name = '设计 说明.txt') {
+            const path = join(root, name); writeFileSync(path, randomUUID()); return artifacts.upload(path, randomUUID());
         }
-        return Response.json({ operation });
-    });
-    const artifacts = new ArtifactClient(h.alpha);
-    async function upload(name = '设计 说明.txt') {
-        const path = join(root, name); writeFileSync(path, randomUUID()); return artifacts.upload(path, randomUUID());
-    }
-    return { ...h, artifacts, upload, service, store, operations, requests, faultsFiles: faults, git };
+        return Object.assign(h, { artifacts, upload, service, store, operations, requests, faultsFiles: faults, git });
+    } catch (error) { return owned.failed(error); }
 }
 
 test('acceptance freezes input names, pins once, gates startup and passes prepared paths into the prompt', async () => {
     const h = await harness(); h.faultsFiles.hold = true; h.faultsFiles.transferResponse = true;
-    const file = await h.upload(), request = { ...h.payload(), intent: { ...h.intent, inputs: [{ artifactId: file.id }] } };
+    const file = await h.upload(), request = { ...h.payload(), intent: { ...h.payload().intent, inputs: [{ artifactId: file.id }] } };
     const accepted = await Promise.all([h.post('spawn', request), h.post('spawn', request)]);
-    expect(accepted[0]).toEqual(accepted[1]); expect(h.tasks!.store.pendingArtifactIntents()).toEqual([]);
+    expect(accepted[0]).toEqual(accepted[1]); expect(h.gateway.delegation.coordinator.store.pendingArtifactIntents()).toEqual([]);
     const current = await until(() => h.post('read', { id: accepted[0].agent_id }), value => value.input_files?.status === 'accepted');
     expect(current.input_files.files).toEqual([{ artifactId: file.id, name: file.filename, size: file.size, sha256: file.sha256 }]);
     expect(h.calls.spawn).toBe(0); expect(h.calls.send).toBe(0); expect(h.requests.filter(item => item === 'materialize')).toHaveLength(1);
@@ -87,7 +92,7 @@ test('acceptance freezes input names, pins once, gates startup and passes prepar
 
 test('new-round inputs replace the native binding and an input-free round explicitly clears it', async () => {
     const h = await harness(), one = await h.upload('one.txt'), two = await h.upload('two.txt');
-    const accepted = await h.post('spawn', { ...h.payload(), intent: { ...h.intent, inputs: [{ artifactId: one.id }] } });
+    const accepted = await h.post('spawn', { ...h.payload(), intent: { ...h.payload().intent, inputs: [{ artifactId: one.id }] } });
     let running = await until(() => h.post('read', { id: accepted.agent_id }), value => value.inputs[0]?.observation?.phase === 'accepted');
     const sessionId = running.session_id;
     h.complete(sessionId); await until(() => h.post('read', { id: accepted.agent_id }), value => value.status === 'completed');
@@ -104,7 +109,7 @@ test('new-round inputs replace the native binding and an input-free round explic
 
 test('worktree copies the verified inputs and releases the intermediate download before native execution', async () => {
     const h = await harness(true), file = await h.upload();
-    const accepted = await h.post('spawn', { ...h.payload(), intent: { ...h.intent, workspaceMode: 'worktree', inputs: [{ artifactId: file.id }] } });
+    const accepted = await h.post('spawn', { ...h.payload(), intent: { ...h.payload().intent, workspaceMode: 'worktree', inputs: [{ artifactId: file.id }] } });
     const running = await until(() => h.post('read', { id: accepted.agent_id }), value => value.inputs[0]?.observation?.phase === 'accepted');
     const prepare = h.git.calls.find(call => call.action === 'prepare'); expect(prepare?.action).toBe('prepare');
     if (prepare?.action === 'prepare') expect(prepare.inputs[0]).toMatchObject({ name: file.filename, sha256: file.sha256, size: file.size });
@@ -116,42 +121,40 @@ test('worktree copies the verified inputs and releases the intermediate download
 
 test('definite file preparation failures end without a model and unknown transfer receipts retry only the same download', async () => {
     const h = await harness(), file = await h.upload(); h.faultsFiles.transferFailure = true;
-    const first = await h.post('spawn', { ...h.payload(), intent: { ...h.intent, inputs: [{ artifactId: file.id }] } });
+    const first = await h.post('spawn', { ...h.payload(), intent: { ...h.payload().intent, inputs: [{ artifactId: file.id }] } });
     const failed = await until(() => h.post('read', { id: first.agent_id }), value => value.status === 'failed');
     expect(failed.execution_not_started).toBe(true); expect(failed.attention.scope).toBe('artifacts'); expect(h.calls.spawn).toBe(0);
     h.faultsFiles.transferFailure = false; h.faultsFiles.inspectUnknown = true;
-    const second = await h.post('spawn', { ...h.payload(), intent: { ...h.intent, inputs: [{ artifactId: file.id }] } });
+    const second = await h.post('spawn', { ...h.payload(), intent: { ...h.payload().intent, inputs: [{ artifactId: file.id }] } });
     await until(() => h.post('read', { id: second.agent_id }), value => value.inputs[0]?.observation?.phase === 'accepted');
     expect(h.operations.size).toBe(2); expect(h.calls.spawn).toBe(1); expect(h.calls.send).toBe(1);
 });
 
 test('uncertain pins retain their intent, identical retry accepts once, startup cleans only known unaccepted references', async () => {
     const h = await harness(), file = await h.upload(), other = await h.upload('other.txt'); h.faultsFiles.pinResponse = true;
-    const request = { ...h.payload(), intent: { ...h.intent, inputs: [{ artifactId: file.id }] } };
+    const request = { ...h.payload(), intent: { ...h.payload().intent, inputs: [{ artifactId: file.id }] } };
     await expect(h.post('spawn', request)).rejects.toMatchObject({ status: 502 });
-    expect(h.tasks!.store.pendingArtifactIntents()).toHaveLength(1); expect((await h.artifacts.refs(file.id)).references).toHaveLength(1);
-    await expect(h.post('spawn', { ...request, intent: h.intent })).rejects.toMatchObject({ code: 'task_request_conflict' });
+    expect(h.gateway.delegation.coordinator.store.pendingArtifactIntents()).toHaveLength(1); expect((await h.artifacts.refs(file.id)).references).toHaveLength(1);
+    await expect(h.post('spawn', { ...request, intent: h.payload().intent })).rejects.toMatchObject({ code: 'task_request_conflict' });
     const accepted = await h.post('spawn', request); expect(await h.post('spawn', request)).toEqual(accepted);
-    expect(h.tasks!.store.pendingArtifactIntents()).toEqual([]); expect((await h.artifacts.refs(file.id)).references).toHaveLength(1);
+    expect(h.gateway.delegation.coordinator.store.pendingArtifactIntents()).toEqual([]); expect((await h.artifacts.refs(file.id)).references).toHaveLength(1);
     h.faultsFiles.pinResponse = true;
-    await expect(h.post('spawn', { ...h.payload(), intent: { ...h.intent, inputs: [{ artifactId: other.id }] } })).rejects.toMatchObject({ status: 502 });
-    await h.artifacts.pin(other.id, 'external-recovery', 'recovery'); await h.tasks!.close();
-    const restarted = new TaskCoordinator(h.statePath, ns => new HapiClient(h.nativeUrl, `test-${ns}`)); cleanup.push(() => restarted.close());
-    await restarted.reconcileFileIntents();
-    expect(restarted.store.pendingArtifactIntents()).toEqual([]);
+    await expect(h.post('spawn', { ...h.payload(), intent: { ...h.payload().intent, inputs: [{ artifactId: other.id }] } })).rejects.toMatchObject({ status: 502 });
+    await h.artifacts.pin(other.id, 'external-recovery', 'recovery'); await h.restart();
+    await until(() => h.gateway.delegation.coordinator.store.pendingArtifactIntents(), pending => !pending.length);
     expect((await h.artifacts.refs(other.id)).references.map(ref => ref.reference)).toEqual(['external-recovery']);
     expect((await h.artifacts.refs(file.id)).references).toHaveLength(1);
 });
 
 test('duplicate names, unpublished objects, unauthorized parents and steer inputs do not create task references', async () => {
     const h = await harness(), file = await h.upload();
-    const request = { ...h.payload(), intent: { ...h.intent, inputs: [{ artifactId: file.id }, { artifactId: file.id }] } };
+    const request = { ...h.payload(), intent: { ...h.payload().intent, inputs: [{ artifactId: file.id }, { artifactId: file.id }] } };
     await expect(h.post('spawn', request)).rejects.toMatchObject({ code: 'artifact_input_name_duplicate' });
-    expect(h.tasks!.store.pendingArtifactIntents()).toEqual([]); expect((await h.artifacts.refs(file.id)).references).toEqual([]);
-    const reserved = h.service.reserve('alpha', { requestId: randomUUID(), filename: 'pending.txt', mimeType: 'text/plain', size: 1, sha256: '0'.repeat(64) });
-    await expect(h.post('spawn', { ...h.payload(), intent: { ...h.intent, inputs: [{ artifactId: reserved.id }] } })).rejects.toMatchObject({ code: 'artifact_input_unavailable' });
-    expect(h.tasks!.store.pendingArtifactIntents()).toEqual([]);
-    const parent = { kind: 'mcp', host: 'codex', nativeSessionId: 'parent-one', cwd: h.cwd, machineId: 'own' };
+    expect(h.gateway.delegation.coordinator.store.pendingArtifactIntents()).toEqual([]); expect((await h.artifacts.refs(file.id)).references).toEqual([]);
+    const reserved = (await h.artifacts.hapi.request('/api/artifacts', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ requestId: randomUUID(), filename: 'pending.txt', mimeType: 'text/plain', size: 1, sha256: '0'.repeat(64) }) })).artifact;
+    await expect(h.post('spawn', { ...h.payload(), intent: { ...h.payload().intent, inputs: [{ artifactId: reserved.id }] } })).rejects.toMatchObject({ code: 'artifact_input_unavailable' });
+    expect(h.gateway.delegation.coordinator.store.pendingArtifactIntents()).toEqual([]);
+    const parent = { kind: 'mcp', host: 'codex', nativeSessionId: 'parent-one', cwd: h.cwd, machineId: h.machineId };
     const accepted = await h.post('spawn', { ...h.payload(), parent });
     await expect(h.post('send', { parent: { ...parent, nativeSessionId: 'other' }, requestId: randomUUID(), intent: {
         id: accepted.agent_id, mode: 'next', message: 'next', inputs: [{ artifactId: file.id }] } })).rejects.toMatchObject({ status: 403 });
@@ -165,7 +168,7 @@ test('duplicate names, unpublished objects, unauthorized parents and steer input
 
 test('stopped shared rounds automatically release only the input copy, then explicit release removes only their own pins', async () => {
     const h = await harness(), file = await h.upload();
-    const first = await h.post('spawn', { ...h.payload(), intent: { ...h.intent, inputs: [{ artifactId: file.id }] } });
+    const first = await h.post('spawn', { ...h.payload(), intent: { ...h.payload().intent, inputs: [{ artifactId: file.id }] } });
     const running = await until(() => h.post('read', { id: first.agent_id }), value => value.inputs[0]?.observation?.phase === 'accepted');
     expect(h.operations.get(running.input_files.operation_id)?.retention).toBe('retained');
     h.faultsFiles.releaseLost = true; h.complete(running.session_id);
