@@ -2,44 +2,34 @@
 
 Runweft 为 Codex 和 Claude Code 提供 Hub 集中配置、任务委派、本地共享/独立 worktree、远端独立 worktree，以及附件和 Git 成果回收。执行基于配套 HAPI 内置适配。用户通过对话交给 Agent 安装和操作，在 Web 维护有权使用的资源、查看本人任务。
 
-本文配套 Runweft 1.1.0。旧 1.0.0 下载不会自动获得新 Hub 行为；核对发行 `index.json` / 官网 `release.json` 的源码版本和校验和，不把版本号相同视为同一程序。
+本文配套 Runweft 1.1.0。公共 npm 已提供主包及四个平台依赖；官网安装版本见 `release.json`，程序来源与验证范围以对应发行记录为准。
+
+## 通过 npm 安装
+
+支持 macOS arm64/x64、glibc Linux arm64/x64。安装需要 Node.js 20+ 和 npm；运行任务需要已登录的 Codex 或 Claude Code，Git 操作需要 Git 2.31+。LFS/子模块需在相关机器具备工具与对象访问条件。
+
+```sh
+npm install -g runweft@1.1.0 --registry=https://registry.npmjs.org/ --include=optional &&
+runweft --version
+```
+
+npm 自动选择当前平台依赖，随包提供配套 HAPI 与产品 Skill，无需另装 Bun 或 HAPI。新终端找不到程序时，用 `npm prefix -g` 核对其 `bin` 子目录是否在 PATH。先检查已有程序归属，不覆盖未知来源的入口。
+
+使用私有 registry 时替换 `--registry`；该 registry 必须提供同版本五包，只有主包 tarball 不足以安装平台依赖。
 
 ## 交给 Agent 接入
 
-把平台包中的 `skills/runweft` 或官网提供的 Skill 交给正在使用的 Agent：
+把下面这段话交给正在使用的 Agent：
 
-> 使用 Runweft Skill，帮我安装并连接指定 Hub；没有 Hub 时先询问是否在本机启动。保留其他 MCP 和模型配置，身份通过浏览器确认，不向我索要 token。分别登记机器和执行工具，创建代码评审 Agent，再在当前项目完成一次只读委派。
+> 通过 npm 安装 runweft@1.1.0，从已安装包中读取并接入 Runweft Skill。整个接入过程中，程序安装、升级和卸载都使用 npm。帮我连接指定 Hub；没有 Hub 时先询问是否在本机启动。保留其他 MCP 和模型配置，身份通过浏览器确认，不向我索要 token。分别登记机器和执行工具，创建代码评审 Agent，再在当前项目完成一次只读委派。
 
-产品 Skill 安装在 Codex 的 `~/.agents/skills/runweft` 或 Claude 的 `${CLAUDE_CONFIG_DIR:-~/.claude}/skills/runweft`；复制完整目录，已有不同内容先备份到扫描目录外并确认替换。Skill 与 MCP 是两项安装。下面是 Agent 使用的工程参考，不要求用户逐条手工执行。
-
-## 安装发行包
-
-支持 macOS arm64/x64、glibc Linux arm64/x64。整包包含相邻的 `bin/runweft`、`bin/hapi`、产品 Skill、使用说明、HAPI 许可证和固定版本源码。平台程序不需要全局 Bun、Node 或另装 HAPI；实际执行需要原生 Codex/Claude Code 和其模型登录，Git 操作需要 Git 2.31+。LFS/子模块需在相关机器具备工具与对象访问条件。
-
-从可信发行目录取得 `index.json`、`SHA256SUMS`、`tarballs/`，或用官网平台下载及独立校验文件。校验后解包，保持整包，不单独移动 Runweft：
+Skill 源目录：
 
 ```sh
-shasum -a 256 -c SHA256SUMS &&
-runweft_platform=darwin-arm64 &&
-runweft_version=1.1.0 &&
-runweft_install="$HOME/.local/share/runweft/$runweft_version-$runweft_platform" &&
-mkdir -p "$runweft_install" "$HOME/.local/bin" &&
-tar -xzf "tarballs/runweft-$runweft_platform-$runweft_version.tgz" -C "$runweft_install" --strip-components=1 &&
-ln -sfn "$runweft_install/bin/runweft" "$HOME/.local/bin/runweft" &&
-export PATH="$HOME/.local/bin:$PATH" &&
-runweft --version
+printf '%s\n' "$(npm root -g)/runweft/skills/runweft"
 ```
 
-先检查安装目录/链接归属；未知已有文件不能覆盖。Linux 可用 `sha256sum -c SHA256SUMS`，平台名为 `linux-x64` 或 `linux-arm64`，Intel Mac 为 `darwin-x64`。把 `~/.local/bin` 加入新终端的 PATH。Mac 产物未签名、公证；核对来源后按系统安全提示允许，交叉构建不代表实机运行。
-
-使用 npm 主入口需要 Node.js 20+。公共 npm 提供本版本的主包和四个平台依赖后，可直接安装：
-
-```sh
-npm install -g runweft@1.1.0 --registry=https://registry.npmjs.org/ --include=optional
-runweft --version
-```
-
-npm 自动选择当前平台包，随包提供相邻 HAPI 和 `skills/runweft`。使用私有 registry 时将 `--registry` 替换为实际地址；该 registry 必须提供同版本五包，只有主包 tarball 不足以安装平台依赖。
+Agent 先读取 `SKILL.md`，再将完整目录复制到 Codex 的 `~/.agents/skills/runweft` 或 Claude 的 `${CLAUDE_CONFIG_DIR:-$HOME/.claude}/skills/runweft`；已有不同内容先备份到扫描目录外并确认替换。Skill 与 MCP 是两项安装。下面是 Agent 使用的工程参考，不要求用户逐条手工执行。
 
 ## Hub、身份与空间
 
@@ -330,8 +320,28 @@ runweft data reset --apply
 | 收尾/交付失败 | 修复具体错误，再 retry-finish/artifacts retry/result retry |
 | HAPI 标签过期 | 从 Hub 任务详情重开，不传 URL token |
 
-升级没有自升级命令：下载校验同批包，解到新目录，保留旧安装至验证完成，切换受管链接并显式 mcp install 更新入口。Skill 比对后备份旧目录再替换。先安全结束任务，按原角色重启 Hub 或 Runner，再核对版本/status/doctor/握手和低风险真实调用，不把程序回退当成数据迁移回滚。
+升级没有自升级命令：用 `npm install -g runweft@<目标版本> --registry=https://registry.npmjs.org/ --include=optional` 安装目标版本，确认成功后检查 `--version` 并显式 mcp install 更新入口。Skill 从更新后的 npm 包中读取，比对后备份旧目录再替换。先安全结束任务，按原角色重启 Hub 或 Runner，再核对版本/status/doctor/握手和低风险真实调用，不把程序回退当成数据迁移回滚。
 
-卸载先 mcp uninstall，停止本机受管服务，再删除明确属于 Runweft 的链接、安装目录及未改写的产品 Skill。数据、模型凭据、原生会话、其他 MCP/Skill 保留，数据清理另行授权。
+卸载先 mcp uninstall，停止本机受管服务，再执行 `npm uninstall -g runweft`，移除未改写的产品 Skill。数据、模型凭据、原生会话、其他 MCP/Skill 保留，数据清理另行授权。
 
 完整本地验收由 Agent 自动执行。Mac 双架构构建不代替实机；Linux arm64 QEMU CLI 检查不代替完整原生协作；同机多 Runner 不等于物理跨机。实际版本的证据以发行记录为准。
+
+## 离线完整交付（工程参考）
+
+本节仅用于用户明确提供的可信离线完整交付目录；官网不提供安装包下载，常规安装、升级与卸载使用 npm。历史整包和独立 Skill 归档仍可用于工程验证，不代表当前官网内容。
+
+从可信发行目录取得 `index.json`、`SHA256SUMS`、`tarballs/`。校验后解包，保持整包，不单独移动 Runweft：
+
+```sh
+shasum -a 256 -c SHA256SUMS &&
+runweft_platform=darwin-arm64 &&
+runweft_version=1.1.0 &&
+runweft_install="$HOME/.local/share/runweft/$runweft_version-$runweft_platform" &&
+mkdir -p "$runweft_install" "$HOME/.local/bin" &&
+tar -xzf "tarballs/runweft-$runweft_platform-$runweft_version.tgz" -C "$runweft_install" --strip-components=1 &&
+ln -sfn "$runweft_install/bin/runweft" "$HOME/.local/bin/runweft" &&
+export PATH="$HOME/.local/bin:$PATH" &&
+runweft --version
+```
+
+先检查安装目录/链接归属；未知已有文件不能覆盖。Linux 可用 `sha256sum -c SHA256SUMS`，平台名为 `linux-x64` 或 `linux-arm64`，Intel Mac 为 `darwin-x64`。把 `~/.local/bin` 加入新终端的 PATH。Mac 产物未签名、公证；核对来源后按系统安全提示允许，交叉构建不代表实机运行。

@@ -3,8 +3,8 @@
 ## 选择安装与 Hub
 
 1. 查询系统/架构、Git、已有 `runweft`、Codex/Claude Code。只安装用户选定宿主，执行端也只需所选 runtime。原生工具未登录时由用户在该工具的安全登录流程完成，不能代填或读取凭据。
-2. 使用用户提供的发行目录或官网的 `release.json`、平台包与 SHA-256；不要猜测公开下载地址或假定 npm 已发布。选择 macOS arm64/x64 或 glibc Linux arm64/x64，不混架构。平台包内含 Runweft/HAPI，无需另装 Bun/Node；Git 操作要求 Git 2.31+。
-3. 在专用临时目录下载，核对可信来源的校验和，检查 tar 列表再解包。把整包放入带版本/平台的安装目录；保持 `bin/runweft` 与 `bin/hapi` 相邻。建立 `$HOME/.local/bin/runweft` 链接前检查旧路径归属，不覆盖未知程序。运行 `--version`。Mac 未签名/公证，不能因系统拒绝就关闭安全保护。
+2. 常规安装使用公共 npm；确认 Node.js 20+ 与 npm，以及 macOS arm64/x64 或 glibc Linux arm64/x64。通过官网 `release.json` 的 npm 版本或用户指定的已发布版本安装，不猜测归档下载地址。Git 操作要求 Git 2.31+。
+3. 先检查已有程序和 npm 全局 prefix 的归属。执行 `npm install -g runweft@<已确认版本> --registry=https://registry.npmjs.org/ --include=optional`，仅成功后运行 `runweft --version`；npm 自动选择平台依赖并提供配套 HAPI，不另装 Bun/HAPI。新终端查 PATH 时核对 `npm prefix -g` 的 `bin`。用户明确提供离线归档时才按可信索引校验并检查 tar 列表后解包，保留整包布局，不覆盖未知文件。
 4. 确认用户要连接的 Hub 地址；未提供且无既有连接时只问“使用已有 Hub，还是在本机启动？”。不要把公网 Hub 当成无需许可的部署目标。
 
 全新本机 Hub：
@@ -58,7 +58,7 @@ runweft runtime check <返回的runtimeId>
 
 ## 安装产品 Skill 与 MCP
 
-产品 Skill 在平台包 `skills/runweft/`，官网也提供独立 Skill tar 包。先读该目录的 `SKILL.md`；经安装授权，把完整目录复制到宿主发现位置：
+产品 Skill 随 npm 主包提供，源目录为 `$(npm root -g)/runweft/skills/runweft`；官网不提供独立下载。先读该目录的 `SKILL.md`；经安装授权，把完整目录复制到宿主发现位置：
 
 - Codex：`$HOME/.agents/skills/runweft`。
 - Claude Code：`${CLAUDE_CONFIG_DIR:-$HOME/.claude}/skills/runweft`。

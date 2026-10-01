@@ -36,11 +36,11 @@ runweft mcp check --client <codex或claude>
 
 先记录安装版本、路径、Hub 角色、数据根、活跃任务。结束/中断任务并确认停止后再停对应服务；停止 Runner/Hub 不能代替中断模型进程。
 
-升级：取得同批可信平台包与校验索引，校验并解到新目录，保留旧安装到新版本验证完成；切换受管链接，再运行 `mcp install --client <宿主>` 更新入口/timeout/hook。更新产品 Skill 时比对、备份扫描目录外的旧目录再替换。没有 `runweft upgrade` 命令。不要把数据降级回滚当成简单切换程序。
+升级：确认当前入口属于 npm 安装，使用 `npm install -g runweft@<目标版本> --registry=https://registry.npmjs.org/ --include=optional`；成功后核对版本和入口，再运行 `mcp install --client <宿主>` 更新入口/timeout/hook。从更新后的 npm 包读取产品 Skill，比对、备份扫描目录外的旧目录再替换。没有 `runweft upgrade` 命令。不要把数据降级回滚当成简单切换程序。
 
 按原角色启动：本机 Hub `start`，独立执行机 `runner start`，前台公开服务由原进程管理器执行 `serve --public`。核对 `--version/status/doctor/mcp check`，再做一次低风险真实调用。只执行用户指定范围，不更新在线其他实例。
 
-卸载：先 `mcp uninstall --client <宿主>`，核对其他 MCP/hooks 保留；再停止本机受管服务。只删除确认属于 Runweft 的链接、安装目录和未被用户改写的产品 Skill。不要删除数据、原生会话、模型凭据或其他 Skill。
+卸载：先 `mcp uninstall --client <宿主>`，核对其他 MCP/hooks 保留；再停止本机受管服务。确认入口属于当前 npm prefix 后执行 `npm uninstall -g runweft`；仅移除未被用户改写的产品 Skill。用户明确提供的既有离线安装按其原受管目录处理，不让 npm 接管或删除未知入口。不要删除数据、原生会话、模型凭据或其他 Skill。
 
 `mcp backups` 列非秘密摘要；`mcp restore <备份ID>` 恢复操作前完整快照，会拒绝覆盖后续修改，不强行绕过。MCP 修改位置：Codex `${CODEX_HOME:-$HOME/.codex}/config.toml`；Claude 默认 `$HOME/.claude.json` 和 `$HOME/.claude/settings.json`，设置 CLAUDE_CONFIG_DIR 后两者均在该目录。不要手工复制完整配置给模型。
 

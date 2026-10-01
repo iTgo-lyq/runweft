@@ -14,7 +14,11 @@ assertFrozenCandidate(index);
 assert.equal(evidence.version, index.version); assert.equal(evidence.sourceRevision, index.source.revision);
 assert.equal(evidence.success, true);
 const site = JSON.parse(readFileSync(join(website, 'release.json'), 'utf8'));
-assert.equal(site.version, index.version); assert.deepEqual(site.source, index.source);
+assert.equal(site.version, index.version, 'Website npm version must match the candidate');
+assert.equal(site.installation, 'npm', 'Website must use npm installation');
+assert.equal(site.package, 'runweft', 'Website npm package must be runweft');
+assert.equal(site.registry, 'https://registry.npmjs.org/', 'Website must use the public npm registry');
+assert(!['platforms', 'skill', 'source', 'hapi'].some(key => key in site) && !existsSync(join(website, 'downloads')), 'Website must not contain legacy downloads or release-source fields');
 const hash = file => createHash('sha256').update(readFileSync(file)).digest('hex');
 function command(args, cwd = process.cwd()) {
     const result = spawnSync(args[0], args.slice(1), { cwd, encoding: 'utf8', timeout: 300_000, maxBuffer: 16 * 1024 * 1024 });
@@ -38,11 +42,6 @@ try {
     }
     cpSync(join(packages, 'SHA256SUMS'), join(output, 'packages/SHA256SUMS'));
     cpSync(website, join(output, 'website'), { recursive: true });
-    for (const platform of site.platforms) {
-        const entry = index.packages.find(item => item.name === `runweft-${platform.id}`);
-        assert.equal(hash(join(output, 'website/downloads', platform.filename)), hash(join(packages, entry.tarball)));
-    }
-    assert.equal(hash(join(output, 'website/downloads', site.skill.filename)), index.skill.sha256);
     cpSync(acceptance, join(output, 'validation/acceptance.md'));
     cpSync(evidenceFile, join(output, 'validation/evidence.json'));
     cpSync('docs/usage.md', join(output, 'USAGE.md'));
@@ -65,7 +64,7 @@ try {
     }
     command(['tar', '-czf', join(output, 'source/runweft-source.tar.gz'), '-C', source, '.']);
     writeFileSync(join(output, 'source/README.md'), `# 对应源码\n\n程序源码：${index.source.revision}\nHAPI：${index.hapi.revision}\n\nrunweft-source.tar.gz 含两仓库的对应源码，不含凭据、node_modules 或验证现场。保留 Git 身份进行构建时使用离线 bundle：\n\n\`\`\`sh\nsource_dir=\"$(pwd)\"\ngit clone \"$source_dir/runweft.bundle\" runweft\ncd runweft\ngit -c protocol.file.allow=always -c submodule.hapi.url=\"$source_dir/hapi.bundle\" submodule update --init hapi\nbun install --frozen-lockfile\n(cd hapi && bun install --frozen-lockfile)\nbun run build:hapi\nbun run typecheck && bun run test && bun run build\n\`\`\`\n\n依赖下载仍需 registry/构建工具网络；bundle 不依赖远端 Git。后续验收提交记录在 ../validation/evidence.json，不冒充程序源码提交。\n`);
-    writeFileSync(join(output, 'README.md'), `# Runweft ${index.version} 完整交付\n\n程序源码 ${index.source.revision}；HAPI ${index.hapi.version} / ${index.hapi.revision}。\n\n- 先用 \`sha256sum -c SHA256SUMS\`（Mac 用 \`shasum -a 256 -c SHA256SUMS\`）核对整批文件。\n- 平台包、主包、Skill 与来源索引在 packages/；从 packages/ 按 ../USAGE.md 操作，保持相邻 Runweft/HAPI 布局。\n- 用户将 Skill 交给 Agent 完成安装/连接；身份通过 Web 加密确认，不给模型 token。未公开 npm 发布。\n- website/ 是完整静态官网及真实下载，可用静态 HTTP 服务器预览，不含生产部署。\n- source/ 含对应两仓库源码及离线 Git bundle；validation/ 是经过筛选的验收与程序 hash，无原生配置或密钥。\n- Linux x64 的真实安装/协作与 arm64 QEMU 分开记录；Mac 双架构仅构建，未签名/公证；物理跨机未测，同机多 Runner 不替代它。\n\n实际逐项结果与限制以 validation/acceptance.md 和 evidence.json 为准。\n`);
+    writeFileSync(join(output, 'README.md'), `# Runweft ${index.version} 完整交付\n\n程序源码 ${index.source.revision}；HAPI ${index.hapi.version} / ${index.hapi.revision}。\n\n- 先用 \`sha256sum -c SHA256SUMS\`（Mac 用 \`shasum -a 256 -c SHA256SUMS\`）核对整批文件。\n- 平台包、主包、Skill 与来源索引在 packages/；从 packages/ 按 ../USAGE.md 操作，保持相邻 Runweft/HAPI 布局。\n- 用户将 Skill 交给 Agent 完成安装/连接；身份通过 Web 加密确认，不给模型 token。常规安装使用 npm；packages/ 保留离线交付。\n- website/ 是 npm 安装静态官网，不含下载副本，可用静态 HTTP 服务器预览。其 npm 版本标识公开包，不证明网页与离线程序来自同一提交；不含生产部署。\n- source/ 含对应两仓库源码及离线 Git bundle；validation/ 是经过筛选的验收与程序 hash，无原生配置或密钥。\n- Linux x64 的真实安装/协作与 arm64 QEMU 分开记录；Mac 双架构仅构建，未签名/公证；物理跨机未测，同机多 Runner 不替代它。\n\n实际逐项结果与限制以 validation/acceptance.md 和 evidence.json 为准。\n`);
     const files = [];
     function collect(directory) {
         for (const name of readdirSync(directory).sort()) {

@@ -1,5 +1,3 @@
-import { installationCommands } from './install.js';
-
 document.documentElement.classList.add('js');
 const status = document.querySelector('#copy-status');
 for (const button of document.querySelectorAll('[data-copy]')) {
@@ -23,43 +21,6 @@ for (const button of document.querySelectorAll('[data-copy]')) {
     clearTimeout(button.resetTimer);
     button.resetTimer = setTimeout(() => { label.textContent = '复制'; }, 2500);
   });
-}
-
-const releaseElement = document.querySelector('#release-data');
-if (releaseElement) {
-  const release = JSON.parse(releaseElement.textContent);
-  const tabs = [...document.querySelectorAll('[data-platform]')];
-  function selectPlatform(platform, focus = false) {
-    const item = release.platforms.find(item => item.id === platform);
-    if (!item) return;
-    for (const tab of tabs) {
-      const selected = tab.dataset.platform === platform;
-      tab.setAttribute('aria-selected', String(selected));
-      tab.tabIndex = selected ? 0 : -1;
-      if (selected && focus) tab.focus();
-    }
-    document.querySelector('#install-panel').setAttribute('aria-labelledby', `platform-${platform}`);
-    document.querySelector('#install-command').textContent = installationCommands(item.id, release.version, item.sha256);
-    const link = document.querySelector('#platform-download');
-    link.href = `downloads/${item.filename}`;
-    link.setAttribute('download', item.filename);
-    document.querySelector('#platform-download-label').textContent = `下载 ${item.label}`;
-    document.querySelector('#platform-size').textContent = item.size;
-    document.querySelector('#platform-note').textContent = item.note;
-    document.querySelector('#platform-checksum').href = `downloads/${item.filename}.sha256`;
-    document.querySelector('#platform-filename').textContent = item.filename;
-  }
-  tabs.forEach((tab, index) => {
-    tab.addEventListener('click', () => selectPlatform(tab.dataset.platform));
-    tab.addEventListener('keydown', event => {
-      const keys = ['ArrowRight', 'ArrowLeft', 'Home', 'End'];
-      if (!keys.includes(event.key)) return;
-      event.preventDefault();
-      const next = event.key === 'Home' ? 0 : event.key === 'End' ? tabs.length - 1 : (index + (event.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length;
-      selectPlatform(tabs[next].dataset.platform, true);
-    });
-  });
-  selectPlatform(new URLSearchParams(location.search).get('platform') || 'darwin-arm64');
 }
 
 for (const button of document.querySelectorAll('[data-mode]')) {

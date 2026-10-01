@@ -1,12 +1,11 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { createReadStream } from 'node:fs';
-import { cp, mkdir, mkdtemp, readFile, readdir, stat, writeFile } from 'node:fs/promises';
-import { join, resolve } from 'node:path';
+import { mkdir, mkdtemp, readFile, readdir, realpath, stat, symlink, writeFile } from 'node:fs/promises';
+import { dirname, join, resolve } from 'node:path';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { chromium } from 'playwright';
-import { buildSite } from './build.mjs';
 import { serveSite } from './serve.mjs';
 
 const run = promisify(execFile);
@@ -14,7 +13,7 @@ const repository = resolve(import.meta.dirname, '..');
 const output = join(repository, 'dist/website');
 await mkdir(join(repository, '.dev-smoke'), { recursive: true });
 const evidenceRoot = await mkdtemp(join(repository, '.dev-smoke/website-'));
-const evidence = { root: evidenceRoot, success: false, checks: [], downloads: [], layouts: [], pageErrors: [], networkErrors: [] };
+const evidence = { root: evidenceRoot, success: false, checks: [], layouts: [], pageErrors: [], networkErrors: [] };
 const servers = [];
 let browser;
 const hash = async path => { const value = createHash('sha256'); for await (const chunk of createReadStream(path)) value.update(chunk); return value.digest('hex'); };
@@ -27,12 +26,17 @@ const assertLayout = async (page, route, width) => {
 
 try {
   const release = JSON.parse(await readFile(join(output, 'release.json'), 'utf8'));
-  const packageIndexHash = await hash(join(repository, 'dist/packages/index.json'));
+  assert.deepEqual(release, { version: release.version, installation: 'npm', package: 'runweft', registry: 'https://registry.npmjs.org/' });
+  const staticFiles = await readdir(output, { recursive: true });
+  assert(!staticFiles.some(file => /(^|\/)downloads(\/|$)|\.(tgz|gz|sha256)$|SHA256SUMS/.test(file)));
+  const sizes = await Promise.all(staticFiles.map(async file => { const info = await stat(join(output, file)); return info.isFile() ? info.size : 0; }));
+  evidence.staticBytes = sizes.reduce((total, size) => total + size, 0);
+  check('Static website has npm metadata and contains no downloads, archives or checksums');
   const started = await serveSite({ root: output, port: 0 }); servers.push(started.server);
   const subpath = await serveSite({ root: output, port: 0, mount: '/sub/' }); servers.push(subpath.server);
   browser = await chromium.launch({ headless: true, ...(process.env.RUNWEFT_SITE_CHROMIUM ? { executablePath: process.env.RUNWEFT_SITE_CHROMIUM } : {}) });
   evidence.browser = browser.version();
-  const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, acceptDownloads: true, permissions: ['clipboard-read', 'clipboard-write'] });
+  const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, permissions: ['clipboard-read', 'clipboard-write'] });
   const page = await context.newPage();
   page.on('pageerror', error => evidence.pageErrors.push(error.message));
   page.on('response', response => { if (response.status() >= 400) evidence.networkErrors.push({ url: response.url(), status: response.status() }); });
@@ -46,66 +50,30 @@ try {
   assert.equal(await page.locator('#routing-label').textContent(), '本机 Hub 调度');
   check('Local / remote diagram is interactive and explicitly illustrative');
 
-  // Download from browser clicks, then verify the actual bytes saved on disk.
-  const downloads = join(evidenceRoot, 'downloads'); await mkdir(downloads);
   await page.locator('[data-copy="onboarding-prompt"]').click();
-  assert.equal(await page.evaluate(() => navigator.clipboard.readText()), await page.locator('#onboarding-prompt').textContent());
-  const skillWaiting = page.waitForEvent('download');
-  await page.locator('#skill-download').click();
-  const skillDownload = await skillWaiting;
-  const skillFile = join(downloads, release.skill.filename);
-  await skillDownload.saveAs(skillFile);
-  assert.equal(await hash(skillFile), release.skill.sha256);
-  const skillEntries = await run('tar', ['-tzf', skillFile]);
-  for (const file of ['runweft/SKILL.md', 'runweft/references/onboarding.md', 'runweft/references/maintenance.md']) assert(skillEntries.stdout.includes(file));
-  evidence.skill = { filename: release.skill.filename, sha256: release.skill.sha256 };
-  check('Agent-first prompt copies correctly; actual Skill download is complete and matches its checksum');
-  for (const item of release.platforms) {
-    await page.locator(`[data-platform="${item.id}"]`).click();
-    assert.equal(await page.locator(`#platform-${item.id}`).getAttribute('aria-selected'), 'true');
-    const commands = await page.locator('#install-command').textContent();
-    assert(commands.includes(item.sha256) && commands.includes(item.filename));
-    assert(commands.includes(item.id.startsWith('darwin') ? 'shasum -a 256 -c -' : 'sha256sum -c -'));
-    const waiting = page.waitForEvent('download');
-    await page.locator('#platform-download').click();
-    const download = await waiting;
-    assert.equal(download.suggestedFilename(), item.filename);
-    const target = join(downloads, item.filename); await download.saveAs(target);
-    assert.equal(await download.failure(), null);
-    assert.equal(await hash(target), item.sha256);
-    assert.equal(await (await fetch(started.url + `downloads/${item.filename}.sha256`)).text(), `${item.sha256}  ${item.filename}\n`);
-    const head = await fetch(started.url + `downloads/${item.filename}`, { method: 'HEAD' });
-    assert.equal(head.headers.get('content-encoding'), null);
-    assert.equal(Number(head.headers.get('content-length')), item.bytes);
-    evidence.downloads.push({ platform: item.id, filename: item.filename, sha256: item.sha256, bytes: item.bytes });
-    if (item.id === 'linux-x64') await writeFile(join(evidenceRoot, 'install-from-dom.sh'), commands + '\n');
-  }
-  check('All four browser downloads match release hashes; per-file checksum paths and platform commands agree');
-
-  await page.locator('[data-platform="linux-x64"]').click();
+  const prompt = await page.locator('#onboarding-prompt').textContent();
+  assert.equal(await page.evaluate(() => navigator.clipboard.readText()), prompt);
+  assert(prompt.includes(`npm 安装 runweft@${release.version}`) && prompt.includes('安装、升级和卸载都使用 npm'));
   const expected = await page.locator('#install-command').textContent();
+  assert.match(expected, new RegExp(`^npm install -g runweft@${release.version.replaceAll('.', '\\.')} --registry=https://registry.npmjs.org/ --include=optional &&\\nrunweft --version$`));
+  await writeFile(join(evidenceRoot, 'install-from-dom.sh'), expected + '\n');
   await page.locator('[data-copy="install-command"]').click();
   assert.equal(await page.evaluate(() => navigator.clipboard.readText()), expected);
   await page.evaluate(() => Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: () => Promise.reject(new Error('Denied by test')) } }));
   await page.locator('[data-copy="install-command"]').click();
   assert.equal(await page.evaluate(() => window.getSelection().toString()), expected);
   assert((await page.locator('#copy-status').textContent()).includes('未允许自动复制'));
-  await page.locator('[data-platform="darwin-arm64"]').focus();
-  await page.keyboard.press('ArrowRight');
-  assert.equal(await page.locator('[data-platform="darwin-x64"]').getAttribute('aria-selected'), 'true');
-  assert.notEqual(await page.locator('[data-platform="darwin-x64"]').evaluate(element => getComputedStyle(element).outlineStyle), 'none');
-  await page.keyboard.press('End');
-  assert.equal(await page.locator('[data-platform="linux-arm64"]').getAttribute('aria-selected'), 'true');
-  check('Clipboard success / denial selection, accessible feedback and keyboard platform tabs');
+  assert(await page.locator('#install-command').evaluate(element => element.closest('pre') === document.activeElement));
+  check('Agent prompt and npm commands copy correctly; clipboard denial selects the command with accessible feedback');
 
-  await page.locator('.all-downloads summary').click();
-  assert.equal(await page.locator('.all-downloads tbody tr').count(), 4);
   await page.locator('#faq details summary').first().click();
   assert(await page.locator('#faq details').first().evaluate(element => element.open));
   for (const width of [1440, 1024, 768, 390, 320]) {
     await page.setViewportSize({ width, height: 1000 });
     for (const route of ['', 'guide.html', 'manual.html']) {
       await page.goto(started.url + route);
+      assert.equal(await page.locator('a[download],a[href*="downloads/"]').count(), 0);
+      assert(!(await page.locator('body').textContent()).includes('尚未发布到公共 npm'));
       await assertLayout(page, route || 'index.html', width);
     }
   }
@@ -121,6 +89,9 @@ try {
   await page.locator('#menu-toggle').click();
   await page.locator('#site-nav a[href="guide.html"]').click();
   assert(page.url().endsWith('/guide.html'));
+  assert.equal(await page.locator('#guide-install-command').textContent(), expected);
+  const skillCommand = await page.locator('#skill-path-command').textContent();
+  await writeFile(join(evidenceRoot, 'skill-path-from-dom.sh'), skillCommand + '\n');
   await page.locator('#mcp summary').click();
   await page.locator('[data-client="claude"]').click();
   assert.equal(await page.locator('#mcp-command').textContent(), 'runweft mcp install --client claude\nrunweft mcp check --client claude');
@@ -148,58 +119,62 @@ try {
     }
     await assertLayout(page, '/sub/' + route, 390);
   }
-  await page.goto(subpath.url);
-  await page.locator('[data-platform="linux-x64"]').click();
-  const downloadAtSubpath = page.waitForEvent('download'); await page.locator('#platform-download').click();
-  const subDownload = await downloadAtSubpath; const subFile = join(evidenceRoot, 'subpath-linux-x64.tgz'); await subDownload.saveAs(subFile);
-  assert.equal(await hash(subFile), release.platforms.find(item => item.id === 'linux-x64').sha256);
-  check(`Relative deployment: ${checkedLinks.size} local links and anchors, plus an actual /sub/ browser download`);
+  check(`Relative deployment: ${checkedLinks.size} local links and anchors`);
 
   await page.emulateMedia({ reducedMotion: 'reduce' }); await page.goto(started.url);
   assert.equal(await page.locator('.map-flow').evaluate(element => getComputedStyle(element).animationName), 'none');
   const plain = await browser.newContext({ javaScriptEnabled: false, viewport: { width: 390, height: 1000 } });
   const plainPage = await plain.newPage(); await plainPage.goto(started.url);
-  await plainPage.locator('.all-downloads summary').click(); assert.equal(await plainPage.locator('.all-downloads tbody tr').count(), 4);
-  assert.equal(await plainPage.locator('.no-script-installs details').count(), 4);
-  await plainPage.locator('.no-script-installs summary').filter({ hasText: 'Linux x64' }).click();
-  assert((await plainPage.locator('.no-script-installs details[open] pre').textContent()).includes('sha256sum -c -'));
-  await assertLayout(plainPage, 'no-js home', 390); await plainPage.close(); await plain.close();
-  check('Reduced motion and readable no-JavaScript downloads / installation commands');
+  assert.equal(await plainPage.locator('#install-command').textContent(), expected);
+  await plainPage.locator('a[href="guide.html"]').first().click();
+  assert.equal(await plainPage.locator('#guide-install-command').textContent(), expected);
+  assert.equal(await plainPage.locator('#skill-path-command').textContent(), skillCommand);
+  await assertLayout(plainPage, 'no-js guide', 390); await plainPage.close(); await plain.close();
+  check('Reduced motion and the same npm installation / Skill location commands without JavaScript');
 
-  // Use the exact command copied from rendered DOM, with a dedicated shell environment.
+  // Execute the exact rendered commands without inheriting user npm configuration, credentials or installed binaries.
   const installHome = join(evidenceRoot, 'install-home'); await mkdir(installHome);
-  const environment = { ...process.env, HOME: installHome, RUNWEFT_HOME: join(installHome, '.runweft'), PATH: '/usr/bin:/bin' };
-  delete environment.BASH_ENV; delete environment.ENV;
-  const corrupt = join(evidenceRoot, 'corrupt-download'); await mkdir(corrupt);
-  await writeFile(join(corrupt, release.platforms.find(item => item.id === 'linux-x64').filename), 'invalid download');
-  await assert.rejects(run('/bin/bash', ['--noprofile', '--norc', join(evidenceRoot, 'install-from-dom.sh')], { cwd: corrupt, env: environment, timeout: 10_000 }));
-  await assert.rejects(stat(join(installHome, '.local')), { code: 'ENOENT' });
-  check('Checksum failure stops the copied installation chain before creating directories or changing links');
-  const installed = await run('/bin/bash', ['--noprofile', '--norc', join(evidenceRoot, 'install-from-dom.sh')], { cwd: downloads, env: environment, timeout: 120_000 });
+  const prefix = join(installHome, 'npm-global'), nodeOnly = join(evidenceRoot, 'node-bin');
+  await mkdir(nodeOnly); await symlink(process.execPath, join(nodeOnly, 'node'));
+  await symlink(await realpath(join(dirname(process.execPath), 'npm')), join(nodeOnly, 'npm'));
+  const userconfig = join(installHome, 'npmrc'), globalconfig = join(installHome, 'npmrc-global');
+  await writeFile(userconfig, '', { mode: 0o600 }); await writeFile(globalconfig, '', { mode: 0o600 });
+  const environment = { ...process.env };
+  for (const key of Object.keys(environment)) if (/^npm_config_/i.test(key) || /^(NPM_TOKEN|NODE_AUTH_TOKEN|BASH_ENV|ENV)$/i.test(key)) delete environment[key];
+  Object.assign(environment, { HOME: installHome, RUNWEFT_HOME: join(installHome, '.runweft'),
+    PATH: `${prefix}/bin:${nodeOnly}:/usr/bin:/bin`, npm_config_prefix: prefix,
+    npm_config_userconfig: userconfig, npm_config_globalconfig: globalconfig, npm_config_cache: join(installHome, 'npm-cache'),
+  });
+  const failedBin = join(evidenceRoot, 'failed-bin'); await mkdir(failedBin);
+  const marker = join(evidenceRoot, 'unexpected-runweft');
+  await writeFile(join(failedBin, 'npm'), '#!/bin/sh\nexit 1\n', { mode: 0o755 });
+  await writeFile(join(failedBin, 'runweft'), '#!/bin/sh\ntouch "$RUNWEFT_TEST_MARKER"\n', { mode: 0o755 });
+  await assert.rejects(run('/bin/bash', ['--noprofile', '--norc', join(evidenceRoot, 'install-from-dom.sh')], {
+    env: { ...environment, PATH: `${failedBin}:/usr/bin:/bin`, RUNWEFT_TEST_MARKER: marker }, timeout: 10_000,
+  }));
+  await assert.rejects(stat(marker), { code: 'ENOENT' });
+  check('A failed npm install stops the DOM command before running any existing Runweft');
+  check('Installing the exact DOM npm command in a dedicated prefix from the public registry');
+  const installed = await run('/bin/bash', ['--noprofile', '--norc', join(evidenceRoot, 'install-from-dom.sh')], {
+    env: environment, timeout: 600_000, maxBuffer: 4 * 1024 * 1024,
+  });
   assert(installed.stdout.trim().endsWith(release.version));
-  const binary = join(installHome, '.local/bin/runweft');
+  const located = await run('/bin/bash', ['--noprofile', '--norc', '-c', 'command -v runweft'], { env: environment });
+  const binary = join(prefix, 'bin/runweft'); assert.equal(located.stdout.trim(), binary);
   const version = await run(binary, ['--version'], { env: environment }); assert.equal(version.stdout.trim(), release.version);
-  const index = JSON.parse(await readFile(join(repository, 'dist/packages/index.json'), 'utf8'));
-  assert.equal(await hash(binary), index.packages.find(item => item.name === 'runweft-linux-x64').binaries['bin/runweft']);
-  await writeFile(join(evidenceRoot, 'install-output.txt'), installed.stdout);
-  evidence.install = { version: version.stdout.trim(), sha256: await hash(binary), home: installHome };
-  check('Exact Linux x64 DOM commands install the release and run without global Bun/Node/HAPI');
-
-  // Failed website builds must keep the already usable website and release artifacts intact.
-  const beforeHome = await hash(join(output, 'index.html'));
-  const stagingBefore = (await readdir(join(repository, 'dist'))).filter(name => name.startsWith('.website-')).sort();
-  const incomplete = join(evidenceRoot, 'invalid-packages'); await mkdir(incomplete);
-  for (const file of ['index.json', 'SHA256SUMS']) await cp(join(repository, 'dist/packages', file), join(incomplete, file));
-  await assert.rejects(buildSite({ packagesDirectory: incomplete, outputDirectory: output }), /ENOENT/);
-  await mkdir(join(incomplete, 'tarballs'));
-  await writeFile(join(incomplete, 'tarballs', release.platforms[0].filename), 'invalid archive');
-  await assert.rejects(buildSite({ packagesDirectory: incomplete, outputDirectory: output }), /校验失败/);
-  assert.equal(await hash(join(output, 'index.html')), beforeHome);
-  assert.equal(await hash(join(repository, 'dist/packages/index.json')), packageIndexHash);
-  assert.deepEqual((await readdir(join(repository, 'dist'))).filter(name => name.startsWith('.website-')).sort(), stagingBefore);
+  const locatedSkill = await run('/bin/bash', ['--noprofile', '--norc', join(evidenceRoot, 'skill-path-from-dom.sh')], { env: environment });
+  const skillDirectory = locatedSkill.stdout.trim();
+  assert.equal(skillDirectory, join(prefix, 'lib/node_modules/runweft/skills/runweft'));
+  for (const file of ['SKILL.md', 'references/onboarding.md', 'references/configuration.md', 'references/delegation.md', 'references/maintenance.md']) {
+    assert((await stat(join(skillDirectory, file))).size > 0);
+  }
+  const installedPackage = JSON.parse(await readFile(join(prefix, 'lib/node_modules/runweft/package.json'), 'utf8'));
+  assert.equal(installedPackage.name, release.package); assert.equal(installedPackage.version, release.version);
+  evidence.install = { version: version.stdout.trim(), commandSource: 'rendered DOM', prefix, binary, launcherSha256: await hash(binary), skillDirectory };
+  check('DOM npm install and Skill location succeed; the installed binary belongs to the isolated prefix and all Skill references exist');
   assert.equal((await fetch(started.url + '../package.json')).status, 404);
   assert.equal((await fetch(started.url, { method: 'POST' })).status, 405);
-  check('Missing / corrupt package builds preserve the website; preview root and method boundaries hold');
+  check('Preview root and method boundaries hold');
 
   await page.setViewportSize({ width: 1440, height: 1000 }); await page.goto(started.url); await page.screenshot({ path: join(evidenceRoot, 'home-desktop.png') });
   await page.locator('#install').scrollIntoViewIfNeeded(); await page.screenshot({ path: join(evidenceRoot, 'install-desktop.png') });
