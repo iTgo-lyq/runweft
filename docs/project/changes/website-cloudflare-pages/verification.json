@@ -39,7 +39,17 @@
     }
   },
   "hosted": {
-    "verified": false
+    "verified": true,
+    "success": true,
+    "runId": 36904295244,
+    "url": "https://github.com/iTgo-lyq/runweft/actions/runs/36904295244",
+    "sourceRevision": "50a2633ea95c154b1d08a6bd1f6549966dfdbbe4",
+    "event": "push",
+    "branch": "codex/cli-foundation",
+    "deploymentTests": 11,
+    "staticArtifactDigestsMatch": true,
+    "upload": "skipped",
+    "onlineVerification": "skipped"
   },
   "cloudflare": {
     "deployed": false,

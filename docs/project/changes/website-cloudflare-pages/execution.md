@@ -10,3 +10,15 @@
 - 验证：node --test ./website/publish.test.mjs：11 pass；actionlint v1.7.12：通过；bun run typecheck：通过；bun run test：265 pass/0 fail；node website/build.mjs 与 node website/publish.mjs check：通过，公共 1.1.0 五包元数据与 HEAD 正常，8 文件 91,064 bytes；validate-change 与 diff 检查通过。
 - 未解决：Cloudflare Secrets 尚无，本地 API 夹具不代替真实上传；main、手动、PR 与非 main 项目拒绝为单测/静态证据。
 - Commit：`website-cloudflare-pages T1: configure checked Pages deployments`
+
+## T2 验证托管 runner 检查
+
+- 结果：当前 codex 分支真实 push 触发独立官网 CI，托管 runner 完成 11 项聚焦测试、构建与公共 npm 检查；两个 Pages 步骤因 Secrets 缺失明确跳过，warning 和准备证据标记未部署。
+- 验证：[run 36904295244](https://github.com/iTgo-lyq/runweft/actions/runs/36904295244) success，源提交 50a2633ea95c154b1d08a6bd1f6549966dfdbbe4；下载 website-static/website-pages-evidence，重新核对八文件 SHA-256 全部匹配检查记录，五包为公共 1.1.0。此次推送未触发 npm 发布或 CLI 四平台构建。
+- 未解决：Secrets API 返回无凭证名称；未调用 Cloudflare 项目 API/上传，未取得在线 URL。T3 等用户在 GitHub Secrets 配置两个字段后恢复，T4 依赖真实预览，不归档。
+- Commit：`website-cloudflare-pages T2: record hosted checks and pending credentials`
+
+## T3 接通账户并验证真实预览
+
+- 结果：已阻塞，缺 CLOUDFLARE_ACCOUNT_ID、CLOUDFLARE_API_TOKEN；已向用户提供 Secrets 页面与最小权限说明。
+- 未解决：实际 Pages API、唯一 URL 和在线内容/MIME 尚未验证。凭证就绪后重跑最新官网 run，先核对项目再上传；不需要修改 npm 信任或用户本地配置。
