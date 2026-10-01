@@ -36,16 +36,16 @@
 
 ### T2 发布与公共安装验证
 
-- 状态：进行中
+- 状态：已完成
 - 交付：重建候选、公共 npm 五包与专用安装证据。
 - 依赖：T1、T4、用户完成 npm 登录。
 - 验收：新候选保持已验收程序和 Skill hash，包内说明正确；五包版本、tag、hash、依赖正确；公共下载与隔离安装验证通过。
 - 验证：package --all --reuse-hapi、test:packages、test:install、dry-run；真实 npm publish、公共 registry 读取/下载、专用 prefix 安装、版本/程序/Skill/MCP 帮助检查。
-- 进展：T4 修正后的冻结候选通过包、安装和 dry-run 检查；Linux x64/macOS x64 包已公开确认，Linux arm64 已接受、待后台处理，macOS arm64 等待官方验证；主包等待四个平台公开确认。
+- 进展：T4 修正后的冻结候选通过包、安装和 dry-run 检查；五包均公开确认，latest/manifest/integrity 正确，匿名下载与公共 npm 隔离安装通过；本次专用登录已退出并清理。
 
 ### T3 同步发行事实并归档
 
-- 状态：待开始
+- 状态：进行中
 - 交付：当前安装/发行文档与完成的发布记录。
 - 依赖：T2。
 - 验收：只写已验证的发布事实；任务均有独立 Commit，Change 校验通过并归档。
