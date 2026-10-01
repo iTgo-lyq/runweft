@@ -41,15 +41,16 @@
   "hosted": {
     "verified": true,
     "success": true,
-    "runId": 36904295244,
-    "url": "https://github.com/iTgo-lyq/runweft/actions/runs/36904295244",
-    "sourceRevision": "50a2633ea95c154b1d08a6bd1f6549966dfdbbe4",
+    "runId": 36909619770,
+    "url": "https://github.com/iTgo-lyq/runweft/actions/runs/36909619770",
+    "sourceRevision": "9d22f23c712ba2ba509db8f06517ce98f366986a",
     "event": "push",
     "branch": "codex/cli-foundation",
-    "deploymentTests": 11,
+    "deploymentTests": 13,
     "staticArtifactDigestsMatch": true,
-    "upload": "skipped",
-    "onlineVerification": "skipped"
+    "upload": "success",
+    "onlineVerification": "success",
+    "actionEnvironmentCompared": true
   },
   "cloudflare": {
     "deployed": true,
@@ -58,8 +59,8 @@
     "projectCreated": true,
     "productionBranch": "main",
     "missingSecrets": [],
-    "previewUrl": "https://9d1bff6b.runweft.pages.dev/",
-    "sourceRevision": "50a2633ea95c154b1d08a6bd1f6549966dfdbbe4",
+    "previewUrl": "https://4c68856f.runweft.pages.dev/",
+    "sourceRevision": "9d22f23c712ba2ba509db8f06517ce98f366986a",
     "independentHttp": {
       "success": true,
       "url": "https://9d1bff6b.runweft.pages.dev/",
@@ -110,7 +111,60 @@
       "branch": "codex/cli-foundation",
       "sourceRevision": "50a2633ea95c154b1d08a6bd1f6549966dfdbbe4",
       "environmentEvidence": "项目 production_branch=main、上传参数为 codex 分支；本次独立 HTTP 校验未读取 action environment 输出。"
-    }
+    },
+    "firstPreviewUrl": "https://9d1bff6b.runweft.pages.dev/",
+    "branchAlias": "https://codex-cli-foundation.runweft.pages.dev/",
+    "verifiedDeployment": {
+      "success": true,
+      "url": "https://4c68856f.runweft.pages.dev/",
+      "mode": "preview",
+      "version": "1.1.0",
+      "files": [
+        {
+          "name": "assets/icons.svg",
+          "bytes": 1598,
+          "sha256": "d708610fe6b75591b214722352dd8dc33671bab46d8f38c21cf154552f3762fa"
+        },
+        {
+          "name": "assets/mark.svg",
+          "bytes": 297,
+          "sha256": "af2367afb3fed6d7b5bb615cf508e4defcb300975f2e575f75db4e50cb2d4168"
+        },
+        {
+          "name": "assets/site.js",
+          "bytes": 3559,
+          "sha256": "d2960a767ab23092f718609a5931bd6f2b67e4d632510a762f93169444b51340"
+        },
+        {
+          "name": "assets/style.css",
+          "bytes": 30672,
+          "sha256": "2aff264dd50554ad1dab5b91d2178a9952c94b3921c1ca837ca77d5aed10da6b"
+        },
+        {
+          "name": "guide.html",
+          "bytes": 14587,
+          "sha256": "32a64899c99ecebe0192f2fcef6d435045b271926248052f31c7166eaa08efc5"
+        },
+        {
+          "name": "index.html",
+          "bytes": 16192,
+          "sha256": "6d734afc525cafc90f4e257db8a03c60a637f32dfe619b09ede7adb7b26448b6"
+        },
+        {
+          "name": "manual.html",
+          "bytes": 24040,
+          "sha256": "47ac8e3dc9f27f8314c4926ef01b9cca5a307286223521d202149ac5a58d92e2"
+        },
+        {
+          "name": "release.json",
+          "bytes": 119,
+          "sha256": "b68ddd8bc82e45cb1ac462efa2c5aa3393118a294881a03ad23ca7d8c0a41b50"
+        }
+      ],
+      "branch": "codex/cli-foundation",
+      "sourceRevision": "9d22f23c712ba2ba509db8f06517ce98f366986a"
+    },
+    "existingProjectReadOnlyVerified": true
   },
   "production": {
     "verified": false,
@@ -124,7 +178,21 @@
     "upload": "success",
     "httpVerification": "failure",
     "failure": "初次网络请求异常；同一 URL 随后独立 HTTP 全部通过。",
-    "recoveryWorkflowVerified": false
+    "recoveryWorkflowVerified": true
   },
-  "deploymentTestsAfterFix": 13
+  "deploymentTestsAfterFix": 13,
+  "initialHostedCheck": {
+    "verified": true,
+    "success": true,
+    "runId": 36904295244,
+    "url": "https://github.com/iTgo-lyq/runweft/actions/runs/36904295244/attempts/1",
+    "sourceRevision": "50a2633ea95c154b1d08a6bd1f6549966dfdbbe4",
+    "event": "push",
+    "branch": "codex/cli-foundation",
+    "deploymentTests": 11,
+    "staticArtifactDigestsMatch": true,
+    "upload": "skipped",
+    "onlineVerification": "skipped",
+    "attempt": 1
+  }
 }

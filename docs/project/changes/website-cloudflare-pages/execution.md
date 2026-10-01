@@ -14,7 +14,7 @@
 ## T2 验证托管 runner 检查
 
 - 结果：当前 codex 分支真实 push 触发独立官网 CI，托管 runner 完成 11 项聚焦测试、构建与公共 npm 检查；两个 Pages 步骤因 Secrets 缺失明确跳过，warning 和准备证据标记未部署。
-- 验证：[run 36904295244](https://github.com/iTgo-lyq/runweft/actions/runs/36904295244) success，源提交 50a2633ea95c154b1d08a6bd1f6549966dfdbbe4；下载 website-static/website-pages-evidence，重新核对八文件 SHA-256 全部匹配检查记录，五包为公共 1.1.0。此次推送未触发 npm 发布或 CLI 四平台构建。
+- 验证：[run 36904295244](https://github.com/iTgo-lyq/runweft/actions/runs/36904295244/attempts/1) attempt 1 success，源提交 50a2633ea95c154b1d08a6bd1f6549966dfdbbe4；下载 website-static/website-pages-evidence，重新核对八文件 SHA-256 全部匹配检查记录，五包为公共 1.1.0。此次推送未触发 npm 发布或 CLI 四平台构建。
 - 未解决：Secrets API 返回无凭证名称；未调用 Cloudflare 项目 API/上传，未取得在线 URL。T3 等用户在 GitHub Secrets 配置两个字段后恢复，T4 依赖真实预览，不归档。
 - Commit：`website-cloudflare-pages T2: record hosted checks and pending credentials`
 
@@ -26,3 +26,10 @@
 - 验证补充：Node 聚焦测试 13 pass，包括超过一分钟暂时不可达和失败回执；actionlint、validate-change、diff 检查通过。不重跑未修改的 CLI 根测试/构建；T1 的 265 项证据保留。
 - 未解决：修正后的托管整体 CI 和 action 实际 preview 输出待 T3.1；生产需 main 后续合码。
 - Commit：`website-cloudflare-pages T3: deploy preview and preserve verification receipts`
+
+## T3.1 验证修正后的托管部署
+
+- 结果：[run 36909619770](https://github.com/iTgo-lyq/runweft/actions/runs/36909619770) 整体 success；既有 Direct Upload/main 项目只读取不再次创建，实际上传仍为 codex 分支 preview。action 返回环境通过脚本比较，唯一 URL https://4c68856f.runweft.pages.dev/ 在线全部校验通过。
+- 验证：托管 runner 的 13 项测试、构建、公共 npm 五包与 HEAD、项目准备、上传和在线校验全部 success；下载最终 evidence/static，八文件 SHA-256 与 check/deployment 回执完全一致，源提交 9d22f23c712ba2ba509db8f06517ce98f366986a。已核对前次已上传 URL 后才从修正提交运行，未盲目重复未知上传。
+- 未解决：main 生产、手动/PR 真实触发仍待未来合码；不阻碍本轮预览配置验收。
+- Commit：`website-cloudflare-pages T3.1: verify hosted preview deployment`
