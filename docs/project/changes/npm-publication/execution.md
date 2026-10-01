@@ -21,6 +21,13 @@ iclaude 在当前工作区完成一次只读评审，会话 `991da989-689b-478a-
 - 验证：`bun run test:install` 通过，专用 registry 安装、服务/信号/reset、重装、缺依赖诊断、卸载与数据保留；证据 `.dev-smoke/install-WW8ijy/evidence.json`。这是本地 registry，尚非公共 npm 安装。
 - 验证：新五包 `npm publish --dry-run --ignore-scripts --json` 均通过，SHA-512 与新索引一致，证据 `.dev-smoke/npm-publication/preflight.json`。专用命令确认 registry 为 `https://registry.npmjs.org/`；未执行真实 publish。
 - 认证：隔离配置起初返回 ENEEDAUTH；官方网页登录已成功，`npm whoami` 为 `itgo-lyq`。首个平台 `runweft-linux-x64@1.1.0` 的真实 publish 请求得到官方发布验证提示，已将浏览器验证入口交给用户，当前等待完成。密码/验证码只在官方页面输入，不收进聊天。
-- 外部事实：该请求尚无成功回执，公共 `/runweft-linux-x64/1.1.0` 和 `/runweft/1.1.0` 仍为 404，不认定任何包发布成功，也尚不能判定 registry 接受包体积。
-- 恢复入口：`.dev-smoke/npm-publication/npm-isolated.mjs` 提供固定 registry/专用配置；`node .dev-smoke/npm-publication/publish.mjs` 已在 TTY 会话 50283 中运行，先读取其结果，不并发重启或盲目重发。五包逐个核验后再执行 `node .dev-smoke/npm-publication/public-install.mjs`；额外认证继续官方 CLI 浏览器流程。认证配置权限 0600，目录 0700，均不提交，保留到发布完成后清理。
-- 未完成：真实发布、公共下载/安装、Specs 同步和归档；T2 已阻塞于发布验证，T3 未开始。
+- 外部事实：原会话 50283 的发布认证轮询返回 E404（官方 done 请求），进程退出；确认零个成功包后重试。会话 34022 在用户完成新的官方发布验证后返回 E413 Payload Too Large；失败后公开版本仍为 404、publication.json 仍零个成功包，体积拒绝已真实复现。
+- 恢复入口：先完成 T4 后的正式候选重建与验证，再在 TTY 启动 `.dev-smoke/npm-publication/publish.mjs`；此前会话均已退出，不能复用旧认证 nonce。五包逐个核验后执行 `.dev-smoke/npm-publication/public-install.mjs`。认证配置权限 0600，目录 0700，均不提交，保留到发布完成后清理。
+- 未完成：修正后正式候选检查、真实发布、公共下载/安装、Specs 同步和归档；T2 继续执行，T3 未开始。
+
+## T4 缩减平台源码归档并验证构建材料
+
+- 结果：源码归档仅省略其他平台的八份工具压缩包；每包保留 2934 个文件，所有源码、许可和当前平台两份工具均与固定 Git blob 相同。源码归档约 23–29 MB，生成包绑定既有 Runweft 仓库 URL；来源说明列出当前平台完整重建步骤，新增脚本纳入冻结输入。
+- 验证：`bun run typecheck`、`bun run test`（256 pass / 0 fail）、`bun run build`、diff-check 和 Change 结构检查通过。实际四平台 CLI 从各自源码归档交叉编译通过，证据 `.dev-smoke/npm-publication/source-archives-v2/evidence.json`；工作区源码在归档内，第三方依赖与 tunwg 复用构建缓存，不带 Web 资产，不代替发行模型验收。
+- 返修：首轮编译缺少原版构建要求下载的 tunwg，保持失败证据目录 `source-archives`；补缓存中的对应 tunwg，并将 workspace 依赖明确指向解包源码后通过。发行仍复用原固定 HAPI 可执行程序，T2 将重新核对四平台程序 hash。
+- Commit：`npm-publication T4: package HAPI sources with platform-specific build tools`。

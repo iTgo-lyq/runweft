@@ -6,6 +6,12 @@
 
 ## 现状与方案
 
+真实发布在额外认证通过后返回 E413，Linux x64 压缩包 207306850 字节未被接受；没有成功发布的包。调查发现每包的 HAPI 源码归档含约 99 MB 的十份、五平台 ripgrep/difftastic 预编译压缩包。HAPI 构建仅检查所选平台的两份工具，Bun 的 HAPI_TARGET feature 选择对应嵌入分支。
+
+修正打包：从固定 Git revision 列出所有文件，仅省略其他平台的工具 `.tar.gz`，保留全部源码、许可证及当前平台两份预编译工具；每平台生成自己的 `hapi-source.tar.gz`。SOURCES.txt 写明范围、当前平台重建方式与完整 Git 来源。包生成 manifest 增加既有 Runweft 仓库 URL，为 npm 产品页与后续可信发布提供正确来源。新增归档脚本纳入冻结输入。
+
+验证源码归档的文件集合和每个 Git blob 与 pin 一致，并从缩减归档真实交叉编译四个平台 CLI（无 Web 资产的构建验证不冒充整包运行验收）；发布候选仍使用原缓存 HAPI，四平台 Runweft/HAPI/Skill 必须与原验收 hash 一致。修正属于既有需求内的打包工程决定，按持续授权确认；不重复 Plan 评审。
+
 包内 `docs/usage.md` 原有“当前不公开 npm 发布”与目标矛盾。先补公共 npm 安装方式并提交，再在干净源码上用现有 `package --all --reuse-hapi` 重建五包，重新运行 `test:packages`、`test:install` 和 dry-run。对比四平台 Runweft/HAPI 程序 hash，只有与既有候选逐字节一致时才能沿用既有模型验收；发生程序变化时补做受影响的原生验收。原离线整包保留原候选与验收事实，本次发布使用新的 `dist/packages/index.json` 和对应绝对 tarball 路径。
 
 源码工程的 `private: true` 不变，直接发布生成包。产品 Skill 已在主包和平台包内，不新增独立 npm 包或安装副作用。每条 npm 命令显式带 `--registry=https://registry.npmjs.org/`，同时使用专用 userconfig、空 globalconfig，清除 `npm_config_*` 环境变量；先记录实际 registry。发布标签为 `latest`。

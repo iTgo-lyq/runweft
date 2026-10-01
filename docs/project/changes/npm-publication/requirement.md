@@ -15,6 +15,7 @@
 ### MODIFIED
 
 - `release/distribution`、`installation/cli`：当前只有本地可发布的五个 1.1.0 包；目标为公共 npm 的同名同版本包，支持 `npm install -g runweft@1.1.0`，四个平台依赖均可解析。
+- `release/distribution`：匹配 HAPI 源码归档保留全部源码和许可证，预编译工具按当前平台提供，保证当前平台所需构建材料完整并降低上传体积。
 
 ## 验收标准
 

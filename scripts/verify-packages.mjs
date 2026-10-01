@@ -4,6 +4,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, statSync
 import { join, resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { assertFrozenCandidate } from './fixtures/release-inputs.mjs';
+import { verifyHapiSourceArchive } from './fixtures/hapi-source-archive.mjs';
 
 const source = resolve(process.argv[2] ?? 'dist/packages');
 const index = JSON.parse(readFileSync(join(source, 'index.json'), 'utf8'));
@@ -69,6 +70,8 @@ try {
         }
         for (const file of ['HAPI-LICENSE', 'HAPI-NOTICE', 'TUNWG-LICENSE', 'tool-licenses']) assert(existsSync(join(directory, file)));
         assert(readFileSync(join(directory, 'SOURCES.txt'), 'utf8').includes(index.hapi.revision));
+        verifyHapiSourceArchive(join(directory, 'hapi-source.tar.gz'), { id: `${os}-${arch}`, os, cpu: arch },
+            index.hapi.revision, join(root, `${entry.name}-hapi-source`));
         assert.equal(JSON.parse(command('tar', ['-xOf', join(directory, 'hapi-source.tar.gz'), 'cli/package.json'])).version, index.hapi.version);
         evidence.platforms.push({ platform: `${os}-${arch}`, directory, binaries, nativeExecuted: false });
         if (os === process.platform && arch === process.arch) {

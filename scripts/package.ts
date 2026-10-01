@@ -4,6 +4,7 @@ import { createHash } from 'node:crypto';
 import pkg from '../package.json';
 import { buildHapi, readHapiBuild, command } from './build-hapi';
 import { platforms, selectedPlatforms } from './platforms';
+import { createHapiSourceArchive } from './hapi-source';
 
 const selected = selectedPlatforms();
 const binaries = process.argv.includes('--reuse-hapi') ? readHapiBuild(selected) : await buildHapi(selected);
@@ -13,9 +14,7 @@ const output = mkdtempSync(resolve('dist/packages-build-'));
 try {
     const tarballs = join(output, 'tarballs');
     mkdirSync(tarballs, { recursive: true });
-    const source = resolve('dist', `hapi-source-${pkg.hapi.revision}.tar.gz`);
-    await command(['git', '-C', 'hapi', 'archive', '--format=tar.gz', '--output', source, pkg.hapi.revision]);
-    const sourceInfo = `HAPI ${pkg.hapi.version}\nRevision: ${pkg.hapi.revision}\nSource: https://github.com/iTgo-lyq/hapi/tree/${pkg.hapi.revision}\nOriginal source archive: hapi-source.tar.gz\nRebuild: follow scripts/build-hapi.ts in https://github.com/iTgo-lyq/runweft\nThe HAPI executable is built without source changes.\n`;
+    const repository = { type: 'git', url: 'git+https://github.com/iTgo-lyq/runweft.git' };
     const hash = (file: string, algorithm = 'sha256', encoding: 'hex' | 'base64' = 'hex') => createHash(algorithm).update(readFileSync(file)).digest(encoding);
     const packages: { name: string; version: string; path: string; tarball: string; sha512: string; binaries?: Record<string, string> }[] = [];
     async function pack(directory: string, binaryHashes?: Record<string, string>) {
@@ -30,6 +29,9 @@ try {
 
     for (const platform of selected) {
         const name = `runweft-${platform.id}`;
+        const source = resolve('dist', `hapi-source-${pkg.hapi.revision}-${platform.id}.tar.gz`);
+        await createHapiSourceArchive(pkg.hapi.revision, platform, source);
+        const sourceInfo = `HAPI ${pkg.hapi.version}\nRevision: ${pkg.hapi.revision}\nSource: https://github.com/iTgo-lyq/hapi/tree/${pkg.hapi.revision}\nSource archive: hapi-source.tar.gz\nAll tracked source files and licenses are preserved. Prebuilt ripgrep/difftastic archives are included for ${platform.id}; other platforms' prebuilt archives are omitted.\nRebuild from the extracted source archive using Bun ${Bun.version}:\n  bun install --frozen-lockfile\n  bun run download:tunwg\n  bun run build:web\n  bun run --cwd hub generate:embedded-web-assets\n  bun run --cwd cli scripts/build-executable.ts --with-web-assets --target ${platform.target}\nDependencies and tunwg are downloaded by the original build steps.\nFor cross-platform builds, use the complete pinned Git checkout from the source URL.\nThe HAPI executable is built without source changes.\n`;
         const directory = join(output, name);
         mkdirSync(join(directory, 'bin'), { recursive: true });
         const result = await Bun.build({ entrypoints: ['src/cli.ts'], compile: {
@@ -47,7 +49,7 @@ try {
         cpSync('skills/runweft', join(directory, 'skills/runweft'), { recursive: true });
         writeFileSync(join(directory, 'SOURCES.txt'), sourceInfo);
         writeFileSync(join(directory, 'package.json'), JSON.stringify({
-            name, version: pkg.version, description: `Runweft and HAPI executables for ${platform.id}`,
+            name, version: pkg.version, description: `Runweft and HAPI executables for ${platform.id}`, repository,
             os: [platform.os], cpu: [platform.cpu], ...(platform.os === 'linux' ? { libc: ['glibc'] } : {}),
             files: ['bin', 'skills', 'README.md', 'HAPI-LICENSE', 'HAPI-NOTICE', 'tool-licenses', 'TUNWG-LICENSE', 'SOURCES.txt', 'hapi-source.tar.gz'],
             engines: { node: '>=20' }, runweft: { hapi: pkg.hapi },
@@ -60,7 +62,7 @@ try {
     chmodSync(join(main, 'bin', 'runweft.cjs'), 0o755);
     copyFileSync('docs/usage.md', join(main, 'README.md'));
     cpSync('skills/runweft', join(main, 'skills/runweft'), { recursive: true });
-    writeFileSync(join(main, 'package.json'), JSON.stringify({ name: 'runweft', version: pkg.version,
+    writeFileSync(join(main, 'package.json'), JSON.stringify({ name: 'runweft', version: pkg.version, repository,
         description: 'One CLI for HAPI execution and Runweft collaboration', bin: { runweft: 'bin/runweft.cjs' },
         files: ['bin', 'skills', 'README.md'], engines: { node: '>=20' },
         optionalDependencies: Object.fromEntries(platforms.map(platform => [`runweft-${platform.id}`, pkg.version])),

@@ -3,7 +3,7 @@ import { spawnSync } from 'node:child_process';
 
 export const packageInputs = [
     'src', 'skills', 'docs/usage.md', 'package.json', 'bun.lock', 'hapi',
-    'scripts/package.ts', 'scripts/build.ts', 'scripts/build-hapi.ts', 'scripts/platforms.ts', 'scripts/npm-launcher.cjs',
+    'scripts/package.ts', 'scripts/build.ts', 'scripts/build-hapi.ts', 'scripts/hapi-source.ts', 'scripts/platforms.ts', 'scripts/npm-launcher.cjs',
 ];
 
 export function assertFrozenCandidate(index, cwd = process.cwd()) {
