@@ -87,15 +87,30 @@ bun run release:assemble dist/packages dist/website <验收说明.md> <脱敏证
 
 五包已绑定 `iTgo-lyq/runweft` 的 `.github/workflows/npm-publish.yml`，GitHub 托管 runner 用 OIDC 获取短期发布授权，无需 npm token secret 或逐包人工验证码。[已验证记录](project/archive/2026-10-01-npm-trusted-publishing/acceptance.md)包括真实五包授权和无上传预演；[1.1.1 原 tag 验收](project/archive/2026-10-02-npm-patch-release/acceptance.md)已新增实际 OIDC 上传和匿名安装。
 
-正式发版先更新 `package.json` 的稳定版本，完成变更验收并提交，再推送匹配的 `v<major>.<minor>.<patch>` 标签；例如下一补丁版为 1.1.2 时使用 `v1.1.2`。工作流从该标签构建干净候选，完成根检查、四平台打包/内容/实际安装检查后，依次发布四平台包；确认全部公开完整性后才发布主包。当前公共 1.1.1 已验证，历史 1.1.0 保持原样，不能用新候选覆盖同版本。
+正式发版先更新 `package.json` 和常规说明中的目标版本，完成变更验收并提交干净源码，再推送严格匹配的版本 tag。`vX.Y.Z` 发布到 npm `latest`，`vX.Y.Z-beta.N` 发布到 `beta`；整数不允许前导零，N 从 0 起，alpha/rc 等其他格式拒绝。工作流从该标签构建干净候选，完成根检查、四平台打包/内容/实际安装检查后，依次发布四平台包；确认全部公开完整性后才发布主包。当前公共 1.1.1 已验证，历史 1.1.0 保持原样，不能用新候选覆盖同版本。
 
 main/codex 分支的发布流程文件变更只检查授权和预演；普通产品变更运行独立 CLI 安装 CI。默认分支 main 已包含工作流，可从 Actions 手动运行预演；手动入口不发布 npm。本仓库为私有，当前不会生成自动 npm provenance。
 
-上传前发现同版本不同完整性会停止；上传结果未知不自动重发。部分完成时检查 `npm-publication` 回执，使用原 run 的 **Re-run failed jobs** 恢复原候选。候选和回执保留三十天；重跑整个 run 会重新构建，不能当作相同候选。到期或未知结果先核实公开 registry 和回执，不直接重新上传。
+Beta 从最新 main 创建独立 codex 开发分支，准备例如 1.1.2-beta.1 的根版本与常规说明，完成检查并提交后再推送 tag：
+
+```sh
+git fetch origin
+git switch -c codex/release-1.1.2-beta.1 origin/main
+# 更新 package.json、README 与 docs/usage.md 的常规版本目标；检查并提交干净源码
+git push origin HEAD
+git tag -a v1.1.2-beta.1 -m "Runweft 1.1.2-beta.1"
+git push origin v1.1.2-beta.1
+```
+
+Beta 仍运行原四平台构建/安装、同一五包 OIDC 与发布顺序，不需要新增 Secret 或可信 publisher。Beta 必须高于每包当前的 beta 和 latest，stable 只与 latest 比较；同版本仅允许原候选恢复。发布后读取实际 dist-tags，Beta 的 latest 必须与上传前相同，回执保留 channel/latestBefore/distTags；变化时失败并提示检查，不自动修正标签。
+
+首次 Beta 公开后可用 `npm install -g runweft@beta --registry=https://registry.npmjs.org/ --include=optional` 跟随 Beta 通道，或使用 `runweft@1.1.2-beta.1` 固定版本；默认 `runweft` 仍安装 latest。Beta 源版本不合入 main；转正式版时准备稳定源码和同名稳定 tag，再按 npm → main/官网顺序交付。
+
+上传前发现同版本不同完整性会停止；上传结果未知不自动重发。部分完成时检查 `npm-publication` 回执，仅在上传前失败、accepted 等待超时或公开完整性已经确认时，使用原 run 的 **Re-run failed jobs** 恢复原候选与通道回执；uploading 且仍未公开时继续停止，先定位结果。候选和回执保留三十天；重跑整个 run 会重新构建，不能当作相同候选。到期或未知结果先核实公开 registry 和回执，不直接重新上传。
 
 ## 官网 Cloudflare Pages
 
-网站使用独立 `website-pages.yml`：官网相关 main 推送发布生产，codex 分支推送发布预览，PR 只检查；操作和 Secrets 见[官网说明](../website/README.md#cloudflare-pages-自动部署)。产品已合入 main，[生产推送 CI](https://github.com/iTgo-lyq/runweft/actions/runs/36919283258)通过；PR 和手动入口已配置，真实触发未实测。
+网站使用独立 `website-pages.yml`：稳定版本的官网相关 main 推送发布生产、codex 分支推送发布预览，PR 只检查；codex push/dispatch 的 Beta 执行聚焦检查后明确跳过构建/上传，main 或 PR 的 Beta 版本直接失败；操作和 Secrets 见[官网说明](../website/README.md#cloudflare-pages-自动部署)。产品已合入 main，[生产推送 CI](https://github.com/iTgo-lyq/runweft/actions/runs/36921038133)通过；PR 和手动入口已配置，真实触发未实测。
 
 两个凭证已保存为 Repository secrets；[正式官网](https://runweft.pages.dev/)已通过八文件摘要/MIME 和三页 Playwright 检查，[分支预览验收](project/archive/2026-10-02-website-cloudflare-pages/acceptance.md)另存归档。工作流先保存上传回执，在约三分钟窗口内等待网络传播；官网部署不触发程序发版，当前生产安装目标为已公开的 npm 1.1.1。
 

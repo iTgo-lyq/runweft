@@ -11,4 +11,11 @@
 
 ## T2 文档与真实工作流预演
 
-- 结果：待推送配置并验证 main 的四平台、五包 OIDC、无上传预演和稳定 Pages；此轮不推送 Beta tag。
+- 结果：492bda5bbc1a4b5befe16215347b4cbd1843f14e 已推送 main；CLI 36921038282、npm 36921038560 和 Pages 36921038133 全部成功。两个独立四平台候选/安装检查通过，五包 OIDC HTTP 201；原 npm 回执 source=492bda5、version=1.1.1、channel=latest、success=true、published=false。
+- 验证：npm 候选根 CI 272 pass、2 skip、0 fail、5369 断言、43 文件，两项跳过因托管 runner 无 Codex CLI。Pages eligibility 为稳定版本 build=true，生产唯一 URL https://08c3e5b5.runweft.pages.dev/；唯一 URL/正式域名八文件 hash/MIME 匹配，91,064 bytes，内容与已验收 1.1.1 完全相同。五包公开完整性/latest=1.1.1 保持、均无 beta tag。
+- 文档：补充独立开发分支、规范版本、同名 tag、Beta 安装、稳定转正和原候选/通道恢复步骤；明确仅开发分支跳过官网。此轮没有实际 Beta tag，Beta 门禁、参数 dry-run 与官网跳过均为专用本地夹具证据，main 真实 CI 只验证稳定路径。
+- Commit：`npm-beta-publishing T2: document and verify trusted release workflow`
+
+## T3 自动验收、Specs 同步与归档
+
+- 结果：同步已验证配置与证据范围；文档推送触发的稳定官网部署按既有流程核对。
