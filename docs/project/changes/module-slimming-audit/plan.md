@@ -29,8 +29,8 @@
 
 ### T2 任务接受、轮次与查询保障迁中心
 
-- 状态：待开始
-- 交付：tasks、task-rounds、tasks-overview、tasks-mcp；迁固定回执、unknown、不重放、审批、等待取消/断联、只读分页、千任务边界；本任务只迁接线，格式仍schema18；迁移用例与旧字段回退留到T14统一删除。
+- 状态：已完成
+- 交付：tasks、task-rounds、tasks-overview、tasks-mcp；迁固定回执、unknown、不重放、审批、等待取消/断联、只读分页、千任务边界；本任务迁接线并窄修复中心overview原3秒库存截止缺口（组合请求signal，撤权/断联不降级成功），格式仍schema18；迁移用例与旧字段回退留到T14统一删除。
 - 依赖：T1。
 - 验收：原任务/轮次/MCP有效断言均在中心接线执行；取消/EOF不停止已接受工作，格式相关保障迁到直接openState测试，不提前删除；查询纯读和有界页保持。
 - 验证：对应五组测试及 hub-delegation；原有效断言逐项可追溯，compiled consumers 身份隔离通过。

@@ -23,7 +23,7 @@ export async function handleDelegationRequest(request: IncomingMessage, response
         const query = parseTask(OverviewQuerySchema, Object.fromEntries(url.searchParams));
         // History remains readable when an Agent is no longer shared. Inventory never widens task scope.
         let inventory: TaskInventory;
-        try { inventory = { machines: await service.config.resources.machines(lease), error: null }; }
+        try { inventory = { machines: await service.config.resources.machines(lease, AbortSignal.any([lease.signal, AbortSignal.timeout(3000)])), error: null }; }
         catch { lease.check(); inventory = { machines: [], error: { code: 'inventory_unavailable', message: '机器状态暂不可用，以下保留已记录的任务事实。' } }; }
         result = taskOverview(coordinator.store.listNamespace(namespace), service.config.resources.store.runtimes(lease.actor), inventory, query);
     } else if (domain === 'tasks' && action.startsWith('details/')) {

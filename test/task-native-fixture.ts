@@ -25,6 +25,7 @@ export async function taskNativeFixture(cleanups: (() => Promise<void> | void)[]
         }
         const h = await nativeFixture(cleanup.resources, { ...options, capabilities: { ...options.capabilities, spawnReceipts: 1, mcpToolFilter: 1 }, async fetch(request, namespace) {
             const url = new URL(request.url), parts = url.pathname.split('/');
+            const custom = await options.fetch?.(request, namespace); if (custom) return custom;
             const fileResponse = await filesApi?.(request, namespace); if (fileResponse) return fileResponse;
             if (parts[2] === 'machines' && parts[4] === 'workspaces' && workspaceApi) return workspaceApi(request, namespace);
             if (parts[2] === 'machines' && parts[4] === 'spawn' && request.method === 'POST') {
@@ -64,7 +65,8 @@ export async function taskNativeFixture(cleanups: (() => Promise<void> | void)[]
                 const candidate = faults.resume === 'new' ? structuredClone(native) : native;
                 if (faults.resume === 'new') candidate.session.id = crypto.randomUUID();
                 candidate.session.active = true; candidate.session.metadata!.lifecycleState = 'running';
-                if (faults.resume === 'mismatch') candidate.session.metadata!.machineId = 'remote';
+                if (faults.resume === 'machine_mismatch') candidate.session.metadata!.machineId = 'unclaimed-machine';
+                if (faults.resume === 'mismatch') candidate.session.metadata!.path = '/wrong/resumed/path';
                 sessions.set(candidate.session.id, candidate);
                 return faults.resume === 'lost' ? new Response('', { status: 502 }) : Response.json({ type: 'success', sessionId: candidate.session.id });
             }

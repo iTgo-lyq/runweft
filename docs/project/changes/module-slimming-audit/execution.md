@@ -25,3 +25,18 @@ iclaude review session：`6870f51d-a7d7-4cfa-b49d-a2a96e69a693`。工具限制Re
 
 - 主 agent 验收：已逐项检查 native fake 提取、现行 gateway HTTP 接线、完整重启与清理归属。要求并已修正依赖随机端口变化的断言与单测独跑目录前置；没有删除原有效测试。独立执行 `bun run test`：268 pass、0 fail、5315 expect、44文件、52.87秒，日志 `.dev-smoke/slimming-acceptance/t1-root-test.log`；`git diff --check` 通过，产品/脚本/依赖无差异。本项验收通过。
 - Commit：`module-slimming-audit T1: detach central fixtures from legacy services`
+
+## T2 任务接受、轮次与查询保障迁中心
+
+- 范围：tasks、task-rounds、tasks-overview、tasks-mcp 脱离旧 task/resource fixture，使用当前完整中心 gateway、用户身份/space、中央 Agent UUID 与机器连接记录；HTTP 经过真实授权 bridge，MCP 使用实际 SDK transport 和当前 HubTaskClient。重启全部调用 T1 完整 restart；未新增旧 API 翻译或模拟 Hub 授权。
+- 替代关系：
+  - tasks：并发接受/固定 requestId、递归身份在输入前持久化、报告分页、lost spawn/send、unknown不重放、取消wait不停止、固定目标错误、持久spawn intent恢复、known完成/uncertain输入跨重启原断言保留。旧“丢接受响应后移除Agent YAML”改为HTTP代理丢当前spawn响应后撤回中央Agent，再用同requestId查询原回执；仍只spawn一次。旧namespace隔离改为other owner×same space和other owner×other space。schema1资源迁移专属用例仍直接ResourceStore/TaskStore，留T14。
+  - task-rounds：两runtime队列/stop后续轮、resume新identity及丢响应、missing才重建业务上下文、unknown不重试、取消/steer/审批/原生报告界限/stop后读取失败全部保留。原wrong-machine场景现行bridge先拒绝，改为专门`resume into an unclaimed machine`断言delegation_native_mismatch、needs_attention、not_started；完整restart后resume/spawn/send各保持1，stop只计前一轮正常完成的1次，不认领/不谎称停止外来对象。另wrong-cwd场景仍验证execution_target_mismatch、准确停止已认领session、不发新输入。
+  - overview：通过真实中央resolve取得当前Hub snapshot再由当前store播种（非YAML快照），完整gateway用60秒poll且启动时空库，查询均真实HTTP。原认证/隔离/过滤/分页/unknown/ absent/成果存储与release/内容脱敏/轮次选择/库存故障/只读/千任务100项页全部保留。other owner same space的数据仍不可见。namespace注入现行access层错误为invalid_native_request；其余坏筛选仍invalid_task_request。PRAGMA data_version及store内容不变验证保留。
+  - MCP：两host发现/幂等/分页/父任务隔离，准确审批/取消/递归抑制，cancel和disconnect不停止shared/worktree执行，explicit Git基线/repair/续轮均保留。真实小Git repo在专用fixture建立并显式绑定当前Hub repository；native workspace fake返回实际请求机器ID，未放宽产品源码/基线核验。旧AgentClient原生auth取消改为当前HubAgentClient健康能力+auth取消，仍无资源probe。没有删除或合并有效测试。
+- 实际契约缺口与窄修复：迁入overview后原6000ms库存超时测试失败。旧tasks/coordinator有3秒库存截止，当前hub/delegation/api未设；真实RequestLease无deadline，native fetch收到显式signal会覆盖默认timeout（不是30秒lease）。主agent授权T2补回：resources.machines内部可选signal默认原lease.signal，overview组合请求signal与3000ms timeout，保留成功/失败后的lease.check，无重试。正式CI新增“库存在途撤成员→401且无items”，不将权限失效降级为成功读。主agent独立token旋转HTTP证据为`.dev-smoke/slimming-acceptance/overview-revocation.test.ts/.log`，1 pass，不冒充实施者运行或重复加入CI。
+- 实施者实际命令：`bun run typecheck`通过；`bun test ./test/tasks.test.ts ./test/task-rounds.test.ts ./test/tasks-overview.test.ts ./test/tasks-mcp.test.ts ./test/hub-delegation.test.ts ./test/hub-resources.test.ts ./test/hub-access.test.ts ./test/hub-consumers.test.ts`：67 pass/0 fail/1621 assertions，8文件（含compiled CLI/MCP consumers）；`bun test ./test/task-workspaces.test.ts ./test/task-files.test.ts ./test/task-outputs.test.ts ./test/artifact-mcp.test.ts`：39 pass/0 fail/924 assertions，4文件，旧fixture仍独立工作。`git diff --check`通过。临时重复的token旋转CI用例试跑后按主agent意见移除；最终正式测试计数按前述67次结果，不记录它为交付保障。
+- 边界：只有获授权overview截止时间是产品变更；未改schema/package版本/lock/HAPI/用户home/Specs，未推进T3/T14；未提交、未改任务完成状态。未运行根全集/build/browser/真实模型/远端；主agent继续独立review/验收。
+
+- 主 agent 验收：逐项复核四组测试差异、当前中心调用链、错误机器/目录两种不同边界与旧保障替代；独立 token 旋转HTTP检查1 pass。独立 `bun run test` 270 pass、0 fail、5245 expect、44文件、54.70秒；`bun run build`通过，日志在 `.dev-smoke/slimming-acceptance/t2-root-test.log` 与 `t2-root-build.log`。Review另将405测试中仅为抛错而建的IIFE改为直接响应状态断言，定向重跑该用例1 pass/0 fail/23 expect；`git diff --check`通过。没有扩展权限或降低超时/边界断言，本项验收通过。
+- Commit：`module-slimming-audit T2: migrate task guarantees to central gateway`

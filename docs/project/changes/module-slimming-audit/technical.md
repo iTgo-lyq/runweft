@@ -61,3 +61,5 @@ tasks-mcp 重复 happy path 只有 compiled consumers 等价且审批、等待�
 T14格式核验先做WAL/SHM与并发创建定向实验，禁止将readonly打开等同无写入。方案为临时新库不覆盖原子落位，已有库用不写原文件的核验方式，检查表/索引/FK；拒绝主DB与已有sidecar字节/mode/文件集不变。文件不匹配state_format_unsupported、损坏state_format_invalid，503提示独立新--home，不建议reset。schema19单任务记录state_record_invalid只拒绝该项、不补字段，扫描日志报ID/错误码并继续有效任务。具体实验与退出条件在Plan T14。
 
 T14 启动入口补充：services.serve 在 serverToken 创建、目录初始化和 HAPI 启动之前预检已有 Runweft state；不能先启动 HAPI 再拒绝旧业务格式。编译 CLI 的旧格式拒绝验收同时检查业务库与 HAPI 数据不变。页面的旧 Agent 版本显示回退一并按当前 DTO 核对；外来原生对象不认领仍是权限边界。用户长期约束同步 AGENTS.md，不改独立 HAPI 实现。
+
+T2 迁接线实际复现中心 overview 库存请求没有原入口的3秒截止时间：`hub/delegation/api.ts`直接用request lease请求库存，原`tasks/coordinator.ts`另设3秒截止；真实RequestLease无deadline，显式signal覆盖fetch默认timeout，库存挂起可一直等待断联。经主agent确认，T2允许窄修复：`resources.machines`内部可选signal默认lease.signal，overview传入lease.signal与3秒timeout的组合；继续保留库存完成与失败降级后的lease.check，撤权/断联不能转换为成功降级。不新增重试或通用deadline框架。

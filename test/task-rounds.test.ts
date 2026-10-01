@@ -1,5 +1,6 @@
 import { afterEach, expect, test } from 'bun:test';
-import { taskFixture, until } from './tasks-fixture';
+import { hubDelegationFixture } from './hub-delegation-fixture';
+import { until } from './helpers';
 import { parseReport } from '../src/tasks/reports';
 
 const cleanups: (() => Promise<void> | void)[] = [];
@@ -8,7 +9,7 @@ const send = (id: string, message = 'Next task', mode = 'next', roundId?: string
 
 test('both runtimes queue rounds, wait for confirmed stop, reuse fixed environment and expose each completion cursor', async () => {
     for (const flavor of ['codex', 'claude'] as const) {
-        const h = await taskFixture(cleanups, flavor);
+        const h = await hubDelegationFixture(cleanups, flavor);
         const first = await h.post('spawn', h.payload());
         const active = await until(() => h.post('read', { id: first.agent_id }), value => value.inputs[0]?.observation?.phase === 'accepted');
         const followup = send(first.agent_id);
@@ -39,14 +40,14 @@ test('both runtimes queue rounds, wait for confirmed stop, reuse fixed environme
 
 test('resume follows actual returned HAPI identity and lost success is reconciled without replay', async () => {
     for (const mode of ['new', 'lost']) {
-        const h = await taskFixture(cleanups), first = await h.post('spawn', h.payload());
+        const h = await hubDelegationFixture(cleanups), first = await h.post('spawn', h.payload());
         const active = await until(() => h.post('read', { id: first.agent_id }), value => value.inputs[0]?.observation?.phase === 'accepted');
         h.complete(active.session_id);
         await until(() => h.post('read', { id: first.agent_id }), value => value.status === 'completed');
         if (mode === 'lost') {
-            const saved = h.tasks!.store.require('alpha', first.agent_id);
+            const saved = h.gateway.delegation.coordinator.store.require(h.namespace, first.agent_id);
             saved.rounds[0].nativeSessionId = undefined; // Missing cached identity is not proof that native history is gone.
-            h.tasks!.store.save(saved.task, saved.rounds[0], saved.inputs);
+            h.gateway.delegation.coordinator.store.save(saved.task, saved.rounds[0], saved.inputs);
         }
         h.faults.resume = mode; await h.post('send', send(first.agent_id));
         const resumed = await until(() => h.post('read', { id: first.agent_id }), value => value.inputs[0]?.observation?.phase === 'accepted');
@@ -55,13 +56,13 @@ test('resume follows actual returned HAPI identity and lost success is reconcile
         if (mode === 'new') expect(resumed.session_id).not.toBe(active.session_id);
         else expect(resumed.session_id).toBe(active.session_id);
         expect(h.calls.resume).toBe(1); expect(h.calls.spawn).toBe(1);
-        expect(() => h.tasks!.store.assertCanDelegate('alpha', { ...h.parent, hapiSessionId: resumed.session_id })).toThrow('再次');
+        expect(() => h.gateway.delegation.coordinator.store.assertCanDelegate(h.namespace, { ...h.parent, hapiSessionId: resumed.session_id })).toThrow('再次');
     }
 });
 
 test('only native_session_missing reconstructs bounded business context; unknown and wrong target never send a new task', async () => {
     for (const mode of ['missing', 'unseen', 'mismatch']) {
-        const h = await taskFixture(cleanups), first = await h.post('spawn', h.payload());
+        const h = await hubDelegationFixture(cleanups), first = await h.post('spawn', h.payload());
         const active = await until(() => h.post('read', { id: first.agent_id }), value => value.inputs[0]?.observation?.phase === 'accepted');
         h.complete(active.session_id, 'HISTORICAL_REPORT');
         await until(() => h.post('read', { id: first.agent_id }), value => value.status === 'completed');
@@ -87,7 +88,7 @@ test('only native_session_missing reconstructs bounded business context; unknown
 });
 
 test('cancel queued round without touching active execution, and cancel an unknown input only after confirmed archive', async () => {
-    const h = await taskFixture(cleanups), first = await h.post('spawn', h.payload());
+    const h = await hubDelegationFixture(cleanups), first = await h.post('spawn', h.payload());
     await until(() => h.post('read', { id: first.agent_id }), value => value.inputs[0]?.observation?.phase === 'accepted');
     const second = await h.post('send', send(first.agent_id));
     await h.post('interrupt', { id: first.agent_id, roundId: second.round_id });
@@ -109,7 +110,7 @@ test('cancel queued round without touching active execution, and cancel an unkno
 
 test('Codex steer preserves same business round and reports actual queue/steer uncertainty without retries', async () => {
     for (const steering of ['steered', 'queued', 'unknown']) {
-        const h = await taskFixture(cleanups), first = await h.post('spawn', h.payload());
+        const h = await hubDelegationFixture(cleanups), first = await h.post('spawn', h.payload());
         await until(() => h.post('read', { id: first.agent_id }), value => value.inputs[0]?.observation?.phase === 'accepted');
         h.faults.queueNext = true; h.faults.steer = steering;
         const request = send(first.agent_id, 'Additional instruction', 'steer', first.round_id);
@@ -130,7 +131,7 @@ test('Codex steer preserves same business round and reports actual queue/steer u
 });
 
 test('Claude rejects steer; permissions and targeted interruption affect only the active round', async () => {
-    const h = await taskFixture(cleanups, 'claude'), first = await h.post('spawn', h.payload());
+    const h = await hubDelegationFixture(cleanups, 'claude'), first = await h.post('spawn', h.payload());
     const active = await until(() => h.post('read', { id: first.agent_id }), value => value.inputs[0]?.observation?.phase === 'accepted');
     await expect(h.post('send', send(first.agent_id, 'No steer', 'steer', first.round_id))).rejects.toMatchObject({ code: 'steer_unsupported' });
     const native = h.sessions.get(active.session_id)!;
@@ -152,7 +153,7 @@ test('report format is optional and malformed output never becomes a false execu
 });
 
 test('Claude report pagination does not return a second unbounded copy through native facts', async () => {
-    const h = await taskFixture(cleanups, 'claude'), first = await h.post('spawn', h.payload());
+    const h = await hubDelegationFixture(cleanups, 'claude'), first = await h.post('spawn', h.payload());
     const active = await until(() => h.post('read', { id: first.agent_id }), value => value.inputs[0]?.observation?.phase === 'accepted');
     h.complete(active.session_id, 'report-'.repeat(10000));
     const done = await until(() => h.post('read', { id: first.agent_id, limit: 100 }), value => value.status === 'completed');
@@ -162,7 +163,7 @@ test('Claude report pagination does not return a second unbounded copy through n
 });
 
 test('cancellation preserves confirmed terminal facts when later transport is unknown and post-stop reads fail', async () => {
-    const h = await taskFixture(cleanups), first = await h.post('spawn', h.payload());
+    const h = await hubDelegationFixture(cleanups), first = await h.post('spawn', h.payload());
     const active = await until(() => h.post('read', { id: first.agent_id }), value => value.inputs[0]?.observation?.phase === 'accepted');
     h.faults.queueNext = true; h.faults.steer = 'queued';
     await h.post('send', send(first.agent_id, 'Queued instruction', 'steer', first.round_id));
@@ -178,4 +179,18 @@ test('cancellation preserves confirmed terminal facts when later transport is un
     expect(cancelled.inputs[0].observation.phase).toBe('completed'); expect(cancelled.report.text).toBe('Known result');
     expect(cancelled.cancellation.confirmed).toBe(true); expect(cancelled.cancellation.error).toBeDefined();
     expect(h.calls.interrupt).toBe(0); expect(cancelled.stop).toBe('stopped');
+});
+
+test('resume into an unclaimed machine is refused by the current bridge without replay or a claimed stop', async () => {
+    const h = await hubDelegationFixture(cleanups), first = await h.post('spawn', h.payload());
+    const active = await until(() => h.post('read', { id: first.agent_id }), value => value.inputs[0]?.observation?.phase === 'accepted');
+    h.complete(active.session_id); await until(() => h.post('read', { id: first.agent_id }), value => value.status === 'completed');
+    h.faults.resume = 'machine_mismatch'; await h.post('send', send(first.agent_id));
+    const refused = await until(() => h.post('read', { id: first.agent_id }), value => h.calls.resume === 1 && !!value.attention);
+    expect(refused).toMatchObject({ status: 'needs_attention', stop: 'not_started', attention: { code: 'delegation_native_mismatch', stage: 'resuming' } });
+    expect(h.calls.stop).toBe(1);
+    await h.restart(); await Bun.sleep(100);
+    expect(h.calls.resume).toBe(1); expect(h.calls.spawn).toBe(1); expect(h.calls.send).toBe(1);
+    expect(await h.post('read', { id: first.agent_id })).toMatchObject({ stop: 'not_started', attention: { code: 'delegation_native_mismatch' } });
+    expect(h.calls.stop).toBe(1);
 });

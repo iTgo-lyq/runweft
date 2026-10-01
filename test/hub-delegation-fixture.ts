@@ -5,17 +5,18 @@ import { dataPaths, loadConfig } from '../src/config';
 import { resourceInspection } from './native-fixture';
 import { createDelegationGateway } from '../src/hub/delegation/gateway';
 import { HubStore } from '../src/hub/store';
+import type { NativeFixtureOptions } from './native-fixture';
 import type { Flavor } from '../src/resources/types';
 
-export async function hubDelegationFixture(cleanups: (() => void | Promise<void>)[], flavor: Flavor = 'codex') {
+export async function hubDelegationFixture(cleanups: (() => void | Promise<void>)[], flavor: Flavor = 'codex', workspaceApi?: (request: Request, namespace: string) => Promise<Response>, nativeOptions: NativeFixtureOptions = {}, pollMs = 10) {
     const cleanup = fixtureCleanup(cleanups);
     try {
-        const h = await taskNativeFixture(cleanup.resources, flavor, undefined, undefined, { namespaces: ['runweft'] });
+        const h = await taskNativeFixture(cleanup.resources, flavor, workspaceApi, undefined, { ...nativeOptions, namespaces: ['runweft'] });
         const config = loadConfig(h.home, {}), statePath = dataPaths(config).state;
         const hub = new HubStore(statePath); cleanup.resources.push(() => hub.close());
         const owner = hub.createIdentity('delegator'), other = hub.createIdentity('machine owner');
         hub.acceptInvitation(other.identity.id, hub.invite(owner.identity.id, owner.personalSpace.id, 'admin').token);
-        let gateway = await createDelegationGateway({ host: '127.0.0.1', port: 0, target: h.nativeUrl, rootToken: 'test-', key: h.key, statePath: statePath, pollMs: 10 });
+        let gateway = await createDelegationGateway({ host: '127.0.0.1', port: 0, target: h.nativeUrl, rootToken: 'test-', key: h.key, statePath: statePath, pollMs });
         cleanup.resources.push(() => gateway.close());
         const space = owner.personalSpace.id, actor = gateway.store.authenticate(owner.token, space), outsider = gateway.store.authenticate(other.token, space);
         const machineConnections = new Map<string, { token: string; requestId: string; credentialId: string }>();
@@ -45,10 +46,10 @@ export async function hubDelegationFixture(cleanups: (() => void | Promise<void>
             if (result.status !== 200) throw Object.assign(new Error(result.body.error?.message), result.body.error, { status: result.status });
             return result.body;
         }
-        return { ...h, config, statePath, get url() { return currentUrl(); }, hub, get gateway() { return gateway; }, owner, other, actor, outsider, space, machine, machineId, machineConnections, runtime, agent, definition, parent, payload, token, request, post,
+        return { ...h, config, statePath, namespace: gateway.delegation.scopes.ensure(actor), get url() { return currentUrl(); }, hub, get gateway() { return gateway; }, owner, other, actor, outsider, space, machine, machineId, machineConnections, runtime, agent, definition, parent, payload, token, request, post,
             async restart() {
                 await gateway.close();
-                gateway = await createDelegationGateway({ host: '127.0.0.1', port: 0, target: h.nativeUrl, rootToken: 'test-', key: h.key, statePath, pollMs: 10 });
+                gateway = await createDelegationGateway({ host: '127.0.0.1', port: 0, target: h.nativeUrl, rootToken: 'test-', key: h.key, statePath, pollMs });
             },
             async use(identity: string, spaceId = space) { jwt = await token(identity, spaceId); } };
     } catch (error) { return cleanup.failed(error); }

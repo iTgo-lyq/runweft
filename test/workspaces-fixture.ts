@@ -38,7 +38,7 @@ export function workspaces() {
     return { records, calls, control, handler: async (http: Request) => {
         const request = await http.json() as WorkspaceRequest; calls.push(request);
         if (request.action === 'resolve' && control.rejectResolve) return Response.json({ code: 'git_failed', error: 'Git baseline does not exist', hint: 'Choose an existing commit' }, { status: 409 });
-        if (request.action === 'resolve') return Response.json({ source: { machineId: 'own', repositoryId: 'repository', sourcePath: request.cwd,
+        if (request.action === 'resolve') return Response.json({ source: { machineId: new URL(http.url).pathname.split('/')[3], repositoryId: 'repository', sourcePath: request.cwd,
             repositoryRoot: request.cwd, commonDir: request.cwd + '/.git', relativePath: '', baseRef: request.baseRef,
             baseCommit: control.base, objectFormat: 'sha1', dirty: true } });
         let workspace = records.get(request.environmentId);

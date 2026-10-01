@@ -33,9 +33,9 @@ export class HubResourceService {
             ...(owner ? { host: native?.metadata?.host ?? null, platform: native?.metadata?.platform ?? null, spaceIds: this.store.spaces(actor, record.machineId) } : {}),
             permissions: { manage: owner, associate: owner, govern: this.store.governs(actor.ownerId, record.machineId, actor.spaceId) } };
     }
-    async machines(lease: RequestLease): Promise<MachineView[]> {
+    async machines(lease: RequestLease, signal = lease.signal): Promise<MachineView[]> {
         if (!this.store.machines(lease.actor).length) return [];
-        const inventory = await this.inventory(lease.signal); lease.check();
+        const inventory = await this.inventory(signal); lease.check();
         return this.store.machines(lease.actor).map(record => this.machineView(lease.actor, record, inventory.find(m => m.id === record.machineId)));
     }
     async machine(lease: RequestLease, id: string): Promise<MachineView> {
