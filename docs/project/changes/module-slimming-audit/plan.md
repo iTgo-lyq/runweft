@@ -21,7 +21,7 @@
 
 ### T1 中心 fixture 脱离旧服务
 
-- 状态：进行中
+- 状态：已完成
 - 交付：S01/S06；提取 native fake，中心 delegation/resources fixture 直接组装当前 gateway，fault hooks、HTTP 和独立 root 保留。
 - 依赖：无。
 - 验收：中心 fixture 不调用旧 handler、不启动旧协调器，实际中心 HTTP 请求与原故障开关可达；root/进程/DB 独立且构造失败可清理。

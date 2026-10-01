@@ -11,7 +11,7 @@ import { HubStore } from '../src/hub/store';
 import { readJson } from '../src/hub/access/transport';
 import { jsonResponse } from '../src/proxy';
 import { fixture } from './helpers';
-import { resourceInspection } from './resources-fixture';
+import { resourceInspection } from './native-fixture';
 import { DelegationNativeClient } from '../src/hub/delegation/native';
 import { HubError } from '../src/hub/types';
 

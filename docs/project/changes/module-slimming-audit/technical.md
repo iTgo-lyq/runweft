@@ -59,3 +59,5 @@ tasks-mcp 重复 happy path 只有 compiled consumers 等价且审批、等待�
 用户授权例外精确为CLI data/reset、专门历史数据升级回滚的scripts/smoke-upgrade.ts（当前package不存在test:upgrade入口）；不忽略oldBinary参数伪转发。smoke-hub-upgrade当前数据程序替换场景保留，但只能用同schema19输入。package版本/lock/HAPI pin不变，STATE_SCHEMA_VERSION可按唯一格式改为19。
 
 T14格式核验先做WAL/SHM与并发创建定向实验，禁止将readonly打开等同无写入。方案为临时新库不覆盖原子落位，已有库用不写原文件的核验方式，检查表/索引/FK；拒绝主DB与已有sidecar字节/mode/文件集不变。文件不匹配state_format_unsupported、损坏state_format_invalid，503提示独立新--home，不建议reset。schema19单任务记录state_record_invalid只拒绝该项、不补字段，扫描日志报ID/错误码并继续有效任务。具体实验与退出条件在Plan T14。
+
+T14 启动入口补充：services.serve 在 serverToken 创建、目录初始化和 HAPI 启动之前预检已有 Runweft state；不能先启动 HAPI 再拒绝旧业务格式。编译 CLI 的旧格式拒绝验收同时检查业务库与 HAPI 数据不变。页面的旧 Agent 版本显示回退一并按当前 DTO 核对；外来原生对象不认领仍是权限边界。用户长期约束同步 AGENTS.md，不改独立 HAPI 实现。

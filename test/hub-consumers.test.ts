@@ -11,7 +11,7 @@ import { hubConnectionPaths } from '../src/hub/resources/connection';
 import { recordClaudeCall } from '../src/mcp/claude-hook';
 import { fixture } from './helpers';
 import { hubDelegationFixture } from './hub-delegation-fixture';
-import { until } from './tasks-fixture';
+import { until } from './helpers';
 
 const cleanups: (() => void | Promise<void>)[] = [];
 afterEach(async () => { for (const fn of cleanups.splice(0).reverse()) await fn(); });

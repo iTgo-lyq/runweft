@@ -5,7 +5,7 @@ import { HubAgentClient } from '../src/hub/agents/client';
 import type { AgentView } from '../src/hub/agents/types';
 import { RepositoryStore } from '../src/hub/repositories/store';
 import { setupHubResources, hubResourceFixture } from './hub-resources-fixture';
-import { resourceInspection } from './resources-fixture';
+import { resourceInspection } from './native-fixture';
 import { openState, STATE_SCHEMA_VERSION } from '../src/state';
 
 const cleanups: (() => void | Promise<void>)[] = [];

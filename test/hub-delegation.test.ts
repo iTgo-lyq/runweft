@@ -1,8 +1,8 @@
 import { afterEach, expect, test } from 'bun:test';
 import { randomUUID } from 'node:crypto';
 import { hubDelegationFixture } from './hub-delegation-fixture';
-import { until } from './tasks-fixture';
-import { resourceInspection } from './resources-fixture';
+import { until } from './helpers';
+import { resourceInspection } from './native-fixture';
 import { createIdentityToken } from '../src/hub/store';
 import { TaskStore } from '../src/tasks/store';
 import { BaselineStore } from '../src/remote/store';
@@ -137,4 +137,34 @@ test('all startup scans quarantine unowned legacy tasks, input intents and basel
         expect(h.gateway.delegation.coordinator.store.pendingArtifactIntents()).toEqual([]);
         expect(h.gateway.delegation.preparations.store.snapshots()).toEqual([]);
     } finally { legacy.close(); baselines.close(); }
+});
+
+test('complete central gateway restart preserves native receipts and sessions without replaying accepted or uncertain input', async () => {
+    for (const flavor of ['codex', 'claude'] as const) {
+        const h = await hubDelegationFixture(cleanups, flavor);
+        h.faults.spawn = 'lost'; h.faults.send = 'lost';
+        const request = h.payload(), accepted = await h.post('spawn', request);
+        const active = await until(() => h.post('read', { id: accepted.agent_id }), view => view.inputs[0]?.observation?.phase === 'accepted');
+        const session = h.sessions.get(active.session_id)!;
+        h.faults.stop = true; h.complete(active.session_id);
+        await until(() => h.post('read', { id: accepted.agent_id }), view => view.attention?.code === 'task_stop_unknown');
+        h.faults.spawn = 'none'; h.faults.send = 'unseen';
+        const uncertain = await h.post('spawn', h.payload());
+        await until(() => h.post('read', { id: uncertain.agent_id }), view => view.status === 'unknown');
+        const before = { spawn: h.calls.spawn, send: h.calls.send }, gateway = h.gateway;
+        const receipts = [...h.receipts.entries()], connections = [...h.machineConnections.entries()];
+        h.faults.stop = false;
+        await h.restart();
+        expect(h.gateway).not.toBe(gateway); expect(gateway.server.listening).toBe(false);
+        expect((await fetch(h.url + '/api/runweft/health')).status).toBe(200);
+        expect((await h.request('spawn', request, await h.token())).body).toEqual(accepted);
+        const finished = await until(() => h.post('read', { id: accepted.agent_id }), view => view.finish === 'complete');
+        expect(finished.report.text).toBe('Native final report');
+        expect((await h.post('read', { id: uncertain.agent_id })).status).toBe('unknown');
+        expect(h.calls.spawn).toBe(before.spawn); expect(h.calls.send).toBe(before.send);
+        expect(h.sessions.get(active.session_id)).toBe(session);
+        expect([...h.receipts.entries()]).toEqual(receipts);
+        expect([...h.machineConnections.entries()]).toEqual(connections);
+        expect(h.nativeCalls.some(call => call.namespace === 'runweft' && call.path.includes('/spawn-requests/'))).toBe(true);
+    }
 });

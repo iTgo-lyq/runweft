@@ -6,7 +6,7 @@ import { NativeTransport, fileNamespace } from '../src/hub/access/transport';
 import { AccessStore } from '../src/hub/access/store';
 import { createIdentityToken } from '../src/hub/store';
 import { setupHubResources } from './hub-resources-fixture';
-import { resourceInspection } from './resources-fixture';
+import { resourceInspection } from './native-fixture';
 
 const cleanups: (() => void | Promise<void>)[] = [];
 afterEach(async () => { for (const fn of cleanups.splice(0).reverse()) await fn(); });

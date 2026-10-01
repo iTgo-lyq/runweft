@@ -8,7 +8,7 @@ import { AccessStore } from '../src/hub/access/store';
 import { HubResourceStore } from '../src/hub/resources/store';
 import { createIdentityToken } from '../src/hub/store';
 import { STATE_SCHEMA_VERSION } from '../src/state';
-import { resourceInspection } from './resources-fixture';
+import { resourceInspection } from './native-fixture';
 
 const cleanups: (() => void | Promise<void>)[] = [];
 afterEach(async () => { for (const fn of cleanups.splice(0).reverse()) await fn(); });

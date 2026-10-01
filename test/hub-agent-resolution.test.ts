@@ -7,7 +7,7 @@ import { RepositoryStore } from '../src/hub/repositories/store';
 import type { Principal } from '../src/hub/access/types';
 import type { AgentView } from '../src/hub/agents/types';
 import { hubResourceFixture } from './hub-resources-fixture';
-import { resourceInspection } from './resources-fixture';
+import { resourceInspection } from './native-fixture';
 import { openState, STATE_SCHEMA_VERSION } from '../src/state';
 
 const cleanups: (() => void | Promise<void>)[] = [];
