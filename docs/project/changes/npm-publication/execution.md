@@ -16,14 +16,16 @@ iclaude 在当前工作区完成一次只读评审，会话 `991da989-689b-478a-
 
 ## T2 发布与公共安装验证
 
-- 已完成：`bun run package --all --reuse-hapi` 在干净 T1 提交上重建 1.1.0；候选源码 `9d44a507fd66525c1c9fc456c5c2eb9a93e65cdf`，dirty=false。四平台 Runweft/HAPI 程序 hash 和独立 Skill 均与原候选相同，比较证据 `.dev-smoke/npm-publication/candidate-comparison.json`；复用已有模型验收，不声称重新执行。
-- 验证：`bun run test:packages` 通过，证据 `.dev-smoke/release-packages-VHeUaX/evidence.json`；五个解包 README 逐字等于更新后的说明，公共 npm 命令正确，证据 `.dev-smoke/npm-publication/readme-checks.json`。
-- 验证：`bun run test:install` 通过，专用 registry 安装、服务/信号/reset、重装、缺依赖诊断、卸载与数据保留；证据 `.dev-smoke/install-WW8ijy/evidence.json`。这是本地 registry，尚非公共 npm 安装。
-- 验证：新五包 `npm publish --dry-run --ignore-scripts --json` 均通过，SHA-512 与新索引一致，证据 `.dev-smoke/npm-publication/preflight.json`。专用命令确认 registry 为 `https://registry.npmjs.org/`；未执行真实 publish。
-- 认证：隔离配置起初返回 ENEEDAUTH；官方网页登录已成功，`npm whoami` 为 `itgo-lyq`。首个平台 `runweft-linux-x64@1.1.0` 的真实 publish 请求得到官方发布验证提示，已将浏览器验证入口交给用户，当前等待完成。密码/验证码只在官方页面输入，不收进聊天。
-- 外部事实：原会话 50283 的发布认证轮询返回 E404（官方 done 请求），进程退出；确认零个成功包后重试。会话 34022 在用户完成新的官方发布验证后返回 E413 Payload Too Large；失败后公开版本仍为 404、publication.json 仍零个成功包，体积拒绝已真实复现。
-- 恢复入口：先完成 T4 后的正式候选重建与验证，再在 TTY 启动 `.dev-smoke/npm-publication/publish.mjs`；此前会话均已退出，不能复用旧认证 nonce。五包逐个核验后执行 `.dev-smoke/npm-publication/public-install.mjs`。认证配置权限 0600，目录 0700，均不提交，保留到发布完成后清理。
-- 未完成：修正后正式候选检查、真实发布、公共下载/安装、Specs 同步和归档；T2 继续执行，T3 未开始。
+- 候选：正式五包重建于干净 T4 提交 `bfa2df88531a2f997038817c901d89ca9cab491e`，dirty=false；四平台 Runweft/HAPI 与独立 Skill hash 均与原验收候选相同，比较证据 `.dev-smoke/npm-publication/candidate-comparison.json`。沿用已有模型验收，不声称重新执行。
+- 验证：`bun run test:packages` 通过，包括匹配源码逐文件 Git blob 校验，证据 `.dev-smoke/release-packages-nDC1ok/evidence.json`；五个随包 README 与当前使用说明逐字相同，证据 `.dev-smoke/npm-publication/readme-checks.json`。
+- 验证：`bun run test:install` 通过，覆盖专用 registry 安装、服务/信号/reset、重装、缺依赖诊断、卸载与数据保留，证据 `.dev-smoke/install-sMpeaY/evidence.json`。这是本地 registry 验证。
+- 验证：实际五个 tarball 的 npm dry-run 全部通过，integrity 与索引相同，证据 `.dev-smoke/npm-publication/preflight.json`。最大包为 Linux x64，134823009 字节；预演不证明真实上传成功。
+- 认证：官方网页登录已成功，隔离配置的 `npm whoami` 为 `itgo-lyq`，registry 为 `https://registry.npmjs.org/`。密码/验证码只在官方页面输入，认证配置权限 0600、目录 0700，不提交，发布完成后清理。
+- 失败证据：首次发布验证轮询返回 E404，进程退出；再次验证成功后，207306850 字节的 Linux x64 包真实上传返回 E413。两次失败后的公开版本均为 404、零个成功包；旧认证 nonce 不能复用。T4 据此修正源码归档，原大包索引保存在 `.dev-smoke/npm-publication/oversized-index.json`。
+- 部分发布：新版 `runweft-linux-x64@1.1.0`、`runweft-darwin-x64@1.1.0` 已公开且 integrity/manifest 匹配；Linux arm64 的 CLI 返回 0 并提示后台处理中，`npm dist-tag ls` 为 latest=1.1.0，公开版本查询仍为 404，不能认定已可安装。即时回执 `.dev-smoke/npm-publication/publication.json` 区分公开确认与已接受、待处理上传。
+- 恢复：最初一分钟公开查询等待不足，Linux arm64 尚不可见时停止；核对官方扫描公告后，将成功上传保存为 pending，不重复上传，可继续其余平台，主包前有界等待四个平台公开确认。处理中旧进程只做查询，停止后读取相同回执继续；非零上传或 integrity 冲突仍停止。
+- 未完成：其他平台与主包的公开确认、公共下载/安装、Specs 同步及归档；发布器已进入 macOS arm64 官方验证，当前认证轮询仍为 202；主包等待四个平台公开确认。认证链接以正在运行的 CLI 为准，不保存进 Git。
+
 
 ## T4 缩减平台源码归档并验证构建材料
 
