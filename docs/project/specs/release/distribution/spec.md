@@ -20,7 +20,9 @@ HAPI 固定版本和协议见[执行兼容](../../execution/compatibility/spec.m
 
 正式候选必须 `source.dirty=false`。冻结后按 `scripts/fixtures/release-inputs.mjs` 的固定包输入检查已跟踪与未跟踪变化；源码、Skill、包内使用说明、package/lock/HAPI及指定构建脚本变化即重建。仅验收脚本和未打入包的项目记录变化可保留同候选，程序源码归档仍取索引revision，后续验收提交独立记录。
 
-`release:assemble` 核对冻结候选、网站来源和hash，接收经过筛选的验收说明/证据索引，拒绝覆盖已有交付。离线Git bundle恢复原Runweft revision及HAPI子模块，重建不依赖远端Git，依赖与构建工具下载仍需网络；普通源码tar包含对应文件，不伪造Git身份。
+当前独立官网仅包含页面、资源与 npm 元数据，无包或 Skill 下载副本；历史离线整包内的网站不覆盖，见[官网安装](../../website/product/spec.md)。
+
+`release:assemble` 核对冻结候选及包 hash，校验网站版本等于候选、installation=npm、package=runweft 和公开 registry，拒绝旧下载/源码字段及 downloads 目录；网页来源不绑定程序提交。它接收经过筛选的验收说明/证据索引，拒绝覆盖已有交付。离线Git bundle恢复原Runweft revision及HAPI子模块，重建不依赖远端Git，依赖与构建工具下载仍需网络；普通源码tar包含对应文件，不伪造Git身份。
 
 ## npm 可信发布
 

@@ -8,12 +8,20 @@
 
 ## T1
 
+- Commit：`420591b1fd39c590b2c8a7a0e1f5ad747a3244d4`
+
 已完成实现和自动本地验收。
 
 - node website/build.mjs：8 文件、91,064 字节、0 归档，无 downloads 目录；本机原预览仍返回新版 npm 页面。
 - 聚焦网站/组装测试：2 通过；无 dist/packages 构建与非法版本/模板失败保留旧输出，错误 npm 元数据和旧下载目录拒绝，离线 bundle 的真实 Git 身份/校验仍通过。
 - bun run typecheck：通过。bun run test：265 通过、0 失败，43 文件，5,304 断言。
 - skill-creator quick_validate：通过；仅修改接入/维护安装来源，无新 Skill 或触发规则变更。
-- Playwright：Chromium 153.0.8010.12，11 项检查通过；3 页 × 5 宽度、子路径/无 JS 共 19 个布局检查无溢出，24 个本地链接/锚点通过，页面与网络错误均为零。截图人工核对安装区桌面与指南手机布局。
+- Playwright：Chromium 153.0.8010.12，11 项检查通过；3 页 × 5 宽度、子路径/无 JS 共 19 个布局检查无溢出，24 个本地链接/锚点通过，页面与网络错误均为零。Agent 查看截图核对安装区桌面与指南手机布局。
 - 从最终 DOM 原样取得 npm 安装和 Skill 目录命令，在专用 prefix 实际安装公共 runweft@1.1.0；程序归属专用 bin，五份 Skill 文档齐全，失败 npm 夹具不调用旧程序。未修改用户 MCP/Skill，不调用模型。
 - 浏览器原始证据：`.dev-smoke/website-V4WZLg/evidence.json`；测试日志：`.dev-smoke/website-npm-tests.log`。本次测试服务和浏览器已关闭，原预览保留。
+
+## T2 同步规格并归档
+
+- 结果：同步项目入口、官网/开发说明及五份相关 Specs，记录 npm 网站实际验收。按持续授权自动完成本地验收，未设置人工门禁；已发布包内 Skill 与本次源码的差异明确保留。
+- 验证：validate-change、文档链接与 diff 检查；源目录整体移入 2026-10-02 归档，不覆盖既有历史。只改未打包的项目文档，不重复已通过的程序/网页验收。
+- Commit：`website-npm-installation: sync specs and archive`

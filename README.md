@@ -9,7 +9,7 @@
 从[产品 Skill](skills/runweft/SKILL.md)和[使用说明](docs/usage.md)接入。[runweft@1.1.0](https://www.npmjs.com/package/runweft/v/1.1.0) 已公开发布；使用 Node.js 20+ 安装：
 
 ```sh
-npm install -g runweft@1.1.0 --registry=https://registry.npmjs.org/ --include=optional
+npm install -g runweft@1.1.0 --registry=https://registry.npmjs.org/ --include=optional &&
 runweft --version
 ```
 
@@ -17,7 +17,7 @@ npm 自动选择 macOS/Linux arm64/x64 对应平台包，附带相邻 HAPI、Ski
 
 从[项目文档](docs/README.md)阅读架构决策、当前 Specs 和全部归档；后续开发沿 [project-workflow](.agents/skills/project-workflow/SKILL.md)。旧实现保留在 [runweft-archive](https://github.com/iTgo-lyq/runweft-archive)，本仓库使用新的 Git 历史。
 
-产品官网包含介绍、四平台下载与上手指南，源码及静态部署见[官网说明](website/README.md)。已有发行产物时，运行 `node website/build.mjs` 和 `node website/serve.mjs` 可在本机预览。
+产品官网包含介绍、统一 npm 安装与上手指南，Skill 随 npm 包提供，源码及静态部署见[官网说明](website/README.md)。无需准备发行产物，运行 `node website/build.mjs` 和 `node website/serve.mjs` 可在本机预览。
 
 源码构建、打包和自动验收见[开发说明](docs/development.md)。开发使用 Bun 1.4.2，需先初始化 submodule 并安装 root/HAPI 两处依赖，再运行类型检查和构建。
 

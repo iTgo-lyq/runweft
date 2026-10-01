@@ -11,7 +11,7 @@ Runweft 提供一个 `runweft` 命令，包含本机部署配置、Hub 连接、
 - `build` 在编译前核对已构建 HAPI 的 revision 和 hash，不混用旧程序；更换固定版本后先运行 `build:hapi`。`package --reuse-hapi` 使用相同核对规则。
 - 1.1.0 主包与四个平台依赖已发布公共 npm；可用 `npm install -g runweft@1.1.0 --registry=https://registry.npmjs.org/ --include=optional` 安装，源码工程保持 private。Linux x64 的公共 npm 专用安装及程序/Skill 校验已通过，见[npm 发布验收](../../../archive/2026-10-01-npm-publication/acceptance.md)。其他 registry 仍须提供主包和平台依赖；只安装主包 tarball 不能代替完整依赖解析。
 - 主包和四个平台包均附相同的完整使用说明，覆盖安装、配置、任务协作、数据留存与维护，不要求从源码启动日常命令。
-- 主包和平台包同时附带[产品 Skill](../skill/spec.md)，官网另提供带校验的独立 Skill 下载；安装到宿主由用户授权的 Agent 操作，不自动更改全局配置。
+- 主包和平台包同时附带[产品 Skill](../skill/spec.md)，官网统一提供 npm 安装命令，从 npm 包读取 Skill，无独立下载；安装到宿主由用户授权的 Agent 操作，不自动更改全局配置。
 - 打包使用独立暂存，成功后替换旧交付；索引与校验文件绑定源码、配套 HAPI、程序和 tarball，见[发行产物](../../release/distribution/spec.md)。
 - npm 卸载删除程序，保留 Runweft 数据根。包升级不搬迁用户数据，运行中的服务与已安装程序分别报告版本，按角色重启生效。
 

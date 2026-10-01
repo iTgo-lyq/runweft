@@ -1,0 +1,71 @@
+{
+  "success": true,
+  "version": "1.1.0",
+  "implementationCommit": "420591b1fd39c590b2c8a7a0e1f5ad747a3244d4",
+  "planReview": {
+    "session": "12845f5f-b54a-477c-9e7f-989c6a828f02",
+    "success": true
+  },
+  "checks": {
+    "typecheck": true,
+    "rootTests": {
+      "pass": 265,
+      "fail": 0,
+      "files": 43,
+      "assertions": 5304
+    },
+    "focusedTests": {
+      "pass": 2,
+      "fail": 0
+    },
+    "skillStructure": true
+  },
+  "website": {
+    "files": 8,
+    "bytes": 91064,
+    "archives": 0,
+    "browser": "153.0.8010.12",
+    "checks": [
+      "Static website has npm metadata and contains no downloads, archives or checksums",
+      "Local / remote diagram is interactive and explicitly illustrative",
+      "Agent prompt and npm commands copy correctly; clipboard denial selects the command with accessible feedback",
+      "Home, guide and manual have no page overflow at 1440 / 1024 / 768 / 390 / 320px",
+      "Mobile menu, Escape focus and guide client/runtime switches",
+      "Relative deployment: 24 local links and anchors",
+      "Reduced motion and the same npm installation / Skill location commands without JavaScript",
+      "A failed npm install stops the DOM command before running any existing Runweft",
+      "Installing the exact DOM npm command in a dedicated prefix from the public registry",
+      "DOM npm install and Skill location succeed; the installed binary belongs to the isolated prefix and all Skill references exist",
+      "Preview root and method boundaries hold"
+    ],
+    "layoutChecks": 19,
+    "localLinks": 24,
+    "pageErrors": [],
+    "networkErrors": []
+  },
+  "installation": {
+    "source": "rendered DOM",
+    "registry": "https://registry.npmjs.org/",
+    "version": "1.1.0",
+    "isolatedPrefix": true,
+    "skillFilesVerified": [
+      "SKILL.md",
+      "references/onboarding.md",
+      "references/configuration.md",
+      "references/delegation.md",
+      "references/maintenance.md"
+    ],
+    "failureChainVerified": true
+  },
+  "evidence": {
+    "browser": ".dev-smoke/website-V4WZLg/evidence.json",
+    "rootTests": ".dev-smoke/website-npm-tests.log",
+    "review": ".dev-smoke/reviews/website-npm-installation/review.json"
+  },
+  "limits": [
+    "网站未部署到公开托管",
+    "未上传新 npm 版本；公共 1.1.0 内旧 Skill 与文档保持原字节，本次修改待后续发行",
+    "发行组装仅使用根夹具验证，原离线整包未重新组装",
+    "npm 本次实测为 Linux x64，不代表其他平台原生协作"
+  ]
+}

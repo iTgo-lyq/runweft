@@ -52,7 +52,7 @@ node website/build.mjs
 RUNWEFT_SITE_CHROMIUM=<Chromium路径> node website/verify.mjs
 ```
 
-先准备当前源码的四平台包，旧认证包被构建器拒绝。Playwright 真正下载 Skill 与四平台包、核对 hash、检查 320–1440px/链接/键盘/无 JS，并从页面 DOM 执行 Linux x64 安装。只在专用 HOME 解包，不改用户 MCP，不部署在线站点。详情见[官网说明](../website/README.md)。
+官网独立构建，仅使用 website、package.json 和当前使用说明，不需要 dist/packages。根夹具验证构建失败保护；Playwright 检查无下载入口、320–1440px/链接/键盘/无 JS，再在专用 HOME/npm prefix/npmrc/cache 中真实执行页面 DOM 的公共 npm 安装和 Skill 目录命令。清除继承的 npm 配置/认证，核对入口归属与 Skill 完整性，不改用户 MCP，不部署在线站点。详情见[官网说明](../website/README.md)。
 
 ## 发行
 
@@ -78,6 +78,8 @@ registry 安装只服务本批包、使用专用 npm prefix/cache；evidence.jso
 ```sh
 bun run release:assemble dist/packages dist/website <验收说明.md> <脱敏证据索引.json>
 ```
+
+网站 release.json 必须为相同版本的 npm 安装元数据，包名 runweft、registry 为公开 npm；旧下载字段或 downloads 目录会被拒绝。网站源码不作为程序候选来源。使用说明和 Skill 源码修改后须重新冻结程序包输入，不能用旧 dist/packages 组装新交付。
 
 输出 `dist/runweft-<版本>-release/`、`.tar.gz` 及 `.sha256`，含包/Skill、静态官网、逐文件校验、对应两仓库源码归档及离线Git bundle；bundle保留固定revision，源码重建不依赖远端Git，但安装依赖仍需网络。已有输出拒绝覆盖，先明确备份旧生成物。不公开发布或修改在线部署。Mac双架构必须构建但保留实机边界，同机多Runner不当作物理远端。实际结果见[项目入口](README.md)。
 

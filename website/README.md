@@ -1,52 +1,47 @@
 # Runweft 产品官网
 
-中文产品首页、Agent 优先接入、产品 Skill/平台包下载、上手指南和完整命令参考。官网独立于 CLI/HAPI 的业务界面，没有服务端数据库、第三方脚本或外部字体请求。
+中文产品首页、npm 安装、Agent 接入、上手指南和命令参考。官网独立于 CLI/HAPI 的业务界面，没有服务端数据库、第三方脚本或外部字体请求。
 
 ## 构建与预览
 
-在仓库根目录使用 Node.js 24。先准备当前源码构建的 `dist/packages/`；从干净源码生成发行包的步骤见[开发说明](../docs/development.md)。构建要求 `product: hub-console-v1` 和配套 Skill，拒绝把旧认证行为的包用于新版页面。纯页面修改不必重新构建未改变的程序。
+在仓库根目录使用 Node.js 24；只需网站源码、根 package.json 和 docs/usage.md，不需要发行包、Bun 依赖或构建网络。
 
 ```sh
 node website/build.mjs
 node website/serve.mjs
 ```
 
-预览默认 `http://127.0.0.1:4173/`，可用 `node website/serve.mjs 4174` 更换端口。预览服务器只绑定本机；Ctrl+C 停止。直接打开源 HTML 不会填充发行信息，应通过构建后的 HTTP 预览访问。
-
-源码与输出：
+预览默认 `http://127.0.0.1:4173/`，可用 `node website/serve.mjs 4174` 更换端口。服务器只绑定本机；Ctrl+C 停止。直接打开源 HTML 不会填充版本，应访问构建后的 HTTP 页面。
 
 | 位置 | 用途 |
 | --- | --- |
-| `website/index.html` | 产品首页与平台安装入口 |
-| `website/guide.html` | 对话接入、安全身份交接、中心配置、委派和维护；折叠工程参考 |
-| `website/manual.html` | 使用说明的 UTF-8 HTML 原文参考模板 |
+| `website/index.html` | 产品首页与统一 npm 安装命令 |
+| `website/guide.html` | npm/Skill 接入、安全身份交接、中心配置、委派和维护 |
+| `website/manual.html` | 当前使用说明的转义 UTF-8 参考模板 |
 | `website/assets/` | 样式、图标与少量原生 JavaScript |
-| `dist/website/` | 可独立部署的静态目录，包含四个平台包 |
+| `dist/website/` | HTML、资源和 npm 安装元数据，无归档或下载目录 |
 
-`build.mjs` 从发行索引读取版本、源码、平台和原包路径，对照 SHA-512 与 SHA256SUMS；平台和 Skill 均生成单文件 `.sha256`。页面显示源码标识，`release.json` 保存来源。构建失败保留之前的官网，成功才替换 `dist/website`。它不修改 CLI、发行包、用户配置或运行数据。
+版本读取 package.json，安装成功后才运行版本检查。release.json 只保存 version、installation=npm、package=runweft 和公开 registry，不记录程序源码候选。构建全部成功后才原子替换旧网站；错误保留之前的输出，清理暂存。
 
-下载命令从 `assets/install.js` 统一生成，macOS 用 shasum，Linux 用 sha256sum；hash 内嵌到命令中，只下载自己的平台包就能校验。每个 `.sha256` 文件只引用相邻文件名。关闭 JavaScript 后仍能阅读指南、展开下载表和对应平台的安装命令。
+参考页读取 docs/usage.md，在末尾“离线完整交付（工程参考）”附录之前截取并转义；官网不展示离线安装命令。使用说明和 Skill 源码改变后，下次程序发行须重新冻结包输入。已公开 1.1.0 和历史离线整包不覆盖，包内旧 Skill 尚未随本次源码改动重新发布；网站接入对话明确全程使用 npm。
 
 ## 部署
 
-将 **整个 `dist/website/` 目录**复制到能承载约 200 MiB 单文件的静态服务器。页面、资源和下载使用相对路径，支持部署到根路径或 `/runweft/` 等子路径，不需要 SPA fallback、Node 生产服务或 HAPI 服务。
+将整个 `dist/website/` 目录部署到静态托管平台，例如 Cloudflare Pages。页面和资源使用相对路径，支持根路径或 `/runweft/` 等子路径，不需要 SPA fallback、Node 生产服务或 HAPI。
 
-- `.html`、`.css`、`.js` 使用对应 MIME type 和 UTF-8；`.svg` 使用 `image/svg+xml`。
-- `.tgz` 原样提供，使用 `application/gzip` 或 `application/octet-stream`，不要给原始归档误加 `Content-Encoding: gzip`，否则浏览器解码后 hash 会不匹配。
-- 保留 `downloads/` 及其中所有文件，不能只部署 HTML。生产部署后确认浏览器取得的字节与校验清单一致。
-- 域名、TLS、缓存和公开发布由实际托管环境配置。本次只交付静态文件和本地预览，没有上传到公开服务。
-
-发布新版本时，先按发行流程生成完整一致的 `dist/packages`，再重新构建官网。不要只手工替换页面上的版本号或一个 tarball。平台验证状态等文案需要随实际证据复核；构建不会把交叉编译自动标为实机验收。
+HTML/CSS/JS 提供对应 MIME type 和 UTF-8，SVG 使用 image/svg+xml。版本须先在公共 npm 发布并验证可安装，再构建并部署网站；构建本身不检查 registry。域名、TLS、缓存和公开发布由实际托管环境配置，本次尚未在线部署。
 
 ## 自动验收
 
-复用根工程的 Playwright。若本机没有浏览器，先安装其 Chromium；已有兼容浏览器时可通过 `RUNWEFT_SITE_CHROMIUM` 指定可执行文件。
+根测试中的独立网站夹具不含 dist/packages，验证无下载产物、非法版本和模板失败保留旧输出。Playwright 使用根工程依赖，在 Linux x64 执行网页与真实 npm 安装验收：
 
 ```sh
-bunx playwright install chromium
+bunx playwright install chromium --only-shell
 node website/verify.mjs
 ```
 
-验收真正下载 Skill、四个平台包及一个子路径副本，检查 hash 和 Skill 内容；覆盖接入说明复制、桌面/手机、复制拒绝、菜单、键盘、FAQ、无 JS、reduced motion 和所有站内链接。Linux x64 从页面 DOM 原样取得安装命令，在 `.dev-smoke/website-*/install-home/` 执行到版本输出，验证无全局 Bun/Node/HAPI 依赖。专用 shell HOME 不改变用户主目录，也不安装用户 MCP 或启动模型。
+已有兼容浏览器可用 RUNWEFT_SITE_CHROMIUM 指定可执行路径。验收覆盖三个页面、320–1440px、复制成功/拒绝与焦点、菜单、FAQ、MCP/runtime 切换、无 JS、reduced motion 和子路径全部本地链接。
 
-`verify.mjs` 当前包含 Linux x64 安装实测步骤，应在 Linux x64 上运行；不将它称为 Mac/arm64 实机验证。执行结束关闭本次浏览器和测试服务，证据、截图和下载留在 `.dev-smoke/website-*/`，可在确认无需保留后清理该次目录。
+安装命令及 Skill 目录命令从实际页面 DOM 获取。安装使用独立 HOME、npm prefix/userconfig/globalconfig/cache，清除继承的 npm 配置与认证环境变量，PATH 仅含本次安装、Node/npm 和系统工具。失败 npm 夹具确认不继续运行旧程序；公共 registry 实际安装核对入口归属、版本和五个 Skill 文档。不改用户 MCP/Skill，不启动模型。该检查不代表 Mac/arm64 实机运行。
+
+本次服务和浏览器在结束时关闭；证据与截图、专用安装留在 `.dev-smoke/website-*/`，不提交。发行组装的根夹具同时验证 npm 元数据和旧下载目录拒绝，离线程序与 Git bundle 仍单独保留。

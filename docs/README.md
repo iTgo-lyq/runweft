@@ -14,7 +14,7 @@ Runweft 1.1.0 已完成 Hub 集中配置七阶段、完整后台/Skill与同候�
 
 核心重构按[六阶段交付结构](project/delivery-structure.md)完成十一个领域 Change 和一个集成发行 Change；当前事实见 Specs，历史需求和验收见下列归档。
 
-产品官网另行交付，包含介绍、真实四平台下载和上手指南；构建与预览见[官网说明](../website/README.md)。
+产品官网已统一为 npm 安装，Skill 从 npm 包内接入；静态构建无下载归档，实际 DOM 命令安装与网页自动验收通过，见[本次验收](project/archive/2026-10-02-website-npm-installation/acceptance.md)。尚未部署在线站点；构建与预览见[官网说明](../website/README.md)。
 
 已交付 Change 按独立交付结果拆分并声明依赖，归档入口如下：
 
@@ -33,12 +33,13 @@ Runweft 1.1.0 已完成 Hub 集中配置七阶段、完整后台/Skill与同候�
 | Subagent 看板（已归档） | [Requirement](project/archive/2026-09-30-subagent-dashboard/requirement.md) | [验收](project/archive/2026-09-30-subagent-dashboard/acceptance.md)、[规格](project/specs/dashboard/subagents/spec.md) |
 | HAPI 默认简体中文（已归档） | [Requirement](project/archive/2026-09-30-hapi-default-chinese/requirement.md) | [验收记录](project/archive/2026-09-30-hapi-default-chinese/execution.md)、[规格](project/specs/dashboard/subagents/spec.md) |
 | 完整版本集成与发布（已归档） | [Requirement](project/archive/2026-09-30-integrated-release/requirement.md) | [验收](project/archive/2026-09-30-integrated-release/acceptance.md)、[发行规格](project/specs/release/distribution/spec.md)、[验证范围](project/specs/release/acceptance/spec.md) |
-| 产品官网（已归档） | [Requirement](project/archive/2026-09-30-product-website/requirement.md) | [验收](project/archive/2026-09-30-product-website/acceptance.md)、[产品与下载](project/specs/website/product/spec.md)、[指南](project/specs/website/guide/spec.md) |
+| 产品官网（已归档） | [Requirement](project/archive/2026-09-30-product-website/requirement.md) | [验收](project/archive/2026-09-30-product-website/acceptance.md)、[产品与安装](project/specs/website/product/spec.md)、[指南](project/specs/website/guide/spec.md) |
 | Hub 委派接入与配置切换（已归档） | [Requirement](project/archive/2026-10-01-hub-delegation-migration/requirement.md) | [验收](project/archive/2026-10-01-hub-delegation-migration/acceptance.md)、[连接交接](project/specs/identity/connection/spec.md)、[中心委派](project/specs/delegation/central/spec.md) |
 | Hub 后台与 Skill（已归档） | [Requirement](project/archive/2026-10-01-hub-console-onboarding/requirement.md) | [验收](project/archive/2026-10-01-hub-console-onboarding/acceptance.md)、[后台](project/specs/dashboard/subagents/spec.md)、[Skill](project/specs/installation/skill/spec.md) |
 | Hub 集中配置与1.1.0集成发行（已归档） | [Requirement](project/archive/2026-10-01-hub-spaces-and-agent-configuration/requirement.md) | [验收](project/archive/2026-10-01-hub-spaces-and-agent-configuration/acceptance.md)、[执行/整包hash](project/archive/2026-10-01-hub-spaces-and-agent-configuration/execution.md)、[交付拆分](project/archive/2026-10-01-hub-spaces-and-agent-configuration/delivery.md) |
 | npm 首次公开发布（已归档） | [Requirement](project/archive/2026-10-01-npm-publication/requirement.md) | [验收/公开包 hash](project/archive/2026-10-01-npm-publication/acceptance.md)、[执行](project/archive/2026-10-01-npm-publication/execution.md)、[发行规格](project/specs/release/distribution/spec.md) |
 | npm 可信发布（已归档） | [Requirement](project/archive/2026-10-01-npm-trusted-publishing/requirement.md) | [五包绑定与真实 CI 验收](project/archive/2026-10-01-npm-trusted-publishing/acceptance.md)、[脱敏证据](project/archive/2026-10-01-npm-trusted-publishing/verification.json)、[发版操作](development.md#npm-可信发布) |
+| 官网统一 npm 安装（已归档） | [Requirement](project/archive/2026-10-02-website-npm-installation/requirement.md) | [验收](project/archive/2026-10-02-website-npm-installation/acceptance.md)、[产品与安装](project/specs/website/product/spec.md)、[指南](project/specs/website/guide/spec.md) |
 
 上述归档 Change 均经一次 iclaude Plan 评审、逐任务实现提交、自动本地验收及 Specs 同步后关闭；明确由用户承担或延期的实测范围见最终验收。活跃 Change 的设计草稿不代替正式 Technical 或 Plan，也不修改已验收 Specs。
 
@@ -52,7 +53,7 @@ Runweft 1.1.0 已完成 Hub 集中配置七阶段、完整后台/Skill与同候�
 - 已验收远端准备 Specs：[诊断入口](project/specs/remote-workspace/spec.md)、[固定基线](project/specs/remote-workspace/baseline/spec.md)、[独立环境与留存](project/specs/remote-workspace/isolation/spec.md)、[启动校验](project/specs/remote-workspace/readiness/spec.md)。
 - 已验收代码回收 Specs：[固定成果](project/specs/remote-results/snapshot/spec.md)、[中心交付](project/specs/remote-results/delivery/spec.md)、[取回合入](project/specs/remote-results/fetch/spec.md)、[恢复留存](project/specs/remote-results/retention/spec.md)。
 - 已验收交付 Specs：[全局看板](project/specs/dashboard/subagents/spec.md)、[发行产物](project/specs/release/distribution/spec.md)、[组合验收范围](project/specs/release/acceptance/spec.md)。
-- 已验收官网 Specs：[产品与下载](project/specs/website/product/spec.md)、[使用指南](project/specs/website/guide/spec.md)。
+- 已验收官网 Specs：[产品与安装](project/specs/website/product/spec.md)、[使用指南](project/specs/website/guide/spec.md)。
 - `project/archive/` 保存已关闭 Change 的完整过程与验收记录。
 
 新仓库不迁入旧实现、旧 Changes 或运行认证。历史证据定位到 [runweft-archive](https://github.com/iTgo-lyq/runweft-archive)。
