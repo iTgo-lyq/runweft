@@ -22,6 +22,16 @@ HAPI 固定版本和协议见[执行兼容](../../execution/compatibility/spec.m
 
 `release:assemble` 核对冻结候选、网站来源和hash，接收经过筛选的验收说明/证据索引，拒绝覆盖已有交付。离线Git bundle恢复原Runweft revision及HAPI子模块，重建不依赖远端Git，依赖与构建工具下载仍需网络；普通源码tar包含对应文件，不伪造Git身份。
 
+## npm 可信发布
+
+五包绑定 GitHub 仓库 `iTgo-lyq/runweft` 的 `npm-publish.yml`，包含直接发布权限 createPackage，不设置 environment。授权范围是仓库工作流，不限制分支；仓库写权限可修改发布行为。托管 runner 使用 Node 24/npm 11.19.0、id-token:write 和 npm audience `npm:registry.npmjs.org`，不保存 npm token secret。逐包 OIDC 交换返回成功且含 token 才继续；token 不打印或持久化。私有仓库支持发布，当前无自动 provenance。
+
+正式上传仅接受 push 事件的严格稳定版本标签，标签、源码版本与冻结索引必须一致。普通 main/codex 分支的发布流程变更及手动入口只预演；手动入口须默认分支含工作流。发布依赖复用 CLI 工作流的根检查、四平台构建/包内容与真实安装检查，使用同一构建候选；正式步骤要求索引源码干净且等于 github.sha，并检查五包 manifest、主包精确依赖及 tarball 完整性。
+
+正式上传前检查全部五包公开版本；同版本不同完整性在首个上传前停止，已公开且完整性相同的包跳过。新版本逐个平台上传并等待公开确认，主包须等四平台全部确认。上传前持久化未知状态回执；成功接受后有界等待后台处理，未知失败不盲目重发。预演可检查已存在版本的候选，明确 published=false，正式发版仍须升版本。
+
+发布工作流串行且不中途取消，候选按 build run_attempt 唯一命名，候选与回执保留三十天；失败恢复只重跑同一 run 的失败 job，读取原 build 输出指向的候选及最新回执。重跑整个 run 不视作相同候选。[可信发布验收](../../../archive/2026-10-01-npm-trusted-publishing/acceptance.md)证明五包真实授权和预演；本次没有新版本上传。
+
 ## 升级与保留
 
 升级不移动用户数据，已安装程序与仍运行的服务分别报告版本；`doctor` 明确提示版本不一致，重启对应角色后生效。当前源码 schema 18，不转换旧试验历史；备份及显式重置边界见[部署](../../deployment/spec.md)，不承诺跨版本回退。npm 卸载保留数据根，MCP 配置由显式命令安装或卸载。

@@ -80,3 +80,13 @@ bun run release:assemble dist/packages dist/website <验收说明.md> <脱敏证
 ```
 
 输出 `dist/runweft-<版本>-release/`、`.tar.gz` 及 `.sha256`，含包/Skill、静态官网、逐文件校验、对应两仓库源码归档及离线Git bundle；bundle保留固定revision，源码重建不依赖远端Git，但安装依赖仍需网络。已有输出拒绝覆盖，先明确备份旧生成物。不公开发布或修改在线部署。Mac双架构必须构建但保留实机边界，同机多Runner不当作物理远端。实际结果见[项目入口](README.md)。
+
+## npm 可信发布
+
+五包已绑定 `iTgo-lyq/runweft` 的 `.github/workflows/npm-publish.yml`，GitHub 托管 runner 用 OIDC 获取短期发布授权，无需 npm token secret 或逐包人工验证码。[已验证记录](project/archive/2026-10-01-npm-trusted-publishing/acceptance.md)包括真实五包授权和无上传预演。
+
+正式发版先更新 `package.json` 的稳定版本，完成变更验收并提交，再推送匹配的 `v<major>.<minor>.<patch>` 标签；例如下一版为 1.1.1 时使用 `v1.1.1`。工作流从该标签构建干净候选，完成根检查、四平台打包/内容/实际安装检查后，依次发布四平台包；确认全部公开完整性后才发布主包。当前公共 1.1.0 保持不变，不能用新候选覆盖同版本。
+
+main/codex 分支的发布流程文件变更只检查授权和预演；普通产品变更运行独立 CLI 安装 CI。手动入口也只预演，但当前默认 main 尚无产品工作流，需将来合入后才能使用该入口；标签入口已配置。本仓库为私有，当前不会生成自动 npm provenance。
+
+上传前发现同版本不同完整性会停止；上传结果未知不自动重发。部分完成时检查 `npm-publication` 回执，使用原 run 的 **Re-run failed jobs** 恢复原候选。候选和回执保留三十天；重跑整个 run 会重新构建，不能当作相同候选。到期或未知结果先核实公开 registry 和回执，不直接重新上传。

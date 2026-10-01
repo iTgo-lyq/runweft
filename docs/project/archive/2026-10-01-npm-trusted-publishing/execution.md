@@ -17,3 +17,9 @@ iclaude 在当前工作区完成一次只读评审，会话 `1acf298d-b9fb-435b-
 - 验证：[真实 CI](https://github.com/iTgo-lyq/runweft/actions/runs/36864700225) attempt 1 已通过构建与四平台原生安装，绑定前首包 OIDC 404 使预演跳过。绑定完成仅 Re-run failed jobs，attempt 2 复用 npm-candidate-36864700225-1；五包交换均 HTTP 201，发布预演 success=true、published=false，整体 success。源码为干净 fe6017e531f06c0c01980d362b8b5b32bc6fde71，没有新版本上传。
 - 清理：专用 npm logout 退出码 0，专用 npmrc/globalconfig、认证缓存和临时日志均已删除；不修改用户原有配置，不为 CI 保存 npm token。
 - Commit：`npm-trusted-publishing T2: configure five npm trusted publishers and verify hosted OIDC`
+
+## T3 同步规格并归档
+
+- 结果：开发说明补充稳定版本标签、平台先于主包、回执恢复和手动入口条件；Specs 同步可信发布及真实 CI 范围，项目入口改为归档链接。只记录绑定与预演，不记作新版本上传。
+- 验证：按持续授权自动验收，Requirement 三项标准有实际证据；validate-change、文档链接与 diff 检查通过，完整目录归档且不覆盖历史归档。产品输入未改动，不重跑已通过的根测试。
+- Commit：`npm-trusted-publishing T3: sync specs and archive`
