@@ -6,7 +6,14 @@
 
 支持本机共享目录、本机或远端独立 worktree、附件、代码 bundle 取回、停止和续接。每轮关闭子进程，保留 session 与工作区；只有原生确认历史缺失才重建上下文，未知执行不盲目重发。代码接纳与冲突处理由主 Agent 决定，不自动 push 或合入。
 
-从[产品 Skill](skills/runweft/SKILL.md)和[使用说明](docs/usage.md)接入。发行提供 macOS/Linux arm64/x64 平台包、相邻 HAPI、Skill、说明和校验索引，无需全局 Bun、Node 或另装 HAPI。尚未公开 npm 发布；真实产物及验收状态见[项目入口](docs/README.md)，不要用旧 1.0.0 的验证代替新候选。Mac 实机与物理跨机、Linux arm64 QEMU 与原生协作分别记录。
+从[产品 Skill](skills/runweft/SKILL.md)和[使用说明](docs/usage.md)接入。[runweft@1.1.0](https://www.npmjs.com/package/runweft/v/1.1.0) 已公开发布；使用 Node.js 20+ 安装：
+
+```sh
+npm install -g runweft@1.1.0 --registry=https://registry.npmjs.org/ --include=optional
+runweft --version
+```
+
+npm 自动选择 macOS/Linux arm64/x64 对应平台包，附带相邻 HAPI、Skill 和说明，无需全局 Bun 或另装 HAPI。平台 tarball 也可直接解包运行，无需 Node。发行与真实验收范围见[项目入口](docs/README.md)；Mac 实机与物理跨机、Linux arm64 QEMU 与原生协作分别记录。
 
 从[项目文档](docs/README.md)阅读架构决策、当前 Specs 和全部归档；后续开发沿 [project-workflow](.agents/skills/project-workflow/SKILL.md)。旧实现保留在 [runweft-archive](https://github.com/iTgo-lyq/runweft-archive)，本仓库使用新的 Git 历史。
 

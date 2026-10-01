@@ -4,14 +4,14 @@
 
 iclaude 在当前工作区完成一次只读评审，会话 `991da989-689b-478a-b679-baf7d0560cbe`，is_error=false；结果保存在 `.dev-smoke/reviews/npm-publication/review.json`。主 agent 采纳包内说明矛盾、显式 registry/专用配置、发布额外认证、部分发布保留与公共元数据检查。
 
-未采纳“原样发布过时 README、下版更正”：首次发布前补正确说明，在干净源码重建并重跑包/安装检查；以四平台程序与 Skill hash 完全相同为复用已有模型验收的条件。Linux x64 为实际最大包（207306747 字节），与既定发布顺序一致，不调整顺序。仅本次专用 npm 登录凭据在完成后清理，不修改其他 npm 认证。
+未采纳“原样发布过时 README、下版更正”：首次发布前补正确说明，在干净源码重建并重跑包/安装检查；以四平台程序与 Skill hash 完全相同为复用已有模型验收的条件。原始候选的 Linux x64 为最大包（207306747 字节），与既定发布顺序一致，不调整顺序。仅本次专用 npm 登录凭据在完成后清理，不修改其他 npm 认证。
 
 ## T1 核对发行输入并补齐 npm 安装说明
 
 - 结果：五个包名的公共 registry 查询均为 404；既有候选五个 tarball 与索引 SHA-512、SHA256SUMS、包内 manifest 和 Skill 一致；补公共 npm 安装命令。
 - 验证：五个实际 tarball 的 npm publish --dry-run --ignore-scripts --json 均通过且 integrity 与索引相同，证据 `.dev-smoke/npm-publication/original-preflight.json`。临时检查脚本适配本机 npm 11 的按包名 JSON 输出后通过；未将预演当作真实发布。
 - 验证：既有 GitHub CI 重跑通过，包括 build、macOS arm64/x64、Linux arm64 安装；run 36848637434，仍不等于四平台完整模型验收。
-- 未解决：本机 npm 认证尚未完成；真实上传、包体积接受情况和公共安装仍未验证。
+- T1 结束时：本机 npm 认证、真实上传/包体积与公共安装尚未验证，后由 T2 完成。
 - Commit：`npm-publication T1: prepare public npm installation instructions and release procedure`。
 
 ## T2 发布与公共安装验证
@@ -37,3 +37,9 @@ iclaude 在当前工作区完成一次只读评审，会话 `991da989-689b-478a-
 - 验证：`bun run typecheck`、`bun run test`（256 pass / 0 fail）、`bun run build`、diff-check 和 Change 结构检查通过。实际四平台 CLI 从各自源码归档交叉编译通过，证据 `.dev-smoke/npm-publication/source-archives-v2/evidence.json`；工作区源码在归档内，第三方依赖与 tunwg 复用构建缓存，不带 Web 资产，不代替发行模型验收。
 - 返修：首轮编译缺少原版构建要求下载的 tunwg，保持失败证据目录 `source-archives`；补缓存中的对应 tunwg，并将 workspace 依赖明确指向解包源码后通过。发行仍复用原固定 HAPI 可执行程序，T2 已重新核对四平台程序 hash。
 - Commit：`npm-publication T4: package HAPI sources with platform-specific build tools`。
+
+## T3 同步发行事实并归档
+
+- 结果：根据真实公共 npm 与安装证据，更新 CLI 安装、发行产物 Specs、根 README 和项目入口；区分原离线候选与公共包、平台源码归档范围和实际验证平台，保留既有实机/模型缺口。
+- 验收：用户已持续授权自动本地验收；Requirement 三项标准逐项映射到 acceptance.md，全部通过。可信发布配置说明不冒充已建立账号绑定或发布工作流。
+- Commit：`npm-publication T3: sync public distribution specs and archive change`；T2 独立提交为 `3f43e83`，T1 为 `9d44a50`、T4 为 `bfa2df8`。
