@@ -1,6 +1,6 @@
 # 发行验收范围
 
-当前1.1.0的完整源码、可安装产物、程序hash、需求逐项结果和原始证据见[Hub完整验收](../../../archive/2026-10-01-hub-spaces-and-agent-configuration/acceptance.md)。程序候选来自干净源码 `657550f20d44d1a65a48b232ef13f3ca5160e8cd`；各领域行为以对应Specs为准，本页只限定本批组合证据。
+1.1.0 的完整组合源码、可安装产物、程序hash、需求逐项结果和原始证据见[Hub完整验收](../../../archive/2026-10-01-hub-spaces-and-agent-configuration/acceptance.md)。程序候选来自干净源码 `657550f20d44d1a65a48b232ef13f3ca5160e8cd`；各领域行为以对应Specs为准，本页只限定本批组合证据。
 
 ## 已验证组合
 
@@ -31,7 +31,15 @@ main 合码提交 `0c3e3a1bd7a70a24be9e13ad4b022dc7f4504d60` 通过[独立 CLI C
 
 同一提交的 [npm 工作流](https://github.com/iTgo-lyq/runweft/actions/runs/36912562431)另行构建干净候选并通过四平台检查；五包 OIDC 交换均 HTTP 201，预演 success=true、published=false，版本保持 1.1.0。普通 main 推送没有上传新包；官网生产验收见[产品官网](../../website/product/spec.md)。
 
-这批 CI 没有运行模型、网页组合或公开新版本；新候选不继承旧候选的模型/实机验收。稳定标签门禁、冲突与部分发布恢复通过聚焦模拟验证，真实新版本上传尚未执行。
+这批 CI 没有运行模型、网页组合或公开新版本；新候选不继承旧候选的模型/实机验收。稳定标签门禁、冲突与部分发布恢复通过聚焦模拟验证，这批旧 CI 未执行真实新版本上传。
+
+## 1.1.1 实际发布与安装
+
+[v1.1.1 原 tag CI](https://github.com/iTgo-lyq/runweft/actions/runs/36915690489)从干净源码 36257dfb3aae2da85289539b11ba8ac857bdbb10 完成四平台构建、包内容、原生安装/服务/信号、重装与卸载检查；263 pass、2 skip、0 fail、5282 断言、43 文件，两项跳过因托管 runner 无 Codex CLI。五包 OIDC 均 HTTP 201，publication success=true、五包 confirmed；全部公共 latest=1.1.1，匿名实际下载 SHA-512、manifest 和主包精确依赖匹配原候选。
+
+Linux x64 通过真实官网 DOM 命令匿名安装 1.1.1；安装后的两程序 SHA-256 匹配原候选，HAPI=0.30.7，主/平台 Skill 六文件与 README 匹配冻结源码。11 项本地网页检查、19 个布局、24 个子路径链接与零网页/网络错误通过；专用配置/数据隔离，慢代理现场保留后以直连完成同一命令。本地 typecheck/build 与 265 项根测试全部通过，5305 断言、43 文件。main 的 [CLI CI](https://github.com/iTgo-lyq/runweft/actions/runs/36919283325)通过四平台安装，[官网生产 CI](https://github.com/iTgo-lyq/runweft/actions/runs/36919283258)及正式域名三页/八文件验证通过，见[完整记录](../../../archive/2026-10-02-npm-patch-release/acceptance.md)。
+
+此轮验证发布、安装与官网，没有新候选模型、物理跨机、arm64 模型组合或新离线整包验收。旧 1.1.0 组合证据保留原版本范围。
 
 ## 尚未取得的证据
 

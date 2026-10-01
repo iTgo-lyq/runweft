@@ -1,14 +1,14 @@
 # 发行产物
 
-Runweft 1.1.0 提供明确 Hub、独立身份/空间、中心配置、完整资源后台、Agent 接入 Skill 和协作能力；执行基础随包附带固定 HAPI，运行时不依赖开发 checkout。支持 macOS arm64/x64 和 glibc Linux arm64/x64，平台范围不等于各平台均已通过原生协作验收，实际范围见[发行验收](../acceptance/spec.md)。
+Runweft 1.1.1 提供明确 Hub、独立身份/空间、中心配置、完整资源后台、Agent 接入 Skill 和协作能力；执行基础随包附带固定 HAPI，运行时不依赖开发 checkout。支持 macOS arm64/x64 和 glibc Linux arm64/x64，平台范围不等于各平台均已通过原生协作验收，实际范围见[发行验收](../acceptance/spec.md)。
 
 ## 包与安装
 
-五个同版本 npm 包为 `runweft`、`runweft-darwin-arm64`、`runweft-darwin-x64`、`runweft-linux-arm64` 和 `runweft-linux-x64`。主包固定四个平台可选依赖，生成 manifest 不含 `private: true`；源码工程保持 private。五包 1.1.0 已公开发布到 npm，全部 latest=1.1.0，公开元数据/下载完整性及 Linux x64 专用安装通过；见[npm 发布验收](../../../archive/2026-10-01-npm-publication/acceptance.md)。本地打包命令仍不执行公开发布、push 或创建 PR。
+五个同版本 npm 包为 `runweft`、`runweft-darwin-arm64`、`runweft-darwin-x64`、`runweft-linux-arm64` 和 `runweft-linux-x64`。主包固定四个平台可选依赖，生成 manifest 不含 `private: true`；源码工程保持 private。五包 1.1.1 已经稳定 tag/OIDC 公开发布，全部 latest=1.1.1；公开元数据、实际下载摘要、精确平台依赖和 Linux x64 专用安装通过，见[1.1.1 发布验收](../../../archive/2026-10-02-npm-patch-release/acceptance.md)。本地打包命令仍不执行公开发布、push 或创建 PR。
 
 平台包包含相邻的 Runweft/HAPI 可执行程序、使用说明、产品 Skill、HAPI 许可证、NOTICE、配套工具许可、匹配源码归档及来源说明；匹配源码保留固定 Git revision 的全部源码、许可与当前平台的两份构建工具压缩包，省略其他平台的八份工具压缩包。SOURCES.txt 说明归档范围、当前平台重建步骤和完整 Git 来源；生成 manifest 的 repository 指向 Runweft 仓库。直接解包并保留其目录布局即可运行，无需全局 Bun、Node 或另装 HAPI；npm 主入口需要 Node.js 20+ 和可解析所有平台依赖的 registry，见 [CLI 安装](../../installation/cli/spec.md)。Mac 程序未签名、未公证。
 
-主包与全部平台包携带同一份[使用说明](../../../../usage.md)，覆盖直接安装、MCP、配置、两种部署角色、资源登记、协作、成果和维护。完整交付 `dist/runweft-1.1.0-release/` 及同名 `.tar.gz` 集中保存五包/独立 Skill、原始索引、静态官网、使用说明、对应两仓库源码归档与离线 Git bundle、脱敏验收说明和证据索引。manifest 在各包内；不包含开发验证现场、原生配置或凭据。整包旁置 `.sha256`，内部 `SHA256SUMS` 校验全部交付文件。原离线整包与网站副本仍绑定候选 `657550f20d44d1a65a48b232ef13f3ca5160e8cd`；公共 npm 候选绑定 `bfa2df88531a2f997038817c901d89ca9cab491e`，四平台程序/Skill 相同，包内 README、源码归档范围和 repository 元数据不同。各自来源以自身索引为准，未重新组装或覆盖原整包。
+主包与全部平台包携带同一份[使用说明](../../../../usage.md)，覆盖直接安装、MCP、配置、两种部署角色、资源登记、协作、成果和维护。完整交付 `dist/runweft-1.1.0-release/` 及同名 `.tar.gz` 集中保存五包/独立 Skill、原始索引、静态官网、使用说明、对应两仓库源码归档与离线 Git bundle、脱敏验收说明和证据索引。manifest 在各包内；不包含开发验证现场、原生配置或凭据。整包旁置 `.sha256`，内部 `SHA256SUMS` 校验全部交付文件。原离线整包与网站副本仍绑定候选 `657550f20d44d1a65a48b232ef13f3ca5160e8cd`；首次公共 npm 1.1.0 候选绑定 `bfa2df88531a2f997038817c901d89ca9cab491e`，四平台程序/Skill 相同，包内 README、源码归档范围和 repository 元数据不同。各自来源以自身索引为准，未重新组装或覆盖原整包。
 
 ## 构建与校验
 
@@ -32,7 +32,7 @@ HAPI 固定版本和协议见[执行兼容](../../execution/compatibility/spec.m
 
 正式上传前检查全部五包公开版本；同版本不同完整性在首个上传前停止，已公开且完整性相同的包跳过。新版本逐个平台上传并等待公开确认，主包须等四平台全部确认。上传前持久化未知状态回执；成功接受后有界等待后台处理，未知失败不盲目重发。预演可检查已存在版本的候选，明确 published=false，正式发版仍须升版本。
 
-发布工作流串行且不中途取消，候选按 build run_attempt 唯一命名，候选与回执保留三十天；失败恢复只重跑同一 run 的失败 job，读取原 build 输出指向的候选及最新回执。重跑整个 run 不视作相同候选。[可信发布验收](../../../archive/2026-10-01-npm-trusted-publishing/acceptance.md)证明五包真实授权和预演；本次没有新版本上传。
+发布工作流串行且不中途取消，候选按 build run_attempt 唯一命名，候选与回执保留三十天；失败恢复只重跑同一 run 的失败 job，读取原 build 输出指向的候选及最新回执。重跑整个 run 不视作相同候选。[可信发布验收](../../../archive/2026-10-01-npm-trusted-publishing/acceptance.md)证明五包真实授权和预演；首次验收只执行预演；后续 v1.1.1 原 run 36915690489 已通过真实五包上传，当前公开候选绑定 `36257dfb3aae2da85289539b11ba8ac857bdbb10`，携带当前 npm Skill。原离线整包未重组，新候选不继承旧模型组合证据，见[新版本验收](../../../archive/2026-10-02-npm-patch-release/acceptance.md)。
 
 ## 升级与保留
 

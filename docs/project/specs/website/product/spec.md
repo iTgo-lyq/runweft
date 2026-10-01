@@ -22,7 +22,7 @@ website/serve.mjs 提供 loopback GET/HEAD 预览，只能读取站点目录。�
 
 website-pages.yml 使用托管 runner 构建、检查公共 npm 版本并上传 Direct Upload 项目；main 的官网相关推送部署 production，codex 分支部署 preview，action 返回环境须与请求模式匹配。生产部署先确认 run 的 SHA 为 main 当前提交，拒绝旧提交覆盖官网。
 
-[正式官网](https://runweft.pages.dev/)已通过[真实 main 推送 CI](https://github.com/iTgo-lyq/runweft/actions/runs/36912561909)，唯一 URL 为 [bea1f782.runweft.pages.dev](https://bea1f782.runweft.pages.dev/)；唯一 URL 与正式域名八文件摘要/MIME、正式域名三个页面的 Playwright 检查通过，静态产物为 91,064 字节，安装版本为 npm 1.1.0。[codex 分支预览](https://codex-cli-foundation.runweft.pages.dev/)的项目创建、后续复用和实际预览证据另见[Pages 验收](../../../archive/2026-10-02-website-cloudflare-pages/acceptance.md)。
+[正式官网](https://runweft.pages.dev/)已通过[真实 main 推送 CI](https://github.com/iTgo-lyq/runweft/actions/runs/36919283258)，唯一 URL 为 [25a3034a.runweft.pages.dev](https://25a3034a.runweft.pages.dev/)；唯一 URL 与正式域名八文件摘要/MIME、正式域名三个页面的 Playwright 检查通过，静态产物为 91,064 字节，安装版本为 npm 1.1.1。[codex 分支预览](https://codex-cli-foundation.runweft.pages.dev/)的项目创建、后续复用和实际预览证据另见[Pages 验收](../../../archive/2026-10-02-website-cloudflare-pages/acceptance.md)。
 
 准备步骤和官方上传 action 使用 Repository secrets 的 CLOUDFLARE_ACCOUNT_ID/CLOUDFLARE_API_TOKEN；凭证不写入静态站点或验收 JSON。主包/四平台包的公开版本、SHA-512 字段、精确可选依赖和 tarball HEAD 均通过；不下载程序、不调用 npm 发布。静态输出为八文件白名单，拒绝链接、隐藏文件、归档和未知文件。
 

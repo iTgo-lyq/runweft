@@ -85,9 +85,9 @@ bun run release:assemble dist/packages dist/website <验收说明.md> <脱敏证
 
 ## npm 可信发布
 
-五包已绑定 `iTgo-lyq/runweft` 的 `.github/workflows/npm-publish.yml`，GitHub 托管 runner 用 OIDC 获取短期发布授权，无需 npm token secret 或逐包人工验证码。[已验证记录](project/archive/2026-10-01-npm-trusted-publishing/acceptance.md)包括真实五包授权和无上传预演。
+五包已绑定 `iTgo-lyq/runweft` 的 `.github/workflows/npm-publish.yml`，GitHub 托管 runner 用 OIDC 获取短期发布授权，无需 npm token secret 或逐包人工验证码。[已验证记录](project/archive/2026-10-01-npm-trusted-publishing/acceptance.md)包括真实五包授权和无上传预演；[1.1.1 原 tag 验收](project/archive/2026-10-02-npm-patch-release/acceptance.md)已新增实际 OIDC 上传和匿名安装。
 
-正式发版先更新 `package.json` 的稳定版本，完成变更验收并提交，再推送匹配的 `v<major>.<minor>.<patch>` 标签；例如下一版为 1.1.1 时使用 `v1.1.1`。工作流从该标签构建干净候选，完成根检查、四平台打包/内容/实际安装检查后，依次发布四平台包；确认全部公开完整性后才发布主包。当前公共 1.1.0 保持不变，不能用新候选覆盖同版本。
+正式发版先更新 `package.json` 的稳定版本，完成变更验收并提交，再推送匹配的 `v<major>.<minor>.<patch>` 标签；例如下一补丁版为 1.1.2 时使用 `v1.1.2`。工作流从该标签构建干净候选，完成根检查、四平台打包/内容/实际安装检查后，依次发布四平台包；确认全部公开完整性后才发布主包。当前公共 1.1.1 已验证，历史 1.1.0 保持原样，不能用新候选覆盖同版本。
 
 main/codex 分支的发布流程文件变更只检查授权和预演；普通产品变更运行独立 CLI 安装 CI。默认分支 main 已包含工作流，可从 Actions 手动运行预演；手动入口不发布 npm。本仓库为私有，当前不会生成自动 npm provenance。
 
@@ -95,8 +95,8 @@ main/codex 分支的发布流程文件变更只检查授权和预演；普通产
 
 ## 官网 Cloudflare Pages
 
-网站使用独立 `website-pages.yml`：官网相关 main 推送发布生产，codex 分支推送发布预览，PR 只检查；操作和 Secrets 见[官网说明](../website/README.md#cloudflare-pages-自动部署)。产品已合入 main，[生产推送 CI](https://github.com/iTgo-lyq/runweft/actions/runs/36912561909)通过；PR 和手动入口已配置，真实触发未实测。
+网站使用独立 `website-pages.yml`：官网相关 main 推送发布生产，codex 分支推送发布预览，PR 只检查；操作和 Secrets 见[官网说明](../website/README.md#cloudflare-pages-自动部署)。产品已合入 main，[生产推送 CI](https://github.com/iTgo-lyq/runweft/actions/runs/36919283258)通过；PR 和手动入口已配置，真实触发未实测。
 
-两个凭证已保存为 Repository secrets；[正式官网](https://runweft.pages.dev/)已通过八文件摘要/MIME 和三页 Playwright 检查，[分支预览验收](project/archive/2026-10-02-website-cloudflare-pages/acceptance.md)另存归档。工作流先保存上传回执，在约三分钟窗口内等待网络传播；官网部署不涉及程序发版或覆盖 npm 1.1.0。
+两个凭证已保存为 Repository secrets；[正式官网](https://runweft.pages.dev/)已通过八文件摘要/MIME 和三页 Playwright 检查，[分支预览验收](project/archive/2026-10-02-website-cloudflare-pages/acceptance.md)另存归档。工作流先保存上传回执，在约三分钟窗口内等待网络传播；官网部署不触发程序发版，当前生产安装目标为已公开的 npm 1.1.1。
 
 发版顺序为更新稳定版本并验收、推送匹配版本 tag、等待五个 npm 包发布通过、运行最新分支的官网工作流。npm 未公开时官网检查停止属于预期；Pages 不自动触发 npm 发布。生产部署拒绝旧 main SHA，不能通过重跑旧任务恢复旧官网；确需回退时先提交明确的源代码/版本回退。

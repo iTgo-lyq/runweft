@@ -24,4 +24,6 @@
 
 ## T4 同步发行事实并归档
 
-- 结果：进行 Specs/文档同步与自动验收，后续文档不会修改 tag 冻结输入。
+- 结果：按持续授权完成自动验收，发行/安装/Skill/官网当前 Specs、维护者说明和项目入口同步；全部需求映射实际证据，完整归档，不修改冻结包输入或历史交付。
+- 验证：Change 结构、文档链接、git diff 与 tag 包输入检查通过；独立工作区提交推送 main，原工作区并行审计保留。官网说明推送触发的部署另在原流程中等待结果。
+- Commit：`npm-patch-release T4: sync verified release facts and archive`
