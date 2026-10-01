@@ -1,0 +1,158 @@
+{
+  "date": "2026-10-01",
+  "bindings": {
+    "repository": "iTgo-lyq/runweft",
+    "workflow": "npm-publish.yml",
+    "packages": [
+      {
+        "name": "runweft-linux-x64",
+        "created": true,
+        "serverResponseMatched": true,
+        "confirmed": true,
+        "evidence": "Successful creation response matched repository, workflow_ref.file and createPackage in runtime assertion. ID was not persisted. Independent GitHub-hosted OIDC exchange returned HTTP 201.",
+        "oidcStatus": 201
+      },
+      {
+        "name": "runweft-linux-arm64",
+        "created": true,
+        "configuration": {
+          "id": "dec618f4-c811-4d67-a33f-f5ccf4a093de",
+          "type": "github",
+          "claims": {
+            "repository": "iTgo-lyq/runweft",
+            "workflow_ref": {
+              "file": "npm-publish.yml"
+            },
+            "environment": null
+          },
+          "permissions": [
+            "createPackage",
+            "createStagedPackage"
+          ]
+        },
+        "serverResponseMatched": true,
+        "confirmed": true,
+        "oidcStatus": 201
+      },
+      {
+        "name": "runweft-darwin-x64",
+        "created": true,
+        "configuration": {
+          "id": "0b6dda60-7890-4147-9944-b068d5d6fe75",
+          "type": "github",
+          "claims": {
+            "repository": "iTgo-lyq/runweft",
+            "workflow_ref": {
+              "file": "npm-publish.yml"
+            },
+            "environment": null
+          },
+          "permissions": [
+            "createPackage",
+            "createStagedPackage"
+          ]
+        },
+        "serverResponseMatched": true,
+        "confirmed": true,
+        "oidcStatus": 201
+      },
+      {
+        "name": "runweft-darwin-arm64",
+        "created": true,
+        "configuration": {
+          "id": "0c877543-890a-4c6d-af78-1315c836c8ec",
+          "type": "github",
+          "claims": {
+            "repository": "iTgo-lyq/runweft",
+            "workflow_ref": {
+              "file": "npm-publish.yml"
+            },
+            "environment": null
+          },
+          "permissions": [
+            "createPackage",
+            "createStagedPackage"
+          ]
+        },
+        "serverResponseMatched": true,
+        "confirmed": true,
+        "oidcStatus": 201
+      },
+      {
+        "name": "runweft",
+        "created": true,
+        "configuration": {
+          "id": "cec2fac5-68a1-4e95-9490-e78feb240915",
+          "type": "github",
+          "claims": {
+            "repository": "iTgo-lyq/runweft",
+            "workflow_ref": {
+              "file": "npm-publish.yml"
+            },
+            "environment": null
+          },
+          "permissions": [
+            "createPackage",
+            "createStagedPackage"
+          ]
+        },
+        "serverResponseMatched": true,
+        "confirmed": true,
+        "oidcStatus": 201
+      }
+    ],
+    "success": true
+  },
+  "ci": {
+    "url": "https://github.com/iTgo-lyq/runweft/actions/runs/36864700225",
+    "runId": 36864700225,
+    "attempt": 2,
+    "conclusion": "success",
+    "candidateArtifact": "npm-candidate-36864700225-1",
+    "oidc": {
+      "packages": [
+        {
+          "name": "runweft-linux-x64",
+          "status": 201,
+          "authorized": true
+        },
+        {
+          "name": "runweft-linux-arm64",
+          "status": 201,
+          "authorized": true
+        },
+        {
+          "name": "runweft-darwin-x64",
+          "status": 201,
+          "authorized": true
+        },
+        {
+          "name": "runweft-darwin-arm64",
+          "status": 201,
+          "authorized": true
+        },
+        {
+          "name": "runweft",
+          "status": 201,
+          "authorized": true
+        }
+      ],
+      "success": true
+    },
+    "preflight": {
+      "source": {
+        "revision": "fe6017e531f06c0c01980d362b8b5b32bc6fde71",
+        "dirty": false
+      },
+      "version": "1.1.0",
+      "success": true,
+      "published": false
+    }
+  },
+  "authenticationCleanup": {
+    "logoutExitCode": 0,
+    "dedicatedCredentialsRemoved": true,
+    "authenticationCacheRemoved": true,
+    "userConfigurationModified": false
+  }
+}

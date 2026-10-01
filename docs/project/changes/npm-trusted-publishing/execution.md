@@ -12,6 +12,8 @@ iclaude 在当前工作区完成一次只读评审，会话 `1acf298d-b9fb-435b-
 
 ## T2 配置五包信任并验证真实授权
 
-- 结果：工作流已推送，真实 run `36864700225` 的构建与四平台安装全部通过。专用 npm 网页登录轮询最后返回 404 并转入传统登录提示，已停止；whoami 明确 ENEEDAUTH，尚未读取或修改五包绑定。
-- 验证：官方 CLI 信任创建 dry-run 返回目标仓库/工作流和 createPackage 权限；这不是实际绑定。CI 的授权 job 正常请求 GitHub OIDC，首包 runweft-linux-x64 交换返回 npm HTTP 404，预演/上传步骤因此未执行；run 结论 failure 不写成整体通过。权限检查回执位于 `.dev-smoke/npm-trusted-publishing/ci/oidc.json`。
-- 未解决：用户本人完成有效的 npm 官方登录/额外 2FA；随后运行专用 bind.mjs 查询/添加/再次核对，再重跑当前 run 的失败授权 job。专用认证目录 `.dev-smoke/npm-trusted-publishing/`，不要读取或打印 npmrc。
+- 结果：专用账号 itgo-lyq 完成本人认证，五包实际创建响应均匹配 iTgo-lyq/runweft、npm-publish.yml 和 createPackage。API 新增配置而不撤销历史配置；runweft 与 Linux x64 的创建前查询为空。服务器为其余四个已保存配置同时返回 createStagedPackage。完整脱敏证据见 [verification.json](verification.json)。
+- 认证调整：CLI JSON 曾隐藏待验证链接；临时助手改用 npm 官方配置/fetch/webAuthOpener。实测每次请求仍需独立认证，改为核对真实 POST 响应和托管 runner 的 OIDC 结果，减少重复读取；成功包不重发。Linux x64 的创建响应通过匹配断言后未保存 ID，由后续独立 OIDC 交换确认。
+- 验证：[真实 CI](https://github.com/iTgo-lyq/runweft/actions/runs/36864700225) attempt 1 已通过构建与四平台原生安装，绑定前首包 OIDC 404 使预演跳过。绑定完成仅 Re-run failed jobs，attempt 2 复用 npm-candidate-36864700225-1；五包交换均 HTTP 201，发布预演 success=true、published=false，整体 success。源码为干净 fe6017e531f06c0c01980d362b8b5b32bc6fde71，没有新版本上传。
+- 清理：专用 npm logout 退出码 0，专用 npmrc/globalconfig、认证缓存和临时日志均已删除；不修改用户原有配置，不为 CI 保存 npm token。
+- Commit：`npm-trusted-publishing T2: configure five npm trusted publishers and verify hosted OIDC`
