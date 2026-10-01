@@ -1,9 +1,9 @@
 # 项目能力边界与讨论地图
 
 > 更新：2026-10-01
-> 本文保存产品决策、职责边界和 Change 依赖；原重构已归档，Hub 集中配置已完成前六阶段。当前实现事实以 Specs 为准。
+> 本文保存产品决策、职责边界和 Change 依赖；原重构与Hub集中配置七阶段均已完成归档。当前实现事实以Specs为准。
 
-2026-09-30 用户同意开始 [Hub 空间、身份与集中 Agent 配置](changes/hub-spaces-and-agent-configuration/requirement.md)：必须连接 Hub 后委派，Git 仓库关联中心配置，补充独立身份 token、空间与资源所有权；访客可领取 token 并自行保存，不建设登录/注册服务。实施按 [七阶段依赖](changes/hub-spaces-and-agent-configuration/delivery.md) 推进；前六阶段已验收，默认服务与 CLI/MCP 已必连 Hub，采用中心配置、独立用户/机器凭据和对象授权，完整后台、Skill 和官网已交付。新版同候选四平台发行由第七阶段完成，见[后台与接入验收](archive/2026-10-01-hub-console-onboarding/acceptance.md)。
+2026-09-30 用户同意开始 [Hub空间、身份与集中Agent配置](archive/2026-10-01-hub-spaces-and-agent-configuration/requirement.md)：必须连接Hub后委派，Git仓库关联中心配置，独立身份token、空间与资源所有权；访客自行领取/保存token，不建设登录注册服务。[七阶段](archive/2026-10-01-hub-spaces-and-agent-configuration/delivery.md)已于2026-10-01完成：默认服务/CLI/MCP必连Hub，中心配置、独立用户/机器凭据和对象授权、完整后台/Skill及官网，1.1.0同候选四平台/源码/脱敏证据完整交付。真实十二组MCP、十组消费者、Playwright、安装升级清理与256项根测试通过，见[最终验收](archive/2026-10-01-hub-spaces-and-agent-configuration/acceptance.md)；Mac实机、物理跨机边界保留，未更新在线部署。
 
 ## 产品边界
 
@@ -156,7 +156,7 @@ Runweft 只补必要协作与交付关联，原生会话/执行事实优先读�
 | 遗留代码如何形成成果 | 仅在 subagent 独立 worktree 内补 checkpoint，保留 agent 已有提交；共享主目录不自动提交，提交失败保留现场 | 遗留改动由程序封存，无改动不产生空提交 |
 | 未 push 的提交如何传输 | 输入基线与输出成果通过 Git bundle 传输，允许无 remote 或尚未 push 的提交；未提交的主工作区文件不自动传入 | 远端任务与成果取回不依赖 Git 托管平台；push/PR 仍由主 agent 按业务需要处理 |
 
-原完整重构沿[六阶段交付结构](delivery-structure.md#阶段与可验收结果)逐项完成，领域功能先独立验收，再以同一已安装候选完成组合。当时的全局看板使用旧认证；当前默认入口已切换为 Hub 身份，旧 /runweft 页面不再开放。远端委派与结果回收已接中心配置，完整资源和任务页面按第六阶段交付。
+原完整重构沿[六阶段交付结构](delivery-structure.md#阶段与可验收结果)逐项完成，领域功能先独立验收，再以同一已安装候选完成组合。当时的全局看板使用旧认证；当前默认入口已切换为Hub身份，旧/runweft页面不再开放。远端委派与结果回收已接中心配置，完整资源和任务页面及Skill已在Hub第六阶段交付，第七阶段完成1.1.0整体发行。下列2026-09-30调查证据保留历史范围，不替代新版候选验收。
 
 ## 调查与验证状态
 

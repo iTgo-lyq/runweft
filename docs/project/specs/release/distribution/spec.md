@@ -1,8 +1,6 @@
 # 发行产物
 
-> Hub 后台、Skill 和新版官网已在源码/工作区候选验收；最终同候选四平台整体发行仍由父 Change 完成。旧版四平台实测不证明当前 Hub 接口，工作区候选也不等于最终发行。
-
-Runweft 1.0.0 提供统一入口、完整协作和内嵌看板；执行基础随包附带固定 HAPI，运行时不依赖开发 checkout。支持 macOS arm64/x64 和 glibc Linux arm64/x64，平台范围不等于各平台均已通过原生协作验收，实际范围见[发行验收](../acceptance/spec.md)。
+Runweft 1.1.0 提供明确 Hub、独立身份/空间、中心配置、完整资源后台、Agent 接入 Skill 和协作能力；执行基础随包附带固定 HAPI，运行时不依赖开发 checkout。支持 macOS arm64/x64 和 glibc Linux arm64/x64，平台范围不等于各平台均已通过原生协作验收，实际范围见[发行验收](../acceptance/spec.md)。
 
 ## 包与安装
 
@@ -10,7 +8,7 @@ Runweft 1.0.0 提供统一入口、完整协作和内嵌看板；执行基础随
 
 平台包包含相邻的 Runweft/HAPI 可执行程序、使用说明、产品 Skill、HAPI 许可证、NOTICE、配套工具许可、匹配源码归档及来源说明。直接解包并保留其目录布局即可运行，无需全局 Bun、Node 或另装 HAPI；npm 主入口需要 Node.js 20+ 和可解析所有平台依赖的 registry，见 [CLI 安装](../../installation/cli/spec.md)。Mac 程序未签名、未公证。
 
-主包与全部平台包携带同一份[使用说明](../../../../usage.md)，覆盖直接安装、MCP、配置、两种部署模式、资源登记、协作、成果和维护。完整交付归档另集中保存五个 tarball、manifest、使用说明、索引和校验清单，不包含开发验证现场、原生配置或凭据。
+主包与全部平台包携带同一份[使用说明](../../../../usage.md)，覆盖直接安装、MCP、配置、两种部署角色、资源登记、协作、成果和维护。完整交付 `dist/runweft-1.1.0-release/` 及同名 `.tar.gz` 集中保存五包/独立 Skill、原始索引、静态官网、使用说明、对应两仓库源码归档与离线 Git bundle、脱敏验收说明和证据索引。manifest 在各包内；不包含开发验证现场、原生配置或凭据。整包旁置 `.sha256`，内部 `SHA256SUMS` 校验全部交付文件。
 
 ## 构建与校验
 
@@ -18,7 +16,11 @@ HAPI 固定版本和协议见[执行兼容](../../execution/compatibility/spec.m
 
 打包在独立暂存目录生成全部产物，成功后替换交付目录；失败保留上一次交付并清理暂存，不混入旧版本 tarball。`index.json` 使用 `product: hub-console-v1`，记录 Runweft 源码 revision/dirty、Bun 版本、HAPI pin、各平台程序 SHA-256、tarball SHA-512 和独立 Skill 的 SHA-256/SHA-512；`SHA256SUMS` 覆盖五个包、Skill tarball 及索引本身。
 
-包验证检查集合、版本、平台/架构、程序执行位、许可与匹配源码、README、Skill 和 hash。`test:packages` 的服务验证入口尚待最终集成切换至当前 Hub 流程，不把旧 smoke 视为新版通过。模型验收绑定已安装程序的 hash；包和程序不同不能沿用旧证据。仅验收脚本及未打入包的项目文档变化不改变候选程序。
+包验证检查集合、版本、平台/架构、程序执行位、许可与匹配源码、README、Skill 和 hash。`test:packages` 直接运行本机平台的默认 Hub/相邻 HAPI 服务；`test:install` 通过专用 registry 验证安装/重装/卸载、数据和原生 MCP 配置保留，不公开发布。模型与网页验收记录实际安装平台程序及相邻 HAPI 的 realpath/hash，不用源码 gateway 替代默认服务。
+
+正式候选必须 `source.dirty=false`。冻结后按 `scripts/fixtures/release-inputs.mjs` 的固定包输入检查已跟踪与未跟踪变化；源码、Skill、包内使用说明、package/lock/HAPI及指定构建脚本变化即重建。仅验收脚本和未打入包的项目记录变化可保留同候选，程序源码归档仍取索引revision，后续验收提交独立记录。
+
+`release:assemble` 核对冻结候选、网站来源和hash，接收经过筛选的验收说明/证据索引，拒绝覆盖已有交付。离线Git bundle恢复原Runweft revision及HAPI子模块，重建不依赖远端Git，依赖与构建工具下载仍需网络；普通源码tar包含对应文件，不伪造Git身份。
 
 ## 升级与保留
 

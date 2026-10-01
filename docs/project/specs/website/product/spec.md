@@ -18,4 +18,4 @@ Runweft 官网是独立静态站点，不与业务看板或 HAPI 服务混用。
 
 移动导航、平台键盘操作、可见焦点和 reduced motion 可用。复制失败会选中命令并提示手动复制；禁用 JavaScript 仍能阅读页面、展开四平台下载和安装命令。站点不包含账号系统、遥测或第三方脚本/字体请求。
 
-当前 Agent 接入、Skill/平台下载、窄屏/桌面、子路径、安装及校验失败保护证据见[后台与接入验收](../../../archive/2026-10-01-hub-console-onboarding/acceptance.md)。
+当前1.1.0的Agent接入、Skill/平台下载、窄屏/桌面、子路径、安装及校验失败保护均经本批真实下载验证，证据见[Hub完整验收](../../../archive/2026-10-01-hub-spaces-and-agent-configuration/acceptance.md)；网站副本随完整发行归档交付，未部署至在线服务。

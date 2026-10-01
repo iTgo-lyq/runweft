@@ -1,8 +1,10 @@
 # 项目文档
 
-Runweft 1.0.0 核心重构与产品官网均已完成，实现、自动验收和 Specs 见下列归档。安装、配置、部署与数据维护见[使用说明](usage.md)，源码构建和验证见[开发说明](development.md)。
+Runweft 1.1.0 已完成 Hub 集中配置七阶段、完整后台/Skill与同候选集成发行。安装、配置、部署与数据维护见[使用说明](usage.md)，源码构建和验证见[开发说明](development.md)。
 
-当前推进 [Hub 空间、身份与集中 Agent 配置](project/changes/hub-spaces-and-agent-configuration/requirement.md)：委派必须连接 Hub，项目设置关联 Git 仓库，用户通过 Agent/Skill 操作、通过 Web 查看配置与任务。身份采用访客可领取并自行保存的独立 token，无需登录/注册服务；共享限空间成员，私有 Agent 仅所有者可修改/分享。按 [七阶段交付拆分](project/changes/hub-spaces-and-agent-configuration/delivery.md) 串行实施，已完成 [身份与空间](project/archive/2026-09-30-hub-identities-and-spaces/requirement.md)、[独立 HAPI 通道授权](project/archive/2026-09-30-hub-hapi-access/acceptance.md)、[机器/runtime 归属与共享](project/archive/2026-09-30-hub-resource-ownership/acceptance.md)、[仓库关联与中心 Agent 配置](project/archive/2026-10-01-hub-repository-agents/acceptance.md)、[委派接入与配置切换](project/archive/2026-10-01-hub-delegation-migration/acceptance.md)和[Hub 后台与 Skill](project/archive/2026-10-01-hub-console-onboarding/acceptance.md)，当前待交付第七阶段集成发行；[产品模型](project/changes/hub-spaces-and-agent-configuration/product-design.md)、[授权边界](project/changes/hub-spaces-and-agent-configuration/access-design.md)和 [Multica 调查](project/changes/hub-spaces-and-agent-configuration/research.md)保留依据，未验收内容不代表已实现。
+[Hub 空间、身份与集中 Agent 配置](project/archive/2026-10-01-hub-spaces-and-agent-configuration/requirement.md)已按[七阶段交付](project/archive/2026-10-01-hub-spaces-and-agent-configuration/delivery.md)完成：独立身份/空间、HAPI对象授权、机器/runtime所有权、仓库/中心Agent、必连Hub委派、后台/Skill及最终发行。用户通过Agent/Skill操作、Web维护配置与任务；共享限空间成员，管理员不取得他人私有内容。产品设计和研究保存在同一归档，当前事实以Specs为准。
+
+完整交付为 `dist/runweft-1.1.0-release/`、`dist/runweft-1.1.0-release.tar.gz` 及 `.sha256`：四平台/主包、Skill、静态官网、对应源码/离线Git bundle、可读验收和脱敏证据。Linux x64真实安装通过十二组原生MCP、十组消费者、后台/连接Playwright、升级与清理；256项根测试通过。具体hash、位置及边界见[1.1.0完整验收](project/archive/2026-10-01-hub-spaces-and-agent-configuration/acceptance.md)。未公开发布、未更新在线Hub/Merlin。
 
 [原版最终交付验收](project/archive/2026-09-30-integrated-release/acceptance.md)汇总当时的四平台产物、校验和、需求对应及原始证据。Linux x64 完成真实安装、20 组核心协作、8 组附件、2 组 MCP 控制、原生历史重建、升级回退和 Playwright；Mac 实机由用户验证，Linux arm64 为 QEMU CLI/配置验证，物理远端延期。远端功能已通过同机独立 Hub/多 Runner 真实链路。早期四平台基础安装证据不代替最终原生协作。
 
@@ -33,12 +35,14 @@ Runweft 1.0.0 核心重构与产品官网均已完成，实现、自动验收和
 | 完整版本集成与发布（已归档） | [Requirement](project/archive/2026-09-30-integrated-release/requirement.md) | [验收](project/archive/2026-09-30-integrated-release/acceptance.md)、[发行规格](project/specs/release/distribution/spec.md)、[验证范围](project/specs/release/acceptance/spec.md) |
 | 产品官网（已归档） | [Requirement](project/archive/2026-09-30-product-website/requirement.md) | [验收](project/archive/2026-09-30-product-website/acceptance.md)、[产品与下载](project/specs/website/product/spec.md)、[指南](project/specs/website/guide/spec.md) |
 | Hub 委派接入与配置切换（已归档） | [Requirement](project/archive/2026-10-01-hub-delegation-migration/requirement.md) | [验收](project/archive/2026-10-01-hub-delegation-migration/acceptance.md)、[连接交接](project/specs/identity/connection/spec.md)、[中心委派](project/specs/delegation/central/spec.md) |
+| Hub 后台与 Skill（已归档） | [Requirement](project/archive/2026-10-01-hub-console-onboarding/requirement.md) | [验收](project/archive/2026-10-01-hub-console-onboarding/acceptance.md)、[后台](project/specs/dashboard/subagents/spec.md)、[Skill](project/specs/installation/skill/spec.md) |
+| Hub 集中配置与1.1.0集成发行（已归档） | [Requirement](project/archive/2026-10-01-hub-spaces-and-agent-configuration/requirement.md) | [验收](project/archive/2026-10-01-hub-spaces-and-agent-configuration/acceptance.md)、[执行/整包hash](project/archive/2026-10-01-hub-spaces-and-agent-configuration/execution.md)、[交付拆分](project/archive/2026-10-01-hub-spaces-and-agent-configuration/delivery.md) |
 
 上述归档 Change 均经一次 iclaude Plan 评审、逐任务实现提交、自动本地验收及 Specs 同步后关闭；明确由用户承担或延期的实测范围见最终验收。活跃 Change 的设计草稿不代替正式 Technical 或 Plan，也不修改已验收 Specs。
 
 按照 [project-workflow](../.agents/skills/project-workflow/SKILL.md)：
 
-- 新的未关闭目标、技术方案和计划放在 `project/changes/`；当前活跃项及依赖见 [Hub 集中配置交付](project/changes/hub-spaces-and-agent-configuration/delivery.md)。
+- 新的未关闭目标、技术方案和计划放在 `project/changes/`；当前没有未完成Change，既有依赖见[Hub集中配置交付](project/archive/2026-10-01-hub-spaces-and-agent-configuration/delivery.md)。
 - 已验收 Specs：[CLI 安装](project/specs/installation/cli/spec.md)、[MCP 安装](project/specs/installation/mcp/spec.md)、[宿主 MCP](project/specs/host-mcp/spec.md)、[部署与数据](project/specs/deployment/spec.md)、[工作区绑定](project/specs/workspaces/bindings/spec.md)、[执行事实](project/specs/execution/lifecycle/spec.md)、[执行恢复](project/specs/execution/recovery/spec.md)、[执行兼容](project/specs/execution/compatibility/spec.md)、[机器](project/specs/resources/machines/spec.md)、[Runtime](project/specs/resources/runtimes/spec.md)、[资源范围](project/specs/resources/scope/spec.md)、[Agent 定义](project/specs/agents/definition/spec.md)、[来源与绑定](project/specs/agents/scope/spec.md)、[原生继承边界](project/specs/agents/inheritance/spec.md)。
 - 已验收协作 Specs：[委派入口](project/specs/delegation/interface/spec.md)、[持久协调](project/specs/delegation/lifecycle/spec.md)、[业务轮次](project/specs/delegation/rounds/spec.md)、[结果与等待](project/specs/delegation/results/spec.md)、[上下文](project/specs/delegation/context/spec.md)、[本机共享工作区](project/specs/local-workspace/shared/spec.md)。
 - 已验收附件 Specs：[持久文件](project/specs/artifacts/spec.md)、[启动前输入](project/specs/artifacts/inputs/spec.md)、[输出交付](project/specs/artifacts/delivery/spec.md)、[留存与清理](project/specs/artifacts/retention/spec.md)。
@@ -51,4 +55,4 @@ Runweft 1.0.0 核心重构与产品官网均已完成，实现、自动验收和
 
 新仓库不迁入旧实现、旧 Changes 或运行认证。历史证据定位到 [runweft-archive](https://github.com/iTgo-lyq/runweft-archive)。
 
-Hub 集中配置前六阶段已验收：默认 serve/CLI/MCP 已使用[身份 token](project/specs/identity/tokens/spec.md)、[空间成员](project/specs/spaces/membership/spec.md)、[Web 凭据交接](project/specs/identity/connection/spec.md)、[执行授权](project/specs/execution/access/spec.md)、[资源归属](project/specs/resources/ownership/spec.md)、[仓库关联](project/specs/repositories/association/spec.md)、[中心 Agent](project/specs/agents/central/spec.md)和[中心委派](project/specs/delegation/central/spec.md)。`/hub` 提供完整资源/任务后台，[产品 Skill](project/specs/installation/skill/spec.md)与官网引导 Agent 接入；阶段六通过 254 项根测试、类型检查、构建、真实原生 MCP 四组合和 Playwright。最终同候选四平台包由阶段七交付，旧发行包不代表本次源码行为；跨 Runner 验证为同机，物理远端和 Mac 实机边界保留。
+当前Hub Specs：[身份token](project/specs/identity/tokens/spec.md)、[空间成员](project/specs/spaces/membership/spec.md)、[Web凭据交接](project/specs/identity/connection/spec.md)、[执行授权](project/specs/execution/access/spec.md)、[资源归属](project/specs/resources/ownership/spec.md)、[仓库关联](project/specs/repositories/association/spec.md)、[中心Agent](project/specs/agents/central/spec.md)、[中心委派](project/specs/delegation/central/spec.md)、[后台](project/specs/dashboard/subagents/spec.md)、[产品Skill](project/specs/installation/skill/spec.md)。四平台已构建；Mac实机和物理跨机未测，Linux arm64为QEMU CLI，同机Runner不替代物理远端。
