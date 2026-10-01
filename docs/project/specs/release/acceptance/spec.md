@@ -27,6 +27,10 @@ Skill与阶段六已验收版本逐文件相同，复用独立Agent判断场景�
 
 [可信发布 CI](https://github.com/iTgo-lyq/runweft/actions/runs/36864700225)验证新的干净候选 fe6017e531f06c0c01980d362b8b5b32bc6fde71：类型检查、264 项根测试、四平台构建/包校验，以及 Linux x64/arm64、macOS x64/arm64 托管 runner 的真实安装、默认服务与信号检查通过。绑定前的授权失败后只重跑失败 job，attempt 2 复用原候选；五包 OIDC 交换均 HTTP 201，预演 success=true、published=false。脱敏绑定和回执见[可信发布验收](../../../archive/2026-10-01-npm-trusted-publishing/acceptance.md)。
 
+main 合码提交 `0c3e3a1bd7a70a24be9e13ad4b022dc7f4504d60` 通过[独立 CLI CI](https://github.com/iTgo-lyq/runweft/actions/runs/36912561656)：类型检查、四平台构建/包校验及各平台真实安装、默认服务、信号退出与清理通过。根测试共 265 项、43 文件、5280 断言，263 项通过、2 项跳过、0 失败；托管 runner 未提供原生 Codex CLI，两项 MCP 配置测试按既有条件跳过。
+
+同一提交的 [npm 工作流](https://github.com/iTgo-lyq/runweft/actions/runs/36912562431)另行构建干净候选并通过四平台检查；五包 OIDC 交换均 HTTP 201，预演 success=true、published=false，版本保持 1.1.0。普通 main 推送没有上传新包；官网生产验收见[产品官网](../../website/product/spec.md)。
+
 这批 CI 没有运行模型、网页组合或公开新版本；新候选不继承旧候选的模型/实机验收。稳定标签门禁、冲突与部分发布恢复通过聚焦模拟验证，真实新版本上传尚未执行。
 
 ## 尚未取得的证据
