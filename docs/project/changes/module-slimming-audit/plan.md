@@ -45,7 +45,7 @@
 
 ### T4 远端与代码成果保障迁中心
 
-- 状态：待开始
+- 状态：已完成
 - 交付：remote、remote-tasks、task-results、result-retention；保留固定基线、Git seal、部分发布、fetch/release/restart；旧 resources/agents 的有效 preflight、错误传播与 launch mapping 迁入当前测试。
 - 依赖：T3。
 - 验收：远端/成果故障与留存恢复通过；旧资源/Agent有效断言有明确替代，原生映射、preflight与错误不重放未丢，不清理旧表/文件。

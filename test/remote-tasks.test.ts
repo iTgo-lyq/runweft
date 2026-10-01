@@ -1,41 +1,18 @@
+import { fixtureCleanup } from './fixture-cleanup';
+import { HubAgentClient } from '../src/hub/agents/client';
+import { agentSnapshot } from '../src/hub/delegation/context';
+import { taskIntent } from '../src/hub/delegation/types';
 import { afterEach, expect, test } from 'bun:test';
 import { randomUUID } from 'node:crypto';
 import { remoteFixture } from './remote-fixture';
-import { taskFixture, until } from './tasks-fixture';
-import { HapiClient, HapiRequestError } from '../src/hapi';
-import { TaskCoordinator } from '../src/tasks/coordinator';
-import { TaskStore } from '../src/tasks/store';
-import { BaselineStore } from '../src/remote/store';
-import { RemoteBaselines } from '../src/remote/baselines';
-import { TaskWorkspaces } from '../src/tasks/workspaces';
+import { until } from './helpers';
 import { resultReference } from '../src/tasks/result-types';
 
-const cleanups: (() => Promise<void> | void)[] = [];
-afterEach(async () => { for (const cleanup of cleanups.splice(0).reverse()) await cleanup(); });
+const cleanupOwner = fixtureCleanup([]), cleanups = cleanupOwner.resources;
+afterEach(() => cleanupOwner.close());
 async function fixture(flavor: 'codex' | 'claude' = 'codex', changed = false) {
-    const git = await remoteFixture(cleanups);
-    const h = await taskFixture(cleanups, flavor, undefined, async request => {
-        const path = new URL(request.url).pathname;
-        if (!path.startsWith('/api/artifacts') && !/^\/api\/machines\/[^/]+\/(repositories|artifacts|workspaces)$/.test(path)) return;
-        const body = request.method === 'GET' ? undefined : await request.text();
-        try {
-            const value = await git.alpha.request(path, { method: request.method, headers: { 'content-type': 'application/json' }, ...(body ? { body } : {}) });
-            const input = body && JSON.parse(body);
-            if (changed && input?.action === 'finalize' && value.workspace?.results[input.roundId]) {
-                const result = git.workspaces.get(input.environmentId)!.results[input.roundId]!;
-                result.resultHead = 'b'.repeat(40); result.startHead = git.workspaces.get(input.environmentId)!.preparations[input.preparationId]!.startHead;
-                result.fileCount = 1; result.paths = ['main.ts']; value.workspace.results[input.roundId] = result;
-            }
-            return Response.json(value);
-        } catch (error) {
-            if (!(error instanceof HapiRequestError)) throw error;
-            return Response.json({ error: { code: error.code, message: error.message, hint: error.hint } }, { status: error.status });
-        }
-    });
-    for (const machine of h.machines) machine.runnerState!.capabilities = { ...git.machines.find(item => item.id === machine.id)?.runnerState?.capabilities };
-    const runtime = await h.register('remote', flavor);
-    const payload = () => ({ ...h.payload(), intent: { ...h.intent, workspaceMode: 'worktree' as const, baseRef: 'HEAD' }, agent: { ...h.agent, runtimeId: runtime.id, machineId: 'remote' } });
-    return { ...h, git, runtime, payload };
+    const h = await remoteFixture(cleanups, 2, flavor, changed);
+    return Object.assign(h, { git: { faults: h.faults, requests: h.requests, refs: h.refs, repos: h.repos, workspaces: h.workspaces, setCommit: h.setCommit } });
 }
 
 for (const flavor of ['codex', 'claude'] as const) test(`${flavor} remote task prepares automatically, fixes origin before branch movement and publishes before completion across two native rounds`, async () => {
@@ -46,10 +23,10 @@ for (const flavor of ['codex', 'claude'] as const) test(`${flavor} remote task p
     expect(await h.post('spawn', request)).toEqual(accepted);
     h.git.faults.exportHold = false; h.git.faults.deliverLost = true;
     const running = await until(() => h.post('read', { id }), value => value.inputs[0]?.observation?.phase === 'accepted');
-    expect(running.environment.remote.origin.machineId).toBe('own'); expect(running.environment.source.machineId).toBe('remote');
+    expect(running.environment.remote.origin.machineId).toBe(h.sourceMachineId); expect(running.environment.source.machineId).toBe(h.targetMachineId);
     expect(running.environment.remote.origin.baseCommit).toBe('a'.repeat(40)); expect(running.cwd).not.toBe(h.cwd);
     expect(h.git.requests.filter(item => item.body.action === 'resolve')).toHaveLength(1);
-    expect(h.git.requests.find(item => item.body.action === 'resolve')!.machine).toBe('own');
+    expect(h.git.requests.find(item => item.body.action === 'resolve')!.machine).toBe(h.sourceMachineId);
     h.complete(running.session_id);
     const first = await until(() => h.post('read', { id }), value => value.phase === 'finished');
     expect(first.code.status).toBe('available'); expect(first.completed_revision).toBeGreaterThan(first.code_revision);
@@ -73,11 +50,11 @@ for (const flavor of ['codex', 'claude'] as const) test(`${flavor} remote task p
 
 test('remote shared, missing base and missing result capability reject before accepting or starting a task', async () => {
     const h = await fixture(), request = h.payload();
-    await expect(h.post('spawn', { ...request, intent: { ...h.intent, workspaceMode: 'shared' } })).rejects.toMatchObject({ code: 'shared_target_required' });
-    await expect(h.post('spawn', { ...request, intent: { ...h.intent, workspaceMode: 'worktree' } })).rejects.toMatchObject({ code: 'remote_base_required' });
-    delete h.machines.find(item => item.id === 'remote')!.runnerState!.capabilities!.repositoryResults;
+    await expect(h.post('spawn', { ...request, intent: { ...h.payload().intent, baseRef: undefined, workspaceMode: 'shared' } })).rejects.toMatchObject({ code: 'shared_target_required' });
+    await expect(h.post('spawn', { ...request, intent: { ...h.payload().intent, baseRef: undefined, workspaceMode: 'worktree' } })).rejects.toMatchObject({ code: 'remote_base_required' });
+    delete h.machines.find(item => item.id === h.targetMachineId)!.runnerState!.capabilities!.repositoryResults;
     await expect(h.post('spawn', request)).rejects.toMatchObject({ code: 'runner_upgrade_required' });
-    expect((await h.post('list')).agents).toHaveLength(0); expect(h.git.requests).toHaveLength(0); expect(h.calls.spawn).toBe(0);
+    expect((await h.post('list')).agents).toHaveLength(0); expect(h.git.requests.every(item => item.body.action === 'resolve')).toBe(true); expect(h.calls.spawn).toBe(0);
 });
 
 test('failed initial import starts no model and retained sealed facts survive a failed result capture with a queued next round', async () => {
@@ -111,18 +88,24 @@ test('code release previews without writes, unpins only the selected round, and 
     const next = await h.post('send', { requestId: randomUUID(), intent: { id: a.agent_id, mode: 'next', message: 'Second round' } }); await finish(next);
     const before = structuredClone(h.git.refs), preview = await h.post('result/release', { id: a.agent_id, roundId: a.round_id });
     expect(preview.applied).toBe(false); expect(preview.can_release).toBe(true); expect(h.git.refs).toEqual(before);
-    await expect(h.post('result/release', { id: a.agent_id, parent: { ...h.parent, kind: 'mcp', host: 'codex', nativeSessionId: randomUUID() } })).rejects.toMatchObject({ code: 'result_release_cli_only' });
+    await expect(h.post('result/release', { id: a.agent_id, parent: { ...h.parent, kind: 'mcp', host: 'codex', nativeSessionId: randomUUID() } })).rejects.toMatchObject({ code: 'task_parent_mismatch' });
+    const mcp = await fixture(), parent = { ...mcp.parent, kind: 'mcp', host: 'codex', nativeSessionId: randomUUID() };
+    const mcpTask = await mcp.post('spawn', { ...mcp.payload(), parent });
+    await expect(mcp.post('result/release', { id: mcpTask.agent_id, parent })).rejects.toMatchObject({ code: 'result_release_cli_only' });
     h.git.faults.unpinLost = true;
     await h.post('result/release', { id: a.agent_id, roundId: a.round_id, apply: true });
     const released = await until(() => h.post('result/show', { id: a.agent_id, roundId: a.round_id }), value => value.code.status === 'released');
     expect(released.code.bytes.retained).toBe(0); expect(released.manifests).toHaveLength(1);
-    for (const refs of h.git.refs.values()) {
-        expect(refs.has(resultReference(a.agent_id, a.round_id))).toBe(false);
-        expect(refs.has(resultReference(a.agent_id, next.round_id))).toBe(true);
-        expect(refs.has(resultReference(b.agent_id, b.round_id))).toBe(true);
+    for (const refs of h.git.refs.values()) expect(refs.has(resultReference(a.agent_id, a.round_id))).toBe(false);
+    for (const selected of [next, b]) {
+        const retained = await h.post('result/show', { id: selected.agent_id, roundId: selected.round_id });
+        expect(retained.code.status).toBe('available'); expect(retained.manifests.length).toBeGreaterThan(0);
+        for (const manifest of retained.manifests) { expect(manifest.baseline.files.length).toBeGreaterThan(0); expect(manifest.output.files.length).toBeGreaterThan(0); }
+        for (const manifest of retained.manifests) for (const file of [...manifest.baseline.files, ...manifest.output.files])
+            expect(h.git.refs.get(file.artifactId)!.has(resultReference(selected.agent_id, selected.round_id))).toBe(true);
     }
     await expect(h.post('result/fetch', { id: a.agent_id, roundId: a.round_id, requestId: randomUUID() })).rejects.toMatchObject({ code: 'result_released' });
-    const second = await h.post('result/show', { id: a.agent_id, roundId: next.round_id }); expect(second.code.status).toBe('available');
+    expect((await h.post('read', { id: a.agent_id, roundId: next.round_id })).code.status).toBe('available');
     await h.post('workspace/remove', { id: a.agent_id });
     await until(() => h.post('read', { id: a.agent_id }), value => value.environment.remote.release?.state === 'released');
     expect(h.git.requests.filter(item => item.domain === 'repositories' && item.body.action === 'release' && h.git.repos.get(item.body.operationId)?.request.action === 'import')).toHaveLength(0);
@@ -133,7 +116,11 @@ test('code release previews without writes, unpins only the selected round, and 
     expect([...h.git.refs.values()].some(refs => [...refs].some(ref => ref.startsWith('runweft:baseline:')))).toBe(true);
     h.git.faults.cacheHeld = false;
     await until(() => h.post('read', { id: b.agent_id }), value => value.environment.remote.release?.state === 'released');
-    for (const refs of h.git.refs.values()) expect(refs.has(resultReference(b.agent_id, b.round_id))).toBe(true);
+    const retained = await h.post('result/show', { id: b.agent_id, roundId: b.round_id });
+    expect(retained.code.status).toBe('available'); expect(retained.manifests.length).toBeGreaterThan(0);
+    for (const manifest of retained.manifests) { expect(manifest.baseline.files.length).toBeGreaterThan(0); expect(manifest.output.files.length).toBeGreaterThan(0); }
+    for (const manifest of retained.manifests) for (const file of [...manifest.baseline.files, ...manifest.output.files])
+        expect(h.git.refs.get(file.artifactId)!.has(resultReference(b.agent_id, b.round_id))).toBe(true);
     expect(h.calls.spawn).toBe(2); expect(h.calls.resume).toBe(1);
 });
 
@@ -180,54 +167,51 @@ test('saved partial release resumes after coordinator replacement without native
     const h = await fixture(), accepted = await h.post('spawn', h.payload()), id = accepted.agent_id;
     const running = await until(() => h.post('read', { id }), value => value.inputs[0]?.observation?.phase === 'accepted'); h.complete(running.session_id);
     await until(() => h.post('read', { id }), value => value.phase === 'finished');
-    const preview = await h.post('result/release', { id }); await h.tasks!.close();
-    const store = new TaskStore(h.statePath), bundle = store.require('alpha', id), round = bundle.rounds[0]!;
+    const preview = await h.post('result/release', { id }); await h.gateway.delegation.coordinator.close();
+    const store = h.gateway.delegation.coordinator.store, bundle = store.require(h.namespace, id), round = bundle.rounds[0]!;
     const { round_id: _, ...plan } = preview.rounds[0]; round.codeRetention = { ...plan, state: 'releasing' };
     h.git.refs.get(round.codeRetention!.references[0]!.artifactId)!.delete(resultReference(id, round.id));
-    store.save(bundle.task, round, []); store.close();
-    const replacement = new TaskCoordinator(h.statePath, namespace => new HapiClient(h.nativeUrl, `test-${namespace}`), 20);
-    cleanups.push(() => replacement.close()); replacement.start();
-    const released = await until(() => replacement.read('alpha', h.parent, id), value => value.code.status === 'released');
+    store.save(bundle.task, round, []);
+    await h.restart();
+    const released = await until(() => h.post('read', { id }), value => value.code.status === 'released');
     expect(released.code.retention).toMatchObject({ state: 'released' }); expect(h.calls.spawn).toBe(1); expect(h.calls.resume).toBe(0);
     for (const refs of h.git.refs.values()) expect(refs.has(resultReference(id, round.id))).toBe(false);
 });
 
 test('consumer committed before task association is reused after coordinator replacement', async () => {
-    const h = await fixture(), input = h.payload(), origin = await new TaskWorkspaces(h.alpha, 'own').resolve(h.cwd, 'HEAD');
-    await h.tasks!.close();
-    const store = new TaskStore(h.statePath), baselineStore = new BaselineStore(h.statePath);
-    const client = (namespace: string) => new HapiClient(h.nativeUrl, `test-${namespace}`);
-    const baselines = new RemoteBaselines(baselineStore, client);
-    const accepted = store.accept('alpha', h.parent, input.requestId, input.intent, input.agent,
-        { runtimeId: h.runtime.id, machineId: 'remote', flavor: 'codex', inspection: h.runtime.inspection! }, origin);
-    const consumer = await baselines.forTask('alpha', origin, 'remote', accepted.agent_id);
-    expect(baselineStore.consumers(consumer.snapshotId)).toHaveLength(1);
-    expect(store.require('alpha', accepted.agent_id).task.environment).toMatchObject({ remote: { origin } });
-    store.close(); baselineStore.close();
-    const replacement = new TaskCoordinator(h.statePath, client, 20); cleanups.push(() => replacement.close()); replacement.start();
-    const running = await until(() => replacement.read('alpha', h.parent, accepted.agent_id), value => value.inputs[0]?.observation?.phase === 'accepted');
+    const h = await fixture(), input = h.payload();
+    await h.gateway.delegation.coordinator.close();
+    const store = h.gateway.delegation.coordinator.store, baselines = h.gateway.delegation.preparations.baselines;
+    const hub = (await new HubAgentClient({ url: h.url, space: h.space, env: { RUNWEFT_IDENTITY_TOKEN: h.owner.token } }).resolve({ agentId: h.agent.id })).resolution;
+    const agent = agentSnapshot(h.namespace, hub), origin = h.source(h.cwd, 'HEAD');
+    const accepted = store.accept(h.namespace, h.parent, input.requestId, taskIntent(input.intent as any), agent, hub.target, origin);
+    const consumer = await baselines.forTask(h.namespace, origin, h.targetMachineId, accepted.agent_id);
+    expect(baselines.store.consumers(consumer.snapshotId)).toHaveLength(1);
+    expect(store.require(h.namespace, accepted.agent_id).task.environment).toMatchObject({ remote: { origin } });
+    await h.restart();
+    const running = await until(() => h.post('read', { id: accepted.agent_id }), value => value.inputs[0]?.observation?.phase === 'accepted');
     expect(running.environment.mode === 'worktree' && running.environment.remote?.consumerId).toBe(consumer.id);
-    const check = new BaselineStore(h.statePath); try { expect(check.consumers(consumer.snapshotId)).toHaveLength(1); } finally { check.close(); }
-    h.complete(running.session_id!); await until(() => replacement.read('alpha', h.parent, accepted.agent_id), value => value.phase === 'finished');
+    expect(h.gateway.delegation.preparations.baselines.store.consumers(consumer.snapshotId)).toHaveLength(1);
+    h.complete(running.session_id!); await until(() => h.post('read', { id: accepted.agent_id }), value => value.phase === 'finished');
     expect(h.calls.spawn).toBe(1);
 });
 
 test('an accepted remote HEAD request still rejects a retransmission that omits its required base', async () => {
     const h = await fixture(); h.git.faults.exportHold = true;
     const request = h.payload(), accepted = await h.post('spawn', request);
-    await expect(h.post('lookup', { requestId: request.requestId, intent: { ...h.intent, workspaceMode: 'worktree' } })).rejects.toMatchObject({ code: 'remote_base_required' });
+    await expect(h.post('lookup', { requestId: request.requestId, intent: { ...h.payload().intent, baseRef: undefined, workspaceMode: 'worktree' } })).rejects.toMatchObject({ code: 'remote_base_required' });
     expect(await h.post('spawn', request)).toEqual(accepted); expect(h.calls.spawn).toBe(0);
 });
 
 test('a lost remote start receipt and unknown stop never duplicate the native run or bypass sealing', async () => {
-    const h = await fixture(); h.faults.spawn = 'lost';
+    const h = await fixture(); h.nativeFaults.spawn = 'lost';
     const accepted = await h.post('spawn', h.payload()), id = accepted.agent_id;
     const running = await until(() => h.post('read', { id }), value => value.inputs[0]?.observation?.phase === 'accepted');
     expect(h.calls.spawn).toBe(1); expect(h.calls.send).toBe(1);
-    h.faults.stop = true; h.complete(running.session_id);
+    h.nativeFaults.stop = true; h.complete(running.session_id);
     const held = await until(() => h.post('read', { id }), value => value.phase === 'stopping' && value.attention);
     expect(held.git.status).toBe('pending'); expect(h.git.requests.some(item => item.body.action === 'finalize')).toBe(false);
-    h.faults.stop = false;
+    h.nativeFaults.stop = false;
     const finished = await until(() => h.post('read', { id }), value => value.phase === 'finished');
     expect(finished.code.status).toBe('available'); expect(h.calls.spawn).toBe(1); expect(h.calls.send).toBe(1);
     expect(h.git.requests.filter(item => item.body.action === 'finalize')).toHaveLength(1);

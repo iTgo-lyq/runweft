@@ -168,3 +168,18 @@ test('complete central gateway restart preserves native receipts and sessions wi
         expect(h.nativeCalls.some(call => call.namespace === 'runweft' && call.path.includes('/spawn-requests/'))).toBe(true);
     }
 });
+
+test('current resource preflight checks launcher facts, permits unknown versions and never dispatches failed targets', async () => {
+    const h = await hubDelegationFixture(cleanups), native = h.inspections.get(h.machineId)![0];
+    const resolve = () => h.request(`runtimes/${h.runtime.id}/resolve`, undefined, undefined, 'resources');
+    native.details.executable = null;
+    expect((await resolve()).body.error.code).toBe('runtime_command_missing');
+    native.details = resourceInspection('codex').details; native.available = false; native.reason = 'invalid_configuration';
+    expect((await resolve()).body.error.code).toBe('runtime_invalid_configuration');
+    native.available = true; delete native.reason; native.details.version = null; native.details.versionStatus = 'failed';
+    expect((await resolve()).body.target).toMatchObject({ toolFound: true, version: null, versionStatus: 'failed' });
+    native.details.versionStatus = 'timeout'; expect((await resolve()).status).toBe(200);
+    h.inspections.set(h.machineId, []);
+    expect((await resolve()).body.error.code).toBe('runtime_probe_failed');
+    expect(h.calls.spawn).toBe(0); expect(h.calls.resume).toBe(0); expect(h.calls.send).toBe(0);
+});

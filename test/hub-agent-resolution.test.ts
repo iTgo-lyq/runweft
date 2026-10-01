@@ -102,6 +102,7 @@ test('resolution snapshots retain content, identity and targets; observation tim
     const h = await setup(), r = h.runtime(), a = h.agent({ runtimeId: r.id, instructions: 'initial' }), c = h.client();
     const initial = (await c.resolve({ agentId: a.id })).resolution, repeated = (await c.resolve({ agentId: a.id })).resolution;
     expect(initial.resolvedVersion).toBe(repeated.resolvedVersion);
+    expect(initial.launchOptions).toEqual({ agent: 'codex', disabledMcpServers: ['runweft'] });
     h.agents.update(h.actor, a.id, { expectedVersion: 1, definition: { ...def(a), instructions: 'edited' } });
     const next = (await c.resolve({ agentId: a.id })).resolution;
     expect(initial.definition.instructions).toBe('initial'); expect(initial.version).toBe(1); expect(next.version).toBe(2);
