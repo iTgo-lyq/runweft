@@ -27,11 +27,12 @@
 
 ### T2 发布与公共安装验证
 
-- 状态：待开始
+- 状态：已阻塞
 - 交付：重建候选、公共 npm 五包与专用安装证据。
 - 依赖：T1、用户完成 npm 登录。
 - 验收：新候选保持已验收程序和 Skill hash，包内说明正确；五包版本、tag、hash、依赖正确；公共下载与隔离安装验证通过。
 - 验证：package --all --reuse-hapi、test:packages、test:install、dry-run；真实 npm publish、公共 registry 读取/下载、专用 prefix 安装、版本/程序/Skill/MCP 帮助检查。
+- 阻塞：本机尚未获得 npm 登录授权，whoami 返回 ENEEDAUTH；候选重建及本地检查已通过，用户完成官方网页登录后继续真实上传。
 
 ### T3 同步发行事实并归档
 
