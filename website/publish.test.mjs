@@ -5,13 +5,19 @@ import { spawnSync } from 'node:child_process';
 import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { buildSite } from './build.mjs';
-import { assertCurrentProduction, checkNpmRelease, deploymentTarget, ensurePagesProject, validateSite, verifyDeployment } from './publish.mjs';
+import { assertCurrentProduction, checkNpmRelease, siteEligibility, deploymentTarget, ensurePagesProject, validateSite, verifyDeployment } from './publish.mjs';
 import { packageNames, registry } from '../scripts/npm-publish.mjs';
 
 await mkdir('.dev-smoke', { recursive: true });
 const temporary = await mkdtemp(resolve('.dev-smoke/website-pages-test-'));
 const directory = join(temporary, 'site');
-await buildSite({ outputDirectory: directory });
+// Deployment checks must also run when the checked-out product version is Beta.
+const projectDirectory = join(temporary, 'stable-project');
+await mkdir(join(projectDirectory, 'docs'), { recursive: true });
+await writeFile(join(projectDirectory, 'package.json'), JSON.stringify({ version: '1.1.1' }));
+await symlink(resolve('website'), join(projectDirectory, 'website'), 'dir');
+await symlink(resolve('docs/usage.md'), join(projectDirectory, 'docs/usage.md'));
+await buildSite({ projectDirectory, outputDirectory: directory });
 const site = await validateSite(directory);
 after(() => rm(temporary, { recursive: true, force: true }));
 const env = { GITHUB_EVENT_NAME: 'push', GITHUB_REF_TYPE: 'branch', GITHUB_REF_NAME: 'main' };
@@ -129,7 +135,7 @@ test('missing secrets explicitly skip preview, fail production, and never output
     const output = join(temporary, `${branch.replace('/', '-')}.output`);
     const summary = `${output}.summary`;
     const isolated = { ...process.env, ...env, GITHUB_REF_NAME: branch, CLOUDFLARE_ACCOUNT_ID: '', CLOUDFLARE_API_TOKEN: '', GITHUB_OUTPUT: output, GITHUB_STEP_SUMMARY: summary };
-    const child = spawnSync(process.execPath, [resolve('website/publish.mjs'), 'prepare'], { cwd: temporary, env: isolated, encoding: 'utf8' });
+    const child = spawnSync(process.execPath, [resolve(import.meta.dirname, 'publish.mjs'), 'prepare'], { cwd: temporary, env: isolated, encoding: 'utf8' });
     assert.equal(child.status, branch === 'main' ? 1 : 0);
     assert.equal(await readFile(output, 'utf8'), 'deploy=false\n');
     assert((await readFile(summary, 'utf8')).includes('未部署'));
@@ -171,11 +177,11 @@ test('verification failure retains uploaded URL/environment receipt without cred
   const working = join(temporary, 'failed-verification');
   const evidence = join(working, '.dev-smoke/website-pages');
   await mkdir(evidence, { recursive: true });
-  await buildSite({ outputDirectory: join(working, 'dist/website') });
+  await buildSite({ projectDirectory, outputDirectory: join(working, 'dist/website') });
   await writeFile(join(evidence, 'prepare.json'), JSON.stringify({ mode: 'preview', branch: 'codex/test', subdomain: project.subdomain }));
   const preload = join(working, 'unavailable-page.mjs');
   await writeFile(preload, "globalThis.fetch = async () => new Response('{}', {headers:{'content-type':'application/json'}});\n");
-  const child = spawnSync(process.execPath, ['--import', preload, resolve('website/publish.mjs'), 'verify'], { cwd: working, env: {
+  const child = spawnSync(process.execPath, ['--import', preload, resolve(import.meta.dirname, 'publish.mjs'), 'verify'], { cwd: working, env: {
     ...process.env, PAGES_DEPLOYMENT_URL: online.url, PAGES_ENVIRONMENT: 'preview',
     CLOUDFLARE_API_TOKEN: 'fixture-secret-never-recorded', GITHUB_SHA: 'a'.repeat(40),
   }, encoding: 'utf8' });
@@ -199,4 +205,26 @@ test('wrong deployment, Access redirect, wrong MIME/content and propagation fail
   await assert.rejects(verifyDeployment(online, { fetchImpl: async () => json({}) }), /MIME/);
   await assert.rejects(verifyDeployment(online, { fetchImpl: async () => new Response('wrong', { headers: { 'content-type': 'image/svg+xml' } }) }), /内容/);
   await assert.rejects(verifyDeployment(online, { fetchImpl: async () => json({}, 404), pause: async () => {}, attempts: 2 }), /HTTP 404/);
+});
+
+test('only a Beta development branch skips the site; main, PR, tags and invalid versions fail', async () => {
+  const version = '1.2.0-beta.1';
+  assert.equal(siteEligibility(env, '1.1.1'), true);
+  assert.equal(siteEligibility({ ...env, GITHUB_REF_NAME: 'codex/beta' }, version), false);
+  assert.equal(siteEligibility({ ...env, GITHUB_EVENT_NAME: 'workflow_dispatch', GITHUB_REF_NAME: 'codex/beta' }, version), false);
+  for (const change of [{}, { GITHUB_EVENT_NAME: 'pull_request', GITHUB_REF_NAME: 'codex/beta' },
+    { GITHUB_REF_TYPE: 'tag', GITHUB_REF_NAME: 'v' + version }, { GITHUB_REF_NAME: 'feature/beta' }]) {
+    assert.throws(() => siteEligibility({ ...env, ...change }, version), /必须使用稳定版本/);
+  }
+  assert.throws(() => siteEligibility(env, '1.2.0-rc.1'), /canonical integers/);
+  const working = join(temporary, 'beta-eligibility');await mkdir(working);
+  await writeFile(join(working, 'package.json'), JSON.stringify({ version }));
+  const output = join(working, 'output'), summary = join(working, 'summary');
+  const child = spawnSync(process.execPath, [resolve(import.meta.dirname, 'publish.mjs'), 'eligibility'], { cwd: working, env: {
+    ...process.env, ...env, GITHUB_REF_NAME: 'codex/beta', GITHUB_OUTPUT: output, GITHUB_STEP_SUMMARY: summary,
+  }, encoding: 'utf8' });
+  assert.equal(child.status, 0, child.stderr);
+  assert.equal(await readFile(output, 'utf8'), 'build=false\n');
+  assert.match(await readFile(summary, 'utf8'), /跳过构建与上传/);
+  assert.equal(JSON.parse(await readFile(join(working, '.dev-smoke/website-pages/eligibility.json'), 'utf8')).version, version);
 });

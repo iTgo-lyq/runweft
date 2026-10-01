@@ -38,13 +38,18 @@ jobs:
           node-version: '24'
       - name: Test deployment checks
         run: node --test ./website/publish.test.mjs
+      - name: Check website version eligibility
+        id: release
+        run: node website/publish.mjs eligibility
       - name: Build npm installation site
+        if: steps.release.outputs.build == 'true'
         run: node website/build.mjs
       - name: Check static output and public npm release
+        if: steps.release.outputs.build == 'true'
         run: node website/publish.mjs check
       - name: Prepare Pages project
         id: prepare
-        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+        if: steps.release.outputs.build == 'true' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
         env:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -83,6 +88,7 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: steps.release.outputs.build == 'true'
         with:
           name: website-static
           path: dist/website/

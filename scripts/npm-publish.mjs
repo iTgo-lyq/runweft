@@ -9,11 +9,48 @@ import { assertFrozenCandidate } from './fixtures/release-inputs.mjs';
 export const registry = 'https://registry.npmjs.org/';
 export const packageNames = ['runweft-linux-x64', 'runweft-linux-arm64', 'runweft-darwin-x64', 'runweft-darwin-arm64', 'runweft'];
 
+const integer = '(0|[1-9]\\d*)';
+const versionPattern = new RegExp(`^${integer}\\.${integer}\\.${integer}(?:-beta\\.${integer})?$`);
+function parseVersion(version) {
+    const match = typeof version === 'string' && version.match(versionPattern);
+    assert(match, 'Release version must be X.Y.Z or X.Y.Z-beta.N with canonical integers');
+    return { core: match.slice(1, 4).map(BigInt), beta: match[4] === undefined ? null : BigInt(match[4]) };
+}
+
+export function releaseChannel(version) {
+    return parseVersion(version).beta === null ? 'latest' : 'beta';
+}
+
+export function compareReleaseVersions(left, right) {
+    const a = parseVersion(left), b = parseVersion(right);
+    for (let i = 0; i < 3; i++) if (a.core[i] !== b.core[i]) return a.core[i] > b.core[i] ? 1 : -1;
+    if (a.beta === b.beta) return 0;
+    if (a.beta === null) return 1;
+    if (b.beta === null) return -1;
+    return a.beta > b.beta ? 1 : -1;
+}
+
+export function assertReleaseForward(version, tags, name) {
+    const channels = releaseChannel(version) === 'beta' ? ['beta', 'latest'] : ['latest'];
+    for (const channel of channels) if (tags[channel] != null) {
+        assert(compareReleaseVersions(version, tags[channel]) >= 0,
+            `${name}: release must be newer than ${channel} ${tags[channel]} (same candidate may resume)`);
+    }
+}
+
 export function isRelease(env, version) {
-    if (env.GITHUB_EVENT_NAME !== 'push' || env.GITHUB_REF_TYPE !== 'tag') return false;
-    assert.match(env.GITHUB_REF_NAME, /^v\d+\.\d+\.\d+$/, 'Only stable version tags can publish');
+    if (env.GITHUB_EVENT_NAME !== 'push' || env.GITHUB_REF_TYPE !== 'tag') return null;
+    const channel = releaseChannel(env.GITHUB_REF_NAME?.slice(1));
     assert.equal(env.GITHUB_REF_NAME, `v${version}`, 'Release tag must match package version');
-    return true;
+    return channel;
+}
+
+export function npmPublishArgs(entry, { dryRun, userConfig, globalConfig, cache }) {
+    const args = ['publish', entry.tarball, '--registry=' + registry, '--access=public',
+        '--tag=' + releaseChannel(entry.version), '--ignore-scripts', '--json', '--loglevel=error',
+        `--userconfig=${userConfig}`, `--globalconfig=${globalConfig}`, `--cache=${cache}`];
+    if (dryRun) args.push('--dry-run', '--force');
+    return args;
 }
 
 export function validateCandidate(source, cwd = process.cwd()) {
@@ -51,12 +88,14 @@ export function checkManifest(entry, manifest) {
 }
 
 // Persist before starting an upload so an interrupted request is never blindly repeated.
-export async function publishCandidate(index, entries, { metadata, upload, save, receipt = {}, pause = () => new Promise(r => setTimeout(r, 5000)), timeoutMs = 20 * 60_000 }) {
+export async function publishCandidate(index, entries, { metadata, tags, upload, save, receipt = {}, pause = () => new Promise(r => setTimeout(r, 5000)), timeoutMs = 20 * 60_000 }) {
+    const channel = releaseChannel(index.version);
     if (receipt.version) {
         assert.equal(receipt.version, index.version, 'Receipt version differs from candidate');
         assert.equal(receipt.sourceRevision, index.source.revision, 'Restore the original candidate for partial publication');
+        assert.equal(receipt.channel, channel, 'Receipt channel differs from candidate');
     }
-    const state = { ...receipt, version: index.version, sourceRevision: index.source.revision, packages: receipt.packages ?? [], success: false };
+    const state = { ...receipt, channel, version: index.version, sourceRevision: index.source.revision, packages: receipt.packages ?? [], success: false };
     for (const record of state.packages) {
         const entry = entries.find(p => p.name === record.name);
         assert(entry && record.integrity === `sha512-${entry.sha512}`, 'Receipt integrity differs from candidate');
@@ -88,6 +127,19 @@ export async function publishCandidate(index, entries, { metadata, upload, save,
         }
     }
     try {
+        const before = {};
+        for (const entry of entries) {
+            const current = await tags(entry);
+            assertReleaseForward(index.version, current, entry.name);
+            before[entry.name] = current.latest ?? null;
+        }
+        if (!state.latestBefore) {
+            assert.equal(state.packages.length, 0, 'Receipt missing latest baseline; inspect original run');
+            state.latestBefore = before;
+        } else if (channel === 'beta') {
+            assert.deepEqual(before, state.latestBefore, 'latest changed during Beta publication; inspect npm dist-tags before resuming');
+        }
+        save(state);
         // Check every existing version before the first upload, including the main package.
         for (const entry of entries) {
             if (await confirm(entry)) continue;
@@ -107,6 +159,24 @@ export async function publishCandidate(index, entries, { metadata, upload, save,
             } else record(entry, 'accepted');
         }
         await waitFor(entries);
+        // Version visibility and dist-tags can propagate independently. Never upload again while waiting.
+        const deadline = Date.now() + timeoutMs;
+        while (true) {
+            const after = {};
+            state.distTags = after;
+            for (const entry of entries) {
+                const current = await tags(entry);
+                after[entry.name] = current;
+                if (channel === 'beta') assert.equal(current.latest ?? null, state.latestBefore[entry.name],
+                    `${entry.name}: latest changed during Beta publication; inspect npm dist-tags, no automatic repair`);
+                if (current[channel] != null) assert(compareReleaseVersions(current[channel], index.version) <= 0,
+                    `${entry.name}: ${channel} advanced beyond this candidate; inspect npm dist-tags`);
+            }
+            save(state);
+            if (entries.every(entry => after[entry.name][channel] === index.version)) break;
+            assert(Date.now() < deadline, `${channel} dist-tags pending; inspect npm dist-tags and rerun failed jobs with this receipt`);
+            await pause();
+        }
         state.success = true;
         return state;
     } finally {
@@ -122,11 +192,20 @@ async function metadata(entry, version = entry.version) {
     return response.json();
 }
 
+async function distTags(entry) {
+    const response = await fetch(`${registry}-/package/${entry.name}/dist-tags`, {
+        headers: { 'cache-control': 'no-cache' }, signal: AbortSignal.timeout(30_000) });
+    if (response.status === 404) return {};
+    assert.equal(response.status, 200, `${entry.name}: npm dist-tags HTTP ${response.status}`);
+    return response.json();
+}
+
 async function main() {
     assert.equal(process.argv.length, 2, 'Usage: node scripts/npm-publish.mjs (mode is selected by GitHub event)');
     const { index, entries } = validateCandidate(resolve('dist/packages'));
     if (process.env.GITHUB_SHA) assert.equal(index.source.revision, process.env.GITHUB_SHA, 'Candidate must belong to this workflow commit');
     const publish = isRelease(process.env, index.version);
+    const channel = releaseChannel(index.version);
     const root = resolve('.dev-smoke/npm-publish');
     mkdirSync(root, { recursive: true });
     const userConfig = join(root, 'npmrc'), globalConfig = join(root, 'npmrc-global');
@@ -134,9 +213,7 @@ async function main() {
     const env = { ...process.env };
     for (const key of Object.keys(env)) if (/^npm_config_/i.test(key) || ['NPM_TOKEN', 'NODE_AUTH_TOKEN'].includes(key)) delete env[key];
     function npm(entry, dryRun) {
-        const args = ['publish', entry.tarball, '--registry=' + registry, '--access=public', '--tag=latest', '--ignore-scripts', '--json', '--loglevel=error',
-            `--userconfig=${userConfig}`, `--globalconfig=${globalConfig}`, `--cache=${join(root, 'npm-cache')}`];
-        if (dryRun) args.push('--dry-run', '--force');
+        const args = npmPublishArgs(entry, { dryRun, userConfig, globalConfig, cache: join(root, 'npm-cache') });
         const result = spawnSync('npm', args, { env, encoding: 'utf8', timeout: 10 * 60_000, maxBuffer: 4 * 1024 * 1024 });
         if (result.stderr) process.stderr.write(result.stderr);
         return result;
@@ -151,22 +228,14 @@ async function main() {
             assert.equal(packed.integrity, `sha512-${entry.sha512}`);
             console.log(`${entry.name}@${index.version}: dry-run integrity verified`);
         }
-        writeFileSync(join(root, 'preflight.json'), JSON.stringify({ source: index.source, version: index.version, success: true, published: false }, null, 2));
+        writeFileSync(join(root, 'preflight.json'), JSON.stringify({ source: index.source, version: index.version, channel, success: true, published: false }, null, 2));
         return;
-    }
-    for (const entry of entries) {
-        const latest = await metadata(entry, 'latest');
-        if (latest && latest.version !== index.version) {
-            const old = latest.version.split('.').map(Number), next = index.version.split('.').map(Number);
-            const first = next.findIndex((n, i) => n !== old[i]);
-            assert(first >= 0 && next[first] > old[first], `${entry.name}: release must be newer than latest ${latest.version}`);
-        }
     }
     const receiptFile = join(root, 'publication.json');
     const receipt = existsSync(receiptFile) ? JSON.parse(readFileSync(receiptFile, 'utf8')) : {};
-    await publishCandidate(index, entries, { receipt, metadata, upload: entry => npm(entry, false).status,
+    await publishCandidate(index, entries, { receipt, metadata, tags: distTags, upload: entry => npm(entry, false).status,
         save: state => writeFileSync(receiptFile, JSON.stringify(state, null, 2)) });
-    console.log(`Five packages ${index.version}: public registry integrity confirmed`);
+    console.log(`Five packages ${index.version}: public registry integrity and ${channel} dist-tags confirmed`);
 }
 
 if (resolve(process.argv[1] ?? '') === fileURLToPath(import.meta.url)) {
