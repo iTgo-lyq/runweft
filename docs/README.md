@@ -16,6 +16,8 @@ Runweft 1.1.0 已完成 Hub 集中配置七阶段、完整后台/Skill与同候�
 
 产品官网已统一为 npm 安装，Skill 从 npm 包内接入；静态构建无下载归档，实际 DOM 命令安装与网页自动验收通过，见[本次验收](project/archive/2026-10-02-website-npm-installation/acceptance.md)。尚未部署在线站点；构建与预览见[官网说明](../website/README.md)。
 
+[Cloudflare Pages 自动部署](project/changes/website-cloudflare-pages/requirement.md)正在接通：独立官网工作流为 main 生产、codex 分支预览、PR 检查；需要账户 ID 和 Pages Edit Token 保存在 GitHub Secrets。当前 main 尚无产品代码，本轮不自动合码；在线部署以该 Change 实际验收为准。
+
 已交付 Change 按独立交付结果拆分并声明依赖，归档入口如下：
 
 | Change | 需求入口 | 方案与依据 |

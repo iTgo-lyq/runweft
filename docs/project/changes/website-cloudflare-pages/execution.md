@@ -1,0 +1,12 @@
+# 官网 Cloudflare Pages 执行概况
+
+## Plan 评审
+
+同一次只读 iclaude 会话 47915e6a-1655-4313-a03c-c11df26f13ea：初次到工具轮次上限，续接同会话仅输出完成结论，无第二次评审或委派。结果保存于 .dev-smoke/reviews/website-cloudflare-pages/result.json。主 agent 已逐项判断并更新 Technical：凭证/工具隔离、main 头检查、npm HEAD 与 HTTP 传播等待、真实证据边界、T2/T3 分开采纳；Node 测试位置与私有 metadata 复用建议未采纳，理由见 Technical。
+
+## T1 实现发布检查与 Pages 工作流
+
+- 结果：独立单 job 构建/检查/Pages 上传工作流；静态八文件白名单、公共五包元数据/tarball HEAD、凭证缺失提示、专用项目与 main 当前头校验、唯一 URL 全文件摘要/MIME 核对；官网和开发说明同步。
+- 验证：node --test ./website/publish.test.mjs：11 pass；actionlint v1.7.12：通过；bun run typecheck：通过；bun run test：265 pass/0 fail；node website/build.mjs 与 node website/publish.mjs check：通过，公共 1.1.0 五包元数据与 HEAD 正常，8 文件 91,064 bytes；validate-change 与 diff 检查通过。
+- 未解决：Cloudflare Secrets 尚无，本地 API 夹具不代替真实上传；main、手动、PR 与非 main 项目拒绝为单测/静态证据。
+- Commit：`website-cloudflare-pages T1: configure checked Pages deployments`

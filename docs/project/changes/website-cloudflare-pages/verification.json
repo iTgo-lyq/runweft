@@ -1,0 +1,55 @@
+{
+  "local": {
+    "success": true,
+    "deploymentTests": 11,
+    "rootTests": 265,
+    "typecheck": true,
+    "actionlint": "1.7.12",
+    "npm": [
+      {
+        "name": "runweft-linux-x64",
+        "version": "1.1.0",
+        "integrity": "sha512-snjE9YXX7GI1vy1Cv664DnLUix5BK8ZiYz5YXVrIYbT+DEFV0trwuW0izAFfCD3GnPsjAIWiG1Vlq0lNcfENPA=="
+      },
+      {
+        "name": "runweft-linux-arm64",
+        "version": "1.1.0",
+        "integrity": "sha512-urJ12i92WGofiKxgA8nX4X7t1bTXUO9pweP7puO2qlDol2spBLLZlXwQIS8UmFsAyvOsh37u4PQ/qnHhZm3+Qw=="
+      },
+      {
+        "name": "runweft-darwin-x64",
+        "version": "1.1.0",
+        "integrity": "sha512-3vPpMLQIcpgRZjbnT043vMud8Dcc+gDexCwX3C2YCEprHAKkIGepEwo+2NKlr/DDOu6RIiX7mhDyR4p3VmhyXQ=="
+      },
+      {
+        "name": "runweft-darwin-arm64",
+        "version": "1.1.0",
+        "integrity": "sha512-VvC/NI9PXdc0RNElZGIfE95IjlfgPNcVDE2wsfFKgl1qbaLl2pA1hrxatB53YymJ2jINnodjjQ8kbuYiIE8y5A=="
+      },
+      {
+        "name": "runweft",
+        "version": "1.1.0",
+        "integrity": "sha512-7a2MA7BbIt3iLNkpwwY7gnTODz6SYm3/aNGFm54KM7V+MtBvl5kRrj2qhCWi8Pi7Y3RgUJH7O9QqBU60Jw369Q=="
+      }
+    ],
+    "site": {
+      "files": 8,
+      "bytes": 91064,
+      "version": "1.1.0"
+    }
+  },
+  "hosted": {
+    "verified": false
+  },
+  "cloudflare": {
+    "deployed": false,
+    "missingSecrets": [
+      "CLOUDFLARE_ACCOUNT_ID",
+      "CLOUDFLARE_API_TOKEN"
+    ]
+  },
+  "production": {
+    "verified": false,
+    "reason": "main 尚无产品代码与工作流，本轮不合码"
+  }
+}

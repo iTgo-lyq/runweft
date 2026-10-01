@@ -92,3 +92,9 @@ bun run release:assemble dist/packages dist/website <验收说明.md> <脱敏证
 main/codex 分支的发布流程文件变更只检查授权和预演；普通产品变更运行独立 CLI 安装 CI。手动入口也只预演，但当前默认 main 尚无产品工作流，需将来合入后才能使用该入口；标签入口已配置。本仓库为私有，当前不会生成自动 npm provenance。
 
 上传前发现同版本不同完整性会停止；上传结果未知不自动重发。部分完成时检查 `npm-publication` 回执，使用原 run 的 **Re-run failed jobs** 恢复原候选。候选和回执保留三十天；重跑整个 run 会重新构建，不能当作相同候选。到期或未知结果先核实公开 registry 和回执，不直接重新上传。
+
+## 官网 Cloudflare Pages
+
+网站使用独立 `website-pages.yml`：官网相关 main 推送发布生产，codex 分支推送发布预览，PR 只检查；操作和 Secrets 见[官网说明](../website/README.md#cloudflare-pages-自动部署)。当前 main 没有产品代码，生产、PR 和手动触发须合码后实测；本轮只验证当前开发分支推送。
+
+发版顺序为更新稳定版本并验收、推送匹配版本 tag、等待五个 npm 包发布通过、运行最新分支的官网工作流。npm 未公开时官网检查停止属于预期；Pages 不自动触发 npm 发布。生产部署拒绝旧 main SHA，不能通过重跑旧任务恢复旧官网；确需回退时先提交明确的源代码/版本回退。

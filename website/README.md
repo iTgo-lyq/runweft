@@ -25,13 +25,51 @@ node website/serve.mjs
 
 参考页读取 docs/usage.md，在末尾“离线完整交付（工程参考）”附录之前截取并转义；官网不展示离线安装命令。使用说明和 Skill 源码改变后，下次程序发行须重新冻结包输入。已公开 1.1.0 和历史离线整包不覆盖，包内旧 Skill 尚未随本次源码改动重新发布；网站接入对话明确全程使用 npm。
 
-## 部署
+## Cloudflare Pages 自动部署
+
+`.github/workflows/website-pages.yml` 使用 GitHub Actions 构建和发布；只运行 Node 24 网站工具，不构建 HAPI 或调用 npm 发布。
+
+| 触发 | 行为 |
+| --- | --- |
+| main 的官网相关推送 | 检查通过后部署生产；拒绝重跑过时 main 提交 |
+| codex/** 的官网相关推送 | 检查通过后部署分支预览 |
+| pull_request 的官网相关变更 | 聚焦测试、构建和公共 npm 检查，不上传 |
+| workflow_dispatch | 所选 main/codex 分支按同一规则部署；tag/其他分支只检查 |
+
+相关路径为 website/**、package.json、docs/usage.md、scripts/npm-publish.mjs 和该工作流。当前默认 main 尚无产品代码与工作流，生产、PR、手动入口已配置但未实测；合码后生效。当前开发分支可由推送触发预览。
+
+在[仓库 Actions Secrets](https://github.com/iTgo-lyq/runweft/settings/secrets/actions)保存：
+
+- `CLOUDFLARE_ACCOUNT_ID`：Cloudflare 目标账户的 32 位 ID。
+- `CLOUDFLARE_API_TOKEN`：该账户下 Account → Cloudflare Pages → Edit 权限的 API Token，不需要 npm token。
+
+Pages 项目默认 `runweft`；已有专用项目可在同一设置的 Variables 添加 `CLOUDFLARE_PAGES_PROJECT`。只有 API 明确返回项目不存在时才创建 Direct Upload 项目，生产分支固定 main；已有 Git 接入项目或生产分支不同的项目会明确失败，不自动修改。部署域名以 Pages API 返回的子域为准，不预定 runweft.pages.dev。
+
+无凭证的开发推送仍完成检查，summary 明确标为“未部署”并提示缺失名称；生产和手动部署缺凭证会失败。Token 仅进入 Pages 准备步骤与官方上传 action，Wrangler 4.146.0 在 runner 临时目录的独立 npm 工程安装，不写入根工程或上传目录。
+
+上传前验证静态文件白名单、npm 元数据、五包完整性字段/精确平台依赖及公开 tarball HEAD；此检查不代替各平台真实安装验收。npm 版本尚未公开时停止；发布完成后运行最新分支对应的工作流，合码后可从最新 main 手动运行。不要重跑旧生产提交。
+
+上传后仅使用 action 返回的唯一部署 URL，确认 preview/production 分类；跟随同一项目域内的 HTML 规范化重定向，有界等待传播并核对全部八个文件的字节摘要与 MIME。Access 保护、错误页面或版本不一致均失败。`website-pages-evidence` 和 `website-static` Actions 产物保留七天，不含凭证或程序包；部署 URL 在 job summary 和 deployment.json 中。
+
+上传结果未知或在线检查失败时，先检查 Cloudflare 控制台和该唯一 URL，核对当前 run 的产物，避免盲目重发；修正后从最新提交运行。无需修改既有 npm 的标签发布规则。
+
+## 其他静态托管
 
 将整个 `dist/website/` 目录部署到静态托管平台，例如 Cloudflare Pages。页面和资源使用相对路径，支持根路径或 `/runweft/` 等子路径，不需要 SPA fallback、Node 生产服务或 HAPI。
 
-HTML/CSS/JS 提供对应 MIME type 和 UTF-8，SVG 使用 image/svg+xml。版本须先在公共 npm 发布并验证可安装，再构建并部署网站；构建本身不检查 registry。域名、TLS、缓存和公开发布由实际托管环境配置，本次尚未在线部署。
+HTML/CSS/JS 提供对应 MIME type 和 UTF-8，SVG 使用 image/svg+xml。版本须先在公共 npm 发布并验证可安装，再构建并部署网站；构建本身不检查 registry。域名、TLS、缓存和公开发布由实际托管环境配置。
 
 ## 自动验收
+
+部署检查使用 Node 内置测试，测试与 CI 都不需要 Bun 依赖：
+
+```sh
+node --test ./website/publish.test.mjs
+node website/build.mjs
+node website/publish.mjs check
+```
+
+最后一步访问公共 npm；API/路由失败路径用专用夹具测试，真实 Cloudflare 部署需 GitHub Secrets 就绪。尚未有实际 Pages 上线证据。
 
 根测试中的独立网站夹具不含 dist/packages，验证无下载产物、非法版本和模板失败保留旧输出。Playwright 使用根工程依赖，在 Linux x64 执行网页与真实 npm 安装验收：
 
