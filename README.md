@@ -2,14 +2,14 @@
 
 让 Codex 和 Claude Code 通过 MCP 委派任务，以 HAPI 内置执行能力运行子会话。
 
-1.1.0 使用明确 Hub、独立用户身份、空间成员权限和中心 Agent 配置。用户通过对话与产品 Skill 完成安装、连接和维护，在 `/hub` 管理机器、runtime、Agent、仓库、个人选择及本人任务；不在项目里维护 Runweft YAML，也不向模型提供身份 token。
+1.1.1 使用明确 Hub、独立用户身份、空间成员权限和中心 Agent 配置。用户通过对话与产品 Skill 完成安装、连接和维护，在 `/hub` 管理机器、runtime、Agent、仓库、个人选择及本人任务；不在项目里维护 Runweft YAML，也不向模型提供身份 token。
 
 支持本机共享目录、本机或远端独立 worktree、附件、代码 bundle 取回、停止和续接。每轮关闭子进程，保留 session 与工作区；只有原生确认历史缺失才重建上下文，未知执行不盲目重发。代码接纳与冲突处理由主 Agent 决定，不自动 push 或合入。
 
-从[产品 Skill](skills/runweft/SKILL.md)和[使用说明](docs/usage.md)接入。[runweft@1.1.0](https://www.npmjs.com/package/runweft/v/1.1.0) 已公开发布；使用 Node.js 20+ 安装：
+从[产品 Skill](skills/runweft/SKILL.md)和[使用说明](docs/usage.md)接入。[runweft@1.1.1](https://www.npmjs.com/package/runweft/v/1.1.1) 使用 Node.js 20+ 从公共 npm 安装：
 
 ```sh
-npm install -g runweft@1.1.0 --registry=https://registry.npmjs.org/ --include=optional &&
+npm install -g runweft@1.1.1 --registry=https://registry.npmjs.org/ --include=optional &&
 runweft --version
 ```
 
