@@ -1,14 +1,16 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
-import { mkdirSync, mkdtempSync, readFileSync, writeFileSync, existsSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync, existsSync, rmSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { atomicWrite } from '../src/config';
 import { freePort } from '../src/services';
 import { hubConnectionPaths } from '../src/hub/resources/connection';
 import { installedBinaries } from './fixtures/installed-binaries.mjs';
 
+import { closeSmoke } from './fixtures/smoke-lifecycle';
+
 mkdirSync('.dev-smoke', { recursive: true });
-const root = mkdtempSync(resolve('.dev-smoke/hub-service-')), home = join(root, 'host'), remote = join(root, 'client');
+const root = mkdtempSync(resolve('.dev-smoke/hub-service-')), home = join(root, 'host'), remote = join(root, 'client'), freshHome = join(root, 'fresh-host');
 const binary = resolve(process.argv[2] ?? 'dist/runweft');
 const env = { ...process.env };
 for (const key of Object.keys(env)) if (key.startsWith('HAPI_') || key.startsWith('RUNWEFT_') || ['CLI_API_TOKEN','DB_PATH','TELEGRAM_BOT_TOKEN'].includes(key)) delete env[key];
@@ -31,7 +33,6 @@ try {
     await cli(home, ['init']); await cli(home, ['config', 'set', 'server.port', String(port)]);
     const initial = await cli(home, ['start']); assert(initial.service.running); assert(!initial.runner.running); assert(!initial.connection.connected);
     await cli(home, ['task', 'list'], 'hub_connection_required');
-    await cli(home, ['data', 'reset', '--apply'], 'reset_service_running');
     const paths = await cli(home, ['paths']), state = JSON.parse(readFileSync(paths.process, 'utf8'));
     assert.equal((await cli(home, ['start'])).service.running, true); assert.equal(JSON.parse(readFileSync(paths.process, 'utf8')).pid, state.pid);
     const rootToken = JSON.parse(readFileSync(join(paths.hapiServer, 'settings.json'), 'utf8')).cliApiToken; secrets.push(rootToken);
@@ -75,25 +76,30 @@ try {
     check('explicit enrolled Runner supervision survives Hub restart; identity and machine remain stable');
     await cli(remote, ['stop']); await cli(home, ['stop']);
     const retained = join(localPaths.taskWorkspaces, 'retained-fixture', 'checkout', 'keep.txt'); atomicWrite(retained, 'KEEP');
-    assert((await cli(home, ['data', 'reset', '--apply'])).applied); assert.equal(readFileSync(retained, 'utf8'), 'KEEP');
-    await cli(home, ['init']); await cli(home, ['config', 'set', 'server.port', String(port)]);
-    assert((await cli(home, ['start'])).service.running);
+    assert.equal(readFileSync(retained, 'utf8'), 'KEEP');
+    await cli(freshHome, ['init']); await cli(freshHome, ['config', 'set', 'server.port', String(port)]);
+    assert((await cli(freshHome, ['start'])).service.running);
     assert.equal((await fetch(url + '/api/auth', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ accessToken: user.token }) })).status, 401);
-    const fresh = await json('/api/runweft/hub/identities', { name: 'after reset' }); secrets.push(fresh.token);
+    const fresh = await json('/api/runweft/hub/identities', { name: 'fresh private Hub' }); secrets.push(fresh.token);
     assert.notEqual(fresh.identity.id, user.identity.id);
-    await cli(home, ['config', 'set', 'hub.url', url]);
-    atomicWrite(hubConnectionPaths(home, url).identityConnection, JSON.stringify({ schemaVersion: 1, hub: url, ownerId: fresh.identity.id,
+    await cli(freshHome, ['config', 'set', 'hub.url', url]);
+    atomicWrite(hubConnectionPaths(freshHome, url).identityConnection, JSON.stringify({ schemaVersion: 1, hub: url, ownerId: fresh.identity.id,
         spaceId: fresh.personalSpace.id, token: fresh.token, requestId: randomUUID(), createdAt: Date.now() }));
-    const freshMachine = await cli(home, ['machine', 'enroll']); assert.notEqual(freshMachine.machineId, enrolled.machineId);
+    const freshMachine = await cli(freshHome, ['machine', 'enroll']); assert.notEqual(freshMachine.machineId, enrolled.machineId);
     secrets.push(JSON.parse(readFileSync(freshMachine.credentialFile, 'utf8')).active.token);
-    assert((await cli(home, ['runner', 'start'])).online);
-    check('stopped prerelease reset preserves worktree bytes; fresh Hub rejects old identity and registers a new machine');
+    assert((await cli(freshHome, ['runner', 'start'])).online);
+    check('explicit stop preserves worktree bytes; independent new Hub rejects foreign identity and registers its own machine');
     evidence.success = true;
 } catch (error) { evidence.error = error instanceof Error ? error.message : String(error); throw error; }
 finally {
-    for (const directory of [remote, home]) {
+    for (const directory of [freshHome, remote, home]) {
         if (!existsSync(join(directory, 'config.yaml'))) continue;
-        try { await cli(directory, ['stop']); } catch (error) { evidence.cleanupErrors.push(String(error)); }
+        try {
+            assert((await cli(directory, ['stop'])).stopped); const stopped = await cli(directory, ['status']); assert(!stopped.service.running && !stopped.runner.running);
+            const paths = await cli(directory, ['paths']);
+            await closeSmoke([paths.identityConnection, paths.machineConnection, paths.pendingConnection,
+                join(paths.hapiClient, 'settings.json'), join(paths.hapiServer, 'settings.json'), join(paths.hapiServer, 'jwt-secret.json')].map(file => () => rmSync(file, { force: true })));
+        } catch (error) { evidence.cleanupErrors.push(String(error)); }
     }
     if (evidence.cleanupErrors.length) { evidence.success = false; process.exitCode = 1; }
     writeFileSync(join(root, 'evidence.json'), JSON.stringify(evidence, null, 2));

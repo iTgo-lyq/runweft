@@ -10,14 +10,14 @@ import { fingerprint, fileNamespace } from '../src/hub/access/transport';
 import { HubStore, createIdentityToken } from '../src/hub/store';
 import { freePort } from '../src/services';
 
+import { closeSmoke, removeSmokeSecrets, startSmokeHapi, stopSmokeProcess } from './fixtures/smoke-lifecycle';
+
 mkdirSync('.dev-smoke', { recursive: true });
 const root = mkdtempSync(resolve('.dev-smoke/hub-access-')), statePath = join(root, 'state.sqlite'), hapiHome = join(root, 'hapi');
 const rootToken = randomBytes(32).toString('base64url'), key = randomBytes(32), hapiPort = await freePort();
 const target = `http://127.0.0.1:${hapiPort}`;
-const environment = { ...process.env, HAPI_HOME: hapiHome, DB_PATH: join(hapiHome, 'hapi.db'), CLI_API_TOKEN: rootToken,
-    HAPI_LISTEN_HOST: '127.0.0.1', HAPI_LISTEN_PORT: String(hapiPort), HAPI_PUBLIC_URL: target, TELEGRAM_BOT_TOKEN: '' };
-const child = Bun.spawn([resolve(process.argv[2] ?? 'dist/hapi'), 'hub'], { env: environment,
-    stdout: Bun.file(join(root, 'hapi-out.log')), stderr: Bun.file(join(root, 'hapi-err.log')) });
+const processes = new Set<ReturnType<typeof Bun.spawn>>();
+let child: Awaited<ReturnType<typeof startSmokeHapi>> | undefined;
 let gateway: Awaited<ReturnType<typeof createAccessGateway>> | undefined, hub: HubStore | undefined;
 const sockets: Socket[] = [], checks: string[] = []; let base = '';
 const evidence: any = { root, success: false, checks, kind: 'real HAPI, source gateway, protocol execution fixture; no model/PTY' };
@@ -41,7 +41,7 @@ async function startGateway() {
     base = `http://127.0.0.1:${(gateway.server.address() as any).port}`;
 }
 try {
-    await eventually(async () => { try { return (await fetch(target + '/health', { signal: AbortSignal.timeout(300) })).ok; } catch { return false; } }, 'native HAPI startup', 30_000);
+    child = await startSmokeHapi(resolve(process.argv[2] ?? 'dist/hapi'), root, process.env, hapiPort, rootToken, processes);
     await startGateway(); hub = new HubStore(statePath);
     const a = hub.createIdentity('machine owner'), b = hub.createIdentity('task owner'), c = hub.createIdentity('other owner');
     const sid = a.personalSpace.id, invitation = hub.invite(a.identity.id, sid, 'member'); hub.acceptInvitation(b.identity.id, invitation.token);
@@ -214,7 +214,11 @@ try {
     evidence.success = true;
 } catch (error) { evidence.error = error instanceof Error ? error.message : String(error); throw error; }
 finally {
-    for (const socket of sockets) socket.disconnect();
-    await gateway?.close(); hub?.close(); child.kill(); await child.exited;
+    const resources: Array<() => void | Promise<void>> = [
+        () => removeSmokeSecrets([join(root, 'hapi', 'settings.json')], processes),
+        async () => { if (child) await stopSmokeProcess(child); }, () => hub?.close(), () => gateway?.close(),
+        ...sockets.map(socket => () => { socket.disconnect(); }),
+    ];
+    try { await closeSmoke(resources); } catch (error) { evidence.success = false; evidence.cleanupErrors = error instanceof AggregateError ? error.errors.map(String) : [String(error)]; process.exitCode = 1; }
     writeFileSync(join(root, 'evidence.json'), JSON.stringify(evidence, null, 2)); console.log('Evidence: ' + root);
 }

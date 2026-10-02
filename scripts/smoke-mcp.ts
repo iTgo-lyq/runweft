@@ -11,6 +11,18 @@ import { freePort } from '../src/services';
 import { codexCatalog } from './fixtures/codex-catalog';
 import pkg from '../package.json';
 
+import { probeMcpProtocol } from './fixtures/mcp-protocol';
+
+if (process.argv.includes('--protocol-only')) {
+    mkdirSync('.dev-smoke', { recursive: true });
+    const root = mkdtempSync(resolve('.dev-smoke/mcp-protocol-'));
+    const binary = resolve(process.argv.slice(2).find(arg => !arg.startsWith('--')) ?? 'dist/runweft');
+    const evidence = await probeMcpProtocol(binary, root);
+    writeFileSync(join(root, 'evidence.json'), JSON.stringify({ success: true, ...evidence }, null, 2));
+    console.log('Evidence: ' + root);
+    process.exit(0);
+}
+
 // Explicit native acceptance using dedicated copies of configuration and existing model login.
 // Not part of credential-free tests; never installs MCP into the user's real native homes.
 const executable = resolve(process.argv[2] ?? 'dist/runweft');
@@ -143,32 +155,6 @@ async function filteredExecution(agent: 'codex' | 'claude', machineId: string, h
     evidence.cases.push({ kind: 'child', mode, agent, sessionId: id, nativeId, filteredStartAndResume: true, stopped: true });
 }
 
-async function compiledCancellation() {
-    let started!: () => void, cancelled!: () => void;
-    const waiting = new Promise<void>(resolve => { started = resolve; }), aborted = new Promise<void>(resolve => { cancelled = resolve; });
-    const paths: string[] = [];
-    const server = Bun.serve({ hostname: '127.0.0.1', port: 0, fetch(request) {
-        const path = new URL(request.url).pathname; paths.push(path);
-        if (path === '/api/runweft/health') return Response.json({ service: 'runweft', protocolVersion: 1, ready: true });
-        assert.equal(path, '/api/auth'); started();
-        return new Promise<Response>(resolve => request.signal.addEventListener('abort', () => { cancelled(); resolve(new Response()); }, { once: true }));
-    } });
-    const home = join(root, 'cancel-client'); cli(home, ['init', '--url', `http://127.0.0.1:${server.port}`]);
-    const transport = new StdioClientTransport({ command: executable, args: ['--home', home, 'mcp', 'serve', '--client', 'codex'],
-        env: Object.fromEntries(Object.entries({ ...env, RUNWEFT_HUB_TOKEN: 'dedicated-cancellation-probe' }).filter(([, value]) => typeof value === 'string')) as Record<string, string>, stderr: 'pipe' });
-    transport.stderr?.on('data', () => {});
-    const client = new Client({ name: 'runweft-cancellation-probe', version: '1' });
-    try {
-        await client.connect(transport);
-        const controller = new AbortController();
-        const call = client.callTool({ name: 'runweft_status', _meta: { threadId: 'protocol-test', sessionId: 'protocol-test', callId: 'protocol-cancel' } }, undefined, { signal: controller.signal }).catch(() => null);
-        await Promise.race([waiting, Bun.sleep(10_000).then(() => { throw new Error('Authentication never started'); })]);
-        controller.abort(); await call;
-        await Promise.race([aborted, Bun.sleep(3_000).then(() => { throw new Error('Cancellation did not abort the HTTP request'); })]);
-        assert.deepEqual(paths, ['/api/runweft/health', '/api/auth']);
-        record('compiled MCP: request cancellation aborts waiting authentication without replay or execution control');
-    } finally { await client.close(); await server.stop(true); }
-}
 
 try {
     const sourceCodex = process.env.CODEX_HOME || join(process.env.HOME!, '.codex');
@@ -211,7 +197,8 @@ try {
         for (const agent of ['codex', 'claude'] as const) await filteredExecution(agent, machineId, home, mode);
     }
     assert.equal(existsSync(auth) ? hashes(auth) : null, authHash, 'Model authentication copy changed during installation');
-    await compiledCancellation();
+    await probeMcpProtocol(executable, join(root, 'protocol'));
+    record('compiled MCP: current identity auth cancellation and EOF abort HTTP; stdout remains protocol only');
     evidence.success = true;
 } catch (error) { evidence.error = error instanceof Error ? error.message : String(error); process.exitCode = 1; }
 finally {

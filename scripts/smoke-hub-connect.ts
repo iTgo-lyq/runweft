@@ -1,12 +1,14 @@
 import assert from 'node:assert/strict';
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, statSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { chromium, type Page } from 'playwright';
 import { Database } from 'bun:sqlite';
 import { freePort } from '../src/services';
 import { hubConnectionPaths } from '../src/hub/resources/connection';
 import { installedBinaries } from './fixtures/installed-binaries.mjs';
+
+import { closeSmoke } from './fixtures/smoke-lifecycle';
 
 const binary = resolve(process.argv[2] ?? 'dist/runweft');
 mkdirSync('.dev-smoke', { recursive: true });
@@ -103,8 +105,16 @@ try {
     check('origin mismatch cannot confirm; CLI output, browser URLs and console contain no identity token, private key or polling secret');
     evidence.success = true;
 } finally {
-    await browser?.close(); database?.close();
-    if (existsSync(join(serverHome, 'config.yaml'))) try { await service(['stop']); } catch (error) { evidence.cleanupErrors.push(String(error)); }
+    let serviceStopped = !existsSync(join(serverHome, 'config.yaml'));
+    const resources: Array<() => void | Promise<void>> = [
+        async () => { assert(serviceStopped, 'Service still running; connection secrets retained');
+            const paths = hubConnectionPaths(home, url);
+            await closeSmoke([paths.pendingConnection, paths.identityConnection, paths.machineConnection]
+                .map(file => () => rmSync(file, { force: true }))); },
+        async () => { if (!serviceStopped) { await service(['stop']); serviceStopped = true; } },
+        () => database?.close(), async () => { await browser?.close(); },
+    ];
+    try { await closeSmoke(resources); } catch (error) { evidence.cleanupErrors.push(...(error instanceof AggregateError ? error.errors.map(String) : [String(error)])); }
     if (evidence.cleanupErrors.length) { evidence.success = false; process.exitCode = 1; }
     writeFileSync(join(root, 'evidence.json'), JSON.stringify(evidence, null, 2) + '\n', { mode: 0o600 });
     console.log(`Evidence: ${join(root, 'evidence.json')}`);

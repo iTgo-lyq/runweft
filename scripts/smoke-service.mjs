@@ -1,16 +1,17 @@
 import assert from 'node:assert/strict';
 import { spawn, spawnSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { createServer } from 'node:net';
+import { verifyServiceVersionDiagnosis } from './fixtures/service-version-probe.mjs';
 import { installedBinaries } from './fixtures/installed-binaries.mjs';
 
 const executable = resolve(process.argv[2] ?? 'dist/runweft');
 const parent = resolve(process.env.RUNWEFT_SMOKE_ROOT ?? '.dev-smoke');
 mkdirSync(parent, { recursive: true });
 const root = mkdtempSync(join(parent, 'service-'));
-const home = join(root, 'host'), remote = join(root, 'client'), sentinel = join(root, 'must-not-be-used');
+const home = join(root, 'host'), remote = join(root, 'client'), freshHome = join(root, 'fresh-host'), sentinel = join(root, 'must-not-be-used');
 const env = { ...process.env };
 for (const key of Object.keys(env)) if (key.startsWith('RUNWEFT_') || key.startsWith('HAPI_') || ['CLI_API_TOKEN', 'DB_PATH', 'TELEGRAM_BOT_TOKEN'].includes(key)) delete env[key];
 Object.assign(env, { HAPI_HOME: sentinel, DB_PATH: join(sentinel, 'hapi.db'), CLI_API_TOKEN: 'unused-smoke-value',
@@ -66,8 +67,6 @@ try {
     const state = JSON.parse(readFileSync(paths.process, 'utf8'));
     assert(run(home, ['start']).service.running); assert.equal(JSON.parse(readFileSync(paths.process, 'utf8')).pid, state.pid);
     run(home, ['task', 'list'], { failure: 'hub_connection_required' });
-    assert.equal(run(home, ['data', 'reset']).applied, false);
-    run(home, ['data', 'reset', '--apply'], { failure: 'reset_service_running' });
     const rootToken = JSON.parse(readFileSync(join(paths.hapiServer, 'settings.json'), 'utf8')).cliApiToken; secrets.push(rootToken);
     assert.equal((await request(url + '/api/auth', { accessToken: rootToken })).status, 401);
     assert.notEqual((await fetch(url + '/runweft/')).status, 200);
@@ -75,7 +74,9 @@ try {
     assert((await (await fetch(url + '/hub')).text()).includes('console-navigation'));
     assert.equal((await fetch(url + '/api/runweft/tasks/overview')).status, 401);
     assert(!existsSync(sentinel));
-    record('default Hub has no implicit user or Runner; root and old routes rejected; running reset refuses before deletion');
+    record('default Hub has no implicit user or Runner; root and old routes rejected');
+    evidence.versionMismatch = await verifyServiceVersionDiagnosis(executable, root, env, state, url);
+    record('compiled status and doctor diagnose advertised running service version mismatch and require restart');
 
     const created = await request(url + '/api/runweft/hub/identities', { name: 'installed service' });
     assert.equal(created.status, 201); const user = created.body; secrets.push(user.token);
@@ -127,25 +128,38 @@ try {
     assert(run(home, ['doctor']).ok);
     foreground.kill('SIGTERM');
     await until(async () => !existsSync(paths.process) && await down(url + '/health'));
+    await until(async () => foreground.exitCode !== null || foreground.signalCode !== null);
+    assert(foreground.exitCode === 0 || foreground.signalCode === 'SIGTERM');
     record('SIGTERM closes owned private/public services and launcher forwards foreground signals without credential logs');
 
-    assert(run(home, ['data', 'reset', '--apply']).applied);
     assert.equal(readFileSync(join(localPaths.taskWorkspaces, 'retained.txt'), 'utf8'), 'KEEP_WORKTREE');
     assert.equal(readFileSync(join(localPaths.artifactTransfers, 'pending.txt'), 'utf8'), 'KEEP_PENDING');
     assert.equal(readFileSync(join(paths.backups, 'keep.txt'), 'utf8'), 'KEEP_BACKUP');
-    assert(!existsSync(localPaths.identityConnection)); assert(!existsSync(localPaths.machineConnection));
-    run(home, ['init']); run(home, ['config', 'set', 'server.port', String(port)]); run(home, ['start']);
+    assert.deepEqual(readFileSync(localPaths.identityConnection), identityBytes); assert.deepEqual(readFileSync(localPaths.machineConnection), machineBytes);
+    run(freshHome, ['init']); run(freshHome, ['config', 'set', 'server.port', String(port)]); run(freshHome, ['start']);
     assert.equal((await request(url + '/api/auth', { accessToken: user.token })).status, 401);
-    const fresh = (await request(url + '/api/runweft/hub/identities', { name: 'fresh after reset' })).body; secrets.push(fresh.token);
-    assert.notEqual(fresh.identity.id, user.identity.id); connect(home, url, fresh);
-    assert.notEqual(run(home, ['machine', 'enroll']).machineId, machine.machineId);
-    record('explicit stopped reset preserves worktrees, pending transfers and backups; old identity is rejected and fresh enrollment works');
+    const fresh = (await request(url + '/api/runweft/hub/identities', { name: 'fresh private Hub' })).body; secrets.push(fresh.token);
+    assert.notEqual(fresh.identity.id, user.identity.id); connect(freshHome, url, fresh);
+    assert.notEqual(run(freshHome, ['machine', 'enroll']).machineId, machine.machineId);
+    record('explicit stop preserves worktrees, pending transfers and backups; independent new Hub rejects foreign identity and enrolls fresh machine');
     evidence.success = true;
 } catch (error) { evidence.error = error.message; throw error; }
 finally {
-    if (foreground && foreground.exitCode === null && foreground.signalCode === null) foreground.kill('SIGTERM');
-    for (const directory of [remote, home]) if (existsSync(join(directory, 'config.yaml'))) {
-        try { run(directory, ['stop']); } catch (error) { evidence.cleanupErrors.push(error.message); }
+    if (foreground && foreground.exitCode === null && foreground.signalCode === null) {
+        const exited = new Promise(resolve => foreground.once('exit', resolve)); foreground.kill('SIGTERM');
+        const stopped = await Promise.race([exited.then(() => true), new Promise(resolve => setTimeout(() => resolve(false), 5000))]);
+        if (!stopped) { foreground.kill('SIGKILL'); await exited; evidence.cleanupErrors.push('Foreground required SIGKILL'); }
+        else if (foreground.exitCode !== 0 && foreground.signalCode !== 'SIGTERM') evidence.cleanupErrors.push('Foreground exited abnormally');
+    }
+    for (const directory of [freshHome, remote, home]) if (existsSync(join(directory, 'config.yaml'))) {
+        try {
+            assert(run(directory, ['stop']).stopped); const stopped = run(directory, ['status']); assert(!stopped.service.running && !stopped.runner.running);
+            const paths = run(directory, ['paths']);
+            for (const file of [paths.identityConnection, paths.machineConnection, paths.pendingConnection,
+                join(paths.hapiClient, 'settings.json'), join(paths.hapiServer, 'settings.json'), join(paths.hapiServer, 'jwt-secret.json')]) {
+                try { rmSync(file, { force: true }); } catch (error) { evidence.cleanupErrors.push(error.message); }
+            }
+        } catch (error) { evidence.cleanupErrors.push(error.message); }
     }
     if (evidence.cleanupErrors.length) { evidence.success = false; process.exitCode = 1; }
     writeFileSync(join(root, 'evidence.json'), JSON.stringify(evidence, null, 2));

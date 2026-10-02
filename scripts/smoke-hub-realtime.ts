@@ -8,21 +8,22 @@ import { createAccessGateway } from '../src/hub/access/http';
 import { HubStore, createIdentityToken } from '../src/hub/store';
 import { freePort } from '../src/services';
 
+import { closeSmoke, removeSmokeSecrets, startSmokeHapi, stopSmokeProcess } from './fixtures/smoke-lifecycle';
+
 mkdirSync('.dev-smoke', { recursive: true });
 const root = mkdtempSync(resolve('.dev-smoke/hub-realtime-')), statePath = join(root, 'state.sqlite');
 const nativeToken = randomBytes(32).toString('base64url'), port = await freePort(), target = `http://127.0.0.1:${port}`;
 const hapiHome = join(root, 'hapi'), binary = resolve(process.argv[2] ?? 'dist/hapi');
-const hapi = Bun.spawn([binary, 'hub'], { env: { ...process.env, HAPI_HOME: hapiHome, DB_PATH: join(hapiHome, 'hapi.db'),
-    CLI_API_TOKEN: nativeToken, HAPI_LISTEN_HOST: '127.0.0.1', HAPI_LISTEN_PORT: String(port), HAPI_PUBLIC_URL: target, TELEGRAM_BOT_TOKEN: '' },
-    stdout: Bun.file(join(root, 'hapi-out.log')), stderr: Bun.file(join(root, 'hapi-err.log')) });
+const processes = new Set<ReturnType<typeof Bun.spawn>>();
+let hapi: Awaited<ReturnType<typeof startSmokeHapi>> | undefined;
 let gateway: Awaited<ReturnType<typeof createAccessGateway>> | undefined, hub: HubStore | undefined;
 let runner: ReturnType<typeof Bun.spawn> | undefined, base = '', heartbeat: ReturnType<typeof setInterval> | undefined;
 const sockets: Socket[] = [], controllers: AbortController[] = [], checks: string[] = [];
 const evidence: any = { root, checks, success: false, kind: 'real HAPI + unmodified Runner; session and terminal protocol fixtures, no model/PTY' };
 const check = (name: string) => { checks.push(name); console.log('PASS ' + name); };
-async function timeout<T>(promise: Promise<T>, ms = 4000): Promise<T> {
+async function timeout<T>(promise: Promise<T>, ms = 4000, label = 'Timed out'): Promise<T> {
     let timer: ReturnType<typeof setTimeout> | undefined;
-    try { return await Promise.race([promise, new Promise<never>((_, reject) => { timer = setTimeout(() => reject(new Error('Timed out')), ms); })]); }
+    try { return await Promise.race([promise, new Promise<never>((_, reject) => { timer = setTimeout(() => reject(new Error(label)), ms); })]); }
     finally { clearTimeout(timer); }
 }
 async function until(fn: () => Promise<boolean>, message: string, ms = 15_000) {
@@ -37,7 +38,7 @@ async function connect(namespace: string, auth: object, transports = ['websocket
     const socket = io(base + namespace, { auth, transports, reconnection: false, forceNew: true, timeout: 3000 }); sockets.push(socket);
     await timeout(new Promise<void>((yes, no) => { socket.once('connect', () => yes()); socket.once('connect_error', no); })); return socket;
 }
-const event = (socket: Socket, name: string) => timeout(new Promise<any>(resolve => socket.once(name, resolve)));
+const event = (socket: Socket, name: string) => timeout(new Promise<any>(resolve => socket.once(name, resolve)), 4000, 'Timed out waiting for ' + name);
 const ping = (socket: Socket) => timeout(new Promise<void>(resolve => socket.emit('ping', resolve)));
 async function denied(namespace: string, auth: object) {
     await assert.rejects(connect(namespace, auth));
@@ -64,7 +65,7 @@ async function stream(token: string, query = '', lastId?: string) {
     return { frames, controller, isClosed: () => closed, subscription: frames[0].data.data.subscriptionId };
 }
 try {
-    await until(async () => { try { return (await fetch(target + '/health', { signal: AbortSignal.timeout(300) })).ok; } catch { return false; } }, 'HAPI startup', 30_000);
+    hapi = await startSmokeHapi(resolve(process.argv[2] ?? 'dist/hapi'), root, process.env, port, nativeToken, processes);
     gateway = await createAccessGateway({ host: '127.0.0.1', port: 0, target, rootToken: nativeToken, key: randomBytes(32), statePath });
     base = `http://127.0.0.1:${(gateway.server.address() as any).port}`; hub = new HubStore(statePath);
     const a = hub.createIdentity('machine owner'), b = hub.createIdentity('task owner'), c = hub.createIdentity('unrelated'), sid = a.personalSpace.id;
@@ -141,19 +142,25 @@ try {
     assert.equal((await api(`/api/sessions/${sa}`, aj)).session.id, sa);
     check('native machine RPC/ack succeeds; foreign RPC registration, unregistration, heartbeat and metadata machine changes are rejected');
 
-    childB.on('terminal:open', data => { childB.emit('terminal:ready', data); childB.emit('terminal:output', { ...data, data: 'owned terminal output' }); });
-    childB.on('agent-terminal:refresh', data => childB.emit('agent-terminal:output', { ...data, terminalId: 'agent', data: 'owned agent output' }));
-    const viewer = await connect('/terminal', { token: bj }), wrongViewer = await connect('/terminal', { token: aj });
-    const output = event(viewer, 'terminal:output'); viewer.emit('terminal:create', { sessionId: sb, terminalId: 'term-b', cols: 80, rows: 24 });
+    childA.on('terminal:open', data => { childA.emit('terminal:ready', data); childA.emit('terminal:output', { ...data, data: 'owned terminal output' }); });
+    childA.on('agent-terminal:refresh', data => childA.emit('agent-terminal:output', { ...data, terminalId: 'agent', data: 'owned agent output' }));
+    childB.on('agent-terminal:refresh', data => childB.emit('agent-terminal:output', { ...data, terminalId: 'agent', data: 'readonly agent output' }));
+    const memberViewer = await connect('/terminal', { token: bj }), ownerViewer = await connect('/terminal', { token: aj });
+    // Interactive shell/input requires both session and machine ownership. Keep B's read-only viewer for later revocation checks.
+    const output = event(ownerViewer, 'terminal:output'); ownerViewer.emit('terminal:create', { sessionId: sa, terminalId: 'term-a', cols: 80, rows: 24 });
     assert.equal((await output).data, 'owned terminal output');
-    const input = event(childB, 'terminal:write'); viewer.emit('terminal:write', { terminalId: 'term-b', data: 'input-b' }); assert.equal((await input).data, 'input-b');
-    const agentOutput = event(viewer, 'agent-terminal:output'); viewer.emit('agent-terminal:subscribe', { sessionId: sb }); assert.equal((await agentOutput).data, 'owned agent output');
-    const agentInput = event(childB, 'agent-terminal:input'); viewer.emit('agent-terminal:input', { sessionId: sb, data: 'x' }); assert.equal((await agentInput).data, 'x');
+    const input = event(childA, 'terminal:write'); ownerViewer.emit('terminal:write', { terminalId: 'term-a', data: 'input-a' }); assert.equal((await input).data, 'input-a');
+    const agentOutput = event(ownerViewer, 'agent-terminal:output'); ownerViewer.emit('agent-terminal:subscribe', { sessionId: sa }); assert.equal((await agentOutput).data, 'owned agent output');
+    const agentInput = event(childA, 'agent-terminal:input'); ownerViewer.emit('agent-terminal:input', { sessionId: sa, data: 'x' }); assert.equal((await agentInput).data, 'x');
+    const readonly = event(memberViewer, 'agent-terminal:output'); memberViewer.emit('agent-terminal:subscribe', { sessionId: sb }); assert.equal((await readonly).data, 'readonly agent output');
+    const shellDenied = event(memberViewer, 'error'); memberViewer.emit('terminal:create', { sessionId: sb, terminalId: 'term-b', cols: 80, rows: 24 }); await shellDenied;
+    const inputDenied = event(memberViewer, 'error'); memberViewer.emit('agent-terminal:input', { sessionId: sb, data: 'denied' }); await inputDenied;
     for (const data of [{ sessionId: sb, terminalId: 'term-b', cols: 80, rows: 24 }, { sessionId: sc, terminalId: 'term-c', cols: 80, rows: 24 }]) {
-        const error = event(wrongViewer, 'error'); wrongViewer.emit('terminal:create', data); await error;
+        const error = event(ownerViewer, 'error'); ownerViewer.emit('terminal:create', data); await error;
     }
-    const wrongWrite = event(wrongViewer, 'error'); wrongViewer.emit('terminal:write', { terminalId: 'term-b', data: 'bad' }); await wrongWrite;
-    check('native terminal and agent terminal deliver bidirectional data only for the session owner, not the execution machine owner');
+    const wrongWrite = event(memberViewer, 'error'); memberViewer.emit('terminal:write', { terminalId: 'term-a', data: 'bad' }); await wrongWrite;
+    const foreignRead = event(ownerViewer, 'error'); ownerViewer.emit('agent-terminal:subscribe', { sessionId: sb }); await foreignRead;
+    check('interactive terminal/agent input require session and machine ownership; B can subscribe to own output but cannot get A shell, and A cannot read B session');
 
     const ae = await stream(aj), be = await stream(bj), ce = await stream(cj);
     for (const [socket, id] of [[childA, sa], [childB, sb], [childC, sc]] as const) { socket.emit('message', { sid: id, message: { role: 'agent', content: { type: 'text', text: 'private-' + id } } }); await ping(socket); }
@@ -232,21 +239,21 @@ try {
     const runnerHome = join(root, 'runner'); mkdirSync(runnerHome);
     writeFileSync(join(runnerHome, 'settings.json'), JSON.stringify({ machineId: 'machine-runner', cliApiToken: mr.token }));
     runner = Bun.spawn([binary, 'runner', 'start-sync'], { env: { ...process.env, HAPI_HOME: runnerHome, CLI_API_TOKEN: mr.token,
-        HAPI_API_URL: base, HAPI_DISABLE_VERSION_HANDOFF: '1' }, stdout: Bun.file(join(root, 'runner-out.log')), stderr: Bun.file(join(root, 'runner-err.log')) });
+        HAPI_API_URL: base, HAPI_DISABLE_VERSION_HANDOFF: '1' }, stdout: Bun.file(join(root, 'runner-out.log')), stderr: Bun.file(join(root, 'runner-err.log')) }); processes.add(runner);
     await until(async () => (await api('/api/machines', aj)).machines.some((m: any) => m.id === 'machine-runner' && m.active), 'unmodified Runner heartbeat', 30_000);
     assert.equal((await api('/api/machines/machine-runner/list-directory', aj, { path: root })).success, true);
-    runner.kill(); await runner.exited; runner = undefined;
+    await stopSmokeProcess(runner); runner = undefined;
     check('unmodified compiled Runner registers with an opaque machine token, heartbeats and handles native directory RPC');
 
     const replacementB = createIdentityToken();
-    const disconnect = event(viewer, 'disconnect'); hub.rotate(b.identity, b.token, replacementB);
+    const disconnect = event(memberViewer, 'disconnect'); hub.rotate(b.identity, b.token, replacementB);
     await disconnect; await until(async () => replay.isClosed(), 'rotated JWT stops idle SSE');
     const machineDisconnect = event(childC, 'disconnect'); gateway.store.revoke(mc.id); await machineDisconnect;
     check('identity rotation closes idle terminal/SSE and machine revocation closes already-connected sessions');
     const bNext = (await api('/api/auth', '', { accessToken: replacementB, spaceId: sid })).token;
-    const memberStream = await stream(bNext), memberViewer = await connect('/terminal', { token: bNext });
-    memberViewer.emit('agent-terminal:subscribe', { sessionId: sb });
-    const memberGone = event(memberViewer, 'disconnect'), machineChildGone = event(childB, 'disconnect');
+    const memberStream = await stream(bNext), rejoinedViewer = await connect('/terminal', { token: bNext });
+    rejoinedViewer.emit('agent-terminal:subscribe', { sessionId: sb });
+    const memberGone = event(rejoinedViewer, 'disconnect'), machineChildGone = event(childB, 'disconnect');
     hub.changeMember(a.identity.id, sid, b.identity.id, null);
     await Promise.all([memberGone, machineChildGone]); await until(async () => memberStream.isClosed(), 'removed member SSE closes');
     check('space removal closes both user subscriptions and the machine socket assigned to that member session');
@@ -275,8 +282,13 @@ try {
     evidence.success = true;
 } catch (error) { evidence.error = error instanceof Error ? error.message : String(error); throw error; }
 finally {
-    clearInterval(heartbeat); for (const c of controllers) c.abort(); for (const s of sockets) s.disconnect();
-    if (runner) { runner.kill(); await runner.exited; }
-    await gateway?.close(); hub?.close(); hapi.kill(); await hapi.exited;
+    const resources: Array<() => void | Promise<void>> = [
+        () => removeSmokeSecrets([join(root, 'hapi', 'settings.json'), join(root, 'runner', 'settings.json')], processes),
+        async () => { if (hapi) await stopSmokeProcess(hapi); }, () => hub?.close(), () => gateway?.close(),
+        async () => { if (runner) await stopSmokeProcess(runner); },
+        () => { clearInterval(heartbeat); }, ...controllers.map(c => () => c.abort()),
+        ...sockets.map(socket => () => { socket.disconnect(); }),
+    ];
+    try { await closeSmoke(resources); } catch (error) { evidence.success = false; evidence.cleanupErrors = error instanceof AggregateError ? error.errors.map(String) : [String(error)]; process.exitCode = 1; }
     writeFileSync(join(root, 'evidence.json'), JSON.stringify(evidence, null, 2)); console.log('Evidence: ' + root);
 }
