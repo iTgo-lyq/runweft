@@ -46,7 +46,7 @@ if (expires(token) <= Date.now()) {
                 const credential = storageGet.call(sessionStorage, sessionKey) ?? '';
                 const response = await fetch(this.url, { credentials: 'omit', redirect: 'error', signal: this.abort.signal,
                     headers: { authorization: `Bearer ${credential}`, accept: 'text/event-stream' } });
-                if (response.status === 401) { location.replace('/hub#native-expired'); return; }
+                if (response.status === 401) { storageRemove.call(sessionStorage, sessionKey); location.replace('/hub#native-expired'); return; }
                 if (!response.ok || !response.body || !response.headers.get('content-type')?.includes('text/event-stream')) throw new Error('Hub event stream unavailable.');
                 this.readyState = 1; this.emit(new Event('open'));
                 const reader = response.body.getReader(), decoder = new TextDecoder();

@@ -1,10 +1,5 @@
 import { afterEach, expect, test } from 'bun:test';
-import { chmodSync, readFileSync, writeFileSync } from 'node:fs';
-import { join, resolve } from 'node:path';
-import { SignJWT } from 'jose';
 import { resourceFixture } from './resources-fixture';
-import { fixture } from './helpers';
-import { browserAddress } from '../src/service-commands';
 import { DashboardClient, LatestRead, LoginRequired, codeText, consumeUrlToken, filesText, hapiLink, stopText, tokenKey } from '../src/dashboard/app';
 
 const cleanups: (() => Promise<void> | void)[] = [];
@@ -104,22 +99,4 @@ test('labels distinguish retained sessions, uncertain starts, delivery failures 
     expect(codeText({ status: 'not_applicable', sealing_status: null, ref: null, result_head: null, storage: null, error: null, next: null })).toBe('不适用');
     expect(filesText({ status: 'none', retention: 'retained', pending: 0, count: 0, available: 0, error: null })).toBe('未声明');
     expect(filesText({ status: 'delivered', retention: 'released', pending: 0, count: 1, available: 1, error: null })).toBe('已释放');
-});
-
-test('open uses public Hub entry and never puts a credential in browser arguments', async () => {
-    const server = Bun.serve({ hostname: '127.0.0.1', port: 0, fetch: () => Response.json({ service: 'runweft', protocolVersion: 1 }) });
-    cleanups.push(() => server.stop(true));
-    const address = await browserAddress(server.url.origin);
-    expect(address).toEqual({ url: server.url.origin + '/hub', publicUrl: server.url.origin + '/hub' });
-    expect((await browserAddress(server.url.origin, true)).url).toBe(server.url.origin + '/');
-    const root = fixture('dashboard-open'), captured = join(root, 'browser-url');
-    const command = join(root, process.platform === 'darwin' ? 'open' : 'xdg-open');
-    writeFileSync(command, '#!/usr/bin/env node\nimport { writeFileSync } from "node:fs"; writeFileSync(process.env.DASHBOARD_OPEN_CAPTURE, process.argv[2]);\n'); chmodSync(command, 0o755);
-    const run = Bun.spawn([process.execPath, resolve('src/cli.ts'), '--home', root, '--json', 'open'], {
-        env: { ...process.env, PATH: `${root}:${process.env.PATH}`, RUNWEFT_MODE: 'hub', RUNWEFT_HUB_URL: server.url.origin, RUNWEFT_HUB_TOKEN: 'legacy-secret', DASHBOARD_OPEN_CAPTURE: captured }, stdout: 'pipe', stderr: 'pipe',
-    });
-    const stdout = await new Response(run.stdout).text(), stderr = await new Response(run.stderr).text();
-    expect(await run.exited).toBe(0); expect(stderr).toBe('');
-    expect(JSON.parse(stdout)).toEqual({ opened: true, url: server.url.origin + '/hub' });
-    expect(readFileSync(captured, 'utf8')).toBe(server.url.origin + '/hub');
 });

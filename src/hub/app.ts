@@ -67,14 +67,18 @@ function showEntry() {
     for (const id of ['identity-name', 'identity-id', 'space-name', 'space-id', 'members', 'invitations', 'spaces']) $(id).replaceChildren();
     renderConnection();
 }
+let renderedIdentityToken = '';
 async function refresh() {
-    clearConsole(); domainTokens.clear();
+    if (renderedIdentityToken !== saved.token || (selected && selected.id !== saved.spaceId)) clearConsole();
+    domainTokens.clear();
     identity = (await api('/identity')).identity;
     spaces = (await api('/spaces')).spaces;
     $('entry').hidden = true; $('workspace').hidden = false; $('logout').hidden = false;
     $('headline').textContent = '资源与协作'; $('intro').textContent = '机器 → Runtime → Agent → 任务。配置属于 Hub，执行留在你选择的机器。';
     $('identity-name').textContent = identity!.name; $('identity-id').textContent = identity!.id; input('identity-name-input').value = identity!.name;
+    const previousSpaceId = selected?.id;
     selected = spaces.find(space => space.id === saved.spaceId) ?? spaces[0];
+    if (previousSpaceId !== selected?.id) clearConsole();
     saved.spaceId = selected?.id; persist();
     await refreshConnection();
     $('spaces').replaceChildren(...spaces.map(space => {
@@ -127,6 +131,7 @@ async function refresh() {
         return node;
     }) : [text('p', '没有待使用的邀请。', 'hint')]));
     const currentToken = saved.token, currentSpace = space.id;
+    renderedIdentityToken = saved.token;
     await mountConsole({ userId: identity!.id, spaceId: space.id, members: members.members, spaces, action, confirm, notice,
         openNative: async (sessionId, files = false) => {
             if (!/^[A-Za-z0-9_-]+$/.test(sessionId)) throw new Error('无效原生会话 ID。');

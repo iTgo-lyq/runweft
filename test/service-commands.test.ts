@@ -1,9 +1,13 @@
-import { expect, test } from 'bun:test';
+import { afterEach, expect, test } from 'bun:test';
 import { spawn } from 'node:child_process';
 import { chmodSync, existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { fixture } from './helpers';
 import { requireRunweft } from '../src/services';
+import { browserAddress } from '../src/service-commands';
+
+const cleanups: (() => void | Promise<void>)[] = [];
+afterEach(async () => { for (const cleanup of cleanups.splice(0).reverse()) await cleanup(); });
 
 test('HAPI passthrough preserves argv, exit status and signals without a shell', async () => {
     const root = fixture('hapi-passthrough');
@@ -49,4 +53,22 @@ test('a plain HAPI or unrelated Hub produces an actionable deployment diagnosis'
     try {
         await expect(requireRunweft(`http://127.0.0.1:${server.port}`)).rejects.toMatchObject({ code: 'runweft_unavailable' });
     } finally { await server.stop(true); }
+});
+
+test('open uses public Hub entry and never puts a credential in browser arguments', async () => {
+    const server = Bun.serve({ hostname: '127.0.0.1', port: 0, fetch: () => Response.json({ service: 'runweft', protocolVersion: 1 }) });
+    cleanups.push(() => server.stop(true));
+    const address = await browserAddress(server.url.origin);
+    expect(address).toEqual({ url: server.url.origin + '/hub', publicUrl: server.url.origin + '/hub' });
+    expect((await browserAddress(server.url.origin, true)).url).toBe(server.url.origin + '/');
+    const root = fixture('dashboard-open'), captured = join(root, 'browser-url');
+    const command = join(root, process.platform === 'darwin' ? 'open' : 'xdg-open');
+    writeFileSync(command, '#!/usr/bin/env node\nimport { writeFileSync } from "node:fs"; writeFileSync(process.env.DASHBOARD_OPEN_CAPTURE, process.argv[2]);\n'); chmodSync(command, 0o755);
+    const run = Bun.spawn([process.execPath, resolve('src/cli.ts'), '--home', root, '--json', 'open'], {
+        env: { ...process.env, PATH: `${root}:${process.env.PATH}`, RUNWEFT_MODE: 'hub', RUNWEFT_HUB_URL: server.url.origin, RUNWEFT_HUB_TOKEN: 'legacy-secret', DASHBOARD_OPEN_CAPTURE: captured }, stdout: 'pipe', stderr: 'pipe',
+    });
+    const stdout = await new Response(run.stdout).text(), stderr = await new Response(run.stderr).text();
+    expect(await run.exited).toBe(0); expect(stderr).toBe('');
+    expect(JSON.parse(stdout)).toEqual({ opened: true, url: server.url.origin + '/hub' });
+    expect(readFileSync(captured, 'utf8')).toBe(server.url.origin + '/hub');
 });

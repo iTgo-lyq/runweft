@@ -126,3 +126,20 @@ D最终自检：remote-native o1jkVo默认八组；remote-tasks WjiLDJ默认两r
 | worktree-tasks / worktree-lifecycle | compiled Task双runtime工程/skill/project MCP和两轮Git seal；restart第三轮保ignored依赖/原记忆且无新commit，准备取消无模型、父推进仍固定base；ignored拒删/restart后显式discard、refs/report保留与后续send拒绝 | root 8sbJQL→yMsL7n，六实际模型轮/两准备取消；终结ownedRoot回收，原evidence紧凑保留 |
 
 上述真实运行不降低矩阵或放宽权限。后续仅remote snapshot/fetch修订精确校验和若干凭据副本登记窄修的版本边界见Execution；最终同候选验证统一由T13完成。当前stage格式仍18，唯一schema19及无迁移/无reset行为由T14实施，不提前声称已完成。
+
+## T7 当前浏览器接替映射（实现者自检；独立根验收见Execution）
+
+| 原有效保障 | 当前具体接替 | 自检层级/边界 |
+| --- | --- | --- |
+| dashboard HTTP公开HTML/CSS/JS、CSP/referrer/cache、GET/HEAD/405/未知文件、数据401；open无凭据argv | hub-console.test静态资产矩阵；service-commands原完整open；真实console pageErrors | 根9pass127expect，当前模块；旧dashboard其他消费者T9退役 |
+| 旧根登录/URLtoken/重试的安全目标：成功才保存、拒绝不覆盖、不循环/不新建、同origin原生链接不携secret | console-smoke合法形状无效identity导入一次read/零create/无保存；consoleTasks native popup/全request URL、header900s user×space、sessionStorage/opener、本机语言设置、rotation与expiry | 原共享root/localStorage与自动续期协议退役，不复活旧认证；当前Playwright真实行为 |
+| 旧LatestRead迟到成功/失败、busy/cancel不复活 | consoleTasks实际served console模块+真实授权HTTP，clear后两种迟到响应不恢复content/navigation/notice；实际UI busy控件禁用与读调用不重复 | 既有generation/action，无新框架；不冒称普通用户可并发点击disabled控件 |
+| unknown非成功、未确认/明确未启动/停止、code不适用、files未声明/已释放 | 当前tasks-page标签函数及根精确用例；consoleTasks已授权overview DOM投影状态/转义；实际引擎数据语义仍由T2根测试保障 | 额外状态是浏览器投影fixture，未播种可执行unknown业务任务 |
+| 组合筛选、页重置/前后页、无匹配/真正空scope、刷新503保数据/错误清除、报告/Agent/summary/hint转义、刷新保轮次与展开 | consoleTasks 27owner/1member、workspace+parent+status、25/50页、当前新空space、local/global/detail503、长报告两round/16K、当前UI文字节点 | 当前真实身份/space权限；新增empty space经当前HTTP，非假权限 |
+| 375/1200无横向溢出、长报告/展开JSON、键盘焦点 | consoleTasks两宽度scrollWidth与真实Tab/Shift+Tab computed outline；hub独立context390px/desktop与键盘skip | Playwright实际行为，S12明确排除，保原根CI安全字符串断言 |
+| 原native retained/archived真实history/库存不变、无再登录 | dashboard全部source argv由consoleHistory逐项严格读取当前hub-native-mcp envelope，serverHome匹配paths，隔离复制当前DB，12case真实archived/title/非空message/API读取+reload；私有副本库存前后相等，原6DB/sidecar存在/mode/size/hash不变 | iFQ4mA→JFXZGU/Jiou6Z两次独立source消费成功，原source不修改不清；不是active RPCfixture替代历史 |
+| 原current console配置、权限、CAS、失回执/重名、分享/治理、原生审批/文件/SSE、foreign404/managed409/terminaldeny/16min | 现有业务断言保留在console-smoke及consoleTasks，新增rotation实际401清短凭据、独立身份不受影响、明确重开新JWT且不续期 | hub-console X0kcqD17组；dashboard同17组并汇总子historyResults；hub6cHnor8组；candidate432a7726/bdf706d7 |
+
+`test:hub-console` 保留单binary与相邻HAPI选择；`test:dashboard` 保留binary、显式HAPI、全部evidence argv，顶层success只在所有source成功后为true。RUNWEFT_SMOKE_CHROMIUM从母进程用于独立Chromium；child隔离RUNWEFT_/HAPI_/CLI_API_TOKEN/DB_PATH/TELEGRAM_BOT_TOKEN。fixture进程停止后清本次秘密，成功回收home/复制DB；截图/evidence紧凑保留。jSgCqe由主agent在全部浏览器验收后调用最终终结函数回收，只留原evidence；实施者没有擅自删除该源。
+
+T7 final consumer现在接在全部historyResults成功之后：全部argv先验证，随后按成功当前hub-native-mcp root去重停止home/确认所有host PID消失，回收仅本次root非evidence数据；原evidence保持原样，补充sourceCleanup由顶层记录并参与success。源数据库不变检查截止回收前，不把终结消费后的删除称为“source永远只读”。根17+12浏览器验收后授权本窄动作，实现者未自行清jSgCqe；根已直接以重复cleanup argv调用最终函数，验证只清一次、24记录PID退出、原evidence不变。最终T13跑producer→browser→cleanup完整链。

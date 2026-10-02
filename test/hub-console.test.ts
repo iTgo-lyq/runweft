@@ -6,6 +6,7 @@ import { hubResourceFixture } from './hub-resources-fixture';
 import { until } from './helpers';
 import { authorizeTerminal } from '../src/hub/access/sockets';
 import { createIdentityToken } from '../src/hub/store';
+import { stopText, codeText, filesText } from '../src/hub/tasks-page';
 
 const cleanups: (() => void | Promise<void>)[] = [];
 afterEach(async () => { for (const cleanup of cleanups.splice(0).reverse()) await cleanup(); });
@@ -99,4 +100,34 @@ test('owned sessions on shared machines never grant terminal input, and own term
     authorizeTerminal(fixture.gateway.store, fixture.actor, 'own-terminal', (_binding, method, suffix) => { seen.push(`${method}:${suffix}`); }, true);
     expect(seen).toEqual(['POST:terminal', 'POST:messages']);
     expect(() => authorizeTerminal(fixture.gateway.store, fixture.actor, 'own-terminal', () => { throw new Error('withdrawn'); })).toThrow('withdrawn');
+});
+
+
+test('current console publishes public assets with strict headers, MIME and method boundaries', async () => {
+    const fixture = await hubResourceFixture(cleanups);
+    for (const [path, mime] of [['/hub', 'text/html'], ['/hub/', 'text/html'], ['/hub/style.css', 'text/css'], ['/hub/app.js', 'text/javascript']]) {
+        const response = await fetch(fixture.url + path);
+        expect(response.status).toBe(200); expect(response.headers.get('content-type')).toContain(mime!);
+        expect(response.headers.get('referrer-policy')).toBe('no-referrer'); expect(response.headers.get('cache-control')).toBe('no-store');
+        expect(response.headers.get('x-content-type-options')).toBe('nosniff');
+        expect(response.headers.get('content-security-policy')).toContain("script-src 'self'");
+        expect(response.headers.get('content-security-policy')).toContain("frame-ancestors 'self'");
+        expect((await response.text()).length).toBeGreaterThan(0);
+        const head = await fetch(fixture.url + path, { method: 'HEAD' });
+        expect(head.status).toBe(200); expect(head.headers.get('content-type')).toContain(mime!); expect(await head.text()).toBe('');
+        const post = await fetch(fixture.url + path, { method: 'POST' });
+        expect(post.status).toBe(405); expect(post.headers.get('allow')).toBe('GET, HEAD');
+    }
+    expect((await fetch(fixture.url + '/hub/not-a-file')).status).toBe(404);
+    expect((await fetch(fixture.url + '/api/runweft/tasks/overview')).status).toBe(401);
+});
+
+
+test('current console labels distinguish uncertain starts, stopped processes and delivery retention', () => {
+    expect(stopText({ stop: 'not_started', execution_not_started: false })).toBe('尚未确认进程结束');
+    expect(stopText({ stop: 'not_started', execution_not_started: true })).toBe('已确认未启动');
+    expect(stopText({ stop: 'stopped', execution_not_started: false })).toBe('进程已结束');
+    expect(codeText({ status: 'not_applicable' })).toBe('不适用');
+    expect(filesText({ status: 'none', retention: 'retained', count: 0, available: 0 })).toBe('未声明');
+    expect(filesText({ status: 'delivered', retention: 'released', count: 1, available: 1 })).toBe('已释放');
 });

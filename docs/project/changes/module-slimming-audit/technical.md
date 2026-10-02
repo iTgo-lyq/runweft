@@ -84,3 +84,14 @@ outputs→retention仅消费当前专属格式和同候选hash，producer关闭�
 - remote-native/default 保留两 runtime prepared 原生执行与独立当前域 Round；remote-tasks 为 compiled serve+CLI+真实 Task 协调器，无终态种子。显式第二 HAPI argv 真实配置到中心和每 Runner，候选 hash 使用实际二进制。
 - 当前 Claude 在 cwd 编码超过200字符时把 projects 名截断加 hash；固定 HAPI getProjectPath 仅替换字符，nativeResume 查不到真实 transcript。本次 Y8ptBq 的 cwd/期望编码长218，实际目录207且原 native jsonl 存在，第二轮确认 missing 并重新创建会话；该固定依赖长路径恢复缺口未修复，不改 HAPI、不复制历史目录。远端 smoke 使用本次唯一系统 tmpRoot/.dev-smoke 短运行目录，工作区 .dev-smoke 仅存 evidence/log；两个 runtime 仍须真实同 nativeID 续轮。
 - 当前 handoff 明确 ownedRoot/ownedTempRoot/evidenceDir、server/source/target home、连接身份/机器事实、当前库和真实案例 IDs；只有 current-remote-tasks-1 全双 runtime×两轮成功且清理无误的生产者可被 retention 消费。生产者先确认模型、Runner、中心退出再移除模型认证副本，保连接和业务现场；最终 retention 成功后回收精确 ownedTempRoot。remote-package 由 E 的 collaboration producer 同步迁，不在 D 假验收。
+
+### T7 当前浏览器保障与旧看板退役边界
+
+- S12 排除：现有根 CI 没有 DOM/Playwright 层，不删 native.js 原安全字符串断言、不新增浏览器框架或 CI。open 完整用例迁 service-commands，当前 public Hub HTTP/MIME/GET/HEAD/405/CSP/no-store/401 与状态文字保持根自动保障；旧 dashboard 其余消费者在 T9 整体退役，本项先给出已验证替代。
+- 同身份/同实际空间刷新保留上一份成功内容并显示读取错误。只有 `data-loaded` 标记过的内容可保留，首次失败显示失败而不是永久加载。切换身份/空间、成员资格失效导致选中空间改变、退出仍清空，沿既有 generation/action 防止迟到响应复活旧内容。详情刷新保留轮次/报告位置与已展开检查段落。
+- 真实浏览器复现 native SSE 401 后跳回 Hub 却留下 native.access；主 agent 授权仅在该 401 分支先清本标签页短 JWT 再 redirect。到期、HTTP拒绝、空间与身份边界不变，不自动续期；仍通过当前 Hub 显式重新打开。
+- `test:hub-console [binary]` 与 `test:dashboard [binary] [HAPI] [全部evidence...]` 共用现有 console 业务流程；显式 HAPI 实际配置执行，历史子证据记录实际 core/HAPI hash。顶层 success 包含全部请求 source，处理历史期间为 false，子证据路径与结果逐项汇总。
+- 历史来源仅接当前 hub-native-mcp handoff，按 serverHome 查 paths，不兼容旧 root/local/server 或 namespace 数据。隔离复制当前 Runweft/HAPI 库，实际打开 finished/stopped 对应 archived 原生会话、读取非空真实消息并保留消息 hash/count；不创建假 active 会话代替历史。每次重新检查六个明确源 DB/sidecar 的存在/mode/size/hash，源不变核验与清理失败均写最终失败证据。浏览器读取期间保留原 source，子服务停止后回收本次复制 home；全部消费成功后按下述终结所有权回收原本次 fixture。
+- console 中 27 owner/1 member、两轮、16K报告与 approval/file RPC 仍是明确的当前领域/原生协议浏览器 fixture，无模型或 OS shell。状态/转义额外场景修改的是已授权 HTTP 查询的 DOM 投影，不播种可执行未知任务。迟到结果场景执行实际 served console 模块、真实已授权 HTTP 和 clear lifecycle，不把强制同时点击禁用按钮当作用户并发。
+
+T7终结所有权补齐：只有全部请求source浏览器检查成功后，按当前成功hub-native-mcp handoff的root去重回收。source文件必须是root/evidence.json，root必须是当前工作区.dev-smoke直属hub-native-mcp-*自有目录；每个记录home独立stop/status，全部记录native host PID确认退出后，删除该root中除原evidence外的可再生数据。原evidence不改，source不变验证仅截至终结清理前；sourceCleanup由顶层独立记录，任何停机不确定不删除并使总success=false。重复argv先各自完成浏览器检查，再清一次；不扫描旧目录，不处理旧格式。

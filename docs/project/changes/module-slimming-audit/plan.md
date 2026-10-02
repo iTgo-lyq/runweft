@@ -70,7 +70,7 @@
 
 ### T7 当前浏览器与 CLI open 保障接替旧看板
 
-- 状态：待开始
+- 状态：已完成
 - 交付：S05/S12；open 移入 service-commands，转义/迟到请求/状态可读性迁 console；短 JWT、无 URL token、存储清理/轮换拒绝纳入必跑 Playwright；`test:dashboard` 保留名称与参数并转到当前 console 的真实等价浏览器场景，`dashboard-browser` 的有效断言迁入后才退役；只有现有根测试实际行为保障保持CI覆盖时删除源码拼写断言；否则排除S12。
 - 依赖：T2、T5。
 - 验收：open有效断言迁移且执行；旧UI有效竞态/转义得到当前浏览器保障；短JWT请求/无URLtoken/存储清理/轮换拒绝在根测试/现有CI自动层级继续保障后才删拼写断言，否则保留。

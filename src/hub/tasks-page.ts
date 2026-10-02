@@ -6,6 +6,19 @@ export default '';
 type TaskDetail = NonNullable<ReturnType<typeof detail>> & { ownerId: string; spaceId: string; hubRepositoryId: string | null;
     actions: { read: boolean; native: boolean; manageViaAgent: boolean } };
 const statusLabels = { running: '进行中', needs_attention: '需要处理', unknown: '执行未确认', completed: '已完成', failed: '失败', interrupted: '已停止' };
+export function stopText(item: { stop: string; execution_not_started?: boolean }) {
+    return item.execution_not_started ? '已确认未启动' : item.stop === 'stopped' ? '进程已结束' : item.stop === 'stopping' ? '等待进程结束' : '尚未确认进程结束';
+}
+export function codeText(code: { status: string; sealing_status?: string | null; ref?: string | null }) {
+    if (code.status === 'pending' && code.sealing_status === 'needs_attention') return '封存待处理';
+    if (code.status === 'pending' && code.sealing_status === 'unknown') return '封存未知';
+    return ({ not_applicable: '不适用', pending: '待封存', capturing: '捕获中', publishing: '上传中', available: code.ref ? '可审阅' : '可取回',
+        needs_attention: '待处理', unknown: '未知', releasing: '释放中', released: '已释放', discarded: '已放弃' } as Record<string, string>)[code.status] ?? code.status;
+}
+export function filesText(files: { status: string; retention: string; available: number; count: number }) {
+    if (files.retention !== 'retained') return ({ releasing: '释放中', released: '已释放', discarded: '已放弃' } as Record<string, string>)[files.retention] ?? files.retention;
+    return files.status === 'none' ? '未声明' : files.status === 'delivered' ? `已交付 ${files.available} 项` : files.status === 'incomplete' ? `待补齐 ${files.available}/${files.count}` : '交付中';
+}
 function jsonDetails(title: string, value: unknown) { return expandable(title, element('pre', JSON.stringify(value, null, 2), 'inspection-output')); }
 export async function renderTasks(target: HTMLElement, context: ConsoleContext) {
     let page = 1, chosen: string | undefined, roundId: string | undefined, offset = 0;
@@ -19,6 +32,7 @@ export async function renderTasks(target: HTMLElement, context: ConsoleContext) 
     }, context), list, details);
     async function show() {
         if (!chosen) return;
+        const expanded = new Set(Array.from(details.querySelectorAll<HTMLDetailsElement>('details[open]')).map(node => node.querySelector('summary')?.textContent));
         const query = new URLSearchParams({ offset: String(offset), limit: '16000' });
         if (roundId) query.set('roundId', roundId);
         const view: TaskDetail = await context.request(`/tasks/details/${chosen}?${query}`);
@@ -32,7 +46,7 @@ export async function renderTasks(target: HTMLElement, context: ConsoleContext) 
         rounds.input.addEventListener('change', () => { void context.action(async () => { roundId = rounds.input.value; offset = 0; await show(); }); });
         content.append(rounds.node);
         const facts = element('dl', '', 'facts');
-        facts.append(fact('状态', statusLabels[view.status]), fact('阶段 / 进程停止', `${view.phase} / ${view.stop}`),
+        facts.append(fact('状态', statusLabels[view.status]), fact('阶段 / 进程停止', `${view.phase} / ${stopText(view)}`),
             fact('工作区', `${view.workspace_mode} · ${view.cwd}`), fact('机器 / Runtime', `${view.machine_id} / ${view.runtime_id}`),
             fact('配置版本', view.agent.hub ? `v${view.agent.hub.version} · ${view.agent.hub.contentHash}` : view.agent.definitionVersion),
             fact('最后观察', view.observed_at ? new Date(view.observed_at).toLocaleString('zh-CN') : '未观察'));
@@ -57,6 +71,7 @@ export async function renderTasks(target: HTMLElement, context: ConsoleContext) 
                 cancellation: view.cancellation, resume: view.resume, reconstruction: view.reconstruction }));
         if (view.actions.manageViaAgent) content.append(expandable('让 Agent 继续处理此任务', element('pre',
             `请在 ${location.origin} 的空间 ${context.spaceId} 检查任务 ${view.agent_id}，先运行 task show 核对第 ${view.round} 轮（${view.round_id}）的状态，再按我的要求续接、停止或取回成果。执行未知时不要盲目重发；取回 bundle 后由主 Agent 审查合入，不自动 push。显式清理前说明删除范围。`, 'task-report')));
+        content.querySelectorAll('details').forEach(node => { node.open = expanded.has(node.querySelector('summary')?.textContent); });
         details.replaceChildren(content); list.hidden = true;
     }
     async function load() {
@@ -78,11 +93,11 @@ export async function renderTasks(target: HTMLElement, context: ConsoleContext) 
             if (task.attention) card.append(element('p', task.attention.message ?? task.attention.code ?? '需要处理', 'attention'));
             if (task.possibly_stale) card.append(element('p', '机器离线或未观察，当前记录可能滞后。', 'hint'));
             card.append(element('p', task.summary || '尚无最终报告', 'task-summary'),
-                element('p', `附件 ${task.files.available}/${task.files.count} · 代码 ${task.code.status}`, 'hint'),
+                element('p', `附件 ${filesText(task.files)} · 代码 ${codeText(task.code)} · ${stopText(task)}`, 'hint'),
                 control('查看任务详情', async () => { chosen = task.id; roundId = task.round_id; offset = 0; await show(); details.focus(); }, context));
             content.append(card);
         }
-        if (!view.items.length) content.append(empty(view.total ? '此页没有任务，请返回前一页。' : '没有匹配的本人任务。通过 Agent 发起首次委派，或调整筛选条件。'));
+        if (!view.items.length) content.append(empty(view.total ? '此页没有任务，请返回前一页。' : workspace.input.value || parent.input.value || status.input.value ? '没有匹配的本人任务。调整筛选条件后重试。' : '你在当前空间还没有任务。通过 Agent 发起首次委派。'));
         const navigation = element('div', '', 'actions');
         if (page > 1) navigation.append(control('上一页任务', async () => { page--; await load(); }, context));
         if (page < view.pages) navigation.append(control('下一页任务', async () => { page++; await load(); }, context));

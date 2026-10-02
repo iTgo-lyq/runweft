@@ -90,7 +90,8 @@ let generation = 0;
 let active = 'tasks';
 export function clearConsole() {
     generation++;
-    document.getElementById('console-content')?.replaceChildren();
+    const content = document.getElementById('console-content');
+    content?.replaceChildren(); if (content) delete content.dataset.loaded;
     document.getElementById('console-navigation')?.replaceChildren();
 }
 export async function mountConsole(context: ConsoleContext) {
@@ -99,12 +100,13 @@ export async function mountConsole(context: ConsoleContext) {
     const members = document.getElementById('members-panel')!;
     const modes = [{ id: 'tasks', label: '任务' }, { id: 'machines', label: '机器' }, { id: 'runtimes', label: 'Runtime' }, { id: 'agents', label: 'Agent' },
         { id: 'repositories', label: '仓库' }, { id: 'selections', label: '我的选择' }, { id: 'members', label: '成员' }];
-    async function render() {
+    async function render(preserve = false) {
         if (epoch !== generation) return;
-        content.replaceChildren(); members.hidden = active !== 'members'; content.hidden = active === 'members';
+        const retain = preserve && content.dataset.loaded === 'true';
+        if (!retain) { content.replaceChildren(); delete content.dataset.loaded; } members.hidden = active !== 'members'; content.hidden = active === 'members';
         navigation.querySelectorAll('button').forEach(button => button.setAttribute('aria-current', button.dataset.view === active ? 'page' : 'false'));
         if (active === 'members') return;
-        content.append(element('p', '正在读取当前权限与资源…', 'muted'));
+        if (!content.childNodes.length) content.append(element('p', '正在读取当前权限与资源…', 'muted'));
         const target = element('div');
         try {
             if (active === 'tasks') await renderTasks(target, context);
@@ -112,10 +114,10 @@ export async function mountConsole(context: ConsoleContext) {
             else if (active === 'repositories') await renderRepositories(target, context, render);
             else if (active === 'selections') await renderSelections(target, context, render);
             else await renderResources(target, context, active === 'runtimes' ? 'runtimes' : 'machines', render);
-            if (epoch === generation) content.replaceChildren(target);
+            if (epoch === generation) { content.replaceChildren(target); content.dataset.loaded = 'true'; }
         } catch (error) {
             if (epoch !== generation) return;
-            content.replaceChildren(empty('资源未能加载。检查 Hub 连接后刷新；不会切换身份或本地配置。'));
+            if (!retain) content.replaceChildren(empty('资源未能加载。检查 Hub 连接后刷新；不会切换身份或本地配置。'));
             throw error;
         }
     }
@@ -125,5 +127,5 @@ export async function mountConsole(context: ConsoleContext) {
     }));
     const guide = document.getElementById('agent-onboarding')!;
     guide.textContent = `请按 Runweft 产品 Skill 帮我接入 ${location.origin}。先检查已有安装和此 Hub 的连接；没有身份时发起 hub connect begin，让我在 Web 领取或导入 token 并确认，随后 complete。不要让我把凭据发到对话。分别登记机器、Runtime 和 Agent，保留其他 MCP 与原生配置，完成首次委派后返回 Hub 页面。`;
-    await render();
+    await render(true);
 }

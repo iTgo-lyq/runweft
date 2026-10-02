@@ -257,3 +257,26 @@ iclaude review session：`6870f51d-a7d7-4cfa-b49d-a2a96e69a693`。工具限制Re
 - 原worktree/remote的审批失败和报告标记失败均保留：只把只读Git分号串联纳入原逐段allowlist，明确仅原生会话记忆及完整报告字面标记；权限拒绝保持，未放行cwd外persistent memory。失败诊断、已停止进程/精确秘密回收记录与原evidence独立保存。
 - 汇总 `.dev-smoke/slimming-acceptance/t6e-root-collaboration-{default-producers,retry}-summary.json`、`t6e-root-remote-final-summary.json`；对应root命令与源码/candidate清单保存在同目录。全部T6入口已具当前可执行保障与逐场景证据，根typecheck通过；T6A产品Socket窄修后根全集274pass/0fail，后续只有smoke/fixture迁接线及明确清理返修，未声称再跑一套未执行的全集。T13仍执行最终同候选组合，物理跨机/Mac实机/arm64模型及固定HAPI长Claude cwd限制不冒充已验证。
 - Commit：`module-slimming-audit T6: 迁移原生与成果验收并收口环境清理`
+
+### T7 实施与自检：当前 Console 接替有效看板保障
+
+- open 原完整无凭据浏览器 argv 用例移至 service-commands；CSS declaration 移 src/assets.d.ts，旧看板模块删除留 T9。根 current Hub 静态发布矩阵及当前停止/代码/文件文字保障补入 hub-console.test，原 native.js 安全字符串断言保留，S12 排除。定向 `bun test ./test/service-commands.test.ts ./test/hub-console.test.ts` 9 pass/0 fail/127 expect，typecheck exit0；本项未重复声称执行根全套，主 agent 独立验收。
+- 当前 UI 窄修：同 token/scope 全局刷新失败保留旧成功内容，首次失败明确显示错误；实际 scope 变化仍清；既有 generation 防迟到结果，详情刷新保留展开检查。SSE401清 native.access 后返回 Hub，不续期、不新增授权或重连框架。
+- 真实失败与版本：构建前首 console 资源七组通过，programmatic focus 不触发 focus-visible，改真实 Tab/Shift+Tab后通过，没有改 CSS放宽。扩展脚本首次全局刷新重置25条分页导致旧选中Task不在第一页，恢复50条后继续；detail route initially误写 /tasks/:id/details，按真实 /tasks/details/:id修正，未改产品接口。t7-console-sse-check 真实旋转后旧 token/JWT401而旧 SSE tab credential未清，窄修后真实通过；该断言初稿会打印拒绝的短JWT，已仅精确脱敏该失败log/evidence并改布尔断言与本fixture已知凭据脱敏。timer初稿先fastForward再开新tab，Playwright context clock也推进新tab，不能作为产品expiry缺陷；把16min到期检查放最后，reload保原token/exp不变且到期不新auth。
+- 实际候选：dist/runweft SHA432a7726aee2795ae217a3d6a8d8b941c30d8a642f879d301815960a6ce5f572，dist/hapi SHA bdf706d7966ae4818b09029991a2bb03e70b10b0555763fc41430afd977b4fec。t7-sse-build.log 构建exit0，冻结源码 t7-source-freeze.sha256；后续仅脚本接线/清理与证据修整，不把旧候选试跑当新 source 刷新验证。
+- 构建后 `test:hub-console dist/runweft` X0kcqD exit0/17组（t7-console-final-clock.log）：保原治理/CAS/丢创建响应、27/1隔离、两轮/16K、真实HAPI SSE/approval/files、foreign404/managed409/terminal拒绝；新增组合筛选、unknown/明确未启动/留存文字及转义、首次与局部/全局503、busy不重复、详情刷新、375/1200展开无溢出与键盘outline、900s user×space JWT header/no URL token、实际rotation401清storage/独立owner仍可读/显式新JWT、空scope与无匹配区别、未取消HTTP迟到成功/失败不复活 clear 后 DOM，16min返回Hub且无自动续期。
+- 最终 `test:dashboard dist/runweft dist/hapi .dev-smoke/hub-native-mcp-jSgCqe/evidence.json .dev-smoke/hub-native-mcp-jSgCqe/evidence.json` exit0（t7-dashboard-final.log）：iFQ4mA顶层17组/cleanupErrors=[]/最终success=true，两个argv逐项进入不同隔离服务 JFXZGU/Jiou6Z，各12真实archived case、非空消息、实际candidatehash、源六DB/sidecar快照不变、隔离副本API的session库存前后不变、复制home已回收。重复同source参数是多argv消费检查，未伪造第二producer；原source仍保留，未运行模型。旧history初轮验证在最后快照/顶层汇总补齐前，最终证据另列。
+- `test:hub dist/runweft` 6cHnor exit0/8组（t7-hub-final.log），保身份备份、恶意名字、两context邀请/角色、丢旋转响应恢复、390px mobile/desktop、无URL/DOM属性凭据、真实权限拒绝/持久库日志脱敏、compiled重启。旧脚本先在隐藏成员面板操作，随后仍假设公开root token可交换、身份token不得交换，均按当前导航/公开authority契约迁接，不改产品权限。成功 home及下载的本次身份秘密备份清除；失败实例只在确认本次 service/Runner停后逐文件清确切secret，8个自有失败log列出的roots核验见 t7-failed-cleanup.json，未扫描历史目录。
+- history最后复核补齐每次重新枚举存在性/mode/size/hash，源核验/回收失败始终记录并传播；top success等待全部historyResults，避免资源段先成功误报整个dashboard。该最终源码typecheck exit0（t7-final-draft-typecheck.log），diff-check0。T7源码已冻结交主 agent 独立验收；不提交、不标完成、不改Specs。
+
+- T7终结consumer补齐（根完整17+12浏览器验收后授权）：history导出finishConsoleHistory({binary,sources})，仅全部source成功后由dashboard调用；去重当前成功handoff root，校验当前工作区直属owned目录/source父目录一致，每home独立stop/status并确认记录host PID退出后只删该root非evidence.json数据，原producer evidence不改。返回独立sourceCleanup逐项结果并进入顶层success。实现者仅typecheck exit0（t7-final-consumer-typecheck.log）和静态复核，未执行jSgCqe清理；主agent将直接调用新增函数验收，先前17+12浏览器结果在该纯终结补齐前，T13重跑完整链。
+
+
+### T7 主 agent 独立验收
+
+- root冻结独立432a7726 CLI/bdf706d7 HAPI副本，实际执行`test:dashboard <core> <hapi> <jSgCqe/evidence.json>`：Aasvzj后台17项及VhMoNE真实完成历史12case均exit0，另`test:hub`的0KM3d8八项exit0；当前hub-console/service-commands/hub-access定向20 pass/0 fail/231 expect/3文件，typecheck通过。源码冻结摘要逐项核对；产品build由实施者实际执行成功，根使用该相同hash独立运行浏览器，没有声称另做第二次build。
+- 根复核真实短JWT、401清标签凭据、跨身份/空间隔离、到期不自动续权，375/1200任务详情截图无横向溢出、报告转义/展开保持；状态投影与live RPC为明确browser fixture，十二archived history取自T6真实模型完成案例，消息非空/原session库存不变。三家专用copy home已回收；原source DB/WAL/SHM的存在性、mode、size、SHA在所有浏览器只读消费前后不变。原生安全字符串根CI断言继续保留，S12排除。
+- 后补最终source所有权收口：只在全部请求的history浏览器检查成功后，终结函数按当前handoff精确去重、逐home尝试runner/service停机及独立status、核对全部host PID退出，才回收原本次fixture数据并保留原evidence。根直接执行最终026f9ebc/e8f39cdb helper，重复cleanup argv只产生一个结果，jSgCqe的24个记录host均已退出，原evidence bytes不变、目录仅剩evidence。这是本次验证环境终结，不清理任何旧用户数据。该末尾动作与此前17+12浏览器业务验收分别记录；T13会执行包含终结动作的完整wrapper。
+- 汇总 `.dev-smoke/slimming-acceptance/t7-root-summary.json`，根日志 `t7-root-{dashboard,hub,focused,typecheck,source-terminal}.log`；终结详情 `t7-root-source-terminal.json`。实现者另已用相同candidate实跑single-binary `test:hub-console`与两个重复history argv各12case，不冒充根重复执行。T7达到本阶段验收条件，等待与T6按依赖顺序独立提交；未关闭整个Change。
+
+- T7 Commit：`module-slimming-audit T7: 用当前后台保障接替旧看板验收`

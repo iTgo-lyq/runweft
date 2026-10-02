@@ -1,17 +1,20 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, readdirSync, statSync, rmSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { chromium, type Page } from 'playwright';
 import { freePort } from '../src/services';
+import { closeSmoke } from './fixtures/smoke-lifecycle';
+import { installedBinaries } from './fixtures/installed-binaries.mjs';
+import { createHash } from 'node:crypto';
 
 const binary = resolve(process.argv[2] ?? 'dist/runweft'), hapi = resolve(process.argv[3] ?? 'dist/hapi');
 mkdirSync('.dev-smoke', { recursive: true });
 const root = mkdtempSync(resolve('.dev-smoke/hub-identity-')), home = join(root, 'home');
-const evidence: any = { root, binary, success: false, checks: [], screenshots: [] };
+const evidence: any = { root, binary, candidate: { core: installedBinaries(binary).runweft, hapi: { path: hapi, sha256: createHash('sha256').update(readFileSync(hapi)).digest('hex') } }, cleanupErrors: [], success: false, checks: [], screenshots: [] };
 const secrets: string[] = [], consoleMessages: string[] = [], pageErrors: string[] = [], requestUrls: string[] = [];
 const env = { ...process.env };
-for (const key of Object.keys(env)) if (key.startsWith('RUNWEFT_') || key.startsWith('HAPI_')) delete env[key];
+for (const key of Object.keys(env)) if (key.startsWith('RUNWEFT_') || key.startsWith('HAPI_') || ['CLI_API_TOKEN', 'DB_PATH', 'TELEGRAM_BOT_TOKEN'].includes(key)) delete env[key];
 const cli = (args: string[]) => {
     const result = spawnSync(binary, ['--home', home, '--json', ...args], { env, encoding: 'utf8', timeout: 60_000 });
     assert.equal(result.status, 0, result.stderr || String(result.error)); return JSON.parse(result.stdout);
@@ -46,7 +49,7 @@ async function socketReject(token: string, namespace: string) {
             if (data.startsWith(`44/${namespace},`)) { clearTimeout(timer); socket.close(); resolve(); }
             if (data.startsWith(`40/${namespace},`)) { clearTimeout(timer); socket.close(); reject(new Error('Identity token unexpectedly accepted by native socket')); }
         };
-        socket.onerror = () => { clearTimeout(timer); reject(new Error('Native Socket probe transport failed')); };
+        socket.onerror = () => { clearTimeout(timer); socket.close(); reject(new Error('Native Socket probe transport failed')); };
     });
 }
 let started = false;
@@ -79,6 +82,7 @@ try {
 
     const b = await create(bob, 'Bob'); assert.notEqual(a.id, b.id); await closeSecret(bob);
     assert.equal((await api(`${prefix}/spaces/${sid}`, b.token)).status, 404);
+    for (const page of [alice, bob]) { await page.locator('#console-navigation').getByRole('button', { name: '成员', exact: true }).click(); await ready(page); }
     await alice.locator('#invitation-role').selectOption('admin');
     await alice.getByRole('button', { name: '生成邀请', exact: true }).click(); await alice.locator('#secret-dialog[open]').waitFor(); await ready(alice);
     const invitation = await alice.locator('#secret-value').innerText(); secrets.push(invitation); await closeSecret(alice);
@@ -129,15 +133,17 @@ try {
 
     const rootToken = JSON.parse(readFileSync(join(home, 'server/hapi/settings.json'), 'utf8')).cliApiToken as string;
     secrets.push(rootToken);
-    const native = await api('/api/auth', '', { accessToken: rootToken }); assert.equal(native.status, 200);
+    assert.equal((await api('/api/auth', '', { accessToken: rootToken })).status, 401);
+    const native = await api('/api/auth', '', { accessToken: rotated, spaceId: sid }); assert.equal(native.status, 200);
     const jwt = native.body.token as string; secrets.push(jwt); assert(jwt);
     for (const token of [rootToken, jwt]) assert.equal((await api(`${prefix}/identity`, token)).status, 401);
-    assert.equal((await api('/api/auth', '', { accessToken: rotated })).status, 401);
-    for (const route of ['/api/sessions', '/api/events', '/cli/sessions/resumable', '/api/runweft/identity', '/api/runweft/resources/machines', '/api/runweft/tasks/overview', '/api/runweft/workspaces/list']) {
+    assert.equal((await api('/api/auth', '', { accessToken: rotated })).status, 200);
+    assert.equal((await api('/api/auth', '', { accessToken: jwt, spaceId: sid })).status, 401);
+    for (const route of ['/api/sessions', '/api/events', '/cli/sessions/resumable', '/api/runweft/agents', '/api/runweft/machines', '/api/runweft/tasks/overview', '/api/runweft/workspaces/list']) {
         assert.equal((await api(route, rotated)).status, 401, route);
     }
     await socketReject(rotated, 'cli'); await socketReject(rotated, 'terminal');
-    check('real HAPI rejects new identity in auth/native/CLI/old Runweft routes and both Socket namespaces; Hub rejects root and JWT');
+    check('current public authority exchanges only identity credentials, rejects root and JWT scope substitution; raw identity cannot access native routes or either Socket namespace');
 
     assert.equal(pageErrors.length, 0, pageErrors.join('\n'));
     for (const token of secrets) {
@@ -159,8 +165,14 @@ try {
 } catch (error) {
     evidence.error = error instanceof Error ? error.message : 'smoke failed'; process.exitCode = 1;
 } finally {
-    await browser?.close();
-    if (started) { try { cli(['stop']); } catch { evidence.cleanupError = 'dedicated service stop failed'; process.exitCode = 1; } }
+    let stopped = false;
+    try { await closeSmoke([() => { if (started) cli(['stop']); const status = cli(['status']); assert(!status.service.running && !status.runner.running); stopped = true; }, async () => { await browser?.close(); }]); }
+    catch (error) { evidence.cleanupErrors.push(String(error)); evidence.success = false; process.exitCode = 1; }
+    if (stopped) {
+        try { await closeSmoke([join(root, 'identity-backup.txt'), join(home, 'server/hapi/settings.json'), join(home, 'server/hapi/jwt-secret.json')].map(path => () => rmSync(path, { force: true }))); }
+        catch (error) { evidence.cleanupErrors.push(String(error)); evidence.success = false; process.exitCode = 1; }
+        if (evidence.success && !evidence.cleanupErrors.length) rmSync(home, { recursive: true, force: true });
+    }
     // Do not emit token values, including assertion diagnostics, into the saved report.
     let report = JSON.stringify(evidence, null, 2);
     for (const token of secrets) report = report.replaceAll(token, '[redacted]');
