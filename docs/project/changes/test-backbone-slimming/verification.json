@@ -1,0 +1,683 @@
+{
+  "baseline": "6cb4332",
+  "candidate": {
+    "version": "1.1.1",
+    "source": {
+      "revision": "6a7e559fc878989c91280213e6cdd54c27fcc110",
+      "dirty": false
+    },
+    "binaries": {
+      "runweft": {
+        "path": "/home/tiger/.codex/worktrees/module-slimming/runweft/.dev-smoke/install-Cyo3do/prefix/lib/node_modules/runweft/node_modules/runweft-linux-x64/bin/runweft",
+        "sha256": "c72c11210578c8db6341d60f8d0f0996c0c42fb3b1a1f66fb129229abfb38be0"
+      },
+      "hapi": {
+        "path": "/home/tiger/.codex/worktrees/module-slimming/runweft/.dev-smoke/install-Cyo3do/prefix/lib/node_modules/runweft/node_modules/runweft-linux-x64/bin/hapi",
+        "sha256": "bdf706d7966ae4818b09029991a2bb03e70b10b0555763fc41430afd977b4fec"
+      }
+    },
+    "hapiRevision": "3ac8b08b2aead13e9eaae459de62d9a5d5df7395"
+  },
+  "nativeAttempts": [
+    {
+      "ledger": ".dev-smoke/native-backbone-PrqjGN/evidence.json",
+      "log": ".dev-smoke/test-backbone-plan/t4-native-setup.log",
+      "selection": "preflight",
+      "success": true,
+      "startedAt": "2026-10-02T18:00:22.091Z",
+      "finishedAt": "2026-10-02T18:00:22.091Z",
+      "error": null,
+      "cases": [],
+      "elapsedSeconds": 0.0
+    },
+    {
+      "ledger": ".dev-smoke/native-backbone-IpDeyv/evidence.json",
+      "log": ".dev-smoke/test-backbone-plan/t4-native-final-preflight.log",
+      "selection": "preflight",
+      "success": true,
+      "startedAt": "2026-10-02T18:09:17.712Z",
+      "finishedAt": "2026-10-02T18:09:33.245Z",
+      "error": null,
+      "cases": [],
+      "elapsedSeconds": 15.533
+    },
+    {
+      "ledger": ".dev-smoke/native-backbone-P97jP0/evidence.json",
+      "log": ".dev-smoke/test-backbone-plan/t4-native-N1.log",
+      "selection": "N1",
+      "success": true,
+      "startedAt": "2026-10-02T18:14:40.400Z",
+      "finishedAt": "2026-10-02T18:17:54.636Z",
+      "error": null,
+      "cases": [
+        {
+          "id": "N1",
+          "success": true,
+          "phase": "complete",
+          "mcpCalls": 8,
+          "reusedFrom": null,
+          "injected": null,
+          "steps": [
+            {
+              "phase": "producer",
+              "elapsedMs": 166608,
+              "exitCode": 0,
+              "evidence": ".dev-smoke/collaboration-dz8oeB/evidence.json",
+              "recordSuccessNow": true,
+              "cleanupErrorsNow": [],
+              "consumedNow": true,
+              "mcpCalls": 8
+            },
+            {
+              "phase": "consumer-cleanup",
+              "elapsedMs": 12325,
+              "exitCode": 0,
+              "evidence": ".dev-smoke/shared-package-hrdPxT/evidence.json",
+              "recordSuccessNow": true,
+              "cleanupErrorsNow": [],
+              "consumedNow": null
+            }
+          ]
+        }
+      ],
+      "elapsedSeconds": 194.236
+    },
+    {
+      "ledger": ".dev-smoke/native-backbone-QEUI3S/evidence.json",
+      "log": ".dev-smoke/test-backbone-plan/t4-case-failure-injection.log",
+      "selection": "all",
+      "success": false,
+      "startedAt": "2026-10-02T18:19:23.528Z",
+      "finishedAt": "2026-10-02T18:19:38.963Z",
+      "error": "Error: Injected case failure: N2; no model launched",
+      "cases": [
+        {
+          "id": "N1",
+          "success": true,
+          "phase": "complete",
+          "mcpCalls": 8,
+          "reusedFrom": "/home/tiger/.codex/worktrees/module-slimming/runweft/.dev-smoke/native-backbone-P97jP0/evidence.json",
+          "injected": null,
+          "steps": [
+            {
+              "phase": "producer",
+              "elapsedMs": 166608,
+              "exitCode": 0,
+              "evidence": ".dev-smoke/collaboration-dz8oeB/evidence.json",
+              "recordSuccessNow": true,
+              "cleanupErrorsNow": [],
+              "consumedNow": true,
+              "mcpCalls": 8
+            },
+            {
+              "phase": "consumer-cleanup",
+              "elapsedMs": 12325,
+              "exitCode": 0,
+              "evidence": ".dev-smoke/shared-package-hrdPxT/evidence.json",
+              "recordSuccessNow": true,
+              "cleanupErrorsNow": [],
+              "consumedNow": null
+            }
+          ]
+        },
+        {
+          "id": "N2",
+          "success": false,
+          "phase": "injected-before-producer",
+          "mcpCalls": null,
+          "reusedFrom": null,
+          "injected": true,
+          "steps": []
+        }
+      ],
+      "elapsedSeconds": 15.435
+    },
+    {
+      "ledger": ".dev-smoke/native-backbone-S5Kht4/evidence.json",
+      "log": ".dev-smoke/test-backbone-plan/t4-native-main.log",
+      "selection": "all",
+      "success": false,
+      "startedAt": "2026-10-02T18:21:35.118Z",
+      "finishedAt": "2026-10-02T18:22:58.567Z",
+      "error": "AssertionError [ERR_ASSERTION]: N2 producer failed; inspect /home/tiger/.codex/worktrees/module-slimming/runweft/.dev-smoke/native-backbone-S5Kht4/N2-producer.log. No automatic whole-matrix retry.\n\n1 !== 0\n",
+      "cases": [
+        {
+          "id": "N1",
+          "success": true,
+          "phase": "complete",
+          "mcpCalls": 8,
+          "reusedFrom": "/home/tiger/.codex/worktrees/module-slimming/runweft/.dev-smoke/native-backbone-QEUI3S/evidence.json",
+          "injected": null,
+          "steps": [
+            {
+              "phase": "producer",
+              "elapsedMs": 166608,
+              "exitCode": 0,
+              "evidence": ".dev-smoke/collaboration-dz8oeB/evidence.json",
+              "recordSuccessNow": true,
+              "cleanupErrorsNow": [],
+              "consumedNow": true,
+              "mcpCalls": 8
+            },
+            {
+              "phase": "consumer-cleanup",
+              "elapsedMs": 12325,
+              "exitCode": 0,
+              "evidence": ".dev-smoke/shared-package-hrdPxT/evidence.json",
+              "recordSuccessNow": true,
+              "cleanupErrorsNow": [],
+              "consumedNow": null
+            }
+          ]
+        },
+        {
+          "id": "N2",
+          "success": false,
+          "phase": "producer",
+          "mcpCalls": null,
+          "reusedFrom": null,
+          "injected": null,
+          "steps": [
+            {
+              "phase": "producer",
+              "elapsedMs": 68029,
+              "exitCode": 1,
+              "evidence": ".dev-smoke/collaboration-OZ5Qya/evidence.json",
+              "recordSuccessNow": false,
+              "cleanupErrorsNow": [],
+              "consumedNow": null,
+              "mcpCalls": 7
+            }
+          ]
+        }
+      ],
+      "elapsedSeconds": 83.449
+    },
+    {
+      "ledger": ".dev-smoke/native-backbone-sGVq91/evidence.json",
+      "log": ".dev-smoke/test-backbone-plan/t4v-native-N2.log",
+      "selection": "N2",
+      "success": false,
+      "startedAt": "2026-10-02T18:28:53.925Z",
+      "finishedAt": "2026-10-02T18:32:10.176Z",
+      "error": "AssertionError [ERR_ASSERTION]: N2 consumer-cleanup failed; inspect /home/tiger/.codex/worktrees/module-slimming/runweft/.dev-smoke/native-backbone-sGVq91/N2-consumer-cleanup.log. No automatic whole-matrix retry.\n\n1 !== 0\n",
+      "cases": [
+        {
+          "id": "N2",
+          "success": false,
+          "phase": "consumer-cleanup",
+          "mcpCalls": 17,
+          "reusedFrom": null,
+          "injected": null,
+          "steps": [
+            {
+              "phase": "producer",
+              "elapsedMs": 178637,
+              "exitCode": 0,
+              "evidence": ".dev-smoke/collaboration-O1jQvU/evidence.json",
+              "recordSuccessNow": true,
+              "cleanupErrorsNow": [],
+              "consumedNow": true,
+              "mcpCalls": 17
+            },
+            {
+              "phase": "consumer-cleanup",
+              "elapsedMs": 2240,
+              "exitCode": 1,
+              "evidence": ".dev-smoke/shared-package-ImyBKb/evidence.json",
+              "recordSuccessNow": false,
+              "cleanupErrorsNow": [
+                "Shutdown uncertain; private connection secrets retained"
+              ],
+              "consumedNow": null
+            }
+          ]
+        }
+      ],
+      "elapsedSeconds": 196.251
+    },
+    {
+      "ledger": ".dev-smoke/native-backbone-PKT4QY/evidence.json",
+      "log": ".dev-smoke/test-backbone-plan/t4v-native-N3.log",
+      "selection": "N3",
+      "success": true,
+      "startedAt": "2026-10-02T18:34:44.108Z",
+      "finishedAt": "2026-10-02T18:38:12.544Z",
+      "error": null,
+      "cases": [
+        {
+          "id": "N3",
+          "success": true,
+          "phase": "complete",
+          "mcpCalls": 22,
+          "reusedFrom": null,
+          "injected": null,
+          "steps": [
+            {
+              "phase": "producer",
+              "elapsedMs": 183588,
+              "exitCode": 0,
+              "evidence": ".dev-smoke/worktree-mcp-XhObJZ/evidence.json",
+              "recordSuccessNow": true,
+              "cleanupErrorsNow": [],
+              "consumedNow": true,
+              "mcpCalls": 22
+            },
+            {
+              "phase": "consumer-cleanup",
+              "elapsedMs": 9503,
+              "exitCode": 0,
+              "evidence": ".dev-smoke/worktree-package-4KG6sQ/evidence.json",
+              "recordSuccessNow": true,
+              "cleanupErrorsNow": [],
+              "consumedNow": null
+            }
+          ]
+        }
+      ],
+      "elapsedSeconds": 208.436
+    },
+    {
+      "ledger": ".dev-smoke/native-backbone-Iw79ls/evidence.json",
+      "log": ".dev-smoke/test-backbone-plan/t4v-native-N4.log",
+      "selection": "N4",
+      "success": true,
+      "startedAt": "2026-10-02T18:38:58.839Z",
+      "finishedAt": "2026-10-02T18:41:11.614Z",
+      "error": null,
+      "cases": [
+        {
+          "id": "N4",
+          "success": true,
+          "phase": "complete",
+          "mcpCalls": 10,
+          "reusedFrom": null,
+          "injected": null,
+          "steps": [
+            {
+              "phase": "producer",
+              "elapsedMs": 107095,
+              "exitCode": 0,
+              "evidence": ".dev-smoke/worktree-mcp-Evg86J/evidence.json",
+              "recordSuccessNow": true,
+              "cleanupErrorsNow": [],
+              "consumedNow": true,
+              "mcpCalls": 10
+            },
+            {
+              "phase": "consumer-cleanup",
+              "elapsedMs": 10466,
+              "exitCode": 0,
+              "evidence": ".dev-smoke/worktree-package-8qhRxa/evidence.json",
+              "recordSuccessNow": true,
+              "cleanupErrorsNow": [],
+              "consumedNow": null
+            }
+          ]
+        }
+      ],
+      "elapsedSeconds": 132.775
+    },
+    {
+      "ledger": ".dev-smoke/native-backbone-NmjbW4/evidence.json",
+      "log": ".dev-smoke/test-backbone-plan/t4v-native-N5.log",
+      "selection": "N5",
+      "success": false,
+      "startedAt": "2026-10-02T18:41:23.860Z",
+      "finishedAt": "2026-10-02T18:48:05.299Z",
+      "error": "AssertionError [ERR_ASSERTION]: Successful case must publish its evidence",
+      "cases": [
+        {
+          "id": "N5",
+          "success": false,
+          "phase": "consumer-cleanup",
+          "mcpCalls": 33,
+          "reusedFrom": null,
+          "injected": null,
+          "steps": [
+            {
+              "phase": "producer",
+              "elapsedMs": 326124,
+              "exitCode": 0,
+              "evidence": ".dev-smoke/remote-mcp-R2VNPG/evidence.json",
+              "recordSuccessNow": true,
+              "cleanupErrorsNow": [],
+              "consumedNow": true,
+              "mcpCalls": 33
+            },
+            {
+              "phase": "consumer-cleanup",
+              "elapsedMs": 59918,
+              "exitCode": 0,
+              "evidence": null
+            }
+          ]
+        }
+      ],
+      "elapsedSeconds": 401.439
+    },
+    {
+      "ledger": ".dev-smoke/native-backbone-ZBHHv2/evidence.json",
+      "log": ".dev-smoke/test-backbone-plan/t4v-native-C-codex.log",
+      "selection": "C-codex",
+      "success": true,
+      "startedAt": "2026-10-02T18:45:00.218Z",
+      "finishedAt": "2026-10-02T18:46:58.438Z",
+      "error": null,
+      "cases": [
+        {
+          "id": "C-codex",
+          "success": true,
+          "phase": "complete",
+          "mcpCalls": null,
+          "reusedFrom": null,
+          "injected": null,
+          "steps": [
+            {
+              "phase": "probe-cleanup",
+              "elapsedMs": 102771,
+              "exitCode": 0,
+              "evidence": ".dev-smoke/task-controls-EysYgd/evidence.json",
+              "recordSuccessNow": true,
+              "cleanupErrorsNow": [],
+              "consumedNow": null
+            }
+          ]
+        }
+      ],
+      "elapsedSeconds": 118.22
+    },
+    {
+      "ledger": ".dev-smoke/native-backbone-anzRhp/evidence.json",
+      "log": ".dev-smoke/test-backbone-plan/t4v-native-C-claude.log",
+      "selection": "C-claude",
+      "success": true,
+      "startedAt": "2026-10-02T18:47:54.279Z",
+      "finishedAt": "2026-10-02T18:49:00.459Z",
+      "error": null,
+      "cases": [
+        {
+          "id": "C-claude",
+          "success": true,
+          "phase": "complete",
+          "mcpCalls": null,
+          "reusedFrom": null,
+          "injected": null,
+          "steps": [
+            {
+              "phase": "probe-cleanup",
+              "elapsedMs": 50813,
+              "exitCode": 0,
+              "evidence": ".dev-smoke/task-controls-37Sh7M/evidence.json",
+              "recordSuccessNow": true,
+              "cleanupErrorsNow": [],
+              "consumedNow": null
+            }
+          ]
+        }
+      ],
+      "elapsedSeconds": 66.18
+    },
+    {
+      "ledger": ".dev-smoke/native-backbone-oRQ53h/evidence.json",
+      "log": ".dev-smoke/test-backbone-plan/t4v-native-N6.log",
+      "selection": "N6",
+      "success": true,
+      "startedAt": "2026-10-02T18:50:35.293Z",
+      "finishedAt": "2026-10-02T18:54:41.388Z",
+      "error": null,
+      "cases": [
+        {
+          "id": "N6",
+          "success": true,
+          "phase": "complete",
+          "mcpCalls": 14,
+          "reusedFrom": null,
+          "injected": null,
+          "steps": [
+            {
+              "phase": "producer",
+              "elapsedMs": 170547,
+              "exitCode": 0,
+              "evidence": ".dev-smoke/remote-mcp-QXZfqk/evidence.json",
+              "recordSuccessNow": true,
+              "cleanupErrorsNow": [],
+              "consumedNow": true,
+              "mcpCalls": 14
+            },
+            {
+              "phase": "consumer-cleanup",
+              "elapsedMs": 59684,
+              "exitCode": 0,
+              "evidence": ".dev-smoke/remote-package-MuINNC/evidence.json",
+              "recordSuccessNow": true,
+              "cleanupErrorsNow": [],
+              "consumedNow": null
+            }
+          ]
+        }
+      ],
+      "elapsedSeconds": 246.095
+    },
+    {
+      "ledger": ".dev-smoke/native-backbone-wsf46S/evidence.json",
+      "log": ".dev-smoke/test-backbone-plan/t4v-native-R-codex.log",
+      "selection": "R-codex",
+      "success": false,
+      "startedAt": "2026-10-02T18:50:36.412Z",
+      "finishedAt": "2026-10-02T18:51:17.385Z",
+      "error": "AssertionError [ERR_ASSERTION]: R-codex probe-cleanup failed; inspect /home/tiger/.codex/worktrees/module-slimming/runweft/.dev-smoke/native-backbone-wsf46S/R-codex-probe-cleanup.log. No automatic whole-matrix retry.\n\n1 !== 0\n",
+      "cases": [
+        {
+          "id": "R-codex",
+          "success": false,
+          "phase": "probe-cleanup",
+          "mcpCalls": null,
+          "reusedFrom": null,
+          "injected": null,
+          "steps": [
+            {
+              "phase": "probe-cleanup",
+              "elapsedMs": 25096,
+              "exitCode": 1,
+              "evidence": ".dev-smoke/reconstruction-R1udSK/evidence.json",
+              "recordSuccessNow": true,
+              "cleanupErrorsNow": [],
+              "consumedNow": null
+            }
+          ]
+        }
+      ],
+      "elapsedSeconds": 40.973
+    },
+    {
+      "ledger": ".dev-smoke/native-backbone-XLLNp0/evidence.json",
+      "log": ".dev-smoke/test-backbone-plan/t4v-native-R-claude.log",
+      "selection": "R-claude",
+      "success": true,
+      "startedAt": "2026-10-02T18:54:32.301Z",
+      "finishedAt": "2026-10-02T18:55:20.920Z",
+      "error": null,
+      "cases": [
+        {
+          "id": "R-claude",
+          "success": true,
+          "phase": "complete",
+          "mcpCalls": null,
+          "reusedFrom": null,
+          "injected": null,
+          "steps": [
+            {
+              "phase": "probe-cleanup",
+              "elapsedMs": 32911,
+              "exitCode": 0,
+              "evidence": ".dev-smoke/reconstruction-GFmkmw/evidence.json",
+              "recordSuccessNow": true,
+              "cleanupErrorsNow": [],
+              "consumedNow": null
+            }
+          ]
+        }
+      ],
+      "elapsedSeconds": 48.619
+    },
+    {
+      "ledger": ".dev-smoke/native-backbone-ivmonJ/evidence.json",
+      "log": ".dev-smoke/test-backbone-plan/t4v-native-N1-final.log",
+      "selection": "N1",
+      "success": true,
+      "startedAt": "2026-10-02T18:55:55.631Z",
+      "finishedAt": "2026-10-02T18:59:00.481Z",
+      "error": null,
+      "cases": [
+        {
+          "id": "N1",
+          "success": true,
+          "phase": "complete",
+          "mcpCalls": 8,
+          "reusedFrom": null,
+          "injected": null,
+          "steps": [
+            {
+              "phase": "producer",
+              "elapsedMs": 157185,
+              "exitCode": 0,
+              "evidence": ".dev-smoke/collaboration-WTtNhw/evidence.json",
+              "recordSuccessNow": true,
+              "cleanupErrorsNow": [],
+              "consumedNow": true,
+              "mcpCalls": 8
+            },
+            {
+              "phase": "consumer-cleanup",
+              "elapsedMs": 11980,
+              "exitCode": 0,
+              "evidence": ".dev-smoke/shared-package-BbSuNd/evidence.json",
+              "recordSuccessNow": true,
+              "cleanupErrorsNow": [],
+              "consumedNow": null
+            }
+          ]
+        }
+      ],
+      "elapsedSeconds": 184.85
+    }
+  ],
+  "coreStability": [
+    {
+      "run": 1,
+      "exitCode": 0,
+      "elapsedSeconds": 57.789,
+      "log": ".dev-smoke/test-backbone-plan/t6-root-1.log"
+    },
+    {
+      "run": 2,
+      "exitCode": 0,
+      "elapsedSeconds": 57.882,
+      "log": ".dev-smoke/test-backbone-plan/t6-root-2.log"
+    },
+    {
+      "run": 3,
+      "exitCode": 0,
+      "elapsedSeconds": 57.355,
+      "log": ".dev-smoke/test-backbone-plan/t6-root-3.log"
+    }
+  ],
+  "notes": [
+    "MCP tool calls are not model requests or token counts.",
+    "Inherited successful cases are excluded from individual-selection attempt costs.",
+    "First failures remain failures; separately executed consumer/reconstruction continuations are listed below.",
+    "Core three-run timings overlapped independent native work."
+  ],
+  "manualCompletions": [
+    {
+      "id": "N2",
+      "producer": ".dev-smoke/collaboration-O1jQvU/evidence.json",
+      "consumer": ".dev-smoke/shared-package-RLcBaa/evidence.json",
+      "success": true,
+      "consumerSecondsFromFilesystem": 10.924
+    },
+    {
+      "id": "N5",
+      "producer": ".dev-smoke/remote-mcp-R2VNPG/evidence.json",
+      "consumer": ".dev-smoke/remote-package-xfUR6U/evidence.json",
+      "success": true,
+      "note": "Both subprocesses exited zero; outer ledger failed to parse consumer evidence label. No rerun."
+    },
+    {
+      "id": "R-codex",
+      "firstFailure": ".dev-smoke/test-backbone-plan/R-codex-first-failure.json",
+      "completed": ".dev-smoke/reconstruction-R1udSK/evidence.json",
+      "success": true,
+      "note": "Only the not-yet-accepted second round continued; first failure snapshot preserved.",
+      "continuationSecondsFromFilesystem": 21.186
+    }
+  ],
+  "finalCore": {
+    "exitCode": 0,
+    "elapsedSeconds": 57.652,
+    "scope": "Final 248-case root suite; no other active acceptance process",
+    "log": ".dev-smoke/test-backbone-plan/t6-root-final.log",
+    "tests": 248,
+    "assertions": 4799,
+    "files": 41
+  },
+  "nativeSummary": {
+    "finalMainMcpCalls": 104,
+    "includingInvalidatedAndFailedProducerCalls": 119,
+    "firstCompleteGatePasses": 7,
+    "logicalCases": 10,
+    "unexpectedFailedGateAttempts": 4,
+    "intentionalInjectedFailures": 1,
+    "modelRequestCount": null,
+    "modelTokens": null,
+    "recordedEntryAndContinuationSeconds": 1984.601,
+    "wallSecondsIncludingImplementationWork": 2660.081,
+    "unmeasured": "early model-free preparation failures"
+  },
+  "modelFreeEvidence": {
+    "access": ".dev-smoke/integration-yZJOOv/evidence.json",
+    "storage": ".dev-smoke/integration-Bb108N/evidence.json",
+    "servicePackage": ".dev-smoke/integration-03NyeF/evidence.json",
+    "webConsole": ".dev-smoke/hub-console-wDqAAi/evidence.json",
+    "arm64Qemu": ".dev-smoke/arm64-xZ2VcN/evidence.json"
+  },
+  "cleanupPreflightLog": ".dev-smoke/test-backbone-plan/t6-cleanup-preflight.log",
+  "nodeTests": {
+    "passed": 33,
+    "failed": 0,
+    "log": ".dev-smoke/test-backbone-plan/t5-all-node.log"
+  },
+  "sourceUnchanged": {
+    "product": true,
+    "hapi": true
+  },
+  "scale": {
+    "testCommands": [
+      47,
+      7
+    ],
+    "smokeEntrypoints": [
+      48,
+      32
+    ],
+    "rootTestFiles": [
+      42,
+      41
+    ],
+    "rootTests": [
+      255,
+      248
+    ]
+  },
+  "validationDiff": "63 files changed, 1055 insertions(+), 3302 deletions(-)",
+  "unexecuted": [
+    "remote CI",
+    "expanded native matrix",
+    "HAPI full tests",
+    "macOS native acceptance",
+    "arm64 native service/models",
+    "physical cross-machine/WAN",
+    "publication/deployment"
+  ]
+}

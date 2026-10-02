@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { nativeUserSmoke } from './native-user-smoke';
 
@@ -24,5 +24,5 @@ export async function preflightNativeSetup(binary: string) {
             assert.deepEqual((await runner.http.request('/api/sessions')).sessions, [], 'Preflight must not dispatch models');
         }
         passed = true;
-    } finally { await fixture.close(passed); }
+    } finally { await fixture.close(passed); if (passed) rmSync(root, { recursive: true }); }
 }

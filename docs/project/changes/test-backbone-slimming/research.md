@@ -106,4 +106,9 @@
 | mcp完整旧矩阵 | 六链真实宿主MCP；现有probeMcpProtocol（access调用）、根stdio/取消/身份快测 |
 | hub-upgrade旧候选入口 | state当前编译CLI对两种DB及start/serve/restart无写拒绝；不再要求建立旧版二进制现场 |
 
-未删除 execution 原生低层能力专项：它含 shared sibling 停止边界，适用于 HAPI/native接口变更，不能只看名称当重复。全部原生替代尚待 T4V 实测；提交前只声明无模型前置通过。T4/T4V拆分只为先冻结候选再记录真实结果，不放宽验收条件。
+未删除 execution 原生低层能力专项：它含 shared sibling 停止边界，适用于 HAPI/native接口变更，不能只看名称当重复。T4冻结提交只声明无模型前置通过；原生替代的最终实测及失败记录见[验收](acceptance.md)。T4/T4V拆分只为先冻结候选再记录真实结果，不放宽验收条件。
+
+
+## 实施后的验证结论与剩余项
+
+六主链、控制/重建、真实消费者均完成本地验证，耗时/首次失败/清理见[验收](acceptance.md)。三种工作区与两种宿主/runtime通过代表链覆盖，未发现必须保留被删重复生产者的独立耦合；这不是全部原生配对已测。HAPI/native映射或workspace变化仍触发expanded；远端CI、物理跨机与其他平台模型属于明确未执行范围。最后发现的证据输出不一致已由真实消费者失败出口纳入零模型preflight；不把该小型契约检查当真实模型或原生历史验证。
