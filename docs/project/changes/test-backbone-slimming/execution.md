@@ -52,3 +52,11 @@ N2在a610dfd脚本下已完成两轮、65秒wait及17次MCP调用。其消费者
 ### T5补充：核心CI原生配置保障
 
 核对根测试发现两个MCP配置用例会在缺Codex时跳过。普通CI先安装已验证的固定Codex工具，候选CI把工具准备前置到根测试，保留真实原生配置编辑保障。普通核心与相关集成合并在同一job，复用checkout、依赖和工具，不再在第二job重复安装；Claude仅在需要集成时准备。actionlint通过；远端执行仍未验证。
+
+## T6 核心稳定性（其他验收继续）
+
+根测试在三个新临时现场串行执行：247 pass/0 fail/4779断言/41文件，墙钟57.789、57.882、57.355秒，含每次真实fixture/lifecycle闭环，没有自动重试。三次与独立N3原生现场运行重叠（目录/端口/配置隔离），故只用作本轮稳定性样本，不作为无干扰性能对比；Technical已据实际安排明确该限制，避免为凑速度样本再重复三遍。相比基线255项，8个原npm用例迁移至Node，实际删/合并3个浅层测试、新增3个有故障价值的fixture测试；Beta另新增9个发布用例，不能把迁移当删除收益。
+
+### T4V N5证据出口修正
+
+N5的producer remote-mcp-R2VNPG与consumer remote-package-xfUR6U均退出0，success=true、cleanupErrors=[]，成果/留存/工作区清理完成且源consumed=true；总入口因只识别Evidence/Installed workspace前缀，漏读remote消费者的Installed remote-task前缀而退出1。归类为汇总接线失败，原ledger保留失败，不把它伪称首跑gate成功，也不为读取证据路径重跑模型。统一三个消费者为唯一Evidence出口，入口不保留旧前缀兼容。新增实际执行三个消费者缺失handoff的零模型用例，核对非零退出、失败证据可读与清理；6项fixture/lifecycle共47断言通过，typecheck通过。后续N6实际验证正常remote出口。

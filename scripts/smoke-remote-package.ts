@@ -106,5 +106,5 @@ for (const file of fixtures) {
 evidence.success = !evidence.error && !evidence.cleanupErrors.length;
 if (!evidence.success) process.exitCode = 1;
 if (evidence.success) for (const name of readdirSync(root)) if (!name.endsWith('.log')) try { rmSync(join(root, name), { recursive: true, force: true }); } catch (error) { evidence.cleanupErrors.push(String(error)); evidence.success = false; process.exitCode = 1; }
-writeFileSync(join(root, 'evidence.json'), JSON.stringify(evidence, null, 2), { mode: 0o600 }); console.log(`Installed remote-task evidence: ${join(root, 'evidence.json')}`);
+writeFileSync(join(root, 'evidence.json'), JSON.stringify(evidence, null, 2), { mode: 0o600 }); console.log(`Evidence: ${join(root, 'evidence.json')}`);
 if (evidence.error) console.error(evidence.error);

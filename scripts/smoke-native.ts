@@ -52,7 +52,7 @@ async function run(item: any, phase: string, script: string, args: string[], env
     const read = async (stream: ReadableStream<Uint8Array>) => { let output = ''; for await (const chunk of stream) { const text = new TextDecoder().decode(chunk); output += text; appendFileSync(log, text); } return output; };
     const child = Bun.spawn([script.endsWith('.mjs') ? 'node' : process.execPath, resolve('scripts', script), ...args], { env, stdout: 'pipe', stderr: 'pipe' });
     const [code, stdout, stderr] = await Promise.all([child.exited, read(child.stdout), read(child.stderr)]);
-    const file = [...stdout.matchAll(/(?:Evidence|Installed workspace evidence): (.+\/evidence\.json)/g)].at(-1)?.[1];
+    const file = [...stdout.matchAll(/^Evidence: (.+\/evidence\.json)$/gm)].at(-1)?.[1];
     item.steps.push({ phase, elapsedMs: Date.now() - start, exitCode: code, log, evidence: file }); save();
     assert.equal(code, 0, `${item.id} ${phase} failed; inspect ${log}. No automatic whole-matrix retry.`);
     assert(file && existsSync(file), 'Successful case must publish its evidence');

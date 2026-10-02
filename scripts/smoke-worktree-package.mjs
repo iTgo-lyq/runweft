@@ -48,4 +48,4 @@ for (const file of fixtures) {
 evidence.success = !evidence.error && !evidence.cleanupErrors.length;
 if (!evidence.success) process.exitCode = 1;
 writeFileSync(join(root, 'evidence.json'), JSON.stringify(evidence, null, 2), { mode: 0o600 });
-console.log(`Installed workspace evidence: ${join(root, 'evidence.json')}`);
+console.log(`Evidence: ${join(root, 'evidence.json')}`);

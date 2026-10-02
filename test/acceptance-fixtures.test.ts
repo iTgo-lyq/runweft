@@ -1,7 +1,7 @@
 import { afterEach, expect, spyOn, test } from 'bun:test';
-import { spawn } from 'node:child_process';
-import { mkdirSync, symlinkSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { spawn, spawnSync } from 'node:child_process';
+import { mkdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { dirname, join, resolve } from 'node:path';
 import { fixture } from './helpers';
 import { fixtureCleanup } from './fixture-cleanup';
 import { hubDelegationFixture } from './hub-delegation-fixture';
@@ -65,4 +65,26 @@ test('native host timeout fails even when SIGTERM exits zero; diagnostics never 
         expect(watcher.state.errors).toEqual(['serverOverloaded']);
         expect(JSON.stringify(watcher.state)).not.toContain('PRIVATE_SECRET');
     } finally { watcher.close(); if (child.exitCode === null) child.kill('SIGKILL'); }
+});
+
+// Exercise the actual child entrypoints: a failed handoff must still return machine-readable evidence.
+test('native consumers publish their failure evidence before any model or source environment starts', () => {
+    const root = fixture('consumer-receipt', cleanup.resources), missing = join(root, 'absent-evidence.json');
+    for (const [script, args] of [
+        ['smoke-shared-package.ts', ['absent-cli', missing]],
+        ['smoke-worktree-package.mjs', ['absent-cli', missing]],
+        ['smoke-remote-package.ts', ['absent-cli', 'absent-hapi', missing]],
+    ] as const) {
+        const result = spawnSync(script.endsWith('.mjs') ? 'node' : process.execPath, [resolve('scripts', script), ...args], { encoding: 'utf8', timeout: 10_000 });
+        const evidence = result.stdout.split('\n').find(line => line.startsWith('Evidence: '))?.slice('Evidence: '.length);
+        expect(evidence).toBeDefined();
+        if (evidence) {
+            expect(dirname(evidence).startsWith(resolve('.dev-smoke') + '/')).toBe(true);
+            cleanup.resources.push(() => rmSync(dirname(evidence), { recursive: true, force: true }));
+            const record = JSON.parse(readFileSync(evidence, 'utf8'));
+            expect(record.success).toBe(false); expect(record.cleanupErrors).toEqual([]);
+            expect(record.error).toContain('ENOENT');
+        }
+        expect(result.status).toBe(1);
+    }
 });
