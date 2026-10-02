@@ -48,3 +48,7 @@
 ### T4V N2消费者修正
 
 N2在a610dfd脚本下已完成两轮、65秒wait及17次MCP调用。其消费者首试ImyBKb失败：历史读取错误地取中心serverPaths.identityConnection，Hub客户端实际身份在本case的Runner连接目录；local模式恰好同home所以初次N1未暴露。修正为按case.clientHome找到真实Runner路径，N2只重跑无模型shared消费者，不重新调用模型，原首次失败保留。消费者在未启动源进程就失败时，原清理代码把“尚未启动”标为停机不确定；改为实际检查所有源home状态及原生PID后判定安全。生产者和包输入均未变化，本次只重验受影响消费阶段，不把全局helper hash拒绝复用误当必须重跑模型。N2的producer/consumer分阶段证据在最终验收表单列，不改写失败ledger。
+
+### T5补充：核心CI原生配置保障
+
+核对根测试发现两个MCP配置用例会在缺Codex时跳过。普通CI先安装已验证的固定Codex工具，候选CI把工具准备前置到根测试，保留真实原生配置编辑保障。普通核心与相关集成合并在同一job，复用checkout、依赖和工具，不再在第二job重复安装；Claude仅在需要集成时准备。actionlint通过；远端执行仍未验证。
