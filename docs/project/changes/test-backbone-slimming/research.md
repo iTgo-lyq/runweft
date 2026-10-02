@@ -14,6 +14,24 @@
 - `smoke-dashboard.ts` 调用同一个 `smokeConsole`；独立跑 console 后再跑 dashboard 会重复整个浏览器主体。历史读取消费者仍有价值，应在同一次主体运行后接上。
 - `cli-install.yml` 在源码或测试推送时四平台构建/安装；`npm-publish.yml` 在发布相关文件推送时又调用它。两者 path 范围相交，可导致同一推送两套构建。Beta 工作区也改这些文件，实施前协调最终版本。
 
+## 前轮失败分类与首要修复
+
+下表只统计前轮 T13 记录明确列出的失败，不代表全部任务失败率；没有全场首次执行分母，不能编造首跑通过百分比。来源为[验收失败记录](../../archive/2026-10-02-module-slimming-audit/acceptance.md)及对应 Execution。
+
+| 失败记录 | 能确认的归因 | 第二轮优先处理 |
+| --- | --- | --- |
+| SM1QaY | Chromium 可执行路径错误，在模型前失败；环境/调用错误 | 真正启动并关闭专用浏览器的前置探针，不能只检查路径存在 |
+| 4xJAw5、i8UBnx | fixture 缺当前 Agent 快照，之后又将全部轮次 inputs 写入第二轮；是两次测试造数错误 | 使用当前真实构造/保存路径，第一轮→第二轮的无模型闭环，产品校验不放宽 |
+| outputs 60FNTA | 八轮模型已通过，之后消费者发现 producer 将 npm launcher hash 记成 core；验收证据失配 | 模型前用真实 writer/reader/installedBinaries 校验身份，避免付费执行后才发现静态失配 |
+| controls 3z6Foc | 原生错误明确为 serverOverloaded/Selected model is at capacity；不是业务控制通过 | 保留明确外部错误码、停止本 case；固定测试模型/effort，允许一次有记录的新环境重试，不自动降级 |
+| remote C6hU6A、Cdedes、fzpnCz | 三次 host 整场超时；出现 201 秒工具间隔、超时后 exit=0，或两轮业务完成而 host 未结束。原始长间隔根因未确认，不能全部判为 provider | 缩短模型承担的流程，逐阶段记录最后进展和错误；host timeout 独立决定失败，首次失败先诊断再决定是否重跑，不能只加时长或整组重试 |
+
+`smoke-collaboration.ts:145–163` 让同一原生 host 完成多步照抄 prompt、审批、轮询、两轮传输、取回和报告；这放大模型行为差异及等待成本，但不能仅凭代码推定每次超时原因。控制器能做的确定性操作移出模型，只保留需要证明真实宿主/MCP 的工具交互；记忆标记、真实字节及原生身份等有效结果检查仍保留。
+
+`smoke-collaboration.ts` 与 `smoke-task-mcp.ts` 直接丢弃 host stderr，可能缺少错误诊断。修正方向是记录有界、脱敏的错误码/摘要和阶段时间，禁止保存完整 prompt、凭据或用户源码；不是原样扩大日志。
+
+实施优先于“40 秒目标”的结果是：已知脚本错误前置阻断、无模型流程可重复、首次失败有明确阶段、未明根因不重试掩盖、失败不拖累已完成且仍有效的 case。真实产品缺陷必须保留失败并修复，不能因为本表有多次验收错误就视为全部是假失败。
+
 ## 核心保障与测试归属
 
 以下覆盖当前全部 42 个测试文件。表内名称省略 `.test.ts`，`npm-publish` 为 `.test.js`；归组不表示合成一个巨型用例。便宜且能独立发现错误的测试不因文件短而删掉。
@@ -37,16 +55,16 @@
 
 | 顺序 | 位置与问题证据 | 具体处理及保留保障 | 风险/验证 |
 | --- | --- | --- | --- |
-| 1 | 上述 40 个原生矩阵 case 的重复生产者，加 task-* 原生脚本 | 用六条两轮主链承担同一候选的正常协作、输入输出、工作区、历史；控制/重建保留两 runtime 定向探针。退出历史由后继消费者读取一次 | 中；逐断言映射至 Technical 的 N1–N6 与专项探针，先有真实替代证据再删生产者 |
-| 2 | 两个 MCP 脚本的六次 65 秒等待 | 留 Codex、Claude 各一次真实超时及返回检查，移除其余四次；取消/after_revision 正确性留快测 | 低；相同的四次等待本身可少约 260 秒，不据此保证整套提速 |
-| 3 | T13 inputs/outputs 直到真实模型后才发现消费契约失配 | 复用 current schema、installedBinaries 和消费者读取/所有权检查，模型前做小型合成当前记录的接线演练；不伪造原生成功 | 中；正常接线可进入模型，错误 hash/格式/归属在零模型调用时失败，producer→consumer→cleanup 链检查 |
-| 4 | remote 单 case 失败后重新跑完整四组 | case 独立持有现场和成功清理证据；同候选且相关测试未变才复用通过 case，失败 case 从新环境重跑全链 | 中；保留失败记录，消费者/共享 fixture 改变则使全部依赖 case 失效，无法确定影响时扩大重跑 |
-| 5 | `smoke-dashboard.ts` 与 `smoke-hub-console.ts` 共用主体，历史遍历十二条相同形态记录 | 保留一次浏览器主体 + 两 runtime 各一条真实历史；删除纯转发入口并更新调用方 | 低；权限、token/401、分页、迟到响应、归档消息与 reload 仍由真实 Playwright 覆盖 |
-| 6 | `hub-console.test.ts:66–68` 搜索 JS 字符串，`:127` 六条纯标签映射 | 删除实现拼写断言，标签文字并入关键状态的行为核对；浏览器骨干保留 URL 无 token、Authorization、401 清理，快测保留 unknown/停止/交付语义 | 低；先确保便宜浏览器层必跑这些实际行为。CSP/MIME/授权等外部契约不按字符串一概删除 |
-| 7 | `resource-commands.test.ts` 四个独立源码 CLI 启动、`cli.test.ts` 多次源码启动；resource CLI 在根测试占 11.785 秒 | 复用已存在的 compiledCli，保留每个命令入口接线检查；权限/CAS 大组合留领域测试，编译 CLI 只留端到端代表主链和必要错误出口 | 中；移除的每项 CLI 断言必须在领域测试中仍可失败，不能只保留 mock 调用次数 |
-| 8 | `execution.test.ts:200` 简单审批转发与上层审批流程重叠 | 待核对上层是否验证真实 HTTP path/body/409；确实相同才并入，否则保留该小用例 | 待验证；mock ExecutionClient 不等于 HTTP 适配保障，不能先删 |
-| 9 | `.github/workflows/cli-install.yml` 与 npm 工作流的重叠触发 | 普通提交只跑核心及按影响的本机检查；发布候选复用一个四平台构建入口，npm 由该入口获得候选 | 中；actionlint、事件→job 表、稳定/Beta 门禁和真实手动无发布预演；不靠取消发布验收提速 |
-| 10 | 多个 native/file/task fixture 各持有模型 home、服务和完整证据 | 保留既有 helper，按每条链复用不可变程序和必要源材料；模型 home/身份/任务现场隔离。成功删除自有临时环境，仅留脱敏摘要/失败诊断 | 中；故障注入验证部分构造失败、producer 成功 consumer 失败、清理非零；不做跨用例可变资源池 |
+| 1 | T13 inputs/outputs 直到真实模型后才发现消费契约失配 | 复用 current schema、installedBinaries 和消费者读取/所有权检查，模型前做小型合成当前记录的接线演练；不伪造原生成功 | 中；正常接线可进入模型，错误 hash/格式/归属在零模型调用时失败，producer→consumer→cleanup 链检查 |
+| 2 | 多个 native/file/task fixture 各持有模型 home、服务和完整证据 | 保留既有 helper，按每条链复用不可变程序和必要源材料；模型 home/身份/任务现场隔离。成功删除自有临时环境，仅留脱敏摘要/失败诊断 | 中；故障注入验证部分构造失败、producer 成功 consumer 失败、清理非零；不做跨用例可变资源池 |
+| 3 | remote 单 case 失败后重新跑完整四组 | case 独立持有现场和成功清理证据；同候选且相关测试未变才复用通过 case，失败 case 从新环境重跑全链 | 中；保留失败记录，消费者/共享 fixture 改变则使全部依赖 case 失效，无法确定影响时扩大重跑 |
+| 4 | 上述 40 个原生矩阵 case 的重复生产者，加 task-* 原生脚本 | 用六条两轮主链承担同一候选的正常协作、输入输出、工作区、历史；控制/重建保留两 runtime 定向探针。退出历史由后继消费者读取一次 | 中；逐断言映射至 Technical 的 N1–N6 与专项探针，先有真实替代证据再删生产者 |
+| 5 | 两个 MCP 脚本的六次 65 秒等待 | 留 Codex、Claude 各一次真实超时及返回检查，移除其余四次；取消/after_revision 正确性留快测 | 低；相同的四次等待本身可少约 260 秒，不据此保证整套提速 |
+| 6 | `smoke-dashboard.ts` 与 `smoke-hub-console.ts` 共用主体，历史遍历十二条相同形态记录 | 保留一次浏览器主体 + 两 runtime 各一条真实历史；删除纯转发入口并更新调用方 | 低；权限、token/401、分页、迟到响应、归档消息与 reload 仍由真实 Playwright 覆盖 |
+| 7 | `hub-console.test.ts:66–68` 搜索 JS 字符串，`:127` 六条纯标签映射 | 删除实现拼写断言，标签文字并入关键状态的行为核对；浏览器骨干保留 URL 无 token、Authorization、401 清理，快测保留 unknown/停止/交付语义 | 低；先确保便宜浏览器层必跑这些实际行为。CSP/MIME/授权等外部契约不按字符串一概删除 |
+| 8 | `resource-commands.test.ts` 四个独立源码 CLI 启动、`cli.test.ts` 多次源码启动；resource CLI 在根测试占 11.785 秒 | 复用已存在的 compiledCli，保留每个命令入口接线检查；权限/CAS 大组合留领域测试，编译 CLI 只留端到端代表主链和必要错误出口 | 中；移除的每项 CLI 断言必须在领域测试中仍可失败，不能只保留 mock 调用次数 |
+| 9 | `execution.test.ts:200` 简单审批转发与上层审批流程重叠 | 待核对上层是否验证真实 HTTP path/body/409；确实相同才并入，否则保留该小用例 | 待验证；mock ExecutionClient 不等于 HTTP 适配保障，不能先删 |
+| 10 | `.github/workflows/cli-install.yml` 与 npm 工作流的重叠触发 | 普通提交只跑核心及按影响的本机检查；发布候选复用一个四平台构建入口，npm 由该入口获得候选 | 中；actionlint、事件→job 表、稳定/Beta 门禁和真实手动无发布预演；不靠取消发布验收提速 |
 
 ## 尚需实施时验证
 
