@@ -55,7 +55,7 @@ async function fileVersion(id: string, roundId: string, version: number, cwd: st
 }
 try {
     fixture = await taskSmoke(root, binary, env); hapi = fixture.runner.http;
-    Object.assign(evidence, { evidenceFormat: 'current-task-outputs-1', candidate: { ...fixture.candidate, cliBinary: binary, hapiBinary: fixture.binaries.hapi.path },
+    Object.assign(evidence, { evidenceFormat: 'current-task-outputs-1', candidate: { ...fixture.candidate, cliBinary: fixture.binaries.runweft.path, hapiBinary: fixture.binaries.hapi.path },
         handoff: { serverHome: fixture.server, clientHome: fixture.home, url: fixture.url, ownerId: fixture.user.identity.id, spaceId: fixture.space,
             serverPaths: fixture.cli(fixture.server, ['paths']), runnerNativeHome: fixture.runner.hapiHome, machineId: fixture.runner.machineId,
             identityFile: fixture.identityFile, cleanupOwner: 'smoke-task-retention final consumer' } });

@@ -67,7 +67,8 @@ export async function nativeUserSmoke(root: string, binary: string, env: NodeJS.
         return { server, url, user, space, identityFile, run, cli, runner, binaries,
             async restart() { cli(server, ['restart']); for (const [home, item] of registered) await ready(home, item.id, item.flavors); },
             proxyHttp: (url: string) => new HubClient({ url, identityFile, space }, 'hubAccess', 'unavailable').http,
-            candidate: { entry: 'compiled CLI + compiled serve + real HAPI/Runner', hashes: Object.fromEntries([['cli', binary], ['hapi', binaries.hapi.path]].map(([name, path]) => [name, createHash('sha256').update(readFileSync(path)).digest('hex')])) },
+            candidate: { entry: 'compiled CLI + compiled serve + real HAPI/Runner', invokedCLI: binary, binaries,
+                hashes: { cli: binaries.runweft.sha256, hapi: binaries.hapi.sha256 } },
             async close(success: boolean, retainConnection = false) { preserveConnection = retainConnection; await closeSmoke(resources); if (success) await removeFileSmokeData(root); } };
     } catch (error) { try { await closeSmoke(resources); } catch (cleanup) { throw new AggregateError([error, cleanup], 'Native user smoke setup failed'); } throw error; }
 }

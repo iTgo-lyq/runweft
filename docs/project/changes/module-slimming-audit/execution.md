@@ -98,7 +98,9 @@ iclaude review session：`6870f51d-a7d7-4cfa-b49d-a2a96e69a693`。工具限制Re
 - 主 agent 验收：逐项复核原有效断言、当前授权边界与全部46个test:*映射；退回补齐登记生命周期与清理失败续行后通过。独立typecheck、smoke-lifecycle 2 pass/0 fail/12 expect；真实HAPI资源10组、配置9组、服务6组、access12组、realtime10组、Playwright connect5组均成功且无cleanupErrors。资源/配置新增断言后重新独立实跑，日志`t5-root-{resources,configuration}-final.log`，清理小修后实施者再次跑connect5组，主agent核对源码与原证据。候选/原始证据汇总`.dev-smoke/slimming-acceptance/t5-root-summary.json`。产品未变，沿用T3构建候选；本项未重复根全集/build、未执行模型或物理远端。
 - Commit：`module-slimming-audit T5: consolidate current Hub smoke and cleanup`
 
-## T6 批次A：无模型文件/Git/诊断
+## T6 原生与成果验收迁接线
+
+### 批次A：无模型文件/Git/诊断
 
 - 九入口迁当前身份/空间、机器登记、中央Agent及真实文件授权。artifacts/prune继续compiled服务与compiled CLI；outputs/inputs机器分支/repository-export/import为compiled CLI + current source delegation gateway +真实HAPI/Runner。低层fixture明确停止模型dispatcher后，用actual resolver/current TaskStore播种完整当前Task/Round.agent/终态，再复用delegation.taskClient的现行policy；没有公开机器RPC、空check、旧API翻译或真实任务从接受到模型完成的E2E声明。hub-delegation-native改为完整gateway、实际来源Runner/当前准备snapshot与taskClient；hub-delegation-preparation保留既有中央实际HTTP/跨owner准备。
 - 逐保障：artifacts保留两client/server-policy、72MiB/hash、真实3byte断流同reservation恢复、慢流>10秒、引用/删除/tombstone、重启零Runner/session；root suffix隔离换真实other owner/space，root CLI文件路由拒绝，允许的machine grant读/撤回由hub-delegation-native实际publication/input场景保障。prune保留policy/usage、所有purpose pins、年龄、预览、分页、丢回复查原tombstone、quota/重启/零模型；旧doctor.artifacts DTO已不存在，改用真实artifact limits与当前paths/实际私有DB目录，不恢复旧诊断字段。
@@ -127,7 +129,7 @@ iclaude review session：`6870f51d-a7d7-4cfa-b49d-a2a96e69a693`。工具限制Re
 
 - 主 agent 批次验收：逐项复核九入口的原有效断言、当前授权链、正常关闭与撤权的区别，以及成功/失败现场清理。独立执行九入口均 exit0：artifacts 6组、prune 3组、inputs机器分支2组、outputs 3组、export 2组、import 3组、native bridge 6组、中心准备5组、完整编译服务诊断6组；cleanupErrors 均空，成功目录仅留证据/日志。独立根全集274 pass/0 fail/5093 expect/45文件/57.65秒；Socket/access/dispatch 定向14 pass/0 fail，最终 typecheck 通过。使用上述 ffb8aec1 候选与固定 HAPI；原始日志为 `t6-root-*.log`，包含源码与候选摘要的独立汇总为 `.dev-smoke/slimming-acceptance/t6a-root-summary.json`。批次A通过，T6仍进行中，尚无模型验收或最终schema19结论。
 
-## T6 批次B：execution/MCP/workspaces/inputs 默认模型
+### T6 批次B：execution/MCP/workspaces/inputs 默认模型
 
 - 仅迁四入口和必要窄helper。execution/MCP保持高层compiled中心与compiled用户CLI，用公共HubClient.http的当前个人native intent/session边界；真实登记身份、空间、machine/runtime，未复活root token、公开机器RPC或旧init/YAML。local/hub两个MCP标签均为当前Hub的独立client+Runner home。workspaces/inputs由current完整gateway停止dispatcher后领域store/resolver播种、私有taskClient现行policy接线，真实HAPI/Git/bytes/双模型；不是Task E2E。当前Task/Round.agent/终态完整，不新增旧格式记录或迁移路径。
 - 原断言逐项保留位置见smoke-coverage T6B。inputs的重启后ExecutionClient改为动态request/response，flavor对应当前Agent/runtime；每个新的显式独立resume采用TaskStore.append新Round，同一attempt未知回执仍保持原ID/原Round，不随机换轮隐藏unknown。actual nativeID/host PID写入evidence；machine-only仍零session、零模型。
@@ -149,7 +151,7 @@ iclaude review session：`6870f51d-a7d7-4cfa-b49d-a2a96e69a693`。工具限制Re
 
 - 主 agent 批次验收：最终冻结源码下独立四默认入口全部 exit0：execution 11组/两runtime，MCP 13组/八case，workspaces 两runtime，inputs 四真实模型轮；另独立 machine-only 两组零模型、repository-export 两组及 typecheck 通过。六现场 cleanupErrors 均空，只剩证据/顶层日志，记录的原生host PID已不存在；四份源配置的hash、mode、size不变。根另用合成配置验证部分复制失败后继续清理、活host拒绝清理、退出后回收，未触碰用户配置。实际证据汇总 `.dev-smoke/slimming-acceptance/t6b-root-summary.json`，命令日志 `t6b-root-*.log`，source/compiled分层及冻结源码hash随汇总保留。批次B通过，T6尚需高层任务、远端、留存与原生矩阵等剩余入口，不提交本任务或宣称最终格式验收。
 
-## T6 批次C：真实高层Task与outputs→retention
+### T6 批次C：真实高层Task与outputs→retention
 
 - 范围仅六Task脚本及五必要helper：task-smoke/non-git-smoke-project/task-capture-receipt新建；native-user-smoke暴露compiled server/raw CLI/current runtime/restart/专用handoff关闭；model-homes加可选requireClaude以保留tasks原Codex-only前置（默认双runtime不变）。全部高层Task经compiled serve真实coordinator，没有领域种子/第二扫描器/旧API翻译。current public owner×space、真实机器/中央Agent UUID；inputs/outputs Git项目均当前repository create/bind。
 - 原保障去向逐项见smoke-coverage T6C。controls保留真实model/effort/审批副作用/steer/execution interrupt，将历史YAML冻结假设改成已确认的current next重新resolve：只update instructions，首轮snapshot原样、新轮新version，固定target/launch与nativehistory。task-mcp保原machine/cwd Task list，真实两host thread/system nativeID与child proof，限定审批、一次spawn、65秒cursor timeout；没有扩大owner库存。
@@ -176,7 +178,7 @@ iclaude review session：`6870f51d-a7d7-4cfa-b49d-a2a96e69a693`。工具限制Re
 
 - 主 agent 批次验收：最终冻结六入口独立全部 exit0：tasks 四组、controls 七组/双 runtime、task-mcp 双 host 四组且实际长 wait 65012/65209ms、inputs 八轮、outputs 八轮、retention 三组/八轮。outputs 交接时确认模型进程退出与模型认证副本删除；retention 实际验证失败候选拒绝普通释放、显式丢弃、外部引用与全部历史不变、配额和重启零重放后，两现场均只剩 evidence。六现场 cleanupErrors=[]，所有记录的 host PID 消失，三个 non-Git 临时根已回收，四份用户源配置 hash/mode/size 不变；13份脚本/helper 与候选 hash 对照最终冻结清单一致。独立 typecheck 通过；保留 join 导入及未声明 Claude 请求两个失败记录，修正后才记录通过。汇总 `.dev-smoke/slimming-acceptance/t6c-root-summary.json`，日志 `t6c-root-*.log`；沿用 ffb8aec1/bdf706d7，无本批产品变更、未重复 build/根全集。批次C通过，T6继续远端和剩余矩阵，未提交。
 
-## T6 当前原生十二组与消费者十组
+### T6 当前原生十二组与消费者十组
 
 - 迁接线只复用实际 modelHomes，保留原矩阵/筛选参数、真实浏览器 encrypted begin/complete、原生宿主 ID、递归委派拒绝、双 owner 权限和消费者全部恢复控制断言。新建 native fixture 不再调用 data reset；两家构造后操作纳入 finally，逐会话/Runner/服务/PID确认，安全后清确切模型与连接秘密。默认成功回收本次环境；显式当前 handoff 仅用于 T7 最终浏览器消费者，不接受历史 fixture 格式。
 - 主 agent 以专用 prefix 离线安装本地 Linux x64 tarballs，实际 npm launcher 指向同 ffb8aec1/bdf706d7 候选；未发布、未改用户全局配置。清单 `t6-installed-linux.json`，package/install 日志 `t6-{package,install}-linux.log`。
@@ -258,7 +260,7 @@ iclaude review session：`6870f51d-a7d7-4cfa-b49d-a2a96e69a693`。工具限制Re
 - 汇总 `.dev-smoke/slimming-acceptance/t6e-root-collaboration-{default-producers,retry}-summary.json`、`t6e-root-remote-final-summary.json`；对应root命令与源码/candidate清单保存在同目录。全部T6入口已具当前可执行保障与逐场景证据，根typecheck通过；T6A产品Socket窄修后根全集274pass/0fail，后续只有smoke/fixture迁接线及明确清理返修，未声称再跑一套未执行的全集。T13仍执行最终同候选组合，物理跨机/Mac实机/arm64模型及固定HAPI长Claude cwd限制不冒充已验证。
 - Commit：`module-slimming-audit T6: 迁移原生与成果验收并收口环境清理`
 
-### T7 实施与自检：当前 Console 接替有效看板保障
+## T7 实施与自检：当前 Console 接替有效看板保障
 
 - open 原完整无凭据浏览器 argv 用例移至 service-commands；CSS declaration 移 src/assets.d.ts，旧看板模块删除留 T9。根 current Hub 静态发布矩阵及当前停止/代码/文件文字保障补入 hub-console.test，原 native.js 安全字符串断言保留，S12 排除。定向 `bun test ./test/service-commands.test.ts ./test/hub-console.test.ts` 9 pass/0 fail/127 expect，typecheck exit0；本项未重复声称执行根全套，主 agent 独立验收。
 - 当前 UI 窄修：同 token/scope 全局刷新失败保留旧成功内容，首次失败明确显示错误；实际 scope 变化仍清；既有 generation 防迟到结果，详情刷新保留展开检查。SSE401清 native.access 后返回 Hub，不续期、不新增授权或重连框架。
@@ -279,7 +281,7 @@ iclaude review session：`6870f51d-a7d7-4cfa-b49d-a2a96e69a693`。工具限制Re
 - 后补最终source所有权收口：只在全部请求的history浏览器检查成功后，终结函数按当前handoff精确去重、逐home尝试runner/service停机及独立status、核对全部host PID退出，才回收原本次fixture数据并保留原evidence。根直接执行最终026f9ebc/e8f39cdb helper，重复cleanup argv只产生一个结果，jSgCqe的24个记录host均已退出，原evidence bytes不变、目录仅剩evidence。这是本次验证环境终结，不清理任何旧用户数据。该末尾动作与此前17+12浏览器业务验收分别记录；T13会执行包含终结动作的完整wrapper。
 - 汇总 `.dev-smoke/slimming-acceptance/t7-root-summary.json`，根日志 `t7-root-{dashboard,hub,focused,typecheck,source-terminal}.log`；终结详情 `t7-root-source-terminal.json`。实现者另已用相同candidate实跑single-binary `test:hub-console`与两个重复history argv各12case，不冒充根重复执行。T7达到本阶段验收条件，等待与T6按依赖顺序独立提交；未关闭整个Change。
 
-- T7 Commit：`module-slimming-audit T7: 用当前后台保障接替旧看板验收`
+- Commit：`module-slimming-audit T7: 用当前后台保障接替旧看板验收`
 
 ## T8 共享依赖迁移并退役旧消费入口
 
@@ -329,8 +331,17 @@ iclaude review session：`6870f51d-a7d7-4cfa-b49d-a2a96e69a693`。工具限制Re
 - 同0231c596…真实Codex **tasks-kiXkjC** 四组通过：CLI固定request幂等、原生完成/archived/host退出、空nonGit目录不改、重启报告/原接受请求不重放；清理无错误。本阶段未跑Claude全矩阵。fixture自己的模型源文件前后hash校验通过；更早T6长期基线中的Codex auth hash已有差异，mtime早于本次smoke，不推断原因或覆盖凭据，其他三份源配置与长期基线一致。
 - 最后仅修CLI guide中已失效client.sqlite用途说明后，final binary **b8a06620…**；compiled hub-service **vma62A** 五组成功/cleanupErrors=[]，测试明确确认各home服务/Runner停止后主agent回收host/client/fresh-host，原evidence不改。全CLI契约仅删除data树，其他命令及17 MCP schema/description/annotations与原基线精确相等。
 - usage/development/产品Skill及install/arm64脚本删除reset调用/推荐，保当前release/prune/remove。消费现场入口先验证本次候选/当前格式，再读业务；Node collaboration消费者只读其私有副本，不以原库readonly引入sidecar。安装包、QEMU、十二原生MCP/十消费者以及最终同候选全组合由T13统一验收，此处不冒认通过。Specs和归档未执行。
-- 原始证据与范围：`.dev-smoke/slimming-acceptance/t14-root-summary.json`。Commit：`module-slimming-audit T14: 仅支持当前数据格式并移除历史清理入口`。
+- 原始证据与范围：`.dev-smoke/slimming-acceptance/t14-root-summary.json`。
+- Commit：`module-slimming-audit T14: 仅支持当前数据格式并移除历史清理入口`。
 
+
+### T14 补充：本机调用身份与连接写锁
+
+主agent复核发现client.sqlite并未随旧Agent bindings整体退役：仍保存Claude逐调用身份，且connectionFileLock借SQLite协调身份/机器JSON写入。纠正T14原guide删用途的判断，恢复准确文档。删除hook的CREATE TABLE IF NOT EXISTS和连接锁任意旧库直接打开路径；二者复用现有openState的固定client schema1，Hub仍19。已有无版本/其他表结构拒绝、不加表/改权限/TTL清理；新建库直接完整创建。当前TTL、一次性消费和写锁行为均保留。start/serve/restart在副作用前同时预检已有client库。
+
+定向6文件 **36 pass/0 fail/912 expect**（t14-hook-focused-v2.log），typecheck/build exit0；首版仅测试损坏错误文案匹配不准失败（期望“格式”，实际“结构无效”），改断言稳定503并核原文件不变。编译CLI并发身份/机器握手、双宿主MCP和实际任务API仍通过；此补充不是HAPI修改或旧库迁移。后续同候选原生矩阵使用全新client schema1，不能消费早先schema0现场。Specs仍留T13统一同步。
+
+- Commit：`9e068f3 module-slimming-audit T14: 统一当前客户端状态格式边界`。
 
 ## T10 详情投影与内部 send 解析
 
@@ -338,7 +349,9 @@ iclaude review session：`6870f51d-a7d7-4cfa-b49d-a2a96e69a693`。工具限制Re
 
 真实HTTP补非法send：未知字段/坏UUID/空message/next携round/steer缺round或携新附件，400且round/input/request/intent不增长、native计数不变；next在异步probe中改Agent定义，明确agent_configuration_changed，任务快照/请求/原生执行不变。console详情增加code/git/attachments与顶层值一致业务断言。原rounds/overview/workspaces/files/outputs/console有效恢复与权限断言继续执行。
 
-定向7文件 **72 pass/0 fail/1516 expect**（t10-focused.log）；typecheck、build均exit0。未声称本阶段跑全套或真实模型。U04排除Round工厂和留存状态机合并：首轮/续轮绑定与业务协议不同，未证实默认漂移；同状态词不构成同职责。Commit：`module-slimming-audit T10: 复用详情投影并消除内部重复解析`。
+定向7文件 **72 pass/0 fail/1516 expect**（t10-focused.log）；typecheck、build均exit0。未声称本阶段跑全套或真实模型。U04排除Round工厂和留存状态机合并：首轮/续轮绑定与业务协议不同，未证实默认漂移；同状态词不构成同职责。
+
+- Commit：`module-slimming-audit T10: 复用详情投影并消除内部重复解析`。
 
 
 ## T11 文件 RPC 样板收敛，保留真实恢复
@@ -347,14 +360,9 @@ iclaude review session：`6870f51d-a7d7-4cfa-b49d-a2a96e69a693`。工具限制Re
 
 追加真实中心HTTP故障：native返回另一operationId时原授权bridge拒绝，模型spawn/send为0且不release输入；恢复正确回执后只inspect原操作，materialize累计1，才启动模型。此用例验证授权/执行边界，不冒称四种wrapper文案都经过该桥直达；文案等价由代码对照，现有四家故障/留存/部分发布/重启测试保留。
 
-files/outputs/remote/remote-tasks/results/native grants定向6文件 **55 pass/0 fail/1315 expect**（t11-focused.log）；typecheck、build exit0。U01排除：既有固定HAPI真实capture丢JSON与SIGKILL持久回执实证表明候选不可重捕获；共享unknown分支也承担deliver恢复，加capture判断只增复杂度。原capture-probe证据不重跑、不当成本阶段Hub/模型端到端。Commit：`module-slimming-audit T11: 收敛文件传输 RPC 样板`。
+files/outputs/remote/remote-tasks/results/native grants定向6文件 **55 pass/0 fail/1315 expect**（t11-focused.log）；typecheck、build exit0。U01排除：既有固定HAPI真实capture丢JSON与SIGKILL持久回执实证表明候选不可重捕获；共享unknown分支也承担deliver恢复，加capture判断只增复杂度。原capture-probe证据不重跑、不当成本阶段Hub/模型端到端。
 
-
-### T14 补充：本机调用身份与连接写锁
-
-主agent复核发现client.sqlite并未随旧Agent bindings整体退役：仍保存Claude逐调用身份，且connectionFileLock借SQLite协调身份/机器JSON写入。纠正T14原guide删用途的判断，恢复准确文档。删除hook的CREATE TABLE IF NOT EXISTS和连接锁任意旧库直接打开路径；二者复用现有openState的固定client schema1，Hub仍19。已有无版本/其他表结构拒绝、不加表/改权限/TTL清理；新建库直接完整创建。当前TTL、一次性消费和写锁行为均保留。start/serve/restart在副作用前同时预检已有client库。
-
-定向6文件 **36 pass/0 fail/912 expect**（t14-hook-focused-v2.log），typecheck/build exit0；首版仅测试损坏错误文案匹配不准失败（期望“格式”，实际“结构无效”），改断言稳定503并核原文件不变。编译CLI并发身份/机器握手、双宿主MCP和实际任务API仍通过；此补充不是HAPI修改或旧库迁移。后续同候选原生矩阵使用全新client schema1，不能消费早先schema0现场。Specs仍留T13统一同步。
+- Commit：`module-slimming-audit T11: 收敛文件传输 RPC 样板`。
 
 
 ## T12 测试产物与临时环境
@@ -369,7 +377,7 @@ files/outputs/remote/remote-tasks/results/native grants定向6文件 **55 pass/0
 - 全套与独跑完成后，对本次开始目录集合做差：新遗留目录0；不清扫任何既有目录。t12-lifecycle-summary.json保存结果。
 - npm-publish与website Node测试实际执行，exit0；未执行发布/远端CI。U02调用DAG和保留不同验证边界的理由见build-review.md；workflow不改。
 
-Commit：`module-slimming-audit T12: 共享测试编译产物并明确清理所有者`。
+- Commit：`module-slimming-audit T12: 共享测试编译产物并明确清理所有者`。
 
 
 ## T13 最终同候选验收（进行中）
@@ -381,3 +389,20 @@ Commit：`module-slimming-audit T12: 共享测试编译产物并明确清理所�
 看板第一次4xJAw5暴露fixture直接append未提供当前Agent快照；修正后i8UBnx暴露保存第二轮时传入了全部轮次的inputs。两处均为当前存储契约下的测试造数错误：显式传入已解析snapshot、只保存当前轮inputs，产品校验不放宽。静态追踪所有脚本save调用后，对native-file-smoke.nextRound作相同input筛选，等待实际双runtime路径验证。修正后hub-console全部17项和hub-realtime全部10项通过，typecheck通过；产品包输入未改变，继续验收同一候选。失败证据保留，不冒充成功。
 
 T13 fixture返修复核：inputs-native-lIiyjN默认两runtime四轮真实输入/原生续接通过、cleanupErrors为空，覆盖native-file-smoke.nextRound修正；hub-console（实际根路径见t13-hub-console-v3.log）17项通过。两处只改验收fixture，不属于四平台npm包输入；打包候选身份继续为e3553755，验收脚本以本次提交为准。审计原始报告/coverage增加时点说明，避免初次审计“保留迁移”建议与后续用户约束混淆。
+
+
+T13安装入口证据修正：task-outputs-60FNTA实际八轮全部通过并正常停机，但retention在任何打开状态/启动操作前因SHA不匹配拒绝。native-user-smoke把npm launcher文件SHA记作core SHA，消费者按既有installedBinaries取真实core，断言正确。现改helper记录invokedCLI、解析后的binaries与两core SHA；task-outputs的cliBinary记录真实core。未改消费者检查、未改写原producer证据、未加旧证据兼容；以新环境重跑八轮全链。原本次fixture在两home status均停止后清六份精确连接/服务秘密，保留原证据和诊断数据（t13-output-preflight-failure-cleanup.json）。原测试自己的modelHomes清理已成功。产品候选不变。
+
+最终原生MCP8aThG1完整12案例/18检查成功、cleanupErrors=[]；远端Task rpnTt3双runtime四轮→result-retention FOasYt四检查成功；remote-native i0iUno双runtime八检查、MCP k06UNt八案例十三检查成功。execution 8LJIuF双runtime十一检查、workspace-http OairUD双runtime两检查、hub-service OgaF1y五检查均通过。当前dashboard继续消费8aThG1并终结清理；完整协作/附件及输出返修全链尚未全部完成。
+
+
+T13看板完整终结链：8aThG1十二原生case→hub-console-mouXhR十七项→console-history-LPql2C十二真实archived history读取/reload全部成功。源六DB/sidecar读取前后存在性/mode/size/hash相等，复制home已回收；final consumer确认两home服务/Runner停止及24记录PID消失后，仅删除producer本次root非evidence内容，原evidence保持不变。sourceCleanup.success=true且cleanupErrors=[]。shared协作jHQQOu默认8case/18round成功、cleanupErrors=[]，实际切断两跨runtime主MCP连接后独立观察完成，不重发；临时ownedRoot已回收。
+
+Change结构检查初次发现Requirement元数据、T6批次标题重复/T7标题级别、Commit字段及T14状态注解不符合既有validator格式；仅规范文档结构，未改变执行事实或把T13改完成。规范后 `bun .agents/skills/project-workflow/scripts/validate-change.mjs docs/project/changes/module-slimming-audit`通过（状态仍执行中）。npm metadata修正typecheck通过；deps/lock/package/workflows/HAPI与实施基线无差异，固定HAPI源码干净。
+
+
+T13安装证据修正后，新task-outputs-9GlRl1完整八轮→task-retention-c3clY4八轮/三组通过、cleanupErrors=[]，两producer/consumer root只留证据；真实core hash匹配，固定候选/显式discard/外部pin/历史与Git保留/配额/重启零重放原断言全保留。独立worktree retry R314V4（含两正常轮及一次明确断联探针）→安装消费j8O4TV成功，实际checkout删除、Git refs及报告保留、目录数与离线诊断通过，ownedRoot已回收。
+
+Task controls 3z6Foc首次Codex首轮实际failed/stopped/complete，native observation给出serverOverloaded/Selected model is at capacity，无控制业务检查通过；不是产品吞错或未知执行。模型/Runner/服务清理成功，原失败现场保留。原生models_cache已有gpt-6.1-sol，主agent明确在新专用fixture以该model及xhigh继续显式参数/权限验证；不改用户配置或产品fallback，Claude仍原claude-opus-5-5/high。
+
+- T13阶段Commit：`module-slimming-audit T13: 记录真实安装二进制的验收身份`。
