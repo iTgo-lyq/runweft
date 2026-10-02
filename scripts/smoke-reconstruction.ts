@@ -100,7 +100,7 @@ if (previous) {
     assert(realpathSync(previous.nonGitRoot).startsWith(join(realpathSync(tmpdir()), 'runweft-non-git-')));
     inside(previous.nonGitRoot, previous.project); assert.equal(observeRepository(previous.project).kind, 'non_git');
     assert.deepEqual(readdirSync(previous.project), []);
-    for (const stage of ['original', 'empty-history']) for (const flavor of flavors) {
+    for (const stage of ['original', 'empty-history']) for (const flavor of ['codex', 'claude'] as const) {
         assert.equal(previous.stageHomes[stage][flavor], join(previous.root, stage, flavor + '-home'));
         inside(previous.root, previous.stageHomes[stage][flavor]);
     }
@@ -255,7 +255,7 @@ try {
     hapi = new HubClient({ url: evidence.handoff.url, home: evidence.handoff.clientHome, env, space: evidence.handoff.spaceId }, 'hubAccess', 'unavailable').http;
     assert.equal(JSON.parse(readFileSync(hubConnectionPaths(evidence.handoff.clientHome, evidence.handoff.url).machineConnection, 'utf8')).machineId, evidence.handoff.machineId);
     const before = (await hapi.request('/api/sessions')).sessions;
-    assert.equal(before.length, 2); assert(before.every((session: any) => !session.active && session.metadata.lifecycleState === 'archived'));
+    assert.deepEqual(before.map((session: any) => session.id).sort(), evidence.cases.map((item: any) => item.rounds[0].session_id).sort()); assert(before.every((session: any) => !session.active && session.metadata.lifecycleState === 'archived'));
     record('same Hub, machine, runtime and Tasks restart against empty native histories');
     for (const item of evidence.cases) {
         const first = item.rounds[0], roundMarker = 'CURRENT_ROUND_' + randomUUID(); item.currentRoundMarker = roundMarker;
@@ -273,9 +273,9 @@ try {
         record(item.flavor + ': missing native history reconstructs one new input, new session and old business memory');
     }
     const after = (await hapi.request('/api/sessions')).sessions;
-    assert.equal(after.length, 4); assert(after.every((session: any) => !session.active && session.metadata.lifecycleState === 'archived'));
+    assert.deepEqual(after.map((session: any) => session.id).sort(), evidence.cases.flatMap((item: any) => item.rounds.map((round: any) => round.session_id)).sort()); assert(after.every((session: any) => !session.active && session.metadata.lifecycleState === 'archived'));
     assert.deepEqual(readdirSync(evidence.project), []);
-    record('four archived native sessions for four business rounds, with an unchanged empty shared project');
+    record(`${after.length} archived native sessions match the selected business rounds, with an unchanged empty shared project`);
     for (const item of evidence.cases) {
         const second = item.rounds[1], transcript = history('empty-history', item.flavor, second.native_session_id);
         const round = businessRound(second.round_id); assert(round.message.includes(item.currentRoundMarker)); assert(!round.message.includes(item.marker));
@@ -344,7 +344,7 @@ finally {
                 join(evidence.handoff.runnerNativeHome, 'settings.json'),
                 join(evidence.handoff.serverHome, 'server/hapi/settings.json'), join(evidence.handoff.serverHome, 'server/hapi/jwt-secret.json'));
         }
-        for (const stage of ['original', 'empty-history']) for (const flavor of flavors) {
+        for (const stage of ['original', 'empty-history']) for (const flavor of ['codex', 'claude'] as const) {
             const home = evidence.stageHomes?.[stage]?.[flavor]; if (!home) continue;
             for (const name of flavor === 'codex' ? ['config.toml', 'auth.json'] : ['.claude.json', 'settings.json', '.credentials.json']) secrets.push(join(home, name));
         }

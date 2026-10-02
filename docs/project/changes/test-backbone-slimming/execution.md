@@ -60,3 +60,7 @@ N2在a610dfd脚本下已完成两轮、65秒wait及17次MCP调用。其消费者
 ### T4V N5证据出口修正
 
 N5的producer remote-mcp-R2VNPG与consumer remote-package-xfUR6U均退出0，success=true、cleanupErrors=[]，成果/留存/工作区清理完成且源consumed=true；总入口因只识别Evidence/Installed workspace前缀，漏读remote消费者的Installed remote-task前缀而退出1。归类为汇总接线失败，原ledger保留失败，不把它伪称首跑gate成功，也不为读取证据路径重跑模型。统一三个消费者为唯一Evidence出口，入口不保留旧前缀兼容。新增实际执行三个消费者缺失handoff的零模型用例，核对非零退出、失败证据可读与清理；6项fixture/lifecycle共47断言通过，typecheck通过。后续N6实际验证正常remote出口。
+
+### T4V 重建专项选择纠偏
+
+R-codex首试reconstruction-R1udSK在首轮成功、切换空原生home后失败：单runtime入口仍断言双runtime的2/4会话数量。改为严格比较实际case各轮sessionId集合；原生配置home的校验/清凭据仍覆盖两份实际创建的副本，不能随runtime筛选漏掉另一份。首轮成功且数据库证明第二轮未被接受，原生历史hash、进程退出与源配置均可核对，沿脚本已有显式恢复入口只继续第二轮，不重放首轮。首次完整失败快照另存test-backbone-plan/R-codex-first-failure.json，原ledger不改成功。typecheck通过；后续实际结果另记。
