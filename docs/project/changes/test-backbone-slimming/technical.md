@@ -1,0 +1,68 @@
+# 核心测试与验收分层方案
+
+> 来源：./requirement.md
+> 状态：已确认
+> 更新：2026-10-03
+
+## 决策
+
+按已有授权制定工程方案，当前交付仅为规划。沿用 Bun、Node、Playwright 和已有 fixture，不引入 runner 框架、自动影响分析服务、通用资源池或重试调度器。测试的“核心”由能否发现独立产品故障决定，不由代码长短或测试层级决定。
+
+## 三层执行与选择
+
+| 层级 | 入口目标 | 执行时机 | 范围 |
+| --- | --- | --- | --- |
+| 核心快测 | 保留 `bun run test` → 显式 `./test`；typecheck 独立 | 相关开发收尾和普通 CI | K1–K12 的有效断言；真实 SQLite/HTTP、必要编译 CLI/协议，无真实模型。删除浅层断言，减少重复子进程 |
+| 无模型集成 | `test:integration`，简单固定清单，可显式选领域 | 修改网关、服务、fixture、浏览器、文件/Git/发行链时 | 真 HAPI/Runner、Playwright、文件/Git 原语、安装；分 access、storage、web、service/package 四组，依赖顺序显式 |
+| 原生协作 | `test:native` 六主链；原生控制/重建专项；`test:native:matrix` 按条件扩展 | 宿主/执行链相关修改或最终候选 | 实际 Codex/Claude、安装产物和真实 HAPI；不在普通 PR 默认跑模型。扩展复用同一案例实现，不能留一套旧全量实现 |
+
+命令名为实施目标。移除已被接替的内部 `test:*` 和转发脚本，更新开发说明/CI/消费者引用，不为旧验收命令或旧 evidence 留兼容分支。产品 CLI/MCP 契约保持。
+
+## 六条原生主链
+
+每条至少两轮、独立 case ID 和自有现场，明确检查原生完成/退出、resume 与禁止重放；共有断言放现有 helper，分支保持直观。避免每条都承担全部专项失败场景。
+
+| ID | 部署/工作区 | host → runtime | 主要独立保障 |
+| --- | --- | --- | --- |
+| N1 | local/shared | Codex → Codex | 项目指令、保留其他 MCP、子执行禁 Runweft、两轮历史、Codex 65 秒真实 wait |
+| N2 | hub/shared | Claude → Claude | Claude hook/clear 或续接身份、原生工具过滤、Claude 65 秒真实 wait |
+| N3 | hub/worktree | Codex → Claude | 固定 base、独立目录/项目 Skill 和 MCP、hook 明确失败后 retry-finish、主目录不变 |
+| N4 | local/worktree | Claude → Codex | 固定工作区续接、无变更无新提交、输入输出路径、原生配置继承 |
+| N5 | hub/remote | Codex → Claude | 两轮跨 Runner、Git/递归模块/LFS、输入/输出字节、固定成果/原主库不变 |
+| N6 | hub/remote | Claude → Codex | 另一宿主/runtime 远端接线、离线取回与显式合入、报告/成果/引用留存 |
+
+三工作区模式均覆盖两宿主与两 runtime；全部四种 host/runtime 配对仍在无模型 compiled MCP 测试中覆盖。六链共同核对准确父身份、子执行不加载 Runweft、CLI 递归拒绝、原生完成/停止、续接后仍保持工具边界；使用现有原生 inventory 和回执，不靠推断。N3/N4 分别实测 Claude/Codex 的项目指令、Skill、项目 MCP 与原生配置继承，不能把任一 runtime 的继承视为另一方已测。只有六条执行过的组合可称本轮原生验证通过。
+
+已核对 local/hub 的 wait 共用 `src/mcp/tasks.ts:41` → `src/hub/delegation/client.ts:80` → `src/hub/delegation/api.ts:61`；`src/services.ts:194` 的 mode 分支决定托管服务或连接 Runner，不是第二套 wait 路径。因此真实 65 秒等待保留每宿主一次；部署监督仍由 service 集成覆盖。
+
+两个 runtime 各保留定向的审批允许/拒绝、精确中断、Codex steer/Claude 不支持，以及真实原生历史缺失后的重建验证。由现有 task-controls/reconstruction 收敛为两个 runtime 专项，各自新建自有会话/模型 home，按阶段记录结果，不消费或破坏六主链现场。历史删除只作用本专项原生历史，不使用主链证据对应的会话。专项耗时与调用数另外列出，并计入总原生验收成本；不隐入六链的提速对比。不让模型承担轮询、比 hash、下载/合入等控制器能确定执行的重复劳动。至少在主链保留 MCP upload/download/fetch 的真实工具调用，不能全部改 CLI 后声称 MCP 已测。
+
+workspace 删除/ignored/重启、文件固定 retry/collect/discard、恢复引用保护，优先由无模型真 HAPI 集成和领域快测承担；必须借助原生事实的后继消费者接主链一次。消费者不重新生成全套模型成果。
+
+扩展原生矩阵条件：HAPI pin、原生 CLI 版本，或 `src/mcp/{identity,claude-hook,server,tasks,tool}.ts`、`src/execution.ts`、`src/hapi.ts`、`src/hub/delegation/{client,native,gateway}.ts` 的身份、工具过滤或启动/resume 行为变化；工作区/远端调度变化涉及 `src/tasks/{coordinator,workspaces}.ts`、`src/remote/` 时扩展受影响模式。实施时核对真实路径和调用者；未归类的执行链变更默认扩展。对受影响模式补齐四 host/runtime 组合（最多三模式十二组合）；参数控制、历史、网络故障仍按自己的专项选取，不再相乘部署模式和所有故障。纯删除测试不自动要求重跑未改的产品扩展矩阵，但新主链/fixture 必须本次真实验证。部署方式由独立 service/Runner 验收保护。
+
+## 前置检查、证据与重跑
+
+1. 先检查固定候选 packageInputs、实际安装 core/HAPI hash、HAPI pin、schema、所有必要原生工具与专用凭据副本。复用 `release-inputs.mjs`、`installed-binaries.mjs`、当前格式读取和既有 modelHomes。
+2. 使用新建的微型当前格式 fixture，经真实 producer 序列化/转换函数和真实 consumer 读取函数演练路径、hash、字段、读取权限和清理所有权，不能手写一个与两端脱节的“正确 JSON”。它只证明接线，不冒称真实原生历史/模型成果。涉及真实历史的消费者还必须消费本次主链证据。
+3. 证据按 case 记录候选程序 hash、生产者/消费者及共享 helper 的内容摘要、Bun/Node/原生 CLI 版本、显式模型/effort、参数、开始/结束、调用数、超时和 cleanupErrors。依赖文件采用小型显式清单并用 Git diff 核对，不仅比较提交 ID，也不引入自动依赖图。复用已有 evidence 字段，只补缺少的身份，不把 prompt、token 或用户源码写入摘要。
+4. 当前运行中，一个 case 成功须同时满足生产、消费及清理；三者完整后才可复用。正在等待历史消费的 handoff 不当作闭环成功。失败证据不改写，不能继续未知模型任务来碰运气。
+5. 产品包输入改变全部作废；相关脚本/共享 helper/消费者改变则使依赖 case 作废；仅文档和无关测试改变不重跑模型。不做跨任意旧版本的“成功缓存”；未知依赖影响按保守范围重跑。
+6. 失败后先区分前置/脚本、产品、provider/host 延迟、清理失败。运行器不自动重试；已排除产品问题且清理确定的 provider/host 延迟，同候选最多从新环境重跑一次该 case 全链，再失败即报告未完成。前置/脚本/产品问题先修复，按变更使受影响证据失效后重验；清理未确定先处理现场。无无限重试、无静默 fallback；host 超时即失败，即使进程返回 0。保留当前 remote 900/910 秒上限，其他上限依据实测制定，不改产品 wait/权限语义。
+
+## 速度与环境
+
+- 先删除重复工作，再处理慢启动；`compiledCli()` 已缓存，重用它而不是新增构建缓存。相同候选的 typecheck/test/build/安装与模型结果在独立审查、提交和归档阶段复用。
+- T4 首次真实模型执行前完成全部 package.json 测试入口调整、提交并冻结候选；T5 仅改工作流及开发说明，不再触及 packageInputs。确需触及则如实使对应证据失效，不能先验一遍再把必然改候选的步骤排在后面。
+- 无模型测试优先精确事件/状态等待；必要的 deadline、65 秒宿主边界和真实 heartbeat 不缩短。流式大文件仅在承担该保障的一处跑完整尺寸，其余业务案例用小文件。
+- 原生 case 默认串行，只有不同 home/端口/仓库/凭据副本及独立 cleanup owner 得到证明后最多并发两条。不能同一现场并发 producer/consumer/清理。
+- 同一候选程序可只读共享，模型 home、身份、服务状态、数据库和 Git 现场不共享。成功确认所属 PID 退出才删自有临时数据；失败保留精简诊断并显式报告清理缺口。
+- 性能采用同机同版本、没有其他验收占用的测量；最终快测跑三次取中位数，原生链只做一次必要验收并报告 provider 影响，不为了性能统计多跑模型。40 秒/5 分钟/30 分钟目标未达则记录瓶颈和实际结果，不以关闭验证达标。
+
+## CI 与外部边界
+
+普通 push/PR 执行快测及按修改选择的本机无模型检查；候选/手动验收不按 diff 跳过 gate，无条件执行 typecheck、核心测试、Node 发布/网站检查和四平台完整构建/安装。npm stable/Beta tag 的 publish 在同一 run 内依赖这份成功候选及既有 OIDC/回执检查。真实模型仍使用授权的专用本地环境，不把模型凭据新增到发布 CI。
+
+在实际目标分支核对 Beta Change 后，通过明确 branch/tag/manual 归属和 job 条件保证一次触发只创建一个候选，不仅依赖 paths。当前 cli-install 没有 tag push，已发现的重复是分支 push 的重叠路径，不能误记成当前 tag 重复。未知影响路径在普通提交默认执行相关集成；不添加外部候选查找/跨 run 缓存系统。Node npm/website 测试只按其领域调用，不因也被 Bun 发现就在同一 gate 中重复执行；运行时确有差异的 Node 最终检查保留一次。
+
+实施后的本地验证不冒称远端 CI、Mac 原生、arm64 模型或 WAN 已过。当前阶段不推送、不发布、不触发远端工作流、不修改用户配置。

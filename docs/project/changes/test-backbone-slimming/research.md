@@ -1,0 +1,56 @@
+# 调查依据与裁剪清单
+
+> 基线：`6cb4332`；调查：2026-10-03。静态判断与实际测量分开，不将候选改法写成已完成。
+
+## 已测量与已确认
+
+- 本次 `bun test ./test`：255 pass、0 fail、4,811 断言、42 文件，墙钟 60.078 秒；日志 `.dev-smoke/test-backbone-plan/root-test.log`、计时 `root-test-timing.json`。只跑一次基线，不为了估算再重复整套。
+- 用例耗时合计较高的文件：`hub-resource-cli.test.ts` 11.785 秒，`hub-consumers.test.ts` 4.669 秒，`artifacts.test.ts` 4.354 秒，`tasks-overview.test.ts` 4.120 秒。后者约 3.039 秒来自真实库存 deadline；这是超时保障，不能直接删除。`compiled-cli.ts` 已全进程只编译一次，不把“减少重复编译”当新增收益。
+- package.json 有 47 个 `test`/`test:*` 命令。前轮成功证据 53 份不等于 53 个独立能力；入口、进程启动和消费者之间存在重复。
+- 第一轮远端 MCP 四次尝试耗时 20.81、14.46、19.88、17.62 分钟，合计约 72.77 分钟、374 次 MCP 调用，前三次失败约 55.14 分钟。证据为 `.dev-smoke/remote-mcp-{C6hU6A,Cdedes,fzpnCz,cnexH5}/evidence.json`。该数字仅覆盖远端这一组，不是整个验收耗时或 token 用量。
+- [前轮验收](../../archive/2026-10-02-module-slimming-audit/acceptance.md)和[执行 T13](../../archive/2026-10-02-module-slimming-audit/execution.md#t13-最终同候选验收)记录了输入 fixture、真实二进制 hash 与消费者失配后重跑模型的问题。当前 `installed-binaries.mjs` 已解决 launcher/core 分辨，第二轮应前置复用，不另造一套解析器。
+- `smoke-hub-native-mcp.ts:60` 的 shared 分支在 2 host × 2 runtime 中各执行 65 秒等待；`smoke-task-mcp.ts:47` 再按两宿主执行，合计六次同类等待。宿主超时差异是真实边界，保留每宿主一次，runtime 维度不再复制该等待。
+- `smoke-collaboration.ts:27` 的 shared/worktree 默认各八组合，remote 四组合；`smoke-artifact-mcp.ts` 再跑八组合，`smoke-hub-native-mcp.ts` 再跑十二组合。不是每项断言都重复，但启动、两轮完成、原生历史、递归拒绝和 MCP 发现多次覆盖。
+- `smoke-dashboard.ts` 调用同一个 `smokeConsole`；独立跑 console 后再跑 dashboard 会重复整个浏览器主体。历史读取消费者仍有价值，应在同一次主体运行后接上。
+- `cli-install.yml` 在源码或测试推送时四平台构建/安装；`npm-publish.yml` 在发布相关文件推送时又调用它。两者 path 范围相交，可导致同一推送两套构建。Beta 工作区也改这些文件，实施前协调最终版本。
+
+## 核心保障与测试归属
+
+以下覆盖当前全部 42 个测试文件。表内名称省略 `.test.ts`，`npm-publish` 为 `.test.js`；归组不表示合成一个巨型用例。便宜且能独立发现错误的测试不因文件短而删掉。
+
+| 骨干 | 当前文件 | 必留的独立故障 |
+| --- | --- | --- |
+| K1 当前数据与配置 | state、task-records、config | 旧/损坏/WAL 格式无写拒绝、并发初始化、坏任务隔离、无效配置不能覆盖有效文件 |
+| K2 身份与授权 | hub、hub-access、hub-sockets、hub-resources、hub-resource-dispatch、hub-agent-resolution | 跨身份/空间/凭据种类拒绝、撤权后在途重查、最后 owner 并发保护、机器/运行时权限不互借、真实 outgoing RPC 重查 |
+| K3 中心配置与接入 | hub-agents、hub-repositories、hub-resource-cli、hub-connect | 配置 CAS/重放、仓库身份与脱敏、连接加密/原文件保留、CLI 确实接到中心 |
+| K4 执行与恢复 | execution、tasks、task-rounds、hub-delegation、hub-delegation-native | 丢回执不重放、未知不当成功、重启恢复、queued/steer/interrupt/审批、仅原生缺失才重建、准确退出 |
+| K5 MCP 接入 | mcp、tasks-mcp、hub-consumers、artifact-mcp | 两宿主真实身份关联、17 工具契约、父隔离/递归拒绝、取消只取消等待、参数到业务行为、附件不泄漏内容 |
+| K6 工作区 | task-workspaces、remote-tasks | accepted base 固定、prepare/stop/seal 顺序、取消不启动、hook 失败后仅 retry-finish、删除和新轮互斥、报告/ref 保留 |
+| K7 文件 | artifacts、task-files、task-outputs | 路径/归属/字节完整性、固定候选重试、输入 pin、外部引用保护、部分交付与显式 discard |
+| K8 远端成果 | remote、task-results | bundle/模块/LFS 的边界调用、固定成果、离线取回/失响应重查、原主库不自动合入、跨消费者引用保留 |
+| K9 查询与 UI | tasks-overview、hub-console、proxy | 有界只读查询、unknown/执行/交付区别、HTTP/SSE/WS、浏览器身份与迟到响应、XSS/秘密不进 URL |
+| K10 CLI 与安装 | cli、resource-commands、service-commands、mcp-install | 可解析错误/stdio、退出与信号、显式 Hub、真实宿主配置格式、安装回滚和并发编辑保护 |
+| K11 发行 | release-assembly、release-inputs、npm-publish、website-build | 源码/包 hash、冻结输入、发布顺序/未知上传/脱敏、网站原子输出与 HTML 转义 |
+| K12 测试资源生命周期 | fixture-cleanup、smoke-lifecycle | 构造半失败也清理、逐资源尝试、活进程凭据不删、非零退出/清理失败不冒充通过 |
+
+## 按收益和风险排序的处理建议
+
+| 顺序 | 位置与问题证据 | 具体处理及保留保障 | 风险/验证 |
+| --- | --- | --- | --- |
+| 1 | 上述 40 个原生矩阵 case 的重复生产者，加 task-* 原生脚本 | 用六条两轮主链承担同一候选的正常协作、输入输出、工作区、历史；控制/重建保留两 runtime 定向探针。退出历史由后继消费者读取一次 | 中；逐断言映射至 Technical 的 N1–N6 与专项探针，先有真实替代证据再删生产者 |
+| 2 | 两个 MCP 脚本的六次 65 秒等待 | 留 Codex、Claude 各一次真实超时及返回检查，移除其余四次；取消/after_revision 正确性留快测 | 低；相同的四次等待本身可少约 260 秒，不据此保证整套提速 |
+| 3 | T13 inputs/outputs 直到真实模型后才发现消费契约失配 | 复用 current schema、installedBinaries 和消费者读取/所有权检查，模型前做小型合成当前记录的接线演练；不伪造原生成功 | 中；正常接线可进入模型，错误 hash/格式/归属在零模型调用时失败，producer→consumer→cleanup 链检查 |
+| 4 | remote 单 case 失败后重新跑完整四组 | case 独立持有现场和成功清理证据；同候选且相关测试未变才复用通过 case，失败 case 从新环境重跑全链 | 中；保留失败记录，消费者/共享 fixture 改变则使全部依赖 case 失效，无法确定影响时扩大重跑 |
+| 5 | `smoke-dashboard.ts` 与 `smoke-hub-console.ts` 共用主体，历史遍历十二条相同形态记录 | 保留一次浏览器主体 + 两 runtime 各一条真实历史；删除纯转发入口并更新调用方 | 低；权限、token/401、分页、迟到响应、归档消息与 reload 仍由真实 Playwright 覆盖 |
+| 6 | `hub-console.test.ts:66–68` 搜索 JS 字符串，`:127` 六条纯标签映射 | 删除实现拼写断言，标签文字并入关键状态的行为核对；浏览器骨干保留 URL 无 token、Authorization、401 清理，快测保留 unknown/停止/交付语义 | 低；先确保便宜浏览器层必跑这些实际行为。CSP/MIME/授权等外部契约不按字符串一概删除 |
+| 7 | `resource-commands.test.ts` 四个独立源码 CLI 启动、`cli.test.ts` 多次源码启动；resource CLI 在根测试占 11.785 秒 | 复用已存在的 compiledCli，保留每个命令入口接线检查；权限/CAS 大组合留领域测试，编译 CLI 只留端到端代表主链和必要错误出口 | 中；移除的每项 CLI 断言必须在领域测试中仍可失败，不能只保留 mock 调用次数 |
+| 8 | `execution.test.ts:200` 简单审批转发与上层审批流程重叠 | 待核对上层是否验证真实 HTTP path/body/409；确实相同才并入，否则保留该小用例 | 待验证；mock ExecutionClient 不等于 HTTP 适配保障，不能先删 |
+| 9 | `.github/workflows/cli-install.yml` 与 npm 工作流的重叠触发 | 普通提交只跑核心及按影响的本机检查；发布候选复用一个四平台构建入口，npm 由该入口获得候选 | 中；actionlint、事件→job 表、稳定/Beta 门禁和真实手动无发布预演；不靠取消发布验收提速 |
+| 10 | 多个 native/file/task fixture 各持有模型 home、服务和完整证据 | 保留既有 helper，按每条链复用不可变程序和必要源材料；模型 home/身份/任务现场隔离。成功删除自有临时环境，仅留脱敏摘要/失败诊断 | 中；故障注入验证部分构造失败、producer 成功 consumer 失败、清理非零；不做跨用例可变资源池 |
+
+## 尚需实施时验证
+
+- 42 个文件中多数用例验证真实边界，不能据标题判成浅层。T1 按实际断言完成删除/合并的精确映射，尤其 K2/K4/K7 不承诺大幅删除。
+- 远端同宿主/runtime 配对是否还存在独立耦合：快测仍覆盖四配对；涉及 host/native 映射、HAPI pin 或 workspace 分支时扩展原生矩阵。
+- 六主链整合后的固定案例运行时间、两个隔离 case 并发是否互相争用、消费者如何消费最小历史，需要真实验证。默认先串行，不用全局并发隐藏重复。
+- 72MiB 流式传输、库存 deadline 和真实 heartbeat 过期测试有不同故障来源，保留在对应集成层，不直接替换为小文件、假时钟或静态状态。
