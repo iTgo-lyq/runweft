@@ -64,3 +64,11 @@ N5的producer remote-mcp-R2VNPG与consumer remote-package-xfUR6U均退出0，suc
 ### T4V 重建专项选择纠偏
 
 R-codex首试reconstruction-R1udSK在首轮成功、切换空原生home后失败：单runtime入口仍断言双runtime的2/4会话数量。改为严格比较实际case各轮sessionId集合；原生配置home的校验/清凭据仍覆盖两份实际创建的副本，不能随runtime筛选漏掉另一份。首轮成功且数据库证明第二轮未被接受，原生历史hash、进程退出与源配置均可核对，沿脚本已有显式恢复入口只继续第二轮，不重放首轮。首次完整失败快照另存test-backbone-plan/R-codex-first-failure.json，原ledger不改成功。typecheck通过；后续实际结果另记。
+
+### T4V完成
+
+- 六主链：最终N1 ivmonJ、N3 PKT4QY、N4 Iw79ls、N6 oRQ53h均完整gate通过；N2复用实际成功的O1jQvU生产结果，修正后的RLcBaa消费者通过并清理；N5实际生产/消费均成功，外层路径汇总错误由零模型契约与N6正常remote出口验证修正，没有再跑模型。原失败ledger保持失败。
+- 专项：C-codex ZBHHv2、C-claude anzRhp、R-claude XLLNp0完整通过；R-codex沿已验证的首轮保留窗口继续第二轮，reconstruction-R1udSK最终通过，首次失败完整快照保留。原生JSONL确证一次新输入携带重建记忆，原历史hash不变。没有继续已接受但结果未知的任务。
+- 清理：成功collaboration ownedRoot均删除；控制专项只留evidence.json；失败N2原现场已在核对所有home停机/PID消失后删除，记录t4v-failed-fixture-cleanup.json。源原生配置摘要每次核对未变。
+- 并行：前四链证明独立home/端口/配置和清理后，N5/N6与独立控制/重建最多并发两条；未共享可变现场。N1最后使用最新实际生产者/历史helper完成，没有沿用失效首跑。
+- 冻结：产品源码及HAPI未改；候选仍为6a7e559、source.dirty=false，测试/helper改动由各次验收提交单独绑定。脚本变化按实际生产、消费或专项依赖判定，只重验受影响阶段；不同指纹ledger不伪造为自动复用成功。
