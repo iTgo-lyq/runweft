@@ -1,0 +1,700 @@
+{
+  "scope": {
+    "moduleGroupsAtAudit": 49,
+    "filesAtAudit": 274,
+    "currentFiles": 278,
+    "unmappedFiles": 0,
+    "duplicateAssignments": 0
+  },
+  "candidate": {
+    "sourceCommit": "e3553755c321c4e7981185ba5aa9bf3308544605",
+    "version": "1.1.1",
+    "hapiRevision": "3ac8b08b2aead13e9eaae459de62d9a5d5df7395",
+    "installed": {
+      "installedCli": "/home/tiger/.codex/worktrees/module-slimming/runweft/.dev-smoke/install-rM9h2z/prefix/bin/runweft",
+      "installedBinary": "/home/tiger/.codex/worktrees/module-slimming/runweft/.dev-smoke/install-rM9h2z/prefix/lib/node_modules/runweft/node_modules/runweft-linux-x64/bin/runweft",
+      "installedHapi": "/home/tiger/.codex/worktrees/module-slimming/runweft/.dev-smoke/install-rM9h2z/prefix/lib/node_modules/runweft/node_modules/runweft-linux-x64/bin/hapi"
+    },
+    "hashes": {
+      "installedBinary": "09bf189c4a0115b9f1badbf5991cb86d6665b6f42b7b22ca93468dc309e29ba3",
+      "installedHapi": "bdf706d7966ae4818b09029991a2bb03e70b10b0555763fc41430afd977b4fec"
+    },
+    "changedPackageInputsAfterBuild": [],
+    "fixtureRevision": "56b63158a694e0fcbb43679d2545f39bf35fc68c",
+    "packageIndex": "t13-index.json",
+    "publishedByThisChange": false
+  },
+  "validation": {
+    "typecheck": "passed; final fixture correction rechecked",
+    "build": "passed",
+    "rootTests": {
+      "passed": 255,
+      "failed": 0,
+      "assertions": 4811,
+      "files": 42,
+      "log": "t12-full.log"
+    },
+    "nodeTests": {
+      "passed": 13,
+      "failed": 0,
+      "log": "t12-release-node.log"
+    },
+    "cliContract": "baseline unchanged except authorized data/reset removal",
+    "mcpContract": "all 17 tools preserve full descriptions, schemas and annotations",
+    "remoteFinalModel": {
+      "codex": "gpt-6.1-sol",
+      "effort": "medium",
+      "timeoutMs": 900000,
+      "hardTimeoutMs": 910000
+    }
+  },
+  "passedEvidence": [
+    {
+      "evidence": ".dev-smoke/arm64-RO781S/evidence.json",
+      "sha256": "5e68214667230e3f0bc479ea0fedb0c01322f4762d38c4a217056344d5f8a7c1",
+      "log": ".dev-smoke/slimming-acceptance/t13-arm64.log",
+      "success": true,
+      "caseEntries": 0,
+      "checkEntries": 0,
+      "cleanupErrors": null
+    },
+    {
+      "evidence": ".dev-smoke/artifact-mcp-Ny2oOU/evidence.json",
+      "sha256": "1beb3ff9ef3b4e54fd43782c8c14d8f0e80146c3d60fff7987ba390381302d24",
+      "log": ".dev-smoke/slimming-acceptance/t13-artifact-mcp.log",
+      "success": true,
+      "caseEntries": 8,
+      "checkEntries": 0,
+      "cleanupErrors": []
+    },
+    {
+      "evidence": ".dev-smoke/artifact-package-aVEqUa/evidence.json",
+      "sha256": "5eb17f2989fb10777b6d2ce1d9d241b799416d9f1f606d1c3ab999c5e4d27e1a",
+      "log": ".dev-smoke/slimming-acceptance/t13-artifact-package.log",
+      "success": true,
+      "caseEntries": 0,
+      "checkEntries": 8,
+      "cleanupErrors": []
+    },
+    {
+      "evidence": ".dev-smoke/artifact-prune-50AjNK/evidence.json",
+      "sha256": "9e74086063d734d513121ffe1868d40835718743dc1e36bf4ca82576f2989b5a",
+      "log": ".dev-smoke/slimming-acceptance/t13-artifact-prune.log",
+      "success": true,
+      "caseEntries": 0,
+      "checkEntries": 3,
+      "cleanupErrors": []
+    },
+    {
+      "evidence": ".dev-smoke/artifact-cli-GAHhMG/evidence.json",
+      "sha256": "02caff8f7f93b8bb0562e778bed68a78c49754ccba898858da4d46ab676ddd2a",
+      "log": ".dev-smoke/slimming-acceptance/t13-artifacts.log",
+      "success": true,
+      "caseEntries": 3,
+      "checkEntries": 6,
+      "cleanupErrors": []
+    },
+    {
+      "evidence": ".dev-smoke/collaboration-jHQQOu/evidence.json",
+      "sha256": "3d7dffebd8fb6f912b73cd78aed0483404f567ec8a40f59843c6e816218efdaf",
+      "log": ".dev-smoke/slimming-acceptance/t13-collaboration-shared.log",
+      "success": true,
+      "caseEntries": 8,
+      "checkEntries": 0,
+      "cleanupErrors": []
+    },
+    {
+      "evidence": ".dev-smoke/worktree-mcp-X3u0lO/evidence.json",
+      "sha256": "9625e97654a9c006d700572434fe4097b7b42f5eac88ba2cb89f903e9f7d4e89",
+      "log": ".dev-smoke/slimming-acceptance/t13-collaboration-worktree.log",
+      "success": true,
+      "caseEntries": 8,
+      "checkEntries": 0,
+      "cleanupErrors": []
+    },
+    {
+      "evidence": ".dev-smoke/hub-consumers-xRjMbP/evidence.json",
+      "sha256": "72b1263d1f0832508fa8012974510290aab15f670dc389c6a7dccf554dd34a4e",
+      "log": ".dev-smoke/slimming-acceptance/t13-consumers.log",
+      "success": true,
+      "caseEntries": 0,
+      "checkEntries": 10,
+      "cleanupErrors": []
+    },
+    {
+      "evidence": ".dev-smoke/hub-console-mouXhR/evidence.json",
+      "sha256": "4ac30048017c561edcc9f64d1caad4392c8f64f7de95e4785024f99e3f8ecdd2",
+      "log": ".dev-smoke/slimming-acceptance/t13-dashboard.log",
+      "success": true,
+      "caseEntries": 0,
+      "checkEntries": 17,
+      "cleanupErrors": []
+    },
+    {
+      "evidence": ".dev-smoke/execution-8LJIuF/evidence.json",
+      "sha256": "ca48e88da2a13af0d3f9a9af0590774f567cf98997d26121168f89a975c27b08",
+      "log": ".dev-smoke/slimming-acceptance/t13-execution.log",
+      "success": true,
+      "caseEntries": 2,
+      "checkEntries": 11,
+      "cleanupErrors": []
+    },
+    {
+      "evidence": ".dev-smoke/hub-access-6SSmtk/evidence.json",
+      "sha256": "b750ef5f47aca052155ed45d0b213f2b7dc133ce91d295013e469cfd64cec36a",
+      "log": ".dev-smoke/slimming-acceptance/t13-hub-access.log",
+      "success": true,
+      "caseEntries": 0,
+      "checkEntries": 12,
+      "cleanupErrors": null
+    },
+    {
+      "evidence": ".dev-smoke/hub-configuration-MhNoAl/evidence.json",
+      "sha256": "b4ea58b145ef9223e6c49f8c3240106e6319ff1372e5ce7b92c581c33661760f",
+      "log": ".dev-smoke/slimming-acceptance/t13-hub-configuration-v3.log",
+      "success": true,
+      "caseEntries": 0,
+      "checkEntries": 9,
+      "cleanupErrors": null
+    },
+    {
+      "evidence": ".dev-smoke/hub-connect-CRGqdd/evidence.json",
+      "sha256": "5ee083b12ceea0e1d4383941059cb637d671bf20b5a69d328233fee10373e845",
+      "log": ".dev-smoke/slimming-acceptance/t13-hub-connect.log",
+      "success": true,
+      "caseEntries": 0,
+      "checkEntries": 5,
+      "cleanupErrors": []
+    },
+    {
+      "evidence": ".dev-smoke/hub-console-Est9a8/evidence.json",
+      "sha256": "d07fa734564b782311d847ea002cad6c8687e2f6ffd08bad9fd6e316da806b63",
+      "log": ".dev-smoke/slimming-acceptance/t13-hub-console-v3.log",
+      "success": true,
+      "caseEntries": 0,
+      "checkEntries": 17,
+      "cleanupErrors": []
+    },
+    {
+      "evidence": ".dev-smoke/hub-delegation-native-uvCKoe/evidence.json",
+      "sha256": "35a7d298fdf40895c0f6f1dcf3dabf25b8d3858829edf7c25befb51721d7385a",
+      "log": ".dev-smoke/slimming-acceptance/t13-hub-delegation-native.log",
+      "success": true,
+      "caseEntries": 0,
+      "checkEntries": 6,
+      "cleanupErrors": null
+    },
+    {
+      "evidence": ".dev-smoke/hub-delegation-preparation-XDh9Kf/evidence.json",
+      "sha256": "40d35e0a3de2166f06870e291fa0bb083b6b854fa722832512cc4524e9afa5ec",
+      "log": ".dev-smoke/slimming-acceptance/t13-hub-delegation-preparation.log",
+      "success": true,
+      "caseEntries": 0,
+      "checkEntries": 5,
+      "cleanupErrors": null
+    },
+    {
+      "evidence": ".dev-smoke/hub-upgrade-mXHjEG/evidence.json",
+      "sha256": "7dc9414b11591231b95c9528b80b6cdc0a5f2c8b4c771df954318c7206b797ff",
+      "log": ".dev-smoke/slimming-acceptance/t13-hub-format.log",
+      "success": true,
+      "caseEntries": 0,
+      "checkEntries": 3,
+      "cleanupErrors": []
+    },
+    {
+      "evidence": ".dev-smoke/hub-realtime-xuAsoz/evidence.json",
+      "sha256": "179d1caf79f42fa9fc8b751b0bbbd2d791e6acc196f26618eb3eba4a206472d9",
+      "log": ".dev-smoke/slimming-acceptance/t13-hub-realtime-v3.log",
+      "success": true,
+      "caseEntries": 0,
+      "checkEntries": 10,
+      "cleanupErrors": null
+    },
+    {
+      "evidence": ".dev-smoke/hub-resources-5j9sUv/evidence.json",
+      "sha256": "ca1611cf3ca7457a966f7c84dd66bc1619addada2aac414e3c301b74bf494e65",
+      "log": ".dev-smoke/slimming-acceptance/t13-hub-resources-v3.log",
+      "success": true,
+      "caseEntries": 0,
+      "checkEntries": 10,
+      "cleanupErrors": null
+    },
+    {
+      "evidence": ".dev-smoke/hub-service-OgaF1y/evidence.json",
+      "sha256": "da43392ea7ff1ffcafe65231bf8100a4f1879ecfd2bac64731d833f1def64438",
+      "log": ".dev-smoke/slimming-acceptance/t13-hub-service.log",
+      "success": true,
+      "caseEntries": 0,
+      "checkEntries": 5,
+      "cleanupErrors": []
+    },
+    {
+      "evidence": ".dev-smoke/inputs-native-lIiyjN/evidence.json",
+      "sha256": "d963aabbc84f81535c44ae4983cf762cafac5c4dd60eec1bd2230581e3ae223f",
+      "log": ".dev-smoke/slimming-acceptance/t13-inputs.log",
+      "success": true,
+      "caseEntries": 4,
+      "checkEntries": 6,
+      "cleanupErrors": []
+    },
+    {
+      "evidence": ".dev-smoke/install-rM9h2z/services/service-KoqMSg/evidence.json",
+      "sha256": "a23effd022307e3acc6ce69eb9f8c3bb0ec6e255a1ec6eda5d4535ff534444d4",
+      "log": ".dev-smoke/slimming-acceptance/t13-install.log",
+      "success": true,
+      "caseEntries": 0,
+      "checkEntries": 6,
+      "cleanupErrors": []
+    },
+    {
+      "evidence": ".dev-smoke/mcp-k06UNt/evidence.json",
+      "sha256": "e55a525ee4e425e0d7f90e4008cf87a5ef51d872e22ea9a9d66267c32f20afb1",
+      "log": ".dev-smoke/slimming-acceptance/t13-mcp-native.log",
+      "success": true,
+      "caseEntries": 8,
+      "checkEntries": 13,
+      "cleanupErrors": []
+    },
+    {
+      "evidence": ".dev-smoke/mcp-protocol-6oWzNG/evidence.json",
+      "sha256": "5e88c717cbd344687fd1615b447e099d5350ef320455e98f942a3faf6f4f98a0",
+      "log": ".dev-smoke/slimming-acceptance/t13-mcp-protocol.log",
+      "success": true,
+      "caseEntries": 0,
+      "checkEntries": 0,
+      "cleanupErrors": null
+    },
+    {
+      "evidence": ".dev-smoke/hub-native-mcp-8aThG1/evidence.json",
+      "sha256": "71521ac06a7b710eda14312d346093f3a462d9b574a7e9f4216a825d7aa2ca07",
+      "log": ".dev-smoke/slimming-acceptance/t13-native-mcp-v2.log",
+      "success": true,
+      "caseEntries": 12,
+      "checkEntries": 18,
+      "cleanupErrors": []
+    },
+    {
+      "evidence": ".dev-smoke/outputs-machine-zaScqD/evidence.json",
+      "sha256": "08e11aab21deaa3708ef93a7009eaf056c5fded43dee77a233375853e5e2c35d",
+      "log": ".dev-smoke/slimming-acceptance/t13-outputs.log",
+      "success": true,
+      "caseEntries": 0,
+      "checkEntries": 3,
+      "cleanupErrors": []
+    },
+    {
+      "evidence": ".dev-smoke/reconstruction-bFZDeN/evidence.json",
+      "sha256": "fffec840edfcd6dc8826b95340365ea40149858525265da55fba4b49f5bf8277",
+      "log": ".dev-smoke/slimming-acceptance/t13-reconstruction.log",
+      "success": true,
+      "caseEntries": 2,
+      "checkEntries": 7,
+      "cleanupErrors": []
+    },
+    {
+      "evidence": ".dev-smoke/remote-mcp-cnexH5/evidence.json",
+      "sha256": "6f75fc3e88d0d1dc953800258728d4232d18a8d937ae586cada0433933e562bc",
+      "log": ".dev-smoke/slimming-acceptance/t13-remote-mcp-v4.log",
+      "success": true,
+      "caseEntries": 4,
+      "checkEntries": 0,
+      "cleanupErrors": []
+    },
+    {
+      "evidence": ".dev-smoke/remote-native-i0iUno/evidence.json",
+      "sha256": "16ecb7e4e5e68ff5e0e215844890588df0172a1555943da724f295362e544ba5",
+      "log": ".dev-smoke/slimming-acceptance/t13-remote-native.log",
+      "success": true,
+      "caseEntries": 2,
+      "checkEntries": 8,
+      "cleanupErrors": []
+    },
+    {
+      "evidence": ".dev-smoke/remote-package-VgzXdE/evidence.json",
+      "sha256": "3b47e30d0b81f493040820418dc594c102cb9ebbedf94f29fc8a783a957005c7",
+      "log": ".dev-smoke/slimming-acceptance/t13-remote-package-v4.log",
+      "success": true,
+      "caseEntries": 4,
+      "checkEntries": 0,
+      "cleanupErrors": []
+    },
+    {
+      "evidence": ".dev-smoke/remote-tasks-native-rpnTt3/evidence.json",
+      "sha256": "0d1147dbab9b56b7b5845530594023a32ddd1bdba6ee258b2e62bf6f0e09a0b5",
+      "log": ".dev-smoke/slimming-acceptance/t13-remote-tasks.log",
+      "success": true,
+      "caseEntries": 2,
+      "checkEntries": 5,
+      "cleanupErrors": []
+    },
+    {
+      "evidence": ".dev-smoke/repository-export-wUqRxC/evidence.json",
+      "sha256": "4106c2e099169bdda85831072fdda09a6e5ef76604086e548658d7cd9b31ccff",
+      "log": ".dev-smoke/slimming-acceptance/t13-repository-export.log",
+      "success": true,
+      "caseEntries": 0,
+      "checkEntries": 2,
+      "cleanupErrors": []
+    },
+    {
+      "evidence": ".dev-smoke/repository-import-CDsNhR/evidence.json",
+      "sha256": "a29437433cae423de5723b429ff6b7788e50ed73d4339f858825137fdbd4bf85",
+      "log": ".dev-smoke/slimming-acceptance/t13-repository-import.log",
+      "success": true,
+      "caseEntries": 0,
+      "checkEntries": 3,
+      "cleanupErrors": []
+    },
+    {
+      "evidence": ".dev-smoke/repository-result-export-rMECqz/evidence.json",
+      "sha256": "240815cc3b20a8d02586c42bc4a9651d5738a998afb462475c7ad1f0a62e8c70",
+      "log": ".dev-smoke/slimming-acceptance/t13-result-export.log",
+      "success": true,
+      "caseEntries": 0,
+      "checkEntries": 4,
+      "cleanupErrors": []
+    },
+    {
+      "evidence": ".dev-smoke/repository-result-fetch-IPjnbF/evidence.json",
+      "sha256": "f4e3b0ff6394a7040638ea521760a3fc412354812c0b47080abc78bfbdc5b4da",
+      "log": ".dev-smoke/slimming-acceptance/t13-result-fetch.log",
+      "success": true,
+      "caseEntries": 0,
+      "checkEntries": 5,
+      "cleanupErrors": []
+    },
+    {
+      "evidence": ".dev-smoke/result-retention-FOasYt/evidence.json",
+      "sha256": "06b91a899ab243bc90b707ba3b644de1fa698742bbe59ffc5ad7cfe3d941ed2d",
+      "log": ".dev-smoke/slimming-acceptance/t13-result-retention.log",
+      "success": true,
+      "caseEntries": 0,
+      "checkEntries": 4,
+      "cleanupErrors": []
+    },
+    {
+      "evidence": ".dev-smoke/task-result-delivery-Y3qoF5/evidence.json",
+      "sha256": "819ec1c5cc2ebc188eed59e15cf907f630be3882ba7c45a0f1c780d97000f14a",
+      "log": ".dev-smoke/slimming-acceptance/t13-result-tasks.log",
+      "success": true,
+      "caseEntries": 0,
+      "checkEntries": 3,
+      "cleanupErrors": []
+    },
+    {
+      "evidence": ".dev-smoke/task-controls-C2Jap7/evidence.json",
+      "sha256": "274cfdb8692c1f0962c1e5187f80398222331f396a07e2a4df37a43ede4a591e",
+      "log": ".dev-smoke/slimming-acceptance/t13-task-controls-v2.log",
+      "success": true,
+      "caseEntries": 2,
+      "checkEntries": 7,
+      "cleanupErrors": []
+    },
+    {
+      "evidence": ".dev-smoke/task-inputs-HOnmYf/evidence.json",
+      "sha256": "8716f33b1189eb868088a3dfe9806612c5db183a553bb5e22548f1f7bcfc01cc",
+      "log": ".dev-smoke/slimming-acceptance/t13-task-inputs.log",
+      "success": true,
+      "caseEntries": 8,
+      "checkEntries": 8,
+      "cleanupErrors": []
+    },
+    {
+      "evidence": ".dev-smoke/task-mcp-zMf5fo/evidence.json",
+      "sha256": "5c16a3873baf3cb723a5c5d58b6a88b699c64f9b2438c3c877d878a5743554af",
+      "log": ".dev-smoke/slimming-acceptance/t13-task-mcp-v2.log",
+      "success": true,
+      "caseEntries": 2,
+      "checkEntries": 4,
+      "cleanupErrors": []
+    },
+    {
+      "evidence": ".dev-smoke/task-outputs-9GlRl1/evidence.json",
+      "sha256": "284c6710588237fdc91ec441edefa9d0bc75a1683556665b09a7b0a3a0d65885",
+      "log": ".dev-smoke/slimming-acceptance/t13-task-outputs-v2.log",
+      "success": true,
+      "caseEntries": 8,
+      "checkEntries": 8,
+      "cleanupErrors": []
+    },
+    {
+      "evidence": ".dev-smoke/task-retention-c3clY4/evidence.json",
+      "sha256": "ea7e7dcb3f22369e1587a3a88972a61a75c07cc9cc4e66d972fe5322e2ae9875",
+      "log": ".dev-smoke/slimming-acceptance/t13-task-retention-v2.log",
+      "success": true,
+      "caseEntries": 8,
+      "checkEntries": 3,
+      "cleanupErrors": []
+    },
+    {
+      "evidence": ".dev-smoke/tasks-39ptAn/evidence.json",
+      "sha256": "7ae69c50ca117d169b801fb9334721e4261f644309033a2e37b5db2f9b197ebb",
+      "log": ".dev-smoke/slimming-acceptance/t13-tasks-v2.log",
+      "success": true,
+      "caseEntries": 0,
+      "checkEntries": 4,
+      "cleanupErrors": []
+    },
+    {
+      "evidence": ".dev-smoke/workspace-preparation-nN38aj/evidence.json",
+      "sha256": "ab45111c670470128c0760241649b070e619fdfb5beb9c6777d93296299ba786",
+      "log": ".dev-smoke/slimming-acceptance/t13-workspace-preparation.log",
+      "success": true,
+      "caseEntries": 0,
+      "checkEntries": 6,
+      "cleanupErrors": []
+    },
+    {
+      "evidence": ".dev-smoke/workspace-http-OairUD/evidence.json",
+      "sha256": "6df6c6192650277c12e3edcefa8e082d2c2f01d5f15a549ea3969c7f867de15d",
+      "log": ".dev-smoke/slimming-acceptance/t13-workspaces.log",
+      "success": true,
+      "caseEntries": 2,
+      "checkEntries": 2,
+      "cleanupErrors": []
+    },
+    {
+      "evidence": ".dev-smoke/worktree-lifecycle-fsmDNx/evidence.json",
+      "sha256": "b9d24fa711f6837c408b2a6aefbc444db610507a20764f6610e09bfe0e5bd880",
+      "log": ".dev-smoke/slimming-acceptance/t13-worktree-lifecycle.log",
+      "success": true,
+      "caseEntries": 2,
+      "checkEntries": 0,
+      "cleanupErrors": []
+    },
+    {
+      "evidence": ".dev-smoke/worktree-package-j8O4TV/evidence.json",
+      "sha256": "bd64677f0b7e930d3dc5ca0fb7417391c43f92620836d4066f7b0658e9845108",
+      "log": ".dev-smoke/slimming-acceptance/t13-worktree-package.log",
+      "success": true,
+      "caseEntries": 1,
+      "checkEntries": 0,
+      "cleanupErrors": []
+    },
+    {
+      "evidence": ".dev-smoke/worktree-mcp-R314V4/evidence.json",
+      "sha256": "0551136243dbba2b92434e85e6049d30833046a4a486d0c5c4764532f11a19bb",
+      "log": ".dev-smoke/slimming-acceptance/t13-worktree-retry.log",
+      "success": true,
+      "caseEntries": 1,
+      "checkEntries": 0,
+      "cleanupErrors": []
+    },
+    {
+      "evidence": ".dev-smoke/worktree-tasks-rJND0n/evidence.json",
+      "sha256": "f55eb473027b71a40f80a9106bb3497db20d19e9abb1b7bac97e3e76b02783f5",
+      "log": ".dev-smoke/slimming-acceptance/t13-worktree-tasks.log",
+      "success": true,
+      "caseEntries": 2,
+      "checkEntries": 5,
+      "cleanupErrors": []
+    },
+    {
+      "evidence": ".dev-smoke/release-packages-P1ol3Q/evidence.json",
+      "sha256": "6f5b452da4352313118249e45ab9b4ec16dc99a06c97da303779366838c2175b",
+      "log": ".dev-smoke/slimming-acceptance/t13-packages-verify.log",
+      "success": true,
+      "caseEntries": 0,
+      "checkEntries": 0,
+      "cleanupErrors": null
+    },
+    {
+      "evidence": ".dev-smoke/install-rM9h2z/evidence.json",
+      "sha256": "408954be79fd45c0a02d74a765bef52a2a9142813821c492b10d3657302f7b72",
+      "log": ".dev-smoke/slimming-acceptance/t13-install.log",
+      "success": true,
+      "caseEntries": 0,
+      "checkEntries": 7,
+      "cleanupErrors": null
+    },
+    {
+      "evidence": ".dev-smoke/hub-identity-pgQgqf/evidence.json",
+      "sha256": "ba00bb1a9de2ee64588c9369982f1011c4b42a632aa41f12e22b5117564ea0d4",
+      "log": ".dev-smoke/slimming-acceptance/t13-hub.log",
+      "success": true,
+      "caseEntries": 0,
+      "checkEntries": 8,
+      "cleanupErrors": []
+    },
+    {
+      "evidence": ".dev-smoke/console-history-LPql2C/evidence.json",
+      "sha256": "a63717c0def0d0d89cb6ed763100207084d2a95b1102b7538c5c56d4874ca81d",
+      "log": ".dev-smoke/slimming-acceptance/t13-dashboard.log",
+      "success": true,
+      "caseEntries": 0,
+      "checkEntries": 12,
+      "cleanupErrors": []
+    }
+  ],
+  "failedAttemptsPreserved": [
+    "hub-native-mcp-SM1QaY",
+    "hub-console-4xJAw5",
+    "hub-console-i8UBnx",
+    "task-outputs-60FNTA: successful producer but rejected consumer metadata",
+    "task-controls-3z6Foc",
+    "remote-mcp-C6hU6A",
+    "remote-mcp-Cdedes",
+    "remote-mcp-fzpnCz"
+  ],
+  "limitations": [
+    "No current-candidate macOS real machine tests",
+    "arm64 QEMU CLI only; no full service or models",
+    "Same-machine independent Runners do not establish physical WAN behavior",
+    "Fixed HAPI long Claude cwd history lookup limitation; short owned fixture paths used",
+    "No remote CI, npm publication, or website deployment by this Change"
+  ],
+  "codeLineDelta": {
+    "src": {
+      "added": 683,
+      "removed": 1954,
+      "net": -1271
+    },
+    "test": {
+      "added": 1906,
+      "removed": 2022,
+      "net": -116
+    },
+    "scripts": {
+      "added": 3613,
+      "removed": 2608,
+      "net": 1005
+    }
+  },
+  "sourceGuards": {
+    "currentBranch": "codex/module-slimming",
+    "hapiRevision": "3ac8b08b2aead13e9eaae459de62d9a5d5df7395",
+    "hapiDirty": [],
+    "dependencyWorkflowChangesSinceImplementationBaseline": [],
+    "packageInputChangesSinceFrozenCandidate": []
+  },
+  "contractComparison": {
+    "equalAfterAuthorizedRemoval": true,
+    "removedCLICommands": [
+      "data"
+    ],
+    "unchangedMCPTools": 17,
+    "baselineSHA256": "c84b3fe07fe96209edf67517a623b205195ee2f8ebbcd9ca9a53c1db4cc0e48d",
+    "candidateSHA256": "8ea1ced68edc4c5ad13af8aa17ff196448ac565ca2eaa760a32ac74b8546abbe"
+  },
+  "ownedSuccessCleanup": [
+    {
+      "root": "/home/tiger/.codex/worktrees/module-slimming/runweft/.dev-smoke/hub-access-6SSmtk",
+      "success": true,
+      "liveReferences": [],
+      "evidenceSHA256": "b750ef5f47aca052155ed45d0b213f2b7dc133ce91d295013e469cfd64cec36a",
+      "removed": [
+        "hapi",
+        "state.sqlite"
+      ],
+      "retained": [
+        "evidence.json",
+        "hapi-err.log",
+        "hapi-out.log"
+      ]
+    },
+    {
+      "root": "/home/tiger/.codex/worktrees/module-slimming/runweft/.dev-smoke/hub-resources-5j9sUv",
+      "success": true,
+      "liveReferences": [],
+      "evidenceSHA256": "ca1611cf3ca7457a966f7c84dd66bc1619addada2aac414e3c301b74bf494e65",
+      "removed": [
+        "claude",
+        "client",
+        "codex",
+        "hapi",
+        "legacy-codex",
+        "mcp-install",
+        "mcp-protocol",
+        "runtime-free-tools",
+        "state.sqlite",
+        "version-failure"
+      ],
+      "retained": [
+        "evidence.json",
+        "hapi-err.log",
+        "hapi-out.log",
+        "runner-1-err.log",
+        "runner-1-out.log",
+        "runner-2-err.log",
+        "runner-2-out.log",
+        "runner-3-err.log",
+        "runner-3-out.log",
+        "runner-4-err.log",
+        "runner-4-out.log",
+        "runner-5-err.log",
+        "runner-5-out.log",
+        "runner-6-err.log",
+        "runner-6-out.log",
+        "runner-7-err.log",
+        "runner-7-out.log"
+      ]
+    },
+    {
+      "root": "/home/tiger/.codex/worktrees/module-slimming/runweft/.dev-smoke/hub-configuration-MhNoAl",
+      "success": true,
+      "liveReferences": [],
+      "evidenceSHA256": "b4ea58b145ef9223e6c49f8c3240106e6319ff1372e5ce7b92c581c33661760f",
+      "removed": [
+        "bad-config",
+        "claude",
+        "client",
+        "clone",
+        "codex",
+        "hapi",
+        "invalid-agent.json",
+        "malformed-definition.json",
+        "member-agent.json",
+        "member-client",
+        "owner-agent.json",
+        "owner-updated.json",
+        "source",
+        "state.sqlite",
+        "worktree"
+      ],
+      "retained": [
+        "evidence.json",
+        "hapi-err.log",
+        "hapi-out.log",
+        "runner-1-err.log",
+        "runner-1-out.log",
+        "runner-2-err.log",
+        "runner-2-out.log"
+      ]
+    },
+    {
+      "root": "/home/tiger/.codex/worktrees/module-slimming/runweft/.dev-smoke/hub-realtime-xuAsoz",
+      "success": true,
+      "liveReferences": [],
+      "evidenceSHA256": "179d1caf79f42fa9fc8b751b0bbbd2d791e6acc196f26618eb3eba4a206472d9",
+      "removed": [
+        "hapi",
+        "runner",
+        "state.sqlite"
+      ],
+      "retained": [
+        "evidence.json",
+        "hapi-err.log",
+        "hapi-out.log",
+        "runner-err.log",
+        "runner-out.log"
+      ]
+    },
+    {
+      "root": "/home/tiger/.codex/worktrees/module-slimming/runweft/.dev-smoke/hub-service-OgaF1y",
+      "success": true,
+      "liveReferences": [],
+      "evidenceSHA256": "da43392ea7ff1ffcafe65231bf8100a4f1879ecfd2bac64731d833f1def64438",
+      "removed": [
+        "client",
+        "fresh-host",
+        "host"
+      ],
+      "retained": [
+        "evidence.json"
+      ]
+    }
+  ],
+  "evidenceLocation": "/home/tiger/.codex/worktrees/module-slimming/runweft/.dev-smoke/slimming-acceptance",
+  "source": "Actual local execution and filesystem evidence; no inference of unexecuted verification"
+}

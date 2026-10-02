@@ -380,7 +380,7 @@ files/outputs/remote/remote-tasks/results/native grants定向6文件 **55 pass/0
 - Commit：`module-slimming-audit T12: 共享测试编译产物并明确清理所有者`。
 
 
-## T13 最终同候选验收（进行中）
+## T13 最终同候选验收
 
 主agent继续直接执行，不再派生或重启subagent。以干净提交 `e3553755c321c4e7981185ba5aa9bf3308544605` 执行 `bun run package --all --reuse-hapi`，四平台使用已经核对摘要的固定HAPI缓存。Linux x64 core SHA256 `09bf189c4a0115b9f1badbf5991cb86d6665b6f42b7b22ca93468dc309e29ba3`，HAPI `bdf706d7966ae4818b09029991a2bb03e70b10b0555763fc41430afd977b4fec`。包核验P1ol3Q、专用安装rM9h2z及其服务KoqMSg、arm64 QEMU RO781S成功；后续均使用rM9h2z保留安装。QEMU不代表arm64真实模型或Mac实机。CLI全契约仅移除data树，其他命令/参数/描述及17MCP工具完整schema/annotations与基线相等。
 
@@ -426,3 +426,14 @@ Task剩余全链依次exit0：C2Jap7控制七项、39ptAn任务CLI四项、zMf5f
 据实际时间线修正验收层预算：仅remote whole-host从420秒改900秒，保留+10秒SIGKILL和所有业务/权限断言；新增hostTimeoutMs/hostTimedOut证据及触发即明确失败检查，避免Codex SIGTERM返回0之后仅报缺send的误导。没有改变产品、单次MCP wait或65秒等待断言，没有循环重试。typecheck实际通过（t13-remote-budget-typecheck.log）；受影响默认远端四组合及consumer用新专用环境重跑，其余已通过矩阵无需重复。失败三次均完整保留。
 
 - T13阶段Commit：`module-slimming-audit T13: 明确远端模型整场验收预算`。
+
+
+### T13 最终验收结论
+
+远端最终remote-mcp-cnexH5在专用副本显式Codex gpt-6.1-sol/medium下完成默认四组合八轮，所有case.success=true、cleanupErrors=[]；后继remote-package-VgzXdE安装消费exit0、success=true、cleanupErrors=[]。前三次失败保留，远端900/910秒整场看门狗均未触发，精确审批、固定spawn/next次数、Git/LFS/input/output/原生记忆/离线取回与显式merge断言均未改。最终producer→consumer完成并按所有权清理本次现场；最终源/程序hash核验在t13-final-source-guards.json，CLI/MCP完整基线对照在t13-contract-check.json。
+
+[最终验收](acceptance.md)逐项汇总S/U处理、测试接替、需求对应及失败/限制；[verification.json](verification.json)登记同候选成功证据及原始SHA。T12根typecheck/test/build已覆盖最终产品源码（255 pass/0 fail/4811 expect/42文件）；T13的fixture窄修已typecheck及受影响真实链验证，npm包输入始终与e3553755相同，未为文档变化重复宣称构建。Node发布/网站13项通过。278范围文件无漏项/重复，依赖/lock/workflow与HAPI源码/pin未变。
+
+主agent依用户及AGENTS.md持续自动本地验收授权判定通过，不再设置人工门禁。物理WAN、当前候选Mac实机、arm64完整服务/模型、HAPI全套及远端发布未执行，固定HAPI长Claude路径与撤权停机限制如实保留，不阻断本次本地实现审计关闭。接续仅同步已验证Specs、入口链接并完整归档，不改其他Change或发布。
+
+- Commit：`module-slimming-audit T13: 完成同候选验收与覆盖核对`。

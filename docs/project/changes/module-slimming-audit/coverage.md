@@ -85,7 +85,7 @@
 ### P02 服务、Runner、代理与重置
 
 - [src/proxy.ts](../../../../src/proxy.ts)
-- [src/reset.ts](../../../../src/reset.ts)
+- `src/reset.ts`（审计基线文件，现已退役）
 - [src/runner.ts](../../../../src/runner.ts)
 - [src/service-commands.ts](../../../../src/service-commands.ts)
 - [src/services.ts](../../../../src/services.ts)
@@ -101,24 +101,24 @@
 
 ### P05 旧 Agent 文件模型与原生 launch
 
-- [src/agents/bindings.ts](../../../../src/agents/bindings.ts)
-- [src/agents/client.ts](../../../../src/agents/client.ts)
-- [src/agents/definitions.ts](../../../../src/agents/definitions.ts)
+- `src/agents/bindings.ts`（审计基线文件，现已退役）
+- `src/agents/client.ts`（审计基线文件，现已退役）
+- `src/agents/definitions.ts`（审计基线文件，现已退役）
 - [src/agents/launch.ts](../../../../src/agents/launch.ts)
 
 ### P06 旧资源模型及共享 native/types
 
-- [src/resources/api.ts](../../../../src/resources/api.ts)
-- [src/resources/client.ts](../../../../src/resources/client.ts)
+- `src/resources/api.ts`（审计基线文件，现已退役）
+- `src/resources/client.ts`（审计基线文件，现已退役）
 - [src/resources/native.ts](../../../../src/resources/native.ts)
-- [src/resources/service.ts](../../../../src/resources/service.ts)
-- [src/resources/store.ts](../../../../src/resources/store.ts)
+- `src/resources/service.ts`（审计基线文件，现已退役）
+- `src/resources/store.ts`（审计基线文件，现已退役）
 - [src/resources/types.ts](../../../../src/resources/types.ts)
 
 ### P07 任务接口、客户端及请求类型
 
-- [src/tasks/api.ts](../../../../src/tasks/api.ts)
-- [src/tasks/client.ts](../../../../src/tasks/client.ts)
+- `src/tasks/api.ts`（审计基线文件，现已退役）
+- `src/tasks/client.ts`（审计基线文件，现已退役）
 - [src/tasks/commands.ts](../../../../src/tasks/commands.ts)
 - [src/tasks/types.ts](../../../../src/tasks/types.ts)
 
@@ -157,9 +157,9 @@
 
 ### P14 远端准备、基线和发布
 
-- [src/remote/api.ts](../../../../src/remote/api.ts)
+- `src/remote/api.ts`（审计基线文件，现已退役）
 - [src/remote/baselines.ts](../../../../src/remote/baselines.ts)
-- [src/remote/client.ts](../../../../src/remote/client.ts)
+- `src/remote/client.ts`（审计基线文件，现已退役）
 - [src/remote/commands.ts](../../../../src/remote/commands.ts)
 - [src/remote/publication.ts](../../../../src/remote/publication.ts)
 - [src/remote/service.ts](../../../../src/remote/service.ts)
@@ -280,27 +280,27 @@
 
 ### P29 旧公开 handler 与看板
 
-- [src/api.ts](../../../../src/api.ts)
-- [src/dashboard/app.ts](../../../../src/dashboard/app.ts)
-- [src/dashboard/assets.d.ts](../../../../src/dashboard/assets.d.ts)
-- [src/dashboard/page.html](../../../../src/dashboard/page.html)
-- [src/dashboard/server.ts](../../../../src/dashboard/server.ts)
-- [src/dashboard/style.css](../../../../src/dashboard/style.css)
+- `src/api.ts`（审计基线文件，现已退役）
+- `src/dashboard/app.ts`（审计基线文件，现已退役）
+- `src/dashboard/assets.d.ts`（审计基线文件，现已退役）
+- `src/dashboard/page.html`（审计基线文件，现已退役）
+- `src/dashboard/server.ts`（审计基线文件，现已退役）
+- `src/dashboard/style.css`（审计基线文件，现已退役）
 
 ### T01 基础 CLI/服务测试
 
 - [test/cli.test.ts](../../../../test/cli.test.ts)
 - [test/config.test.ts](../../../../test/config.test.ts)
 - [test/proxy.test.ts](../../../../test/proxy.test.ts)
-- [test/reset.test.ts](../../../../test/reset.test.ts)
+- `test/reset.test.ts`（审计基线文件，现已退役）
 - [test/service-commands.test.ts](../../../../test/service-commands.test.ts)
 
 ### T02 旧 Agent/资源及当前拒绝测试
 
-- [test/agent-targets.test.ts](../../../../test/agent-targets.test.ts)
-- [test/agents.test.ts](../../../../test/agents.test.ts)
+- `test/agent-targets.test.ts`（审计基线文件，现已退役）
+- `test/agents.test.ts`（审计基线文件，现已退役）
 - [test/resource-commands.test.ts](../../../../test/resource-commands.test.ts)
-- [test/resources.test.ts](../../../../test/resources.test.ts)
+- `test/resources.test.ts`（审计基线文件，现已退役）
 
 ### T03 任务与轮次家族测试
 
@@ -352,7 +352,7 @@
 
 ### T08 旧看板与当前 open 测试
 
-- [test/dashboard.test.ts](../../../../test/dashboard.test.ts)
+- `test/dashboard.test.ts`（审计基线文件，现已退役）
 
 ### T09 全部根测试 fixture/helpers
 
@@ -360,8 +360,8 @@
 - [test/hub-delegation-fixture.ts](../../../../test/hub-delegation-fixture.ts)
 - [test/hub-resources-fixture.ts](../../../../test/hub-resources-fixture.ts)
 - [test/remote-fixture.ts](../../../../test/remote-fixture.ts)
-- [test/resources-fixture.ts](../../../../test/resources-fixture.ts)
-- [test/tasks-fixture.ts](../../../../test/tasks-fixture.ts)
+- `test/resources-fixture.ts`（审计基线文件，现已退役）
+- `test/tasks-fixture.ts`（审计基线文件，现已退役）
 - [test/workspaces-fixture.ts](../../../../test/workspaces-fixture.ts)
 
 ### V01 Hub 系列验收
@@ -395,7 +395,7 @@
 
 ### V03 旧业务 smoke 与附属探针
 
-- [scripts/dashboard-browser.ts](../../../../scripts/dashboard-browser.ts)
+- `scripts/dashboard-browser.ts`（审计基线文件，现已退役）
 - [scripts/remote-task-probe.ts](../../../../scripts/remote-task-probe.ts)
 - [scripts/smoke-agents.ts](../../../../scripts/smoke-agents.ts)
 - [scripts/smoke-artifact-mcp.ts](../../../../scripts/smoke-artifact-mcp.ts)
@@ -412,7 +412,7 @@
 - [scripts/smoke-task-outputs.ts](../../../../scripts/smoke-task-outputs.ts)
 - [scripts/smoke-task-retention.ts](../../../../scripts/smoke-task-retention.ts)
 - [scripts/smoke-tasks.ts](../../../../scripts/smoke-tasks.ts)
-- [scripts/smoke-upgrade.ts](../../../../scripts/smoke-upgrade.ts)
+- `scripts/smoke-upgrade.ts`（审计基线文件，现已退役）
 - [scripts/smoke-workspace-preparation.ts](../../../../scripts/smoke-workspace-preparation.ts)
 - [scripts/smoke-worktree-tasks.ts](../../../../scripts/smoke-worktree-tasks.ts)
 - [scripts/task-results-probe.ts](../../../../scripts/task-results-probe.ts)
@@ -496,3 +496,60 @@
 - [bun.lock](../../../../bun.lock)
 - [package.json](../../../../package.json)
 - [tsconfig.json](../../../../tsconfig.json)
+
+
+## 实施后新增/移动文件覆盖
+
+前文保留基线模块调查；退役文件的链接改为基线名称，仍可按基线提交定位。下列新增或移动文件接回同一职责树，并非新增产品框架。当前范围为278文件（src110、test54、scripts85、website13、skills6、workflow3、根配置7），其中根测试42文件。文件数只用于覆盖核验，不作为瘦身目标。原有仍在范围的文件全部由基线表覆盖，新文件全部如下；实际验证及未执行范围见[验收](acceptance.md)。
+
+### P05 共享定义与内容身份
+
+- [src/agents/types.ts](../../../../src/agents/types.ts)
+- [src/content-version.ts](../../../../src/content-version.ts)
+
+### P08 当前任务记录边界
+
+- [src/tasks/records.ts](../../../../src/tasks/records.ts)
+
+### P28 页面资源声明
+
+- [src/assets.d.ts](../../../../src/assets.d.ts)
+
+### T01/T09 单测编译、接线与清理
+
+- [test/compiled-cli.ts](../../../../test/compiled-cli.ts)
+- [test/fixture-cleanup.test.ts](../../../../test/fixture-cleanup.test.ts)
+- [test/fixture-cleanup.ts](../../../../test/fixture-cleanup.ts)
+- [test/hub-workspace-fixture.ts](../../../../test/hub-workspace-fixture.ts)
+- [test/native-fixture.ts](../../../../test/native-fixture.ts)
+- [test/preload.ts](../../../../test/preload.ts)
+- [test/remote-native-fixture.ts](../../../../test/remote-native-fixture.ts)
+- [test/smoke-lifecycle.test.ts](../../../../test/smoke-lifecycle.test.ts)
+- [test/task-native-fixture.ts](../../../../test/task-native-fixture.ts)
+
+### T01/T03 当前格式与坏记录隔离
+
+- [test/state.test.ts](../../../../test/state.test.ts)
+- [test/task-records.test.ts](../../../../test/task-records.test.ts)
+
+### V05 当前验收辅助与所有权
+
+- [scripts/fixtures/collaboration-package.d.mts](../../../../scripts/fixtures/collaboration-package.d.mts)
+- [scripts/fixtures/collaboration-package.mjs](../../../../scripts/fixtures/collaboration-package.mjs)
+- [scripts/fixtures/hub-console-history.ts](../../../../scripts/fixtures/hub-console-history.ts)
+- [scripts/fixtures/hub-console-smoke.ts](../../../../scripts/fixtures/hub-console-smoke.ts)
+- [scripts/fixtures/mcp-protocol.ts](../../../../scripts/fixtures/mcp-protocol.ts)
+- [scripts/fixtures/model-homes.ts](../../../../scripts/fixtures/model-homes.ts)
+- [scripts/fixtures/native-file-smoke.ts](../../../../scripts/fixtures/native-file-smoke.ts)
+- [scripts/fixtures/native-user-smoke.ts](../../../../scripts/fixtures/native-user-smoke.ts)
+- [scripts/fixtures/non-git-smoke-project.ts](../../../../scripts/fixtures/non-git-smoke-project.ts)
+- [scripts/fixtures/service-version-probe.mjs](../../../../scripts/fixtures/service-version-probe.mjs)
+- [scripts/fixtures/smoke-lifecycle.ts](../../../../scripts/fixtures/smoke-lifecycle.ts)
+- [scripts/fixtures/task-capture-receipt.ts](../../../../scripts/fixtures/task-capture-receipt.ts)
+- [scripts/fixtures/task-smoke.ts](../../../../scripts/fixtures/task-smoke.ts)
+- [scripts/fixtures/worktree-task-smoke.ts](../../../../scripts/fixtures/worktree-task-smoke.ts)
+- [scripts/smoke-mcp-install.d.mts](../../../../scripts/smoke-mcp-install.d.mts)
+
+### R01 Bun测试清理入口
+
+- [bunfig.toml](../../../../bunfig.toml)
