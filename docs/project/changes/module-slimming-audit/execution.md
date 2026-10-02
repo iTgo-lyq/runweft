@@ -370,3 +370,14 @@ files/outputs/remote/remote-tasks/results/native grants定向6文件 **55 pass/0
 - npm-publish与website Node测试实际执行，exit0；未执行发布/远端CI。U02调用DAG和保留不同验证边界的理由见build-review.md；workflow不改。
 
 Commit：`module-slimming-audit T12: 共享测试编译产物并明确清理所有者`。
+
+
+## T13 最终同候选验收（进行中）
+
+主agent继续直接执行，不再派生或重启subagent。以干净提交 `e3553755c321c4e7981185ba5aa9bf3308544605` 执行 `bun run package --all --reuse-hapi`，四平台使用已经核对摘要的固定HAPI缓存。Linux x64 core SHA256 `09bf189c4a0115b9f1badbf5991cb86d6665b6f42b7b22ca93468dc309e29ba3`，HAPI `bdf706d7966ae4818b09029991a2bb03e70b10b0555763fc41430afd977b4fec`。包核验P1ol3Q、专用安装rM9h2z及其服务KoqMSg、arm64 QEMU RO781S成功；后续均使用rM9h2z保留安装。QEMU不代表arm64真实模型或Mac实机。CLI全契约仅移除data树，其他命令/参数/描述及17MCP工具完整schema/annotations与基线相等。
+
+原生十二组第一次SM1QaY因传错Chromium可执行路径，在任何模型案例开始前失败、cleanupErrors为空；纠正路径后的8aThG1是新的完整运行，不将调用错误计作产品失败。消费者xRjMbP十项实际通过、cleanupErrors为空。全部原生/附件/Git留存矩阵仍执行中，尚不标整体通过或同步Specs。
+
+看板第一次4xJAw5暴露fixture直接append未提供当前Agent快照；修正后i8UBnx暴露保存第二轮时传入了全部轮次的inputs。两处均为当前存储契约下的测试造数错误：显式传入已解析snapshot、只保存当前轮inputs，产品校验不放宽。静态追踪所有脚本save调用后，对native-file-smoke.nextRound作相同input筛选，等待实际双runtime路径验证。修正后hub-console全部17项和hub-realtime全部10项通过，typecheck通过；产品包输入未改变，继续验收同一候选。失败证据保留，不冒充成功。
+
+T13 fixture返修复核：inputs-native-lIiyjN默认两runtime四轮真实输入/原生续接通过、cleanupErrors为空，覆盖native-file-smoke.nextRound修正；hub-console（实际根路径见t13-hub-console-v3.log）17项通过。两处只改验收fixture，不属于四平台npm包输入；打包候选身份继续为e3553755，验收脚本以本次提交为准。审计原始报告/coverage增加时点说明，避免初次审计“保留迁移”建议与后续用户约束混淆。

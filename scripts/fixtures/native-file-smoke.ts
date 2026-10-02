@@ -94,7 +94,7 @@ export async function nativeFileSmoke(root: string, command: string[], hapiBinar
                 store.append(namespace, task.parent, randomUUID(), { id: task.id, mode: 'next', message: 'Explicit independent native resume probe' }, snapshot);
                 const bundle = store.require(namespace, task.id), next = bundle.rounds.at(-1)!;
                 next.phase = 'finished'; next.stop = 'not_started'; next.finish = 'complete'; next.executionAbsent = true; next.completedAt = Date.now();
-                store.save(bundle.task, next, bundle.inputs); Object.assign(task, bundle.task); Object.assign(round, next);
+                store.save(bundle.task, next, bundle.inputs.filter(input => input.roundId === next.id)); Object.assign(task, bundle.task); Object.assign(round, next);
             }
             return { task, round, nextRound, get native() { return gateway.delegation.taskClient(task, round); } };
         }
