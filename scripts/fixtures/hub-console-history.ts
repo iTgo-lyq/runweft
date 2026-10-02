@@ -56,7 +56,9 @@ export async function consoleHistory(options: { binary: string; hapiBinary: stri
                     sessions.push(value.sessionId);
                 }
             } finally { state.close(); }
-            const identity = JSON.parse(readFileSync(paths.identityConnection, 'utf8'));
+            const runner = previous.runners.find((runner: any) => runner.clientHome === previous.cases[0].clientHome);
+            assert(runner, 'History needs the actual case client identity');
+            const identity = JSON.parse(readFileSync(runner.paths.identityConnection, 'utf8'));
             assert.equal(identity.ownerId, previous.ownerId); assert.equal(identity.spaceId, previous.spaceId);
             started = true; const service = await cli(['start']); const origin = service.url;
             const auth = await fetch(origin + '/api/auth', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ accessToken: identity.token, spaceId: previous.spaceId }) });

@@ -83,6 +83,13 @@ export function collaborationPackage(file, binary, explicitHapi, expectedOwner) 
             for (const session of sessions) { if (session.metadata?.hostPid) pids.add(session.metadata.hostPid); if (session.active) { shutdownErrors.push('Unexpected active session during no-model consumer'); await attempt(() => api(`/api/sessions/${session.id}/archive`, 'POST')); } }
             sessionsStopped = (await api('/api/sessions')).sessions.every(session => !session.active);
         });
+        if (!started.length) await attempt(() => {
+            // A consumer can fail while copying history, before starting any source process.
+            for (const home of new Set([source.serverHome, ...source.runners.map(runner => runner.clientHome)])) {
+                const status = cli(home, ['status']); assert(!status.service.running && !status.runner.running);
+            }
+            sessionsStopped = true; // Current handoff requires finished/stopped rounds; native PIDs are checked below.
+        });
         for (const home of [...started].reverse()) { await attempt(() => cli(home, ['stop'])); let confirmed = false; await attempt(() => { const status = cli(home, ['status']); assert(!status.service.running && !status.runner.running); confirmed = true; }); stopped &&= confirmed; }
         const deadline = Date.now() + 10_000;
         const alive = pid => { try { process.kill(pid, 0); return true; } catch { return false; } };

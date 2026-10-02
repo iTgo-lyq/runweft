@@ -44,3 +44,7 @@
 - 验证：Node三文件33 pass/0 fail；typecheck通过；actionlint1.7.12通过；官网稳定源码实际构建通过；当前包输入与6a7e559冻结候选无差异。使用CI相同固定版本在专用prefix实际安装Codex/Claude并运行version，不读取模型认证。没有推送或远端CI结果。
 - 前置发现：初次Node运行暴露原Bun import不兼容，转换后又由负例发现not.toMatch转换反向错误，均修正后通过。实际安装暴露Claude在ignore-scripts下只有占位入口，改为显式运行已检查的包内install.cjs并检查两个version后通过；Beta候选不运行stable-only网站构建，网站单独做版本资格判断。以上均在本地、零模型阶段发现，未伪称CI成功。
 - Commit：`test-backbone-slimming T5: select local checks and build one release candidate`
+
+### T4V N2消费者修正
+
+N2在a610dfd脚本下已完成两轮、65秒wait及17次MCP调用。其消费者首试ImyBKb失败：历史读取错误地取中心serverPaths.identityConnection，Hub客户端实际身份在本case的Runner连接目录；local模式恰好同home所以初次N1未暴露。修正为按case.clientHome找到真实Runner路径，N2只重跑无模型shared消费者，不重新调用模型，原首次失败保留。消费者在未启动源进程就失败时，原清理代码把“尚未启动”标为停机不确定；改为实际检查所有源home状态及原生PID后判定安全。生产者和包输入均未变化，本次只重验受影响消费阶段，不把全局helper hash拒绝复用误当必须重跑模型。N2的producer/consumer分阶段证据在最终验收表单列，不改写失败ledger。
