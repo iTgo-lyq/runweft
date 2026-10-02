@@ -29,3 +29,10 @@
 - 已拦截问题：首个本地模式preflight因缺hub.url在machine enroll前失败，修复为显式连接本机Hub后通过；没有把hub目录标签冒充local验证。另修复watchdog诊断覆盖case.host字段的问题。完整日志与前置结果位于 `.dev-smoke/test-backbone-plan/`。
 - 边界：真实模型及新历史消费者行为尚待T4V，不声明原生替代全部通过。拆分冻结与真实验收为两个任务，防止把未来验证写入当前提交。
 - Commit：`test-backbone-slimming T4: freeze native backbone and per-case evidence`
+
+## T4V 原生验收（进行中）
+
+- 干净候选：`6a7e559`、版本1.1.1、HAPI pin不变；四平台 `package --all --reuse-hapi` 通过。service-package四脚本通过，真实registry安装候选见 install-Cyo3do；本地Chromium1243实际启动。
+- 初次N1：native-backbone-P97jP0 / collaboration-dz8oeB / shared-package-hrdPxT通过，包含真实local Codex→Codex两轮、65秒wait、子CLI拒绝、历史网页、重启无重放和清理。注入N2 producer前失败时，QEUI3S实际复用N1且未调用N2模型，退出1符合预期。
+- 初次N2：S5Kht4 / collaboration-OZ5Qya失败，已停止自建进程、cleanupErrors=[]。子CLI探针已写入两个subagent_delegation_denied证明且退出0，但无stdout；Claude为了确认探针结果读取helper，超出宿主当时的验收白名单，宿主按指令停止，尚未send_input。不是服务商失败或产品权限错误，不盲目重发已接受任务。
+- 修正：helper输出明确成功标记；任务说明控制器负责证明检查，避免额外读取；只读专用helper/proof精确路径进入验收白名单。产品源码和二进制不变。因共享脚本变化，原N1保留为历史事实但不作为最终指纹下通过，不复用旧ledger；新现场重新验收。
