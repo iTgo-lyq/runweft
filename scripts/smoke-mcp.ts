@@ -1,13 +1,12 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { spawn, spawnSync } from 'node:child_process';
-import { chmodSync, copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
-import { Client } from '@modelcontextprotocol/sdk/client/index.js';
-import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { join, resolve } from 'node:path';
 import { ExecutionClient } from '../src/execution';
-import { HapiClient } from '../src/hapi';
-import { freePort } from '../src/services';
+import type { HapiHttp } from '../src/hapi';
+import { nativeUserSmoke } from './fixtures/native-user-smoke';
+import { modelHomes } from './fixtures/model-homes';
 import { codexCatalog } from './fixtures/codex-catalog';
 import pkg from '../package.json';
 
@@ -42,8 +41,11 @@ const evidence: { root: string; revision: string; platform: string; startedAt: s
     root, revision: pkg.hapi.revision, platform: `${process.platform}-${process.arch}`, startedAt: new Date().toISOString(),
     success: false, binaryHashes: {}, versions: {}, checks: [], cases: [], cleanupErrors: [],
 };
-let token: string | undefined, hapi: HapiClient | undefined, execution: ExecutionClient | undefined;
-const homes: string[] = [];
+let hapi: HapiHttp | undefined, execution: ExecutionClient | undefined;
+let fixture: Awaited<ReturnType<typeof nativeUserSmoke>> | undefined;
+const ownedModelPids = new Set<number>();
+let models: ReturnType<typeof modelHomes> | undefined;
+let runnerHapiHome = '';
 const hashes = (path: string) => createHash('sha256').update(readFileSync(path)).digest('hex');
 function readLines(path: string): any[] {
     return existsSync(path) ? readFileSync(path, 'utf8').split('\n').filter(Boolean).map(line => JSON.parse(line)) : [];
@@ -51,7 +53,6 @@ function readLines(path: string): any[] {
 function alive(pid: number) { try { process.kill(pid, 0); return true; } catch { return false; } }
 function cli(home: string, args: string[], input?: string) {
     const result = spawnSync(executable, ['--home', home, '--json', ...args], { env, input, encoding: 'utf8', timeout: 60_000 });
-    if (token) assert(!`${result.stdout}${result.stderr}`.includes(token), 'Credential appeared in CLI output');
     assert.equal(result.status, 0, `${args[0]} failed: ${result.stderr || result.error || result.signal}`);
     return JSON.parse(result.stdout);
 }
@@ -65,10 +66,6 @@ async function until<T>(read: () => Promise<T>, accept: (value: T) => boolean, l
     throw new Error(`Timed out: ${label}`);
 }
 function record(check: string) { evidence.checks.push(check); console.log(`PASS ${check}`); }
-function copy(source: string, destination: string) {
-    if (!existsSync(source)) return;
-    mkdirSync(dirname(destination), { recursive: true, mode: 0o700 }); copyFileSync(source, destination); chmodSync(destination, 0o600);
-}
 function shellQuote(value: string) { return `'${value.replaceAll("'", "'\\''")}'`; }
 function diagnosticValues(value: any): any[] {
     if (!value || typeof value !== 'object') return [];
@@ -88,6 +85,7 @@ async function hostCall(client: 'codex' | 'claude', directory: string, home: str
         : ['-p', '--output-format', 'stream-json', '--verbose', '--tools', '', '--allowedTools', 'mcp__runweft__runweft_status', '--max-turns', '3', prompt];
     const result = await new Promise<{ code: number | null; events: any[] }>((resolve, reject) => {
         const child = spawn(client === 'codex' ? 'codex' : nativeClaude!, args, { cwd: directory, env, stdio: ['ignore', 'pipe', 'pipe'] });
+        if (child.pid) ownedModelPids.add(child.pid);
         let stdout = ''; child.stdout.on('data', chunk => { stdout += chunk; });
         child.stderr.on('data', () => {}); // Native diagnostics are not copied into test evidence.
         const timer = setTimeout(() => child.kill('SIGTERM'), 150_000);
@@ -104,7 +102,7 @@ async function hostCall(client: 'codex' | 'claude', directory: string, home: str
     const value = result.events.flatMap(diagnosticValues).find(value => value.identity?.nativeSessionId === nativeId);
     assert(value, `${client} returned no actual MCP diagnostic`);
     assert.equal(value.identity.cwd, directory); assert.equal(value.workspace.path, directory);
-    assert.equal(value.dataRoot, home); assert.equal(value.connection.mode, mode); assert.equal(value.connection.connected, true);
+    assert.equal(value.dataRoot, home); assert.equal(value.connection.hub, fixture!.url); assert.equal(value.connection.ownerId, fixture!.user.identity.id); assert.equal(value.connection.spaceId, fixture!.space); assert.equal(value.connection.connected, true);
     evidence.cases.push({ kind: 'host', mode, client, nativeId, cwd: directory, connected: true });
     record(`${mode}/${client}: installed global MCP returns real identity, cwd and authenticated connection`);
 }
@@ -117,10 +115,10 @@ async function filteredExecution(agent: 'codex' | 'claude', machineId: string, h
     const id = started.receipt.sessionId, paths = cli(home, ['paths']);
     let nativeId: string | undefined;
     for (const round of ['start', 'resume']) {
-        const ready = await execution!.waitUntilReady(id);
+        const ready = await execution!.waitUntilReady(id); if (ready.metadata?.hostPid) ownedModelPids.add(ready.metadata.hostPid);
         assert.deepEqual(ready.metadata?.disabledMcpServers, ['runweft']);
         if (agent === 'codex') {
-            const catalog = await until(() => codexCatalog(paths.hapiClient, id, ready.metadata!.codexSessionId!, ready.metadata!.hostPid!),
+            const catalog = await until(() => codexCatalog(runnerHapiHome, id, ready.metadata!.codexSessionId!, ready.metadata!.hostPid!),
                 rows => rows.some(row => row.name === 'keep_probe' && row.tools.includes('probe_report')), 'native Codex tool discovery', 30_000);
             assert(!catalog.some(row => row.name === 'runweft' && row.tools.length), 'Runweft tools visible to child');
         }
@@ -157,14 +155,7 @@ async function filteredExecution(agent: 'codex' | 'claude', machineId: string, h
 
 
 try {
-    const sourceCodex = process.env.CODEX_HOME || join(process.env.HOME!, '.codex');
-    copy(join(sourceCodex, 'config.toml'), join(codexHome, 'config.toml')); copy(join(sourceCodex, 'auth.json'), join(codexHome, 'auth.json'));
-    if (!existsSync(join(codexHome, 'config.toml'))) { mkdirSync(codexHome, { recursive: true }); writeFileSync(join(codexHome, 'config.toml'), ''); }
-    const sourceClaude = process.env.CLAUDE_CONFIG_DIR;
-    copy(sourceClaude ? join(sourceClaude, '.claude.json') : join(process.env.HOME!, '.claude.json'), join(claudeHome, '.claude.json'));
-    copy(join(sourceClaude || join(process.env.HOME!, '.claude'), 'settings.json'), join(claudeHome, 'settings.json'));
-    copy(join(sourceClaude || join(process.env.HOME!, '.claude'), '.credentials.json'), join(claudeHome, '.credentials.json'));
-    env.CODEX_HOME = codexHome; env.CLAUDE_CONFIG_DIR = claudeHome;
+    models = modelHomes(root, env);
     const probe = { command: process.execPath, args: [resolve('scripts/fixtures/mcp-probe.mjs')], env: { RUNWEFT_SMOKE_PROBE_LOG: probeLog } };
     const prefs = existsSync(join(claudeHome, '.claude.json')) ? JSON.parse(readFileSync(join(claudeHome, '.claude.json'), 'utf8')) : {};
     prefs.mcpServers = { keep_probe: { type: 'stdio', ...probe } }; mkdirSync(claudeHome, { recursive: true, mode: 0o700 });
@@ -177,41 +168,46 @@ try {
     env.HAPI_CLAUDE_PATH = wrapper; env.RUNWEFT_SMOKE_CLAUDE = nativeClaude;
     env.RUNWEFT_SMOKE_CLAUDE_LOG = claudeLog;
     const auth = join(codexHome, 'auth.json'), authHash = existsSync(auth) ? hashes(auth) : null;
-    evidence.binaryHashes = { runweft: hashes(executable), hapi: hashes(join(dirname(executable), 'hapi')) };
+    evidence.binaryHashes = { runweft: hashes(executable), hapi: (await import('./fixtures/installed-binaries.mjs')).installedBinaries(executable).hapi.sha256 };
     for (const [name, command] of [['codex', 'codex'], ['claude', nativeClaude]]) {
         const version = spawnSync(command, ['--version'], { env, encoding: 'utf8' }); assert.equal(version.status, 0); evidence.versions[name] = version.stdout.trim();
     }
     console.log(`Evidence directory: ${root}`);
-    cli(local, ['init']); homes.push(local); cli(local, ['config', 'set', 'server.port', String(await freePort())]); cli(local, ['start']);
-    const localStatus = cli(local, ['status']); assert.equal(localStatus.hapiRevision, pkg.hapi.revision);
-    const url = localStatus.url, localPaths = cli(local, ['paths']);
-    token = JSON.parse(readFileSync(join(localPaths.hapiServer, 'settings.json'), 'utf8')).cliApiToken; assert(token);
-    hapi = new HapiClient(url, token); execution = new ExecutionClient(hapi);
-    assert.equal((await hapi.request('/health')).capabilities.mcpToolFilter, 1);
+    fixture = await nativeUserSmoke(root, executable, env);
+    Object.assign(evidence, { candidate: fixture.candidate });
     for (const [mode, home] of [['local', local], ['hub', hub]]) {
-        if (mode === 'hub') { cli(home, ['init', '--url', url]); homes.push(home); cli(home, ['auth', 'login', '--token-stdin'], token); cli(home, ['start']); }
+        const selected = await fixture.runner(home); runnerHapiHome = selected.hapiHome;
+        hapi = selected.http; execution = new ExecutionClient(hapi);
+        assert.equal((await hapi.request('/health')).capabilities.mcpToolFilter, 1);
+        const machineId = selected.machineId;
         cli(home, ['mcp', 'install', '--client', 'all']); assert(cli(home, ['mcp', 'check', '--client', 'all']).ok);
         const hosts = await Promise.allSettled((['codex', 'claude'] as const).map(client => hostCall(client, join(root, mode, `parent-${client}`), home, mode)));
         for (const result of hosts) if (result.status === 'rejected') throw result.reason;
-        const paths = cli(home, ['paths']), machineId = JSON.parse(readFileSync(join(paths.hapiClient, 'settings.json'), 'utf8')).machineId;
         for (const agent of ['codex', 'claude'] as const) await filteredExecution(agent, machineId, home, mode);
     }
     assert.equal(existsSync(auth) ? hashes(auth) : null, authHash, 'Model authentication copy changed during installation');
     await probeMcpProtocol(executable, join(root, 'protocol'));
     record('compiled MCP: current identity auth cancellation and EOF abort HTTP; stdout remains protocol only');
+    models.verify(); Object.assign(evidence, { sourceModelConfigurationUnchanged: true, ownedNativeHostPids: [...ownedModelPids] });
     evidence.success = true;
 } catch (error) { evidence.error = error instanceof Error ? error.message : String(error); process.exitCode = 1; }
 finally {
+    const modelPids = new Set(ownedModelPids);
+    let modelShutdownConfirmed = true;
     if (hapi && execution) {
         try { for (const session of (await hapi.request('/api/sessions')).sessions) {
-            if ((await execution.stop(session.id)).outcome !== 'stopped') evidence.cleanupErrors.push(`Unconfirmed stop: ${session.id}`);
-        } } catch (error) { evidence.cleanupErrors.push(String(error)); }
+            if (session.metadata?.hostPid) modelPids.add(session.metadata.hostPid);
+            try { if ((await execution.stop(session.id)).outcome !== 'stopped') { modelShutdownConfirmed = false; evidence.cleanupErrors.push(`Unconfirmed stop: ${session.id}`); } } catch (error) { modelShutdownConfirmed = false; evidence.cleanupErrors.push(String(error)); }
+        } } catch (error) { modelShutdownConfirmed = false; evidence.cleanupErrors.push(String(error)); }
     }
-    for (const home of homes.reverse()) { try { cli(home, ['stop']); } catch (error) { evidence.cleanupErrors.push(String(error)); } }
+    try { await fixture?.close(false); } catch (error) { modelShutdownConfirmed = false; evidence.cleanupErrors.push(String(error)); }
     await Bun.sleep(600);
-    for (const pid of new Set([...readLines(probeLog), ...readLines(claudeLog)].map(event => event.pid))) {
+    try { for (const pid of new Set([...readLines(probeLog), ...readLines(claudeLog)].map(event => event.pid))) {
         if (alive(pid)) evidence.cleanupErrors.push(`Native probe still alive: ${pid}`);
-    }
+    } } catch (error) { evidence.cleanupErrors.push(String(error)); }
+    try { await models?.waitHosts(modelPids); } catch (error) { modelShutdownConfirmed = false; evidence.cleanupErrors.push(String(error)); }
+    if (modelShutdownConfirmed) try { await models?.remove(); } catch (error) { evidence.cleanupErrors.push(String(error)); }
+    if (evidence.success && !evidence.cleanupErrors.length) try { await (await import('./fixtures/native-file-smoke')).removeFileSmokeData(root); } catch (error) { evidence.cleanupErrors.push(String(error)); }
     if (evidence.cleanupErrors.length) { evidence.success = false; process.exitCode = 1; }
     evidence.finishedAt = new Date().toISOString();
     writeFileSync(join(root, 'evidence.json'), JSON.stringify(evidence, null, 2));

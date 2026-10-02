@@ -97,3 +97,163 @@ iclaude review session：`6870f51d-a7d7-4cfa-b49d-a2a96e69a693`。工具限制Re
 
 - 主 agent 验收：逐项复核原有效断言、当前授权边界与全部46个test:*映射；退回补齐登记生命周期与清理失败续行后通过。独立typecheck、smoke-lifecycle 2 pass/0 fail/12 expect；真实HAPI资源10组、配置9组、服务6组、access12组、realtime10组、Playwright connect5组均成功且无cleanupErrors。资源/配置新增断言后重新独立实跑，日志`t5-root-{resources,configuration}-final.log`，清理小修后实施者再次跑connect5组，主agent核对源码与原证据。候选/原始证据汇总`.dev-smoke/slimming-acceptance/t5-root-summary.json`。产品未变，沿用T3构建候选；本项未重复根全集/build、未执行模型或物理远端。
 - Commit：`module-slimming-audit T5: consolidate current Hub smoke and cleanup`
+
+## T6 批次A：无模型文件/Git/诊断
+
+- 九入口迁当前身份/空间、机器登记、中央Agent及真实文件授权。artifacts/prune继续compiled服务与compiled CLI；outputs/inputs机器分支/repository-export/import为compiled CLI + current source delegation gateway +真实HAPI/Runner。低层fixture明确停止模型dispatcher后，用actual resolver/current TaskStore播种完整当前Task/Round.agent/终态，再复用delegation.taskClient的现行policy；没有公开机器RPC、空check、旧API翻译或真实任务从接受到模型完成的E2E声明。hub-delegation-native改为完整gateway、实际来源Runner/当前准备snapshot与taskClient；hub-delegation-preparation保留既有中央实际HTTP/跨owner准备。
+- 逐保障：artifacts保留两client/server-policy、72MiB/hash、真实3byte断流同reservation恢复、慢流>10秒、引用/删除/tombstone、重启零Runner/session；root suffix隔离换真实other owner/space，root CLI文件路由拒绝，允许的machine grant读/撤回由hub-delegation-native实际publication/input场景保障。prune保留policy/usage、所有purpose pins、年龄、预览、分页、丢回复查原tombstone、quota/重启/零模型；旧doctor.artifacts DTO已不存在，改用真实artifact limits与当前paths/实际私有DB目录，不恢复旧诊断字段。
+- outputs保留72MiB部分发布、固定capture候选、缺文件后显式collect、源文件删除后同delivery恢复、Hub/Runner重启、spool释放、停止Runner后的download/hash。inputs机器分支保留72MiB真实transfer/hash、完整Hub/Runner重启后固定回执、Unicode worktree输入、释放中间下载后仍保留工作树副本、seal/remove及零session。export/import保留实际bundle/module/LFS、私有NativeTransport上游HTTP丢回复、同operationId恢复、source/Git refs/index/config保护、source离线、独立目标Runner、损坏输入、固定import/prepare/finalize/remove、零session。
+- 正常shutdown缺口与窄产品修复：workspace-preparation固定请求复现git_interrupted（错误停止了外部Runner），继而完整Hub正常close且Runner存活仍unknown/machine_offline。失败根gWwAUQ，日志t6a-workspace-preparation-final.log；当前sockets.close发送Socket.IO server DISCONNECT，固定HAPI只清RPC/keepalive不会自动重连。整体shutdown先置flag、关闭Engine.IO transport，撤权/旋转/孤立上游断联仍显式disconnect；不实现重连器/重试、不以模拟断网取代原故障窗口。新根测试正常transport关闭后自动连接、固定RPC不重放、fresh RPC成功、旋转io server disconnect/active=false、旧凭据新握手拒绝。
+- workspace-preparation最终恢复完整高层：compiled CLI + compiled center serve/start/stop +真实两Runner。repository create/bind、Agent创建与诊断均走compiled当前命令；无低层领域种子。保留103文件/批≤100、dirty只取固定commit、同request重启、snapshot/import及第二commit LFS复用、source离线、dirty/ignored拒绝、offline unknown/pins、最后consumer删除cache、本机runtime诊断拒绝且零额外准备。schema断言引用当前STATE_SCHEMA_VERSION，不保留旧v6数字。停服后逐Runner最终status确认，秘密清理不能被center成功覆盖。
+- 候选：build exit0；dist/runweft SHA256 `ffb8aec139d88fef6a2f0475f6993bcbf4890fb56480ec28dc4baf19dec1c5e9`，显式dist/hapi SHA256 `bdf706d7966ae4818b09029991a2bb03e70b10b0555763fc41430afd977b4fec`。日志`t6a-build.log`。所有默认双binary按原顺序使用；两个Hub专用入口的单参数仍是HAPI。早期candidate.entry=compiled实际指compiled CLI+source gateway、candidate.bun的process.version是Node兼容版本；已修正后续标签/Bun.version，未篡改原evidence。src模式标source CLI，不宣称compiled；本批实际输入为compiled机器分支。
+
+自检最终命令均exit0，日志目录均为`.dev-smoke/slimming-acceptance/`，evidence均在下列根的`evidence.json`：
+
+| 实际命令 | 日志 | Evidence根（.dev-smoke/） |
+|---|---|---|
+| bun run test:artifacts | t6a-artifacts-fixed.log | artifact-cli-frYRaC |
+| bun run test:artifact-prune | t6a-artifact-prune-fixed.log | artifact-prune-Vk0ogK |
+| bun run test:outputs | t6a-outputs-fixed.log | outputs-machine-JBzzMB |
+| bun run test:inputs dist/runweft dist/hapi --machine-only | t6a-inputs-fixed.log | inputs-native-jeWnRq |
+| bun run test:repository-export | t6a-repository-export-fixed.log | repository-export-zh2JkD |
+| bun run test:repository-import | t6a-repository-import-fixed.log | repository-import-CqXpvz |
+| bun run test:hub-delegation-native | t6a-hub-delegation-native-fixed.log | hub-delegation-native-RPLNkj |
+| bun run test:hub-delegation-preparation | t6a-hub-delegation-preparation-fixed.log | hub-delegation-preparation-TVZd8Y |
+| bun run test:workspace-preparation | t6a-workspace-preparation-compiled-final.log | workspace-preparation-Q0OLsX |
+
+- 自检typecheck exit0；sockets/access/resource-dispatch/delegation-native根定向20 pass/0 fail/172 expect，日志`t6a-{typecheck,sockets-test}.log`；diff检查通过。主agent独立验收同候选九入口全部exit0、cleanupErrors=[]，根274 pass/0 fail/45文件与typecheck通过，证据`t6a-root-summary.json`；本实施记录不认领这些独立执行。
+- 清理：本批无外部后续evidence consumer。确认所有进程退出后，成功root回收大文件/下载、spool/缓存/Git、DB与凭据/配置，只保留紧凑evidence/顶层日志；九最终现场已检查满足。失败保留DB/Git/固定receipt诊断，退出后清确切秘密路径，包括HAPI jwt-secret.json。早期本agent自检33个明确新建root的额外回收清单`t6a-owned-cleanup.json`，未扫描历史home/他人fixture、未清旧版本业务数据。
+- 批次A不含模型验证。inputs默认分支待批次B按flavor固定实际runtime/Agent，重启后重新取得ExecutionClient，新的显式resume对应新当前Round，同一次unknown恢复保留固定ID；不能把machine-only成功当默认双runtime成功。其他任务/模型producer-consumer链、矩阵、T7/T14仍未推进；未改HAPI/依赖/版本/Specs，未提交、未标T6完成。主agent接受批次A后正式下发四家批次B。
+
+- 主 agent 批次验收：逐项复核九入口的原有效断言、当前授权链、正常关闭与撤权的区别，以及成功/失败现场清理。独立执行九入口均 exit0：artifacts 6组、prune 3组、inputs机器分支2组、outputs 3组、export 2组、import 3组、native bridge 6组、中心准备5组、完整编译服务诊断6组；cleanupErrors 均空，成功目录仅留证据/日志。独立根全集274 pass/0 fail/5093 expect/45文件/57.65秒；Socket/access/dispatch 定向14 pass/0 fail，最终 typecheck 通过。使用上述 ffb8aec1 候选与固定 HAPI；原始日志为 `t6-root-*.log`，包含源码与候选摘要的独立汇总为 `.dev-smoke/slimming-acceptance/t6a-root-summary.json`。批次A通过，T6仍进行中，尚无模型验收或最终schema19结论。
+
+## T6 批次B：execution/MCP/workspaces/inputs 默认模型
+
+- 仅迁四入口和必要窄helper。execution/MCP保持高层compiled中心与compiled用户CLI，用公共HubClient.http的当前个人native intent/session边界；真实登记身份、空间、machine/runtime，未复活root token、公开机器RPC或旧init/YAML。local/hub两个MCP标签均为当前Hub的独立client+Runner home。workspaces/inputs由current完整gateway停止dispatcher后领域store/resolver播种、私有taskClient现行policy接线，真实HAPI/Git/bytes/双模型；不是Task E2E。当前Task/Round.agent/终态完整，不新增旧格式记录或迁移路径。
+- 原断言逐项保留位置见smoke-coverage T6B。inputs的重启后ExecutionClient改为动态request/response，flavor对应当前Agent/runtime；每个新的显式独立resume采用TaskStore.append新Round，同一attempt未知回执仍保持原ID/原Round，不随机换轮隐藏unknown。actual nativeID/host PID写入evidence；machine-only仍零session、零模型。
+- 专用model-homes仅复制必要native配置到实际使用的目录，原source hash验证不变；Codex override只改副本，RUNWEFT_SMOKE_CLAUDE映射实际launcher/observer。构造失败在helper内逐份回收；finally逐session尽力stop并采集known PID，确认模型host与Runner/HAPI均退出后删副本。局部modelShutdownConfirmed与proxy/日志等无关cleanupErrors分开，安全的秘密清理仍尝试，失败现场数据仅完全成功才回收。
+- 自检32 pass/0 fail/278 expect/5文件：`bun test ./test/hub-access.test.ts ./test/hub-resource-dispatch.test.ts ./test/hub-delegation-native.test.ts ./test/mcp.test.ts ./test/mcp-install.test.ts`，日志`t6b-current-tests.log`；此前只实际匹配到一个文件的6 pass记录`t6b-focused.log`不冒充多文件验证。`bun run typecheck`与diff检查通过。没有B产品修改，沿用A ffb8aec1 CLI与固定bdf706d7 HAPI。
+- 故障自检：`.dev-smoke/slimming-acceptance/t6b-model-home-cleanup.ts`仅本次合成source，非法TOML使构造失败，全部五份复制文件移除且source未改，日志`t6b-model-home-cleanup.log`；未操作用户home。首次execution setup因helper误用旧server.noRunner失败，已改当前server.runner=false，失败根execution-kOXoH5保留配置诊断，无模型启动。没有产品契约缺口或provider失败。
+
+自检实际命令/结果如下，日志均在`.dev-smoke/slimming-acceptance/`，证据均为各根的`evidence.json`：
+
+| 命令 | 日志 | Evidence根（.dev-smoke/） | 实际结果 |
+|---|---|---|---|
+| bun run test:execution dist/runweft | t6b-execution-final.log | execution-BTP8sv | 11组，双runtime，exit0/cleanupErrors=[] |
+| bun run test:mcp dist/runweft | t6b-mcp-final.log | mcp-WeirZT | 13组，两独立home×双host/双runtime start+resume及协议probe，exit0/cleanupErrors=[] |
+| bun run test:workspaces dist/runweft dist/hapi | t6b-workspaces-final.log | workspace-http-28Un0B | 双runtime全部原proof/seal/missing checkout断言，exit0/cleanupErrors=[] |
+| bun run test:inputs dist/runweft dist/hapi | t6b-inputs-final.log | inputs-native-SD7nJZ | 机器前置2组+双runtime四输入轮，exit0/cleanupErrors=[] |
+| bun run test:inputs dist/runweft dist/hapi --machine-only | t6b-inputs-machine-final.log | inputs-native-ReWVIk | 2组、零session模型，exit0/cleanupErrors=[] |
+
+- 上述成功roots实际仅剩evidence/顶层日志；execution/MCP仅evidence。最后主agent静态要求恢复compiled status.hapiRevision pin断言、MCP hub地址断言、去掉领域candidate写死no-model及清理失败续行，已修后typecheck通过；最后同版四默认真实重跑由主agent承担，不能把修改前证据伪装同版实跑。实施源码已冻结，无commit/T6完成/后续批次，未修改data-format-research/HAPI/依赖/version/Specs。
+
+- 主 agent 批次验收：最终冻结源码下独立四默认入口全部 exit0：execution 11组/两runtime，MCP 13组/八case，workspaces 两runtime，inputs 四真实模型轮；另独立 machine-only 两组零模型、repository-export 两组及 typecheck 通过。六现场 cleanupErrors 均空，只剩证据/顶层日志，记录的原生host PID已不存在；四份源配置的hash、mode、size不变。根另用合成配置验证部分复制失败后继续清理、活host拒绝清理、退出后回收，未触碰用户配置。实际证据汇总 `.dev-smoke/slimming-acceptance/t6b-root-summary.json`，命令日志 `t6b-root-*.log`，source/compiled分层及冻结源码hash随汇总保留。批次B通过，T6尚需高层任务、远端、留存与原生矩阵等剩余入口，不提交本任务或宣称最终格式验收。
+
+## T6 批次C：真实高层Task与outputs→retention
+
+- 范围仅六Task脚本及五必要helper：task-smoke/non-git-smoke-project/task-capture-receipt新建；native-user-smoke暴露compiled server/raw CLI/current runtime/restart/专用handoff关闭；model-homes加可选requireClaude以保留tasks原Codex-only前置（默认双runtime不变）。全部高层Task经compiled serve真实coordinator，没有领域种子/第二扫描器/旧API翻译。current public owner×space、真实机器/中央Agent UUID；inputs/outputs Git项目均当前repository create/bind。
+- 原保障去向逐项见smoke-coverage T6C。controls保留真实model/effort/审批副作用/steer/execution interrupt，将历史YAML冻结假设改成已确认的current next重新resolve：只update instructions，首轮snapshot原样、新轮新version，固定target/launch与nativehistory。task-mcp保原machine/cwd Task list，真实两host thread/system nativeID与child proof，限定审批、一次spawn、65秒cursor timeout；没有扩大owner库存。
+- non-Git首个tasks复现repository_unmatched：当前observeRepository明确清GIT_CEILING_DIRECTORIES，仓库下.dev-smoke/project真实是Git子目录。不是产品缺口。经主agent确认，改为系统tmp本次唯一root/.dev-smoke/project、先assert non_git，三脚本finally尝试回收该新root；evidence记录路径，不动用户或历史临时目录。
+- outputs→retention唯一格式current-task-outputs-1，同候选binaryhash校验与真实八case路径。producer模型host/Runner/服务已停、源配置hash验证后清复制模型auth，只保留consumer需要的当前DB/Git/files与Hub身份/机器/HAPI连接。consumer不再复制或启动模型，以公开Task/artifact/current owner会话操作和本次Runner只读receipt/spool观察；manifest对应operation/action/cwd/name/relativePath/hash/size全验证，不开放机器RPC。全部release/history/Git/spool事实确认后，终止consumer恢复quota/停进程/删除确切秘密，再回收本次producer可再生数据。两家最终仅evidence；对失败仍保留诊断。
+
+自检默认实际结果（使用A的ffb8aec1 CLI和固定bdf706d7 HAPI；未改产品，未build重建HAPI）：日志均`.dev-smoke/slimming-acceptance/`，证据均以下根的evidence.json。
+
+| 实际命令 | 日志 | Evidence根（.dev-smoke/） | 实际结果 |
+|---|---|---|---|
+| bun run test:tasks dist/runweft | t6c-tasks-current.log | tasks-udeACs | 四组、Codex真实执行，exit0/cleanupErrors=[] |
+| bun run test:task-controls dist/runweft | t6c-task-controls.log | task-controls-rGSF1r | 七组、双runtime审批/steer/interrupt，exit0/cleanupErrors=[] |
+| bun run test:task-mcp dist/runweft | t6c-task-mcp.log | task-mcp-krg8yM | 两host各两组，实际长wait 64859/65181ms，exit0/cleanupErrors=[] |
+| bun run test:task-inputs dist/runweft | t6c-task-inputs.log | task-inputs-iRaJBB | 默认双runtime×两mode×两round八组，exit0/cleanupErrors=[] |
+| bun run test:task-outputs dist/runweft | t6c-task-outputs.log | task-outputs-weHP8R | 默认四task八round及每首轮partial/retry/collect，exit0/cleanupErrors=[]，交唯一consumer |
+| bun run test:task-retention .dev-smoke/task-outputs-weHP8R/evidence.json dist/runweft | t6c-task-retention.log | task-retention-Z2VRxy | 三组、八轮留存/真实candidate discard/重启零重放，exit0/cleanupErrors=[]，producer回收 |
+
+- 定向根实际44 pass/0 fail/1081 expect/五文件（tasks/task-rounds/tasks-mcp/task-outputs/hub-delegation-native），日志t6c-focused-tests.log；首条命令中的./test/task-inputs.test.ts并不存在，未声称它通过。补当前./test/task-files.test.ts，7 pass/0 fail/145 expect，日志t6c-task-files-tests.log。没有删或改根有效断言。
+- 最后source修整：ready按实际所需flavor的discovery返回而非强迫tools.length===2；retention清HAPI_/RUNWEFT_/CLI_API_TOKEN/DB_PATH等外层变量，不恢复用户home认证。known各round host PID加入退出确认。初次自检全模型通过后的这些修整由主agent最终版本独立实跑，不以先前版本证据冒充。
+- 真实验收返修：清unused imports误删tasks最后evidence写入所需join。主agent最终版本跑到四行为组全过，但finally ReferenceError/exit1，typecheck也报TS2304；我此前组合命令取到末尾diff-check的成功出口，漏看typecheck失败，不能据此称通过。仅恢复join import后，独立命令bun run typecheck实际exit0，日志t6c-typecheck.log；主agent重跑tasks/typecheck，其余C源码仍冻结。最终六家验收尚待主agent记录。
+- 冻结六脚本/五helper的精确SHA256清单在t6c-implementation-hashes.json，已包含join恢复。未改data-format-research/HAPI/pin/依赖/version/Specs，未commit、未标T6完成、未开始下一批。其它当前矩阵由主agent另安排，仅不与本批共享helper编辑。
+
+- C task-mcp 最终独立验收返修：主agent现场task-mcp-CM3ah4中Codex递归拒绝及65秒wait通过，Claude额外提出本次项目ls/git权限请求，原assert(expected)使入口exit1；cleanupErrors=[]。仅该脚本解冻：提示明确不检查目录、不运行ls/git及被拒后不重试额外请求；未声明helper/proof请求经现行task permission明确denied并记录deniedRequests，声明请求仍按原白名单批准。原唯一spawn、真实helper/proof、递归拒绝、completed及65秒wait断言全部保留，不新开Round/重发Task，不修改HAPI默认denial reason或产品权限。该版本等待主agent完整两host复跑；前一失败不记为通过。
+
+- 主 agent 批次验收：最终冻结六入口独立全部 exit0：tasks 四组、controls 七组/双 runtime、task-mcp 双 host 四组且实际长 wait 65012/65209ms、inputs 八轮、outputs 八轮、retention 三组/八轮。outputs 交接时确认模型进程退出与模型认证副本删除；retention 实际验证失败候选拒绝普通释放、显式丢弃、外部引用与全部历史不变、配额和重启零重放后，两现场均只剩 evidence。六现场 cleanupErrors=[]，所有记录的 host PID 消失，三个 non-Git 临时根已回收，四份用户源配置 hash/mode/size 不变；13份脚本/helper 与候选 hash 对照最终冻结清单一致。独立 typecheck 通过；保留 join 导入及未声明 Claude 请求两个失败记录，修正后才记录通过。汇总 `.dev-smoke/slimming-acceptance/t6c-root-summary.json`，日志 `t6c-root-*.log`；沿用 ffb8aec1/bdf706d7，无本批产品变更、未重复 build/根全集。批次C通过，T6继续远端和剩余矩阵，未提交。
+
+## T6 当前原生十二组与消费者十组
+
+- 迁接线只复用实际 modelHomes，保留原矩阵/筛选参数、真实浏览器 encrypted begin/complete、原生宿主 ID、递归委派拒绝、双 owner 权限和消费者全部恢复控制断言。新建 native fixture 不再调用 data reset；两家构造后操作纳入 finally，逐会话/Runner/服务/PID确认，安全后清确切模型与连接秘密。默认成功回收本次环境；显式当前 handoff 仅用于 T7 最终浏览器消费者，不接受历史 fixture 格式。
+- 主 agent 以专用 prefix 离线安装本地 Linux x64 tarballs，实际 npm launcher 指向同 ffb8aec1/bdf706d7 候选；未发布、未改用户全局配置。清单 `t6-installed-linux.json`，package/install 日志 `t6-{package,install}-linux.log`。
+- 最终版本独立原生默认 all/all/all 成功：12 cases/12 Task/12 round、18 checks，四次实际 long wait 65010/65094/64985/65312ms；cleanupErrors=[]、24记录PID消失、源配置 hash/mode/size 不变，模型认证副本删除。为 T7 明确保留当前 state/HAPI history/Git 与 0600 连接文件，cleanupOwner=T7 final consumer。证据 `.dev-smoke/hub-native-mcp-jSgCqe/evidence.json`，汇总 `t6-current-root-native-summary.json`，日志 `t6-current-root-native.log`。
+- 最终消费者独立默认成功：10 checks、tasks数组6项/5唯一Task/11唯一round；cleanupErrors=[]、记录PID消失、仅余evidence、源配置不变。证据 `.dev-smoke/hub-consumers-1cdGb4/evidence.json`，汇总 `t6-current-root-consumers-summary.json`，日志 `t6-current-root-consumers-final.log`。
+- 根首消费者现场 xll7fw 在两项异步 release 后过早 workspace remove，正确收到 result_remove_pending，入口exit1；保留诊断并确认所有记录PID与秘密副本已清。仅脚本增加公开 task/result DTO 的真实释放确认后再一次 remove，不重试 mutation、不改产品并发保护。修后完整十组才记通过。此前实施者自检成功属较早清理版本，不能冒充最终版本验收。
+- 两家最终源码与五个冻结依赖/candidate hash 已独立核对，清单 `t6-current-root-inputs-v2.json`。这是真实本机 Linux 双 Runner/模型/浏览器接入验收，未验证物理跨机器；T6其它模型家族仍进行中，未提交或认领最终 schema19。
+
+### T6D 实施中：远端成果/当前连接
+
+- 仅 result-export(default/--fetch/--tasks)、task-results-probe、remote-native(default/--tasks)、remote-task-probe、result-retention；remote-package 由主agent派 E producer 同步迁，本项未编辑或声称其通过。共享窄扩展由主agent批准：nativeUserSmoke 第四可选 hapiBinary（默认不变），nativeFileSmoke.restart(scan=false)/reopenGateway(scan=false) 完整重建；modelHomes 未改。
+- 自检 result-export 四组 xaDG0F、result-fetch 五组 8nrz6B exit0/cleanupErrors=[]，原真实双 Runner、Git/LFS、丢成功回执/原ID查询、partial seal、冻结首轮 bytes、离线 object 下载和保护父 index/config/HEAD/FETCH_HEAD/dirty/hook/模块合码保障保留。最终 TaskResults JhaqWq（三组）自检 exit0，证据嵌入 taskResults，原无模型领域层级明确；主agent正独立最终版三入口验收。
+- TaskResults 初 jYNhw8 在新 gateway 后私有 prepare HTTP500；随后 sO2r63 的固定 export 写 unknown。初scan早于实际RPC重连是调查方向，不将其混同已证实的同进程 spawnSync CLI 死锁：AGoufT 两轮 publication 完成后同步 compiled CLI 阻塞本进程 HTTP 报 connection_failed，改异步 compiled CLI 后 jseuVZ 及最终 JhaqWq 实测通过。等待 unknown 沿当前原操作恢复，没有新 export/新种子掩盖不确定回执；未修改产品 retry。
+- default 模型首 KdURs8 Codex两轮/两runtime六gate通过，Claude额外 ls memory+重定向请求违反原 allowlist，整入口失败；仅强化提示不读外部memory、不ls/重定向，未放宽审批。该首草稿 cleanup 调用顺序误用逆序工具，先删模型副本/后等PID导致真实清理失败，不能称安全通过；已改本家正确顺序。已依据本次 HAPI metadata 且验证 owned cwd 停 PID1499384；Y8ptBq 四已知host均已消失，补证据 t6d-first-native-cleanup.json/t6d-first-task-cleanup.json。
+- k7nRyi default 通过首轮Claude后次轮resume missing，cleanupErrors=[]；Y8ptBq Task 第一Codex两轮/Claude首轮后次轮同nativeID失败，真实固定HAPI长路径限制见Technical。本家按主agent授权使用短 tmpRoot/.dev-smoke，新默认矩阵 Sj4nDX、wajJet 实跑中，尚不声称最终通过。
+- 当前定向 bun test ./test/remote.test.ts ./test/remote-tasks.test.ts ./test/task-results.test.ts ./test/hub-delegation-native.test.ts 实际34 pass/0 fail/816 expect/4文件（t6d-focused-tests.log）；最新独立 typecheck exit0。初并行 E 草稿曾报类型错，随后收敛；不把该瞬时失败当本批最终通过。
+
+- 主 agent 三个无模型成果入口验收：最终冻结源码，以实际本地安装的 compiled core 与 HAPI 分别独立执行 `test:result-export`、`test:result-fetch`、`test:task-results`，全部 exit0。export 四组/两导出/一次真实成功响应丢失；fetch 五组/两导出两取回/三次真实响应丢失；TaskResults 三组/两固定业务轮，完整当前 gateway 重建后恢复出版，第二次恢复零重复上传，compiled CLI 与当前 MCP adapter 分别离线取回。三家均零模型 session，不能替代真实模型 Task 验收。固定 Git/LFS 字节、源和执行端离线、父 Git 状态保护、子模块/LFS 显式合入均实际验证。
+- 三个根分别为 `.dev-smoke/repository-result-export-0wOdlA`、`repository-result-fetch-2eWjPF`、`task-result-delivery-rCqN4m`；cleanupErrors=[]，成功现场仅证据/进程日志。候选仍 ffb8aec1/bdf706d7；源码及候选核对和结果保存于 `.dev-smoke/slimming-acceptance/t6d-root-results-{inputs,summary}.json`，命令日志 `t6d-root-{result-export,result-fetch,task-results}.log`。三入口通过，D真实模型及retention仍待验收，不提交或标T6完成。
+
+- D 模型与consumer后续自检：default补回真实copied config中的Runweft MCP后，o1jkVo八组exit0/cleanupErrors=[]；两runtime各两真实native轮同ID，实际MCP配置存在且Runweft被过滤、keep_probe仍执行，四host退出、源配置hash验证，auth副本及本次MCP config备份在退出后删除，ownedTempRoot精确回收。jEl4jv Task默认双runtime×两轮+offline fetch/merge全部通过/cleanupErrors=[]，但该启动版本尚无恢复的MCP configured前置，不能代替最终版本filter保障；其当前数据格式/真实Task事实仍由独立retention消费：KZdKmG四组exit0/cleanupErrors=[]，release preview/独立round refs/共享cache首删保留末删物理回收/离线fetch/Git refs与sessions不变，最终/tmp/runweft-remote-GkGOkI回收，仅两家evidence。
+- 最终Task配置矩阵另开新fixture实跑（t6d-remote-tasks-configured.log），保原强断言。新增本家cleanup失败路径保证：各session stop独立尽力；factory未返回不默认已停机；配置hash/remove失败导致整体handoff失效时，如模型与基础进程已确认停止，仍清精确连接身份/机器/HAPI settings/JWT，不遗留无效handoff。无模型已冻结三家/sharedhelpers未改。
+- 同机两独立Runner/native home和机器UUID、真实HTTP/Git/LFS/模型，未验证物理异机网络；远端访问条件缺口仍保留，不把本次本地双Runner验收称物理远端。
+
+
+### T6E 原生历史重建：主 agent 验收
+
+- `smoke-reconstruction.ts` 保留双 runtime 四真实轮次与可选 failed-evidence 参数，当前连接/机器/Task 不变，在空原生历史下通过真实 missing 分支重建。当前证据格式仅有 `current-reconstruction-1`；继续失败现场须未接受第二轮、首轮已完成停机、同候选及身份/路径/当前记录全部一致，拒绝已接受第二轮的再次提交。这是本次验收断点恢复，不是旧数据兼容。
+- 最终提示明确首轮正文与结构化字段都不回显记忆标记，原断言不变。根初次 Zcf45v 中 Claude 在 summary 自行复述标记，正确 exit1；cleanupErrors=[]、模型PID退出、临时non-Git项目删除，保留失败证据。未重发该Task或改写其报告。
+- 主 agent 以实际安装 launcher 与显式 HAPI 独立执行最终 a12d0155 脚本，wa6hwy exit0/七组：Codex/Claude各两轮，四个 archived session；新轮消息不含旧标记，重建来源只首轮，实际两种原生JSONL均恰一条当前轮输入且含恢复记忆；原history SHA/报告及空项目不变。四host退出、non-Git临时根删除、成功根只余evidence、cleanupErrors=[]、源模型配置SHA与冻结源码均相符。
+- 根再把此已接受第二轮的真实成功证据传第三argv，预期exit1且在启动前拒绝，evidence bytes及文件集不变。实施者另外已真实执行故障窗口pt6CM8两首轮→同现场继续两个第二轮，first Task/Round/native ID未变、四最终session，无重放；这项是实施者证据，非根重复执行。默认早期自检/故障/继续与最后提示修正版本分别记录，不合并成一次验收。
+- 根汇总 `.dev-smoke/slimming-acceptance/t6e-root-reconstruction-summary.json`，源码/candidate清单 `t6e-root-reconstruction-inputs-v2.json`，日志 `t6e-root-reconstruction-{default-v2,second-refused}.log`；候选仍 ffb8aec1/bdf706d7，产品/HAPI未变。其余E链仍进行中，不据此标T6完成。
+
+- D 最终模型链自检：`bun run test:remote-tasks dist/runweft dist/hapi` 的 WjiLDJ exit0/五组，两runtime各两轮真实协调器Task、同nativeID恢复、四seal故障修复及离线fetch/merge，Runweft MCP configured前置实际为true；`bun run test:result-retention .dev-smoke/remote-tasks-native-WjiLDJ dist/runweft dist/hapi` 的 k5pauW exit0/四组，两家 cleanupErrors=[]。最终consumer精确回收 /tmp/runweft-remote-Jt9vym，留下紧凑evidence/log。日志 t6d-remote-tasks-configured.log、t6d-result-retention-final.log。D模型与consumer交主agent独立验收，未标T6完成。
+- 最终生命周期窄修：只有默认all Task producer保留数据交result-retention；合法单flavor成功由producer回收，证据明确cleanupOwner/retainedForConsumer。默认all实跑不受此分支修正影响；单flavor修正本轮只静态核验。已记录的四失败现场确切backup目录检查无残留，t6d-failed-backup-check.json；不扫描历史目录。
+- 主agent要求的已验C清理补齐：task-mcp安装返回backupPath立即登记既有models.copies；taskSmoke构造未返回center时不把基础进程当已停止，不删除模型认证副本。先前C真实矩阵在该窄修前，未声称重跑；最终typecheck exit0（t6d-final-typecheck.log），T13保留整体验收。
+
+
+### T6E 附件原生矩阵与安装消费：主 agent 验收
+
+- 当前 producer 以真实编译中心/CLI、两 Runner 与 MCP 宿主执行原八组合/十六轮，实际 upload/input/output、partial→retry拒绝→collect、第二轮原bytes、child工具边界均保留。root默认 Qn6bmR 全部八组成功，源码与启动清单cb889671逐项相等、模型PID退出、原模型配置副本清除。安装 consumer u33pgy 的八组只读重启检查全部通过：原轮次/report/input/native/session/manifest与真实文件SHA/bytes不变，原生history摘要不变。
+- 该默认 consumer 随后的 release→worktree remove 后 deepEqual 整个 rounds 失败：正常释放令 artifacts_revision 从53/94增加到103/106，执行完成版本、轮次和请求未变；这不是产品回放或数据兼容缺口。消费者仅在明确释放后的比对拆出可变留存修订号，要求非下降，其余完整执行字段保持相等；释放前仍完整exact比较。原 consumer 保留exit1事实，不改成通过。
+- 最终 producer 同时补 MCP 安装实际返回 backupPath 的安全回收；root用最终5bff565f producer与c73a322b consumer对两个跨runtime worktree组合独立执行完整链：hub-claude-codex 的5I4ep7→Q5dHu6、hub-codex-claude 的86eJJ9→KythXJ，两producer/两consumer均exit0。全部原bytes、报告/native历史、释放完成、实际workspace删除、父HEAD/status与每轮Git ref/result blob保留通过；仅剩evidence/logs、记录PID均消失，源配置hash/mode/size不变。此前默认全部八组真实只读保障与这两个最终释放链分开记录；T13再执行最终默认完整链。
+- 汇总 `.dev-smoke/slimming-acceptance/t6e-root-artifact-summary.json`；默认及selected命令日志 `t6e-root-artifact-*.log`，两版源码和candidate清单随日志保存。已确认失败默认两现场无进程并精确清凭据/MCP备份后，root回收其本次可再生数据，只留原始evidence/log；补充清理记录 `t6e-root-artifact-failed-consumer-cleanup.json`。使用同ffb8aec1/bdf706d7安装候选，无产品或HAPI改动。
+
+### T6 临时 MCP 配置备份的最后复核
+
+- 实际 `mcp install` 备份含完整专用宿主配置，原 modelHomes.remove 只知道初始复制文件。artifact/current-native/task-mcp 三家改为把每次CLI返回的backupPath立即登记到已有copies数组，安全停机后由原逐项清理删除，不扫目录或用户home、不新增清理框架。task-smoke另修构造AggregateError且center未返回时不能默认停机后删除模型凭据。后两家的已通过完整矩阵是在此窄清理返修前，不冒称已经重跑；静态复核/typecheck通过，T13最终同候选验收会使用返修版。
+- root对当前T7 handoff jSgCqe 的一个安装备份及已失败task-mcp-CM3ah4的一个备份，确认专用服务/Runner停机、已知进程退出、备份内路径归本次root后精确删除；原evidence不变。jSgCqe当前state/nativehistory/Git/连接继续交T7。证据 `t6-current-root-backup-cleanup.json`、`t6c-root-failed-mcp-backup-cleanup.json`。这是本次验收副本回收，不是旧版本用户数据清理。
+
+
+### T6D 最终默认原生与Task→retention：主 agent 验收
+
+- root以固定安装core/HAPI独立跑最终c086239a producer：默认native vWPXeA exit0/八组；compiled Task 8aheeA exit0/五组。均双runtime各两轮、同native ID复用、实际工程/skill/input/submodule/LFS内容、现有Runweft MCP配置被过滤而其它MCP实际调用、原生进程退出；native另保两runtime各六个实际prepared-state拒绝且无新session、source与target离线后真实中心Git/LFS对象可下载。Task保真实seal hook失败修复、自动代码/文件发布、执行端离线由CLI fetch、父index/config保护及显式Git/LFS合入。
+- root继续同一8aheeA的当前handoff，用最终211464a1 retention consumer MA3NHE，exit0/四组：preview不unpin、仅释放首轮保共享baseline/LFS pin；删首Task保共享cache与第二checkout，删末Task才物理清cache；执行端已离线且checkout/cache已删仍能取回两份最终成果，父refs/index/config不变；最后中心pins独立释放、session IDs不变。producer未新dispatch或重新拷贝模型认证。
+- 三入口cleanupErrors=[]；所有记录host PID已退出，native与Task两独占system tmpRoot/.dev-smoke均已回收、证据目录只余evidence/log、MCP备份删除，源配置hash/mode/size不变。候选仍ffb8aec1/bdf706d7、root源码hash对照冻结清单通过。汇总 `.dev-smoke/slimming-acceptance/t6d-root-summary.json`，命令日志 `t6d-root-{native,tasks,retention}.log`。合法单flavor成功由producer自行回收、仅default双runtime交retention的窄分支只静态核对/typecheck，未声称root另跑了单flavor。
+- 本次使用明确owned短运行目录；固定HAPI对长Claude cwd编码与实际原生历史目录不一致的已复现限制仍在，未改HAPI/复制transcript/建立兼容路径。短目录同nativeID成功不能声称已修复长路径限制。D全部入口通过本阶段验收，T6其它E矩阵仍待完成，未标整任务完成。
+
+
+### T6E 原生 MCP 控制：主 agent 验收
+
+- root 使用固定安装 ffb8aec1/bdf706d7 和 producer 4131511b 独立执行两种宿主/runtime 控制链：Codex GvlmS0 四轮、Claude RAYamM 三轮，均 exit0。每家唯一 spawn，第二轮同 native ID 恢复且只报告不改文件；Codex 原轮双输入实际 steer 成功，Claude 明确 steer_unsupported；最后新轮实际 accepted 后 interrupt，同 execution ID 变为 interrupted/stopped/complete，没有重发。
+- root 逐项复核原 MCP 调用和 round views、真实 native 终态、记录 PID 全部退出、owned 短运行目录已删除、证据目录只余 evidence、cleanupErrors=[]，源四份配置 hash/mode/size 不变。汇总 `.dev-smoke/slimming-acceptance/t6e-root-collaboration-controls-summary.json`；两个命令日志为 `t6e-root-collaboration-controls-{codex,claude}.log`。后续 producer 04d2e86b 仅修改 worktree/remote 提示及错误 stack，shared controls 分支未变；默认 worktree/remote 与 finish-repair 尚在独立验收，不能据此标 T6 全部完成。
+
+
+### T6E 独立工作树 Task 与 lifecycle：主 agent 验收
+
+- root 首次 NHRa0p 在 Claude 第二轮误拒合法只读 Git：模型用分号串联同 prepared cwd 的 status --short 与 log --oneline -3，测试只拆 &&。仅改为两种分隔符逐段校验，原命令/当前cwd枚举与空段拒绝保持；不是批准任意 Bash。原失败证据保持、九个记录PID退出、ownedRoot回收，不在已接受的第二轮现场重发。
+- root 用最终 efae36c1 tasks / 391dc35d lifecycle / a70c9b01 helper 和固定 ffb8aec1/bdf706d7 安装候选独立执行默认链：8sbJQL producer 五组/四真实轮，随后同现场 yMsL7n lifecycle 六组/两个真实第三轮、两个准备取消Task，均 exit0。两runtime工程指令/skill/project MCP实际调用、结果编辑与Git封存、两次同nativeID恢复、第三轮只读ignored依赖无新commit均通过；Claude首轮真实失败hook由单次CLI retry-finish修复，原inputs/report不重放。
+- lifecycle保留实际post-checkout延迟窗口：接受后父HEAD推进，preparing中interrupt仍固定原base、不创建session；ignored内容令remove失败，重启后显式discard才移除checkout，原三轮报告/result refs及准备取消成果保留，后续send拒绝。root逐项复核终态、十二个记录PID全退出、唯一运行tmpRoot删除，两家证据目录仅evidence、源配置hash/mode/size不变。汇总 `.dev-smoke/slimming-acceptance/t6e-root-worktree-summary.json`，日志 `t6e-root-worktree-tasks-v2.log`、`t6e-root-worktree-lifecycle.log`。此链通过，协作矩阵其它分支仍在验收。
+
+### T6E 协作矩阵与安装消费：主 agent 验收
+
+- root以同ffb8aec1/bdf706d7安装候选独立执行worktree gPq2Pu，8case/18轮全部通过，包含两个相反宿主/runtime的真实MCP连接断开；每家单次spawn、同native历史、context/skill/保留MCP真实调用、Git封存与显式合入、只报告不改mtime，父HEAD/index/dirty状态保持。共享8case/18轮MI1twF为实施者真实执行、根逐项复核；root没有把它记成自己重复运行。两类成功矩阵全部记录PID退出、自有短目录回收、源配置不变。
+- root native retry-finish mbmMVX两轮→安装worktree consumer VPbpC2均exit0：首轮模型已完成而真实hook失败，恰一次原轮次retry_finish、原输入/报告不重放；消费者重启读取原历史，实际checkout与doctor计数1→0、Git refs和父状态保留。之前5zUPXx是已从精确原生history独立确认的server_overloaded，尚未retry，保留失败且不复用现场；没有改模型、扩大审批或自动重发。
+- root默认remote BlkHGo四case/八轮全部原实际Git/LFS/input/output、双Runner离线取回及显式合入断言通过。其安装consumer AWbF2R在启动后的第一项snapshot比较失败，尚未执行consumer下载/fetch/release：producer模型结束时保存DTO，后续正常offline fetch使末轮code_revision从137/147/137/149增至145/155/145/157，其余执行/completed/artifacts字段未变；失败不能记为消费者通过。
+- 最小返修仅remote业务动作完成后重采完整两轮DTO；consumer自身显式fetch绑定唯一requestId/roundId、等待available+released并核resultHead，再把该次实际code_revision作为对应轮次的精确预期。其它轮次/执行字段、inputs、报告、native history、session库存继续exact；释放后才使用原留存修订非下降检查。root用最终producer5f2c337c/consumer1a2f3300/helper3aea3b2a独立跑两个跨runtime完整链：uOAImS→MrrJFs（hub-claude-codex）、5w1CcT→X9Cf7M（hub-codex-claude），四入口均exit0。实际执行端离线、下载SHA/bytes、再次fetch保父index/config、release/remove/no-replay与终结清理通过，仅剩紧凑证据；源配置hash/mode/size不变。最终默认完整四case消费链留T13，与此前default生产者证明分开记录。
+- 原worktree/remote的审批失败和报告标记失败均保留：只把只读Git分号串联纳入原逐段allowlist，明确仅原生会话记忆及完整报告字面标记；权限拒绝保持，未放行cwd外persistent memory。失败诊断、已停止进程/精确秘密回收记录与原evidence独立保存。
+- 汇总 `.dev-smoke/slimming-acceptance/t6e-root-collaboration-{default-producers,retry}-summary.json`、`t6e-root-remote-final-summary.json`；对应root命令与源码/candidate清单保存在同目录。全部T6入口已具当前可执行保障与逐场景证据，根typecheck通过；T6A产品Socket窄修后根全集274pass/0fail，后续只有smoke/fixture迁接线及明确清理返修，未声称再跑一套未执行的全集。T13仍执行最终同候选组合，物理跨机/Mac实机/arm64模型及固定HAPI长Claude cwd限制不冒充已验证。
+- Commit：`module-slimming-audit T6: 迁移原生与成果验收并收口环境清理`

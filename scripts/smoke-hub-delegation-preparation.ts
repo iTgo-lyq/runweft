@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { randomBytes, randomUUID } from 'node:crypto';
+import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
@@ -8,6 +8,8 @@ import { fetchJson } from '../src/hapi';
 import { freePort } from '../src/services';
 import { HubStore } from '../src/hub/store';
 import { createDelegationGateway } from '../src/hub/delegation/gateway';
+import { removeFileSmokeData } from './fixtures/native-file-smoke';
+import { closeSmoke, removeSmokeSecrets, startSmokeHapi, stopSmokeProcess } from './fixtures/smoke-lifecycle';
 import { observeRepository } from '../src/hub/repositories/observation';
 
 mkdirSync('.dev-smoke', { recursive: true });
@@ -19,9 +21,9 @@ for (const name of Object.keys(env)) if (name.startsWith('HAPI_') || name.starts
 env.CODEX_HOME = join(root, 'codex'); env.CLAUDE_CONFIG_DIR = join(root, 'claude');
 for (const path of [env.CODEX_HOME, env.CLAUDE_CONFIG_DIR]) mkdirSync(path, { mode: 0o700 });
 const nativeHome = join(root, 'hapi');
-const child = Bun.spawn([nativeBinary, 'hub'], { env: { ...env, HAPI_HOME: nativeHome, DB_PATH: join(nativeHome, 'hapi.db'), CLI_API_TOKEN: rootToken,
-    HAPI_LISTEN_HOST: '127.0.0.1', HAPI_LISTEN_PORT: String(port), HAPI_PUBLIC_URL: targetUrl, TELEGRAM_BOT_TOKEN: '' },
-    stdout: Bun.file(join(root, 'hapi-out.log')), stderr: Bun.file(join(root, 'hapi-err.log')) });
+let child: ReturnType<typeof Bun.spawn> | undefined;
+const processes = new Set<ReturnType<typeof Bun.spawn>>(), secretFiles = new Set<string>([join(nativeHome, 'jwt-secret.json'), join(nativeHome, 'settings.json')]);
+const cleanup: Array<() => void | Promise<void>> = [() => removeSmokeSecrets(secretFiles, processes)];
 let gateway: Awaited<ReturnType<typeof createDelegationGateway>> | undefined, identities: HubStore | undefined;
 const runners: ReturnType<typeof Bun.spawn>[] = [], checks: string[] = [], evidence: any = { root, checks, success: false,
     kind: 'real unchanged HAPI, two isolated Runners, central server selection, owned baseline bytes and remote diagnostic worktrees; no model execution' };
@@ -33,10 +35,11 @@ async function until<T>(fn: () => Promise<T>, good: (v: T) => boolean, label: st
 }
 console.log('Evidence directory: ' + root);
 try {
-    await until(async () => { try { return (await fetch(targetUrl + '/health', { signal: AbortSignal.timeout(500) })).ok; } catch { return false; } }, Boolean, 'HAPI startup');
+    child = await startSmokeHapi(nativeBinary, root, env, port, rootToken, processes); cleanup.push(() => stopSmokeProcess(child!));
+    cleanup.push(() => gateway?.close());
     gateway = await createDelegationGateway({ host: '127.0.0.1', port: 0, target: targetUrl, statePath, rootToken, key, pollMs: 30 });
     const base = `http://127.0.0.1:${(gateway.server.address() as { port: number }).port}`;
-    identities = new HubStore(statePath);
+    identities = new HubStore(statePath); cleanup.push(() => identities?.close());
     const a = identities.createIdentity('Runner owner'), b = identities.createIdentity('task owner'), sid = a.personalSpace.id;
     secrets.push(a.token, b.token); identities.acceptInvitation(b.identity.id, identities.invite(a.identity.id, sid, 'member').token);
     const actorA = gateway.store.authenticate(a.token, sid), actorB = gateway.store.authenticate(b.token, sid), resources = gateway.resources.store;
@@ -45,9 +48,11 @@ try {
         const registered = resources.enroll(actor, { requestId: randomUUID(), token: machineTokens[i] });
         resources.associate(actor, registered.machineId, sid, true);
         const runnerHome = join(root, `runner-${i}`);
+        secretFiles.add(join(runnerHome, 'settings.json'));
         atomicWrite(join(runnerHome, 'settings.json'), JSON.stringify({ machineId: registered.machineId, cliApiToken: machineTokens[i] }));
         runners.push(Bun.spawn([nativeBinary, 'runner', 'start-sync'], { env: { ...env, HAPI_HOME: runnerHome, HAPI_API_URL: base, CLI_API_TOKEN: machineTokens[i], HAPI_DISABLE_VERSION_HANDOFF: '1' },
             stdout: Bun.file(join(root, `runner-${i}-out.log`)), stderr: Bun.file(join(root, `runner-${i}-err.log`)) }));
+        const runner = runners.at(-1)!; processes.add(runner); cleanup.push(() => stopSmokeProcess(runner));
         return registered.machineId;
     });
     const aj = (await gateway.authority.exchange(a.token, sid)).token, bj = (await gateway.authority.exchange(b.token, sid)).token;
@@ -100,10 +105,10 @@ try {
         const log = readFileSync(join(root, name), 'utf8'); for (const value of secrets) assert(!log.includes(value), 'Credential appeared in service log');
     }
     check('share revocation prevents new preparation, retained records remain readable, and service logs contain no credentials');
+    evidence.candidate = { entry: 'source gateway + explicit HAPI binary', nativeBinary, hapiSha256: createHash('sha256').update(readFileSync(nativeBinary)).digest('hex'), revision: execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim() };
     evidence.success = true;
 } catch (error) { evidence.error = error instanceof Error ? error.message : String(error); throw error; }
 finally {
-    for (const runner of runners) { runner.kill(); await runner.exited; }
-    await gateway?.close(); identities?.close(); child.kill(); await child.exited;
+    try { await closeSmoke(cleanup); if (evidence.success) await removeFileSmokeData(root); } catch (error) { evidence.success = false; evidence.cleanupErrors = error instanceof AggregateError ? error.errors.map(String) : [String(error)]; process.exitCode = 1; }
     writeFileSync(join(root, 'evidence.json'), JSON.stringify(evidence, null, 2)); console.log('Evidence: ' + root);
 }

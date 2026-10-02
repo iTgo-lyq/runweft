@@ -1,18 +1,19 @@
 import assert from 'node:assert/strict';
 import { spawn, spawnSync } from 'node:child_process';
-import { chmodSync, copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
-import { homedir } from 'node:os';
+import { chmodSync, copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { freePort } from '../src/services';
 import { HubClient } from '../src/hub/client';
 import type { HapiHttp } from '../src/hapi';
 import { chromium } from 'playwright';
-import { configureSmokeCodexModel } from './fixtures/codex-model';
+import { modelHomes } from './fixtures/model-homes';
+import { closeSmoke } from './fixtures/smoke-lifecycle';
+import { removeFileSmokeData } from './fixtures/native-file-smoke';
 import { installedBinaries } from './fixtures/installed-binaries.mjs';
 import pkg from '../package.json';
 
 // Real MCP hosts and model calls, using dedicated writable native homes only.
-const executable = resolve(process.argv[2] ?? 'dist/runweft');
+const executable = resolve(process.argv[2] ?? 'dist/runweft'), binaries = installedBinaries(executable);
 const selectedHost = process.env.RUNWEFT_SMOKE_HOST ?? 'all';
 assert(['all', 'codex', 'claude'].includes(selectedHost), 'RUNWEFT_SMOKE_HOST must be all, codex or claude');
 const selectedMode = process.env.RUNWEFT_SMOKE_MODE ?? 'all';
@@ -21,29 +22,19 @@ const selectedRuntime = process.env.RUNWEFT_SMOKE_RUNTIME ?? 'all';
 assert(['all', 'codex', 'claude'].includes(selectedRuntime), 'Unknown runtime smoke selection');
 mkdirSync('.dev-smoke', { recursive: true });
 const root = mkdtempSync(resolve('.dev-smoke/hub-native-mcp-'));
-const home = join(root, 'runweft'), remoteHome = join(root, 'remote'), project = join(root, 'project'), codexHome = join(root, 'codex'), claudeHome = join(root, 'claude');
-for (const path of [project, codexHome, claudeHome]) mkdirSync(path, { mode: 0o700 });
+const home = join(root, 'runweft'), remoteHome = join(root, 'remote'), project = join(root, 'project');
+for (const path of [project]) mkdirSync(path, { mode: 0o700 });
 const env: NodeJS.ProcessEnv = { ...process.env };
 for (const key of Object.keys(env)) if (key.startsWith('RUNWEFT_') || key.startsWith('HAPI_') || ['CLI_API_TOKEN', 'DB_PATH', 'TELEGRAM_BOT_TOKEN'].includes(key)) delete env[key];
 delete env.HAPI_CODEX_APP_SERVER_BIN; delete env.HAPI_SESSION_ID;
-const nativeClaude = process.env.RUNWEFT_SMOKE_CLAUDE || Bun.which('iclaude') || Bun.which('claude');
-assert(nativeClaude && Bun.which('codex'), 'Both native clients and model authentication are required');
+const models = modelHomes(root, env), codexHome = env.CODEX_HOME!, claudeHome = env.CLAUDE_CONFIG_DIR!;
+const { nativeClaude, codexModel } = models;
+
 function copy(source: string, target: string) { if (existsSync(source)) { mkdirSync(dirname(target), { recursive: true, mode: 0o700 }); copyFileSync(source, target); chmodSync(target, 0o600); } }
-const sourceCodex = process.env.CODEX_HOME ?? join(homedir(), '.codex');
-for (const file of ['config.toml', 'auth.json']) copy(join(sourceCodex, file), join(codexHome, file));
-const sourceClaude = process.env.CLAUDE_CONFIG_DIR ?? join(homedir(), '.claude');
-copy(process.env.CLAUDE_CONFIG_DIR ? join(sourceClaude, '.claude.json') : join(homedir(), '.claude.json'), join(claudeHome, '.claude.json'));
-for (const file of ['settings.json', '.credentials.json']) copy(join(sourceClaude, file), join(claudeHome, file));
-Object.assign(env, { CODEX_HOME: codexHome, CLAUDE_CONFIG_DIR: claudeHome, GIT_CEILING_DIRECTORIES: root, HAPI_CLAUDE_PATH: nativeClaude });
-const codexModel = configureSmokeCodexModel(join(codexHome, 'config.toml'));
-const original = Bun.TOML.parse(readFileSync(join(codexHome, 'config.toml'), 'utf8')) as any;
-for (const name of Object.keys(original.mcp_servers ?? {})) assert.equal(spawnSync('codex', ['mcp', 'remove', name], { env, stdio: 'pipe' }).status, 0);
-const prefsPath = join(claudeHome, '.claude.json');
-const prefs = existsSync(prefsPath) ? JSON.parse(readFileSync(prefsPath, 'utf8')) : {};
-prefs.mcpServers = {}; writeFileSync(prefsPath, JSON.stringify(prefs), { mode: 0o600 });
+env.GIT_CEILING_DIRECTORIES = root;
 const evidence: { [key: string]: any; checks: string[]; cases: any[]; cleanupErrors: string[] } = {
-    root, executable, binaries: installedBinaries(executable), selectedHost, selectedMode, selectedRuntime, codexModel, hapiRevision: pkg.hapi.revision,
-    startedAt: new Date().toISOString(), success: false, checks: [], cases: [], cleanupErrors: [],
+    root, executable, binaries, selectedHost, selectedMode, selectedRuntime, codexModel, hapiRevision: pkg.hapi.revision,
+    startedAt: new Date().toISOString(), kind: 'hub-native-mcp', handoffRequested: process.env.RUNWEFT_SMOKE_HANDOFF === '1', success: false, checks: [], cases: [], cleanupErrors: [],
 };
 let started = false, token: string | undefined, hapi: HapiHttp | undefined;
 const pids = new Set<number>();
@@ -52,7 +43,9 @@ function cli(args: string[], directory = home) {
     const result = spawnSync(executable, ['--home', directory, '--json', ...args], { cwd: project, env, encoding: 'utf8', timeout: 60_000 });
     if (token) assert(!`${result.stdout}${result.stderr}`.includes(token), 'Credential leaked');
     assert.equal(result.status, 0, `${args[0]}: ${result.stderr || result.error || result.signal}`);
-    return JSON.parse(result.stdout);
+    const value = JSON.parse(result.stdout);
+    if (args[0] === 'task' && args[1] === 'show' && typeof value.host_pid === 'number') pids.add(value.host_pid);
+    return value;
 }
 function record(check: string) { evidence.checks.push(check); console.log(`PASS ${check}`); }
 function values(value: any): any[] {
@@ -169,7 +162,12 @@ async function hostCall(host: 'codex' | 'claude', runtime: string, agentId: stri
 
 console.log(`Evidence directory: ${root}`);
 try {
-    cli(['init']); cli(['data', 'reset', '--apply']);
+    assert(nativeClaude && Bun.which('codex'), 'Both native clients and model authentication are required');
+const original = Bun.TOML.parse(readFileSync(join(codexHome, 'config.toml'), 'utf8')) as any;
+for (const name of Object.keys(original.mcp_servers ?? {})) assert.equal(spawnSync('codex', ['mcp', 'remove', name], { env, stdio: 'pipe' }).status, 0);
+const prefsPath = join(claudeHome, '.claude.json');
+const prefs = existsSync(prefsPath) ? JSON.parse(readFileSync(prefsPath, 'utf8')) : {};
+prefs.mcpServers = {}; writeFileSync(prefsPath, JSON.stringify(prefs), { mode: 0o600 });
     cli(['init']); cli(['config', 'set', 'server.port', String(await freePort())]);
     const service = cli(['start']); started = true;
     const url = service.service.url;
@@ -193,6 +191,7 @@ try {
         assert(!page.url().includes(token));
         record('fresh browser identity and space connect through encrypted begin/complete before native host use');
     } finally { await browser.close(); }
+    evidence.serverHome = home; evidence.clientHomes = [home, remoteHome]; evidence.spaceId = spaceId!; evidence.ownerId = cli(['hub', 'identity']).identity.id;
     hapi = new HubClient({ url, home, env }, 'hubDelegation', 'unavailable').http;
     const machine = cli(['machine', 'enroll']); cli(['machine', 'associate', machine.machineId, spaceId!]);
     cli(['runner', 'start']);
@@ -216,8 +215,10 @@ try {
         const file = join(root, `${location}-${flavor}.json`); writeFileSync(file, JSON.stringify({ name: `${location}-${flavor}`, runtimeId: runtime.id, repositoryId: repository.id }));
         agents[`${location}-${flavor}`] = cli(['agent', 'create', '--request-id', crypto.randomUUID(), '--file', file]).agent.id;
     }
-    record('default compiled Hub starts after prerelease reset; identity, machine, runtime, repository and Agent register independently');
-    cli(['mcp', 'install', '--client', 'all']); assert(cli(['mcp', 'check', '--client', 'all']).ok);
+    record('default compiled Hub starts fresh; identity, machine, runtime, repository and Agent register independently');
+    const installed = cli(['mcp', 'install', '--client', 'all']);
+    if (installed.backupPath) { assert(installed.backupPath.startsWith(join(home, 'backups', 'mcp') + '/')); models.copies.push(installed.backupPath); }
+    assert(cli(['mcp', 'check', '--client', 'all']).ok);
     for (const mode of ['shared', 'worktree', 'remote']) for (const host of ['codex', 'claude'] as const) for (const runtime of ['codex', 'claude'] as const) {
         if (selectedHost !== 'all' && selectedHost !== host) continue;
         if (selectedMode !== 'all' && selectedMode !== mode) continue;
@@ -241,13 +242,44 @@ console.log('CHILD_CLI_DENIED');
     evidence.success = true;
 } catch (error) { evidence.error = error instanceof Error ? error.message : String(error); process.exitCode = 1; }
 finally {
-    if (hapi) try {
-        for (const session of (await hapi.request('/api/sessions')).sessions) if (session.active) await hapi.request(`/api/sessions/${session.id}/archive`, { method: 'POST', signal: AbortSignal.timeout(45_000) });
-    } catch (error) { evidence.cleanupErrors.push(String(error)); }
-    if (existsSync(join(remoteHome, 'config.yaml'))) try { cli(['stop'], remoteHome); } catch (error) { evidence.cleanupErrors.push(String(error)); }
-    if (started) try { cli(['stop']); } catch (error) { evidence.cleanupErrors.push(String(error)); }
-    for (const pid of pids) if (alive(pid)) evidence.cleanupErrors.push(`Process still alive: ${pid}`);
+    const attempt = async (action: () => void | Promise<void>) => { try { await action(); } catch (error) { evidence.cleanupErrors.push(String(error)); } };
+    const client = hapi;
+    let sessionsConfirmed = !client;
+    if (client) await attempt(async () => {
+        const { sessions } = await client.request('/api/sessions');
+        let archived = true;
+        for (const session of sessions) {
+            if (typeof session.metadata?.hostPid === 'number') pids.add(session.metadata.hostPid);
+            if (session.active) { let confirmed = false; await attempt(async () => { await client.request(`/api/sessions/${session.id}/archive`, { method: 'POST', signal: AbortSignal.timeout(45_000) }); confirmed = true; }); archived &&= confirmed; }
+        }
+        sessionsConfirmed = archived;
+    });
+    const fixtureHomes = [remoteHome, home];
+    const paths: any[] = []; let stopsConfirmed = true;
+    for (const directory of fixtureHomes) if (existsSync(join(directory, 'config.yaml'))) {
+        await attempt(async () => { paths.push(cli(['paths'], directory)); });
+        await attempt(async () => { cli(['stop'], directory); });
+        let confirmed = false;
+        await attempt(async () => { const status = cli(['status'], directory);
+            assert.equal(status.service.running, false); assert.equal(status.runner.running, false); confirmed = true; });
+        stopsConfirmed &&= confirmed;
+    }
+    let hostsStopped = false;
+    await attempt(async () => { await models.waitHosts(pids); hostsStopped = true; });
+    const safe = sessionsConfirmed && stopsConfirmed && hostsStopped;
+    if (!safe) evidence.cleanupErrors.push('Process shutdown uncertain; configuration and connection secrets retained');
+    await attempt(() => models.verify());
+    if (safe) {
+        await attempt(() => models.remove());
+        const handoff = evidence.success && !evidence.cleanupErrors.length && evidence.handoffRequested;
+        evidence.handoff = handoff;
+        if (handoff) { evidence.cleanupOwner = 'T7 final consumer'; evidence.paths = paths; evidence.nativeHomes = { codex: codexHome, claude: claudeHome }; }
+        else await attempt(() => closeSmoke(paths.flatMap(path => [path.identityConnection, path.machineConnection, path.pendingConnection, join(path.hapiClient, 'settings.json'), join(path.hapiServer, 'settings.json'), join(path.hapiServer, 'jwt-secret.json')]).filter(Boolean).map(path => () => rmSync(path, { force: true }))));
+    }
     if (evidence.cleanupErrors.length) { evidence.success = false; process.exitCode = 1; }
-    evidence.finishedAt = new Date().toISOString(); writeFileSync(join(root, 'evidence.json'), JSON.stringify(evidence, null, 2));
-    console.log(`Evidence: ${join(root, 'evidence.json')}`); if (evidence.error) console.error(evidence.error);
+    evidence.hostPids = [...pids]; evidence.finishedAt = new Date().toISOString();
+    writeFileSync(join(root, 'evidence.json'), JSON.stringify(evidence, (key, value) => key === 'message' && typeof value === 'string' ? { omitted: true, length: value.length } : value, 2), { mode: 0o600 });
+    if (evidence.success && !evidence.handoff) await attempt(() => removeFileSmokeData(root));
+    if (evidence.cleanupErrors.length) { evidence.success = false; process.exitCode = 1; writeFileSync(join(root, 'evidence.json'), JSON.stringify(evidence, (key, value) => key === 'message' && typeof value === 'string' ? { omitted: true, length: value.length } : value, 2), { mode: 0o600 }); }
+    console.log('Evidence: ' + join(root, 'evidence.json')); if (evidence.error) console.error(evidence.error);
 }

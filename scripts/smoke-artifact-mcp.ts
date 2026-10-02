@@ -1,59 +1,42 @@
 import assert from 'node:assert/strict';
 import { spawn, spawnSync } from 'node:child_process';
-import { chmodSync, copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
-import { homedir } from 'node:os';
-import { dirname, join, resolve } from 'node:path';
-import { freePort } from '../src/services';
-import { HapiClient } from '../src/hapi';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { join, resolve } from 'node:path';
+import type { HapiHttp } from '../src/hapi';
+import { nativeUserSmoke } from './fixtures/native-user-smoke';
+import { modelHomes } from './fixtures/model-homes';
 import { codexMcpDefinition, replaceCodexMcp } from '../src/mcp/toml';
 import { codexCatalog } from './fixtures/codex-catalog';
 import pkg from '../package.json';
-import { configureSmokeCodexModel } from './fixtures/codex-model';
+import { installedBinaries } from './fixtures/installed-binaries.mjs';
 
 type Flavor = 'codex' | 'claude';
-const executable = resolve(process.argv[2] ?? 'dist/runweft');
+const executable = resolve(process.argv[2] ?? 'dist/runweft'), binaries = installedBinaries(executable);
 const selected = process.env.RUNWEFT_SMOKE_CASE;
 const cases = (['local', 'hub'] as const).flatMap(mode => (['codex', 'claude'] as const).flatMap(host => (['codex', 'claude'] as const).map(flavor => ({ mode, host, flavor, id: `${mode}-${host}-${flavor}` }))));
 assert(!selected || cases.some(item => item.id === selected), 'RUNWEFT_SMOKE_CASE must name a mode-host-runtime combination');
 mkdirSync('.dev-smoke', { recursive: true });
 const root = mkdtempSync(resolve('.dev-smoke/artifact-mcp-'));
-const local = join(root, 'local'), hub = join(root, 'hub'), codexHome = join(root, 'codex'), claudeHome = join(root, 'claude');
+const local = join(root, 'client'), hub = join(root, 'hub');
 const probeLog = join(root, 'probe.jsonl'), claudeLog = join(root, 'claude-init.jsonl');
 const env: NodeJS.ProcessEnv = { ...process.env };
-for (const key of Object.keys(env)) if (key.startsWith('RUNWEFT_')) delete env[key];
-delete env.HAPI_CODEX_APP_SERVER_BIN; delete env.HAPI_SESSION_ID;
-const nativeClaude = process.env.RUNWEFT_SMOKE_CLAUDE || Bun.which('iclaude') || Bun.which('claude');
-assert(nativeClaude && Bun.which('codex'), 'Both native clients and existing model authentication are required');
-function copy(source: string, target: string) { if (existsSync(source)) { mkdirSync(dirname(target), { recursive: true, mode: 0o700 }); copyFileSync(source, target); chmodSync(target, 0o600); } }
-for (const file of ['config.toml', 'auth.json']) copy(join(process.env.CODEX_HOME ?? join(homedir(), '.codex'), file), join(codexHome, file));
-const codexModel = configureSmokeCodexModel(join(codexHome, 'config.toml'));
-const sourceClaude = process.env.CLAUDE_CONFIG_DIR ?? join(homedir(), '.claude');
-copy(process.env.CLAUDE_CONFIG_DIR ? join(sourceClaude, '.claude.json') : join(homedir(), '.claude.json'), join(claudeHome, '.claude.json'));
-for (const file of ['settings.json', '.credentials.json']) copy(join(sourceClaude, file), join(claudeHome, file));
+for (const key of Object.keys(env)) if (key.startsWith('RUNWEFT_') || key.startsWith('HAPI_') || ['CLI_API_TOKEN', 'DB_PATH', 'TELEGRAM_BOT_TOKEN'].includes(key)) delete env[key];
+let fixture: Awaited<ReturnType<typeof nativeUserSmoke>> | undefined;
+let models: ReturnType<typeof modelHomes> | undefined;
+let nativeClaude: string | undefined, codexPath: string, claudePath: string;
 function quote(value: string) { return `'${value.replaceAll("'", "'\\''")}'`; }
 const wrapper = join(root, 'claude-observer');
-writeFileSync(wrapper, `#!/bin/sh\nexec ${quote(process.execPath)} ${quote(resolve('scripts/fixtures/claude-observer.mjs'))} "$@"\n`, { mode: 0o700 });
-Object.assign(env, { CODEX_HOME: codexHome, CLAUDE_CONFIG_DIR: claudeHome, GIT_CEILING_DIRECTORIES: root,
-    HAPI_CLAUDE_PATH: wrapper, RUNWEFT_SMOKE_CLAUDE: nativeClaude, RUNWEFT_SMOKE_CLAUDE_LOG: claudeLog });
 function nativeConfig(args: string[]) { assert.equal(spawnSync('codex', ['mcp', ...args], { env, stdio: 'pipe' }).status, 0); }
-const codexPath = join(codexHome, 'config.toml'), claudePath = join(claudeHome, '.claude.json');
-for (const name of Object.keys((Bun.TOML.parse(readFileSync(codexPath, 'utf8')) as any).mcp_servers ?? {})) nativeConfig(['remove', name]);
-const probe = { command: process.execPath, args: [resolve('scripts/fixtures/mcp-probe.mjs')], env: { RUNWEFT_SMOKE_PROBE_LOG: probeLog } };
-nativeConfig(['add', 'keep_probe', '--env', `RUNWEFT_SMOKE_PROBE_LOG=${probeLog}`, '--', probe.command, ...probe.args]);
-const prefs = existsSync(claudePath) ? JSON.parse(readFileSync(claudePath, 'utf8')) : {};
-prefs.mcpServers = { keep_probe: { type: 'stdio', ...probe } }; writeFileSync(claudePath, JSON.stringify(prefs), { mode: 0o600 });
 const evidence: { [key: string]: any; cases: any[]; cleanupErrors: string[] } = {
-    root, executable, hapiRevision: pkg.hapi.revision, codexModel, selected, startedAt: new Date().toISOString(), success: false, cases: [], cleanupErrors: [],
+    kind: 'artifact-mcp-current', root, executable, candidate: { binaries, hapiRevision: pkg.hapi.revision, entry: 'compiled CLI + compiled serve + actual HAPI/Runner' }, selected, startedAt: new Date().toISOString(), success: false, cases: [], cleanupErrors: [],
 };
-let token: string | undefined, hapi: HapiClient | undefined;
+let hapi: HapiHttp | undefined, constructorCleanupUncertain = false;
+const runners = new Map<string, Awaited<ReturnType<Awaited<ReturnType<typeof nativeUserSmoke>>['runner']>>>();
 const homes: string[] = [], pids = new Set<number>();
 const lines = (path: string): any[] => existsSync(path) ? readFileSync(path, 'utf8').split('\n').filter(Boolean).map(line => JSON.parse(line)) : [];
 function alive(pid: number) { try { process.kill(pid, 0); return true; } catch { return false; } }
 function cli(home: string, args: string[], cwd = root, input?: string) {
-    const result = spawnSync(executable, ['--home', home, '--json', ...args], { cwd, env, input, encoding: 'utf8', timeout: 65_000 });
-    if (token) assert(!`${result.stdout}${result.stderr}`.includes(token), 'Credential leaked into CLI output');
-    assert.equal(result.status, 0, `${args[0]}: ${result.stderr || result.error || result.signal}`);
-    return JSON.parse(result.stdout);
+    assert(fixture); return fixture.cli(home, args, { cwd, timeout: 65_000 });
 }
 function values(value: any): any[] {
     if (typeof value === 'string') { try { return values(JSON.parse(value)); } catch { return []; } }
@@ -64,7 +47,8 @@ function values(value: any): any[] {
 // Only private test registrations gain this environment override.
 // Native Codex otherwise drops GIT_CEILING_DIRECTORIES from MCP's inherited env.
 function instrument(home: string) {
-    cli(home, ['mcp', 'install', '--client', 'all']);
+    const installed = cli(home, ['mcp', 'install', '--client', 'all']);
+    if (installed.backupPath) { assert(installed.backupPath.startsWith(join(home, 'backups', 'mcp') + '/')); models!.copies.push(installed.backupPath); }
     assert(cli(home, ['mcp', 'check', '--client', 'all']).ok);
     const before = readFileSync(codexPath, 'utf8'), config = Bun.TOML.parse(before) as any;
     const entry = config.mcp_servers.runweft;
@@ -83,12 +67,17 @@ async function runCase(spec: typeof cases[number], home: string) {
     };
     git('init', '-q'); git('config', 'user.name', 'MCP File Test'); git('config', 'user.email', 'file-test@example.invalid'); git('config', 'commit.gpgsign', 'false');
     git('add', '.'); git('commit', '-qm', 'fixture'); const baseline = git('rev-parse', 'HEAD');
+    const runner = runners.get(home)!;
+    const repository = cli(home, ['repository', 'create', 'Artifact MCP fixture', '--request-id', crypto.randomUUID()], cwd).repository;
+    cli(home, ['repository', 'bind', repository.id, '--machine', runner.machineId], cwd);
+    const definition = join(root, `${id}-agent.json`); writeFileSync(definition, JSON.stringify({ name: id, repositoryId: repository.id, runtimeId: runner.runtimes[flavor].id }));
+    const agent = cli(home, ['agent', 'create', '--request-id', crypto.randomUUID(), '--file', definition], cwd).agent;
     instrument(home);
     const requestIds = [crypto.randomUUID(), crypto.randomUUID()];
     const messages = [0, 1].map(round => `专用文件验收第 ${round + 1} 轮。读取本轮输入附件 输入.txt，将完整内容写入当前工作目录的 成果.txt，只写内容本身，不加换行。${round === 0 ? '再把相同内容写入 extra.txt；不要生成 遗漏.txt。' : '覆盖 成果.txt，不改其他文件。'}调用一次 keep_probe 的 probe_report，验证其他 MCP 保留。不要调用 Runweft 或内置子代理，不自行提交。最终报告输入内容、工程指令中的标记和 FILE_ROUND_DONE。`);
     const prompt = `你是专用 MCP 文件验收主会话。只使用 runweft MCP，不用 shell 或内置 subagent。必须实际完成下面步骤，每个 spawn/send 只调用一次，不添加额外轮次。
 1. list_agent_definitions。upload_artifact(path="材料 1.txt",request_id="${requestIds[0]}")，然后 read_artifact(request_id="${requestIds[0]}") 确认 available。
-2. spawn_agent(agent_type="${flavor}",workspace_mode="${worktree ? 'worktree' : 'shared'}",inputs=[{artifactId:上步 artifact.id,name:"输入.txt"}],outputs=[{name:"成果.txt",relativePath:"成果.txt"},{name:"遗漏.txt",relativePath:"遗漏.txt"}],message=${JSON.stringify(messages[0])})。
+2. spawn_agent(agent_type="${agent.id}",workspace_mode="${worktree ? 'worktree' : 'shared'}",inputs=[{artifactId:上步 artifact.id,name:"输入.txt"}],outputs=[{name:"成果.txt",relativePath:"成果.txt"},{name:"遗漏.txt",relativePath:"遗漏.txt"}],message=${JSON.stringify(messages[0])})。
 3. wait(timeout_ms=30000) 到 completed，再 read_agent。测试控制器会批准已审阅的子任务文件操作，不要自行批准。artifacts.status=incomplete 是故意缺少 遗漏.txt 的预期结果，成功项仍可下载。
 4. download_artifact(id=清单 成果.txt 项的 artifactId,path="downloads/first.txt")。read_artifact(id=该 artifactId)。
 5. retry_artifacts(id=agent_id,round_id=首轮 round_id)，预期返回 artifact_no_retry_candidate，因为缺失文件没有候选；不会产生新清单。只调用这一次，不重试模型或再次 retry。
@@ -96,7 +85,7 @@ async function runCase(spec: typeof cases[number], home: string) {
 7. upload_artifact(path="材料 2.txt",request_id="${requestIds[1]}")。send_input(id=同一 agent_id,mode="next",inputs=[{artifactId:这次上传 artifact.id,name:"输入.txt"}],outputs=[{name:"成果.txt",relativePath:"成果.txt"}],message=${JSON.stringify(messages[1])})。
 8. wait 到 completed，必须 read_agent；download_artifact 将第二轮 成果.txt 下载到 downloads/second.txt。再按第一轮原 artifactId 下载到 downloads/old.txt，验证旧对象仍可取回。
 文件操作受理不代表结束；等待补交时用 read_agent 当前 revision 作 wait.after_revision，或继续 read_agent。全部完成回复 ARTIFACT_MCP_DONE。`;
-    const item: any = { ...spec, cwd, workspaceMode: worktree ? 'worktree' : 'shared', markers, contextMarker, requestIds, baseline, calls: [], inventories: {}, approvals: [] };
+    const item: any = { ...spec, cwd, workspaceMode: worktree ? 'worktree' : 'shared', markers, contextMarker, requestIds, baseline, clientHome: home, machineId: runner.machineId, repositoryId: repository.id, agentId: agent.id, calls: [], inventories: {}, approvals: [] };
     evidence.cases.push(item);
     const calls = new Map<string, any>();
     const args = host === 'codex' ? ['exec', '--json', '--skip-git-repo-check', prompt]
@@ -165,7 +154,8 @@ async function runCase(spec: typeof cases[number], home: string) {
         const secondAccepted = named('send_input')[0].results.find((value: any) => value.accepted); assert(firstAccepted && secondAccepted);
         const first = cli(home, ['task', 'show', firstAccepted.agent_id, '--round', firstAccepted.round_id], cwd);
         const second = cli(home, ['task', 'show', firstAccepted.agent_id, '--round', secondAccepted.round_id], cwd);
-        item.first = first; item.second = second;
+        assert(named('read_agent').flatMap((call: any) => call.results ?? []).some((value: any) => value.round_id === first.round_id && value.status === 'completed' && value.artifacts?.status === 'incomplete' && value.artifacts?.manifest?.version === 1), 'Missing actual completed incomplete first manifest before collection');
+        item.rounds = [{ roundId: first.round_id, view: first }, { roundId: second.round_id, view: second }];
         assert.equal(first.parent.nativeSessionId, item.nativeId); assert.equal(first.parent.host, host);
         assert.equal(second.native_session_id, first.native_session_id); assert.equal(second.resume.outcome, 'resumed');
         assert.equal(first.artifacts.manifest.version, 2); assert.equal(first.artifacts.status, 'delivered');
@@ -181,7 +171,7 @@ async function runCase(spec: typeof cases[number], home: string) {
             assert.equal(detail.input_files.download_retention, 'released');
             assert(!alive(detail.host_pid));
             const session = (await hapi!.request(`/api/sessions/${detail.session_id}`)).session;
-            assert.equal(session.active, false); assert.deepEqual(session.metadata.disabledMcpServers, ['runweft']);
+            assert.equal(session.active, false); assert.equal(session.metadata.lifecycleState, 'archived'); assert.deepEqual(session.metadata.disabledMcpServers, ['runweft']);
             const reads = named('read_agent').flatMap((call: any) => call.results ?? []);
             assert(reads.some((value: any) => value.round_id === detail.round_id && value.status === 'completed'));
             if (worktree) assert.equal(detail.git.status, 'sealed');
@@ -200,32 +190,61 @@ async function runCase(spec: typeof cases[number], home: string) {
     } finally {
         item.calls = [...calls.values()]; clearTimeout(soft);
         if (!done) { child.kill('SIGTERM'); await exited; } clearTimeout(hard);
-        writeFileSync(join(root, `${id}.json`), JSON.stringify(item, null, 2));
+
     }
 }
 console.log(`Evidence directory: ${root}`);
 try {
-    cli(local, ['init']); cli(local, ['config', 'set', 'server.port', String(await freePort())]); homes.push(local);
-    const service = cli(local, ['start']);
-    token = JSON.parse(readFileSync(join(local, 'server/hapi/settings.json'), 'utf8')).cliApiToken; assert(token);
-    hapi = new HapiClient(service.url, token);
+    models = modelHomes(root, env);
+    fixture = await nativeUserSmoke(root, executable, env);
+    nativeClaude = models.nativeClaude ?? undefined; assert(nativeClaude && Bun.which('codex'));
+    Object.assign(evidence, { serverHome: fixture.server, url: fixture.url, ownerId: fixture.user.identity.id, spaceId: fixture.space, codexModel: models.codexModel, nativeHomes: { codex: env.CODEX_HOME, claude: env.CLAUDE_CONFIG_DIR }, cleanupOwner: 'artifact-package' });
+writeFileSync(wrapper, `#!/bin/sh\nexec ${quote(process.execPath)} ${quote(resolve('scripts/fixtures/claude-observer.mjs'))} "$@"\n`, { mode: 0o700 });
+Object.assign(env, { GIT_CEILING_DIRECTORIES: root,
+    HAPI_CLAUDE_PATH: wrapper, RUNWEFT_SMOKE_CLAUDE: nativeClaude, RUNWEFT_SMOKE_CLAUDE_LOG: claudeLog });
+codexPath = join(env.CODEX_HOME!, 'config.toml'); claudePath = join(env.CLAUDE_CONFIG_DIR!, '.claude.json');
+for (const name of Object.keys((Bun.TOML.parse(readFileSync(codexPath, 'utf8')) as any).mcp_servers ?? {})) nativeConfig(['remove', name]);
+const probe = { command: process.execPath, args: [resolve('scripts/fixtures/mcp-probe.mjs')], env: { RUNWEFT_SMOKE_PROBE_LOG: probeLog } };
+nativeConfig(['add', 'keep_probe', '--env', `RUNWEFT_SMOKE_PROBE_LOG=${probeLog}`, '--', probe.command, ...probe.args]);
+const prefs = existsSync(claudePath) ? JSON.parse(readFileSync(claudePath, 'utf8')) : {};
+prefs.mcpServers = { keep_probe: { type: 'stdio', ...probe } }; writeFileSync(claudePath, JSON.stringify(prefs), { mode: 0o600 });
+    const primary = await fixture.runner(local); runners.set(local, primary); homes.push(local); hapi = primary.http;
     for (const mode of ['local', 'hub'] as const) {
         if (selected && !selected.startsWith(mode + '-')) continue;
         const home = mode === 'local' ? local : hub;
-        if (mode === 'hub') { cli(home, ['init', '--url', service.url]); cli(home, ['auth', 'login', '--token-stdin'], root, token); homes.push(home); cli(home, ['start']); }
-        cli(home, ['machine', 'register']);
-        for (const flavor of ['codex', 'claude']) { const runtime = cli(home, ['runtime', 'register', flavor]).runtime; cli(home, ['agent', 'init', flavor, '--runtime', runtime.id]); }
+        if (mode === 'hub') { runners.set(home, await fixture.runner(home)); homes.push(home); }
         for (const spec of cases.filter(spec => spec.mode === mode && (!selected || selected === spec.id))) await runCase(spec, home);
     }
     evidence.success = true;
-} catch (error) { evidence.error = error instanceof Error ? error.stack ?? error.message : String(error); process.exitCode = 1; }
+} catch (error) { constructorCleanupUncertain = !fixture && error instanceof AggregateError; evidence.error = error instanceof Error ? error.message : String(error); process.exitCode = 1; }
 finally {
-    if (hapi) try { for (const session of (await hapi.request('/api/sessions')).sessions) if (session.active) await hapi.request(`/api/sessions/${session.id}/archive`, { method: 'POST', signal: AbortSignal.timeout(45_000) }); }
-    catch (error) { evidence.cleanupErrors.push(String(error)); }
-    for (const home of homes.reverse()) try { cli(home, ['stop']); } catch (error) { evidence.cleanupErrors.push(String(error)); }
-    await Bun.sleep(500);
-    for (const pid of new Set([...pids, ...lines(probeLog).map(value => value.pid), ...lines(claudeLog).map(value => value.pid)])) if (alive(pid)) evidence.cleanupErrors.push(`Process still alive: ${pid}`);
+    const attempt = async (action: () => void | Promise<void>) => { try { await action(); } catch (error) { evidence.cleanupErrors.push(String(error)); } };
+    let safe = !constructorCleanupUncertain;
+    for (const log of [probeLog, claudeLog]) try { for (const value of lines(log)) if (value.pid) pids.add(value.pid); } catch (error) { safe = false; evidence.cleanupErrors.push(String(error)); }
+    evidence.runners = [];
+    if (fixture) {
+        for (const [clientHome, runner] of runners) await attempt(() => { evidence.runners.push({ clientHome, machineId: runner.machineId, paths: cli(clientHome, ['paths']), nativeHome: runner.hapiHome }); });
+        if (hapi) try {
+            const sessions = (await hapi.request('/api/sessions')).sessions; evidence.sessionIds = sessions.map((session: any) => session.id).sort();
+            for (const session of sessions) {
+                if (session.metadata?.hostPid) pids.add(session.metadata.hostPid);
+                if (session.active) try { await hapi.request(`/api/sessions/${session.id}/archive`, { method: 'POST', signal: AbortSignal.timeout(45_000) }); }
+                catch (error) { safe = false; evidence.cleanupErrors.push(String(error)); }
+            }
+        } catch (error) { safe = false; evidence.cleanupErrors.push(String(error)); }
+        try { await fixture.close(false, true); } catch (error) { safe = false; evidence.cleanupErrors.push(String(error)); }
+    }
+    if (models) {
+        try { await models.waitHosts(pids); } catch (error) { safe = false; evidence.cleanupErrors.push(String(error)); }
+        await attempt(() => models!.verify());
+        if (safe) await attempt(() => models!.remove());
+    }
+    if (safe && (!evidence.success || evidence.cleanupErrors.length)) {
+        for (const runner of evidence.runners) for (const file of [runner.paths.identityConnection, runner.paths.machineConnection, runner.paths.pendingConnection, join(runner.paths.hapiClient, 'settings.json')]) await attempt(() => rmSync(file, { force: true }));
+        if (fixture) for (const file of [fixture.identityFile, join(fixture.server, 'server/hapi/settings.json'), join(fixture.server, 'server/hapi/jwt-secret.json')]) await attempt(() => rmSync(file, { force: true }));
+    }
     if (evidence.cleanupErrors.length) { evidence.success = false; process.exitCode = 1; }
-    evidence.finishedAt = new Date().toISOString(); writeFileSync(join(root, 'evidence.json'), JSON.stringify(evidence, null, 2));
+    evidence.hostPids = [...pids]; evidence.finishedAt = new Date().toISOString();
+    writeFileSync(join(root, 'evidence.json'), JSON.stringify(evidence, (key, value) => key === 'message' && typeof value === 'string' ? { omitted: true, length: value.length } : value, 2), { mode: 0o600 });
     console.log(`Evidence: ${join(root, 'evidence.json')}`); if (evidence.error) console.error(evidence.error);
 }

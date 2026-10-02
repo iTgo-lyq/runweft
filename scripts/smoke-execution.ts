@@ -1,10 +1,10 @@
 import assert from 'node:assert/strict';
-import { spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { createServer } from 'node:net';
 import { ExecutionClient, type StartResult } from '../src/execution';
-import { HapiClient } from '../src/hapi';
+import type { HapiHttp } from '../src/hapi';
+import { nativeUserSmoke } from './fixtures/native-user-smoke';
+import { modelHomes } from './fixtures/model-homes';
 import pkg from '../package.json';
 
 // Explicitly invoked native acceptance: uses existing model login/configuration.
@@ -21,13 +21,6 @@ const evidence: { root: string; revision: string; platform: string; startedAt: s
     root, revision: pkg.hapi.revision, platform: `${process.platform}-${process.arch}`, startedAt: new Date().toISOString(),
     checks: [], cases: [], cleanupErrors: [],
 };
-let token: string | undefined;
-function run(args: string[]) {
-    const result = spawnSync(executable, ['--home', home, '--json', ...args], { env, encoding: 'utf8', timeout: 45_000 });
-    if (token) assert(!`${result.stdout}${result.stderr}`.includes(token), 'Credential in CLI output');
-    assert.equal(result.status, 0, `${args[0]} failed: ${result.stderr || result.error || result.signal}`);
-    return JSON.parse(result.stdout);
-}
 function record(check: string) { evidence.checks.push(check); console.log(`PASS ${check}`); }
 function alive(pid: number) { try { process.kill(pid, 0); return true; } catch { return false; } }
 async function until<T>(read: () => Promise<T>, accept: (value: T) => boolean, label: string, timeout = 90_000): Promise<T> {
@@ -35,11 +28,8 @@ async function until<T>(read: () => Promise<T>, accept: (value: T) => boolean, l
     do { const value = await read(); if (accept(value)) return value; await Bun.sleep(200); } while (Date.now() < end);
     throw new Error(`Timed out: ${label}`);
 }
-const listener = createServer();
-await new Promise<void>(resolve => listener.listen(0, '127.0.0.1', resolve));
-const port = (listener.address() as { port: number }).port;
-await new Promise<void>(resolve => listener.close(() => resolve()));
-let hapi: HapiClient | undefined;
+let hapi: HapiHttp | undefined;
+let fixture: Awaited<ReturnType<typeof nativeUserSmoke>> | undefined, models: ReturnType<typeof modelHomes> | undefined;
 let execution: ExecutionClient | undefined;
 let proxy: ReturnType<typeof Bun.serve> | undefined;
 const wrapperPids = new Set<number>();
@@ -47,28 +37,24 @@ const post = (path: string, body = {}) => hapi!.request(path, { method: 'POST', 
 const facts = (id: string, input: string, phase: string, idle = false) => until(() => execution!.query(id, input),
     value => value.facts.some(f => f.observation.phase === phase) && (!idle || !value.session.thinking), `${phase} fact`);
 try {
-    run(['init']); run(['config', 'set', 'server.port', String(port)]); run(['start']);
-    assert.equal(run(['status']).hapiRevision, pkg.hapi.revision, 'Compiled Runweft has a different HAPI pin');
-    const paths = run(['paths']);
-    token = JSON.parse(readFileSync(join(paths.hapiServer, 'settings.json'), 'utf8')).cliApiToken;
-    assert(token);
-    const url = `http://127.0.0.1:${port}`;
-    hapi = new HapiClient(url, token); execution = new ExecutionClient(hapi);
-    const machine = (await hapi.request('/api/machines')).machines[0]; assert(machine);
+    models = modelHomes(root, env);
+    fixture = await nativeUserSmoke(root, executable, env); Object.assign(evidence, { candidate: fixture.candidate });
+    const selected = await fixture.runner(home), machine = { id: selected.machineId }, url = fixture.url;
+    hapi = selected.http; execution = new ExecutionClient(hapi);
     const health = await hapi.request('/health'); assert.equal(health.capabilities.execution, 1);
     let dropSpawn = false, dropInput = false;
     proxy = Bun.serve({ hostname: '127.0.0.1', port: 0, fetch: async request => {
-        const path = new URL(request.url).pathname;
-        const response = await fetch(url + path, { method: request.method, headers: request.headers,
+        const incoming = new URL(request.url), path = incoming.pathname;
+        const response = await fetch(url + path + incoming.search, { method: request.method, headers: request.headers,
             ...(request.method === 'GET' ? {} : { body: await request.arrayBuffer() }) });
         const body = await response.arrayBuffer();
         if (request.method === 'POST' && ((dropSpawn && path.endsWith('/spawn')) || (dropInput && path.endsWith('/messages')))) {
             if (path.endsWith('/spawn')) dropSpawn = false; else dropInput = false;
             return Response.json({ error: 'Test proxy discarded the upstream response' }, { status: 502 });
         }
-        return new Response(body, { status: response.status, headers: { 'content-type': 'application/json' } });
+        return new Response(body, { status: response.status, headers: response.headers });
     }});
-    const throughProxy = new ExecutionClient(new HapiClient(`http://127.0.0.1:${proxy.port}`, token));
+    const throughProxy = new ExecutionClient(fixture.proxyHttp(`http://127.0.0.1:${proxy.port}`));
     for (const agent of ['codex', 'claude'] as const) {
         const directory = join(root, agent); mkdirSync(directory);
         const marker = `SKILL_${crypto.randomUUID().slice(0, 8)}`, context = `CONTEXT_${crypto.randomUUID().slice(0, 8)}`;
@@ -144,19 +130,26 @@ try {
         row.resumedSessionId = resumed.session.id; row.historyPreserved = true; row.closed = true;
         record(`${agent}: native resume preserves history and all owned processes close`);
     }
-    evidence.success = true;
+    models.verify(); Object.assign(evidence, { sourceModelConfigurationUnchanged: true, ownedNativeHostPids: [...wrapperPids] }); evidence.success = true;
 } catch (error) {
-    evidence.error = error instanceof Error ? error.message : String(error); process.exitCode = 1;
+    evidence.error = error instanceof Error ? error instanceof AggregateError ? error.errors.map(String).join('; ') : error.message : String(error); process.exitCode = 1;
 } finally {
+    const modelPids = new Set<number>();
+    let modelShutdownConfirmed = true;
     if (hapi && execution) {
         try { for (const session of (await hapi.request('/api/sessions')).sessions) {
-            const result = await execution.stop(session.id);
-            if (result.outcome !== 'stopped') evidence.cleanupErrors.push(`Unconfirmed session stop: ${session.id}`);
-        } } catch (error) { evidence.cleanupErrors.push(error instanceof Error ? error.message : String(error)); }
+            if (session.metadata?.hostPid) modelPids.add(session.metadata.hostPid);
+            try { const result = await execution.stop(session.id);
+            if (result.outcome !== 'stopped') { modelShutdownConfirmed = false; evidence.cleanupErrors.push(`Unconfirmed session stop: ${session.id}`); }
+            } catch (error) { modelShutdownConfirmed = false; evidence.cleanupErrors.push(String(error)); }
+        } } catch (error) { modelShutdownConfirmed = false; evidence.cleanupErrors.push(error instanceof Error ? error instanceof AggregateError ? error.errors.map(String).join('; ') : error.message : String(error)); }
     }
-    await proxy?.stop(true);
-    try { run(['stop']); } catch (error) { evidence.cleanupErrors.push(error instanceof Error ? error.message : String(error)); }
-    for (const pid of wrapperPids) if (alive(pid)) evidence.cleanupErrors.push(`Wrapper still alive: ${pid}`);
+    try { await proxy?.stop(true); } catch (error) { evidence.cleanupErrors.push(String(error)); }
+    for (const pid of wrapperPids) modelPids.add(pid);
+    try { await fixture?.close(false); } catch (error) { modelShutdownConfirmed = false; evidence.cleanupErrors.push(String(error)); }
+    try { await models?.waitHosts(modelPids); } catch (error) { modelShutdownConfirmed = false; evidence.cleanupErrors.push(String(error)); }
+    if (modelShutdownConfirmed) try { await models?.remove(); } catch (error) { evidence.cleanupErrors.push(String(error)); }
+    if (evidence.success && !evidence.cleanupErrors.length) try { await (await import('./fixtures/native-file-smoke')).removeFileSmokeData(root); } catch (error) { evidence.cleanupErrors.push(String(error)); }
     if (evidence.cleanupErrors.length) { evidence.success = false; process.exitCode = 1; }
     evidence.finishedAt = new Date().toISOString();
     writeFileSync(join(root, 'evidence.json'), JSON.stringify(evidence, null, 2));

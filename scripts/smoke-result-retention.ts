@@ -1,30 +1,41 @@
 import assert from 'node:assert/strict';
 import { randomUUID, createHash } from 'node:crypto';
-import { spawn, spawnSync, type ChildProcess } from 'node:child_process';
-import { closeSync, existsSync, mkdirSync, mkdtempSync, openSync, readFileSync, writeFileSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join, resolve, sep } from 'node:path';
-import { HapiClient } from '../src/hapi';
+import { tmpdir } from 'node:os';
+import { HubClient } from '../src/hub/client';
+import { hubConnectionPaths } from '../src/hub/resources/connection';
+import { HubTaskClient } from '../src/hub/delegation/client';
+import { Database } from 'bun:sqlite';
+import { closeSmoke } from './fixtures/smoke-lifecycle';
 import { ArtifactClient } from '../src/artifacts/client';
-import { loadConfig, targetUrl } from '../src/config';
-import { TaskStore } from '../src/tasks/store';
-import { TaskClient } from '../src/tasks/client';
 import { resultReference } from '../src/tasks/result-types';
 
 // Reuse a completed, private two-runtime native fixture; never dispatch or resume a model.
 const fixture = resolve(process.argv[2] ?? ''), smokeRoot = resolve('.dev-smoke');
 assert(fixture.startsWith(smokeRoot + sep), 'Provide an existing private .dev-smoke/remote-tasks-native-* fixture');
 const original = JSON.parse(readFileSync(join(fixture, 'evidence.json'), 'utf8'));
-assert(original.success && original.cases.length === 2 && original.cases.every((item: any) => item.id && item.rounds.length === 2));
+assert(original.kind === 'current-remote-tasks-1' && original.success && original.cleanupErrors.length === 0 && original.selected === 'all' && original.cases.length === 2 && original.cases.every((item: any) => item.id && item.rounds.length === 2));
 const binary = resolve(process.argv[3] ?? 'dist/runweft'), hapiBinary = resolve(process.argv[4] ?? 'dist/hapi');
 mkdirSync(smokeRoot, { recursive: true }); const root = mkdtempSync(join(smokeRoot, 'result-retention-'));
 const { center, sourceHome, targetHome } = original as { center: string; sourceHome: string; targetHome: string };
-const project = join(fixture, 'source/project'), cwd = join(project, 'app');
-const env: NodeJS.ProcessEnv = { ...process.env, CODEX_HOME: join(fixture, 'codex'), CLAUDE_CONFIG_DIR: join(fixture, 'claude'), GIT_CONFIG_GLOBAL: '/dev/null', GIT_CONFIG_NOSYSTEM: '1' };
-for (const key of Object.keys(env)) if (key.startsWith('RUNWEFT_')) delete env[key];
+const project = original.project, cwd = original.cwd, ownedRoot = original.ownedRoot;
+assert.equal(original.evidenceDir, fixture); assert.equal(ownedRoot, join(original.ownedTempRoot, '.dev-smoke'));
+assert(original.ownedTempRoot.startsWith(join(tmpdir(), 'runweft-remote-')), 'Expected this current producer owned temp root');
+for (const path of [center, sourceHome, targetHome, project, original.identityFile, original.source.nativeHome, original.target.nativeHome]) assert(path.startsWith(ownedRoot + sep), 'Consumer paths must belong to this producer');
+assert.equal(createHash('sha256').update(readFileSync(binary)).digest('hex'), original.candidate.hashes.cli);
+assert.equal(createHash('sha256').update(readFileSync(hapiBinary)).digest('hex'), original.candidate.hashes.hapi);
+const env: NodeJS.ProcessEnv = { ...process.env, CODEX_HOME: join(ownedRoot, 'codex-home'), CLAUDE_CONFIG_DIR: join(ownedRoot, 'claude-home'), GIT_CONFIG_GLOBAL: '/dev/null', GIT_CONFIG_NOSYSTEM: '1' };
+for (const key of Object.keys(env)) if (key.startsWith('RUNWEFT_') || key.startsWith('HAPI_') || ['CLI_API_TOKEN', 'DB_PATH', 'TELEGRAM_BOT_TOKEN'].includes(key)) delete env[key];
 delete env.HAPI_SESSION_ID;
-const evidence: any = { root, fixture, binary, hapiBinary, startedAt: new Date().toISOString(), success: false, checks: [], cleanupErrors: [] };
-const homes: string[] = []; let hub: ChildProcess | undefined;
-const token = JSON.parse(readFileSync(join(center, 'server/hapi/settings.json'), 'utf8')).cliApiToken;
+const evidence: any = { root, fixture, binary, hapiBinary, ownedRoot, candidate: { binary, hapiBinary, hashes: { cli: original.candidate.hashes.cli, hapi: original.candidate.hashes.hapi } }, startedAt: new Date().toISOString(), success: false, checks: [], cleanupErrors: [] };
+const homes = [center, sourceHome, targetHome], secrets = new Set<string>([original.identityFile, join(center, 'server/hapi/settings.json'), join(center, 'server/hapi/jwt-secret.json')]);
+for (const home of [sourceHome, targetHome]) {
+    const paths = hubConnectionPaths(home, original.url);
+    for (const file of [paths.identityConnection, paths.pendingConnection, paths.machineConnection, join(paths.connection, 'hapi/settings.json')]) secrets.add(file);
+}
+const token = readFileSync(original.identityFile, 'utf8');
 const cli = (home: string, args: string[], directory = cwd) => {
     const result = spawnSync(binary, ['--home', home, '--json', ...args], { env, cwd: directory, encoding: 'utf8', timeout: 60_000 });
     assert(!`${result.stdout}${result.stderr}`.includes(token), 'Credential leaked');
@@ -39,18 +50,22 @@ const until = async <T>(read: () => Promise<T>, done: (value: T) => boolean, lab
 };
 const note = (value: string) => { evidence.checks.push(value); console.log(value); };
 try {
-    const store = new TaskStore(join(center, 'server/runweft/state.sqlite'));
-    try { for (const item of original.cases) assert(store.require('default', item.id).rounds.every(round => round.phase === 'finished' && round.stop === 'stopped')); }
-    finally { store.close(); }
+    const db = new Database(join(center, 'server/runweft/state.sqlite'), { readonly: true });
+    try {
+        for (const item of original.cases) {
+            const row = db.query('SELECT data FROM delegation_tasks WHERE id=?').get(item.id) as { data: string };
+            assert(row); const task = JSON.parse(row.data); assert.equal(task.hub.ownerId, original.ownerId); assert.equal(task.hub.spaceId, original.spaceId); assert.equal(task.target.machineId, original.target.machineId);
+            const rounds = db.query('SELECT data FROM delegation_rounds WHERE taskId=? ORDER BY ordinal').all(item.id) as { data: string }[];
+            assert.equal(rounds.length, 2); for (const row of rounds) { const round = JSON.parse(row.data); assert.equal(round.phase, 'finished'); assert.equal(round.stop, 'stopped'); assert.equal(round.code?.status, 'available'); assert(!round.code?.release); assert(item.rounds.some((r: any) => r.roundId === round.id)); }
+        }
+    } finally { db.close(); }
     for (const home of [center, sourceHome, targetHome]) cli(home, ['config', 'set', 'hapi.executable', hapiBinary]);
-    const url = targetUrl(loadConfig(sourceHome, env).config), hapi = new HapiClient(url, token), artifacts = new ArtifactClient(hapi);
-    const fd = openSync(join(root, 'hub.log'), 'a', 0o600);
-    try { hub = spawn(binary, ['--home', center, 'serve', '--public'], { env, cwd: root, stdio: ['ignore', fd, fd] }); } finally { closeSync(fd); }
-    homes.push(center);
-    await until(async () => { if (hub!.exitCode !== null) throw new Error('Hub exited'); return fetch(`${url}/api/runweft/health`).then(response => response.ok).catch(() => false); }, Boolean, 'Hub');
-    for (const home of [sourceHome, targetHome]) { cli(home, ['start']); homes.push(home); }
+    const url = original.url, options = { url, home: sourceHome, env, space: original.spaceId };
+    const hapi = new HubClient(options, 'hubAccess', 'unavailable').http, artifacts = new ArtifactClient(hapi);
+    cli(center, ['start']);
+    for (const home of [sourceHome, targetHome]) { cli(home, ['runner', 'start']); await until(async () => { try { return cli(home, ['machine', 'discover', home === sourceHome ? original.source.machineId : original.target.machineId]).tools.length === 2; } catch { return false; } }, Boolean, 'current Runner RPC'); }
     const sessions = (await hapi.request('/api/sessions')).sessions.map((session: any) => session.id).sort();
-    const client = new TaskClient(loadConfig(sourceHome, env), cwd), tasks = await Promise.all(original.cases.map((item: any) => client.read(item.id)));
+    const client = new HubTaskClient(options, cwd), tasks = await Promise.all(original.cases.map((item: any) => client.read(item.id)));
     const [a, b] = tasks, aFirst = original.cases[0].rounds[0].roundId;
     assert(a.environment.mode === 'worktree' && b.environment.mode === 'worktree');
     const common = a.environment.source.commonDir; assert.equal(common, b.environment.source.commonDir); assert(existsSync(common));
@@ -71,7 +86,7 @@ try {
         if (index === 0) { assert(existsSync(common)); assert(existsSync(b.environment.checkout!)); }
     }
     assert(!existsSync(common));
-    cli(targetHome, ['stop']);
+    cli(targetHome, ['runner', 'stop']);
     note('two completed native tasks release precise executor refs and independent consumers; shared cache survives the first removal and disappears after the last, with no model call');
     const protectedFiles = [digest(join(project, '.git/index')), digest(join(project, '.git/config'))];
     for (const task of tasks) {
@@ -100,8 +115,11 @@ try {
     note('remaining center recovery pins release independently; imported main-repository refs and native session identities remain unchanged');
 } catch (error) { evidence.error = error instanceof Error ? error.stack : String(error); process.exitCode = 1; }
 finally {
-    for (const home of [...homes].reverse()) try { cli(home, ['stop']); } catch (error) { evidence.cleanupErrors.push(String(error)); }
-    if (hub?.exitCode === null) { hub.kill('SIGTERM'); await new Promise<void>(done => hub!.once('exit', () => done())); }
+    let stopped = true;
+    try { await closeSmoke([...homes].map(home => () => { try { cli(home, home === center ? ['stop'] : ['runner', 'stop']); const status = cli(home, ['status']); assert(!status.runner.running && (home !== center || !status.service.running)); } catch (error) { stopped = false; throw error; } })); }
+    catch (error) { evidence.cleanupErrors.push(...(error instanceof AggregateError ? error.errors.map(String) : [String(error)])); }
+    if (stopped) try { await closeSmoke([...secrets].map(file => () => { rmSync(file, { force: true }); })); } catch (error) { evidence.cleanupErrors.push(String(error)); }
+    if (evidence.success && !evidence.cleanupErrors.length) try { rmSync(original.ownedTempRoot, { recursive: true, force: true }); evidence.producerRecycled = true; } catch (error) { evidence.cleanupErrors.push(String(error)); }
     if (evidence.cleanupErrors.length) { evidence.success = false; process.exitCode = 1; }
     evidence.finishedAt = new Date().toISOString(); writeFileSync(join(root, 'evidence.json'), JSON.stringify(evidence, null, 2));
     console.log(`Evidence: ${join(root, 'evidence.json')}`); if (evidence.error) console.error(evidence.error);

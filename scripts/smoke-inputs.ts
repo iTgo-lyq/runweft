@@ -1,11 +1,12 @@
 import assert from 'node:assert/strict';
 import { randomUUID, createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, readFileSync, writeFileSync, existsSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, writeFileSync, existsSync } from 'node:fs';
 import { open } from 'node:fs/promises';
-import { createServer } from 'node:net';
 import { join, resolve } from 'node:path';
-import { HapiClient } from '../src/hapi';
+import type { HapiHttp } from '../src/hapi';
+import { modelHomes } from './fixtures/model-homes';
+import { nativeFileSmoke } from './fixtures/native-file-smoke';
 import { ArtifactClient } from '../src/artifacts/client';
 import { ExecutionClient } from '../src/execution';
 import type { ArtifactTransfer, ArtifactTransferRequest } from '../hapi/shared/src/artifactTransfers';
@@ -13,50 +14,46 @@ import type { ArtifactTransfer, ArtifactTransferRequest } from '../hapi/shared/s
 // Explicit model verification. Dedicated service/project data; native credentials and defaults remain inherited.
 const command = process.argv[2] === '--source' ? [process.execPath, resolve('src/cli.ts')] : [resolve(process.argv[2] ?? 'dist/runweft')];
 const hapiBinary = resolve(process.argv[3] ?? 'dist/hapi');
-mkdirSync('.dev-smoke', { recursive: true }); const root = mkdtempSync(resolve('.dev-smoke/inputs-native-')), home = join(root, 'home');
+mkdirSync('.dev-smoke', { recursive: true }); const root = mkdtempSync(resolve('.dev-smoke/inputs-native-'));
 const env = { ...process.env }; for (const key of Object.keys(env)) if (key.startsWith('RUNWEFT_')) delete env[key];
 const evidence = { root, hapiBinary, sourceLauncher: process.argv[2] === '--source', startedAt: new Date().toISOString(), finishedAt: '',
     success: false, checks: [] as string[], cases: [] as Record<string, unknown>[], error: '', cleanupErrors: [] as string[] };
-let token: string | undefined, hapi: HapiClient | undefined, execution: ExecutionClient | undefined, machineId = '';
+let hapi: HapiHttp | undefined, execution: ExecutionClient | undefined, machineId = '';
+let fixture: Awaited<ReturnType<typeof nativeFileSmoke>> | undefined, scope: Awaited<ReturnType<Awaited<ReturnType<typeof nativeFileSmoke>>['scoped']>>;
+const ownedModelPids = new Set<number>();
 const record = (message: string) => { evidence.checks.push(message); console.log(message); };
-function cli(args: string[]) {
-    const result = spawnSync(command[0]!, [...command.slice(1), '--home', home, '--json', ...args], { env, encoding: 'utf8', timeout: 45_000 });
-    if (token) assert(!`${result.stdout}${result.stderr}`.includes(token), 'Credential leaked');
-    assert.equal(result.status, 0, `${args.slice(0, 2).join(' ')}: ${result.stderr || result.error || result.signal}`); return JSON.parse(result.stdout);
-}
 async function until<T>(read: () => Promise<T>, done: (value: T) => boolean, label: string, timeout = 120_000): Promise<T> {
     const deadline = Date.now() + timeout;
     do { const value = await read(); if (done(value)) return value; await Bun.sleep(200); } while (Date.now() < deadline);
     throw new Error(`Timed out: ${label}`);
 }
 async function transfer(body: ArtifactTransferRequest): Promise<ArtifactTransfer> {
-    return (await hapi!.request(`/api/machines/${machineId}/artifacts`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) })).operation;
+    return (await scope.native.request(`/api/machines/${machineId}/artifacts`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) })).operation;
 }
 async function prepared(operationId: string) {
     const result = await until(() => transfer({ action: 'inspect', operationId }), value => !['accepted', 'running'].includes(value.status), 'machine materialize');
     assert.equal(result.status, 'succeeded', JSON.stringify(result.error)); return result;
 }
-const socket = createServer(); await new Promise<void>(done => socket.listen(0, '127.0.0.1', done));
-const port = (socket.address() as { port: number }).port; await new Promise<void>(done => socket.close(() => done()));
+let models: ReturnType<typeof modelHomes> | undefined;
 try {
-    cli(['init']); cli(['config', 'set', 'server.port', String(port)]); cli(['config', 'set', 'hapi.executable', hapiBinary]); cli(['start']);
-    const paths = cli(['paths']); token = JSON.parse(readFileSync(join(paths.hapiServer, 'settings.json'), 'utf8')).cliApiToken; assert(token);
-    hapi = new HapiClient(`http://127.0.0.1:${port}`, token); execution = new ExecutionClient(hapi); const files = new ArtifactClient(hapi);
-    const machine = (await hapi.request('/api/machines')).machines[0]; machineId = machine.id;
-    assert.equal(machine.runnerState.capabilities.artifactTransfers, 1);
+    if (!process.argv.includes('--machine-only')) models = modelHomes(root, env);
+    fixture = await nativeFileSmoke(root, command, hapiBinary, env); Object.assign(evidence, { candidate: fixture.candidate });
+    const runner = await fixture.addRunner(); machineId = runner.machineId;
+    scope = await fixture.scoped(machineId); hapi = fixture.http; execution = new ExecutionClient({ request: (path, options) => scope.native.request(path, options), response: (path, options) => scope.native.response(path, options) }); const files = new ArtifactClient(hapi);
+    assert.equal((await hapi.request('/api/machines')).machines.find((m: any) => m.id === machineId).runnerState.capabilities.artifactTransfers, 1);
     const largePath = join(root, '大文件.bin'), largeHandle = await open(largePath, 'w'); await largeHandle.truncate(72 * 1024 * 1024); await largeHandle.close();
     const large = await files.upload(largePath, randomUUID()), largeRequest = { action: 'materialize' as const, operationId: randomUUID(), files: [
         { artifactId: large.id, name: large.filename, size: large.size, sha256: large.sha256 }] };
     assert.equal((await transfer(largeRequest)).status, 'accepted'); const largeReady = await prepared(largeRequest.operationId);
     const hash = createHash('sha256'); for await (const chunk of Bun.file(largeReady.files[0]!.path).stream()) hash.update(chunk);
     assert.equal(hash.digest('hex'), large.sha256); assert.equal((await hapi.request('/api/sessions')).sessions.length, 0);
-    cli(['restart']); assert.equal((await transfer({ action: 'inspect', operationId: largeRequest.operationId })).status, 'succeeded');
+    await fixture.restart(); assert.equal((await transfer({ action: 'inspect', operationId: largeRequest.operationId })).status, 'succeeded');
     const repo = join(root, 'worktree-source'); mkdirSync(repo); writeFileSync(join(repo, 'base.txt'), 'base');
     const git = (...args: string[]) => {
         const result = spawnSync('git', ['-C', repo, ...args], { env, encoding: 'utf8' }); assert.equal(result.status, 0, result.stderr); return result.stdout.trim();
     };
     git('init', '-q'); git('add', '.'); git('-c', 'user.name=Input Smoke', '-c', 'user.email=smoke@example.invalid', '-c', 'commit.gpgsign=false', 'commit', '-qm', 'fixture');
-    const workspace = (body: unknown) => hapi!.request(`/api/machines/${machineId}/workspaces`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+    const workspace = (body: unknown) => scope.native.request(`/api/machines/${machineId}/workspaces`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
     const { source: gitSource } = await workspace({ action: 'resolve', cwd: repo, baseRef: 'HEAD' });
     const input = largeReady.files[0]!, name = '中文 大文件.bin', preparation = { action: 'prepare', environmentId: randomUUID(), preparationId: randomUUID(), roundId: randomUUID(),
         source: gitSource, expectedHead: gitSource.baseCommit, inputs: [{ name, path: input.path, size: input.size, sha256: input.sha256 }] };
@@ -78,7 +75,8 @@ try {
     record('worktree prepare retains its verified Unicode/space input after the intermediate download is released');
     record('72 MiB download through actual machine RPC/HTTP; receipt survives Runner/Hub restart; explicit release without sessions');
     for (const agent of process.argv.includes('--machine-only') ? [] : ['codex', 'claude'] as const) {
-        const cwd = join(root, agent); mkdirSync(cwd); const projectMarker = `PROJECT_${randomUUID().replaceAll('-', '')}`;
+        const cwd = join(root, agent); mkdirSync(cwd); scope = await fixture.scoped(machineId, cwd, agent);
+        Object.assign(evidence, { kind: 'current Task/Round domain seeds + real authorized HAPI/Runner double-runtime models; not Task end-to-end' }); const projectMarker = `PROJECT_${randomUUID().replaceAll('-', '')}`;
         const instructions = `For the input-read acceptance request, include ${projectMarker} in your final reply. Read the explicit input file. Do not modify files or delegate.\n`;
         writeFileSync(join(cwd, 'AGENTS.md'), instructions); writeFileSync(join(cwd, 'CLAUDE.md'), instructions);
         let sessionId = '', nativeId: string | undefined;
@@ -93,10 +91,11 @@ try {
                 const start = await execution.start(machineId, { requestId: randomUUID(), directory: cwd, agent, preparedFiles: reference, disabledMcpServers: ['runweft'] });
                 assert(start.outcome === 'recorded'); assert.equal(start.receipt.response?.type, 'success', JSON.stringify(start.receipt.response)); sessionId = start.receipt.sessionId;
             } else {
+                scope.nextRound();
                 const resumed = await execution.resume(sessionId, undefined, reference); assert.equal(resumed.outcome, 'resumed', JSON.stringify(resumed));
                 if (resumed.outcome === 'resumed') { assert.equal(resumed.nativeSessionId, nativeId); sessionId = resumed.session.id; }
             }
-            const session = await execution.waitUntilReady(sessionId); assert.deepEqual(session.metadata?.preparedFiles, reference);
+            const session = await execution.waitUntilReady(sessionId); if (session.metadata?.hostPid) ownedModelPids.add(session.metadata.hostPid); assert.deepEqual(session.metadata?.preparedFiles, reference);
             assert.deepEqual(session.metadata?.disabledMcpServers, ['runweft']);
             await assert.rejects(() => transfer({ action: 'release', operationId }), { code: 'artifact_execution_active' });
             const localId = randomUUID(); await execution.send(sessionId, { localId,
@@ -107,22 +106,32 @@ try {
             assert(done.output.some(item => item.text.includes(projectMarker)), 'Native did not inherit project instructions');
             nativeId = agent === 'codex' ? done.session.metadata?.codexSessionId : done.session.metadata?.claudeSessionId; assert(nativeId); assert.equal((await execution.stop(sessionId)).outcome, 'stopped');
             await transfer({ action: 'release', operationId });
+            scope.nextRound();
             await assert.rejects(() => execution!.resume(sessionId), { code: 'files_not_prepared' });
-            evidence.cases.push({ agent, round, operationId, sessionId, nativeId, sha256: object.sha256, permissionMode: session.permissionMode ?? null, nativePid: session.metadata?.hostPid });
+            evidence.cases.push({ agent, round, taskId: scope.task.id, currentRoundId: scope.round.id, operationId, sessionId, nativeId, sha256: object.sha256, permissionMode: session.permissionMode ?? null, nativePid: session.metadata?.hostPid });
             record(`${agent} round ${round + 1}: native read verified, project instructions inherited, no extra permission response, released-input resume rejected`);
         }
-        const cleared = await execution.resume(sessionId, undefined, null); assert.equal(cleared.outcome, 'resumed');
-        if (cleared.outcome === 'resumed') { assert.equal(cleared.nativeSessionId, nativeId); assert.equal(cleared.session.metadata?.preparedFiles, undefined); assert.equal((await execution.stop(cleared.session.id)).outcome, 'stopped'); }
+        scope.nextRound();
+        const cleared: Awaited<ReturnType<ExecutionClient['resume']>> = await execution.resume(sessionId, undefined, null); assert.equal(cleared.outcome, 'resumed');
+        if (cleared.outcome === 'resumed') { if (cleared.session.metadata?.hostPid) ownedModelPids.add(cleared.session.metadata.hostPid); assert.equal(cleared.nativeSessionId, nativeId); assert.equal(cleared.session.metadata?.preparedFiles, undefined); assert.equal((await execution.stop(cleared.session.id)).outcome, 'stopped'); }
     }
-    evidence.success = true;
+    models?.verify(); Object.assign(evidence, { sourceModelConfigurationUnchanged: !!models, ownedNativeHostPids: [...ownedModelPids] }); evidence.success = true;
 } catch (error) { evidence.error = error instanceof Error ? error.stack ?? error.message : String(error); process.exitCode = 1; }
 finally {
+    const modelPids = new Set(ownedModelPids);
+    let modelShutdownConfirmed = true;
     if (hapi && execution) {
-        try { for (const session of (await hapi.request('/api/sessions')).sessions) if (session.active || session.metadata?.lifecycleState !== 'archived') {
-            if ((await execution.stop(session.id)).outcome !== 'stopped') evidence.cleanupErrors.push(`Stop unconfirmed: ${session.id}`);
-        } } catch (error) { evidence.cleanupErrors.push(String(error)); }
+        try { for (const session of (await hapi.request('/api/sessions')).sessions) {
+            if (session.metadata?.hostPid) modelPids.add(session.metadata.hostPid);
+            try {
+            if ((session.active || session.metadata?.lifecycleState !== 'archived') && (await execution.stop(session.id)).outcome !== 'stopped') { modelShutdownConfirmed = false; evidence.cleanupErrors.push(`Stop unconfirmed: ${session.id}`); }
+            } catch (error) { modelShutdownConfirmed = false; evidence.cleanupErrors.push(String(error)); }
+        } } catch (error) { modelShutdownConfirmed = false; evidence.cleanupErrors.push(String(error)); }
     }
-    try { cli(['stop']); } catch (error) { evidence.cleanupErrors.push(String(error)); }
+    try { await fixture?.close(false); } catch (error) { modelShutdownConfirmed = false; evidence.cleanupErrors.push(String(error)); }
+    try { await models?.waitHosts(modelPids); } catch (error) { modelShutdownConfirmed = false; evidence.cleanupErrors.push(String(error)); }
+    if (modelShutdownConfirmed) try { await models?.remove(); } catch (error) { evidence.cleanupErrors.push(String(error)); }
+    if (evidence.success && !evidence.cleanupErrors.length) try { await (await import('./fixtures/native-file-smoke')).removeFileSmokeData(root); } catch (error) { evidence.cleanupErrors.push(String(error)); }
     if (evidence.cleanupErrors.length) { evidence.success = false; process.exitCode = 1; }
     evidence.finishedAt = new Date().toISOString(); writeFileSync(join(root, 'evidence.json'), JSON.stringify(evidence, null, 2));
     console.log(`Evidence: ${join(root, 'evidence.json')}`); if (evidence.error) console.error(evidence.error);

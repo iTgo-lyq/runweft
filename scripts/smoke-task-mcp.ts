@@ -1,10 +1,10 @@
 import assert from 'node:assert/strict';
-import { spawn, spawnSync } from 'node:child_process';
-import { chmodSync, copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
-import { homedir } from 'node:os';
-import { dirname, join, resolve } from 'node:path';
-import { freePort } from '../src/services';
-import { HapiClient } from '../src/hapi';
+import { spawn } from 'node:child_process';
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { join, resolve } from 'node:path';
+import type { HapiHttp } from '../src/hapi';
+import { nonGitSmokeProject } from './fixtures/non-git-smoke-project';
+import { taskSmoke } from './fixtures/task-smoke';
 import pkg from '../package.json';
 
 // Real MCP hosts and model calls, using dedicated writable native homes only.
@@ -13,34 +13,21 @@ const selectedHost = process.env.RUNWEFT_SMOKE_HOST ?? 'all';
 assert(['all', 'codex', 'claude'].includes(selectedHost), 'RUNWEFT_SMOKE_HOST must be all, codex or claude');
 mkdirSync('.dev-smoke', { recursive: true });
 const root = mkdtempSync(resolve('.dev-smoke/task-mcp-'));
-const home = join(root, 'runweft'), project = join(root, 'project'), codexHome = join(root, 'codex'), claudeHome = join(root, 'claude');
-for (const path of [project, codexHome, claudeHome]) mkdirSync(path, { mode: 0o700 });
+const nonGit = nonGitSmokeProject(), project = nonGit.project;
 const env: NodeJS.ProcessEnv = { ...process.env };
-for (const key of Object.keys(env)) if (key.startsWith('RUNWEFT_')) delete env[key];
-delete env.HAPI_CODEX_APP_SERVER_BIN; delete env.HAPI_SESSION_ID;
+for (const key of Object.keys(env)) if (key.startsWith('RUNWEFT_') || key.startsWith('HAPI_') || ['CLI_API_TOKEN', 'DB_PATH'].includes(key)) delete env[key];
+env.GIT_CEILING_DIRECTORIES = root;
 const nativeClaude = process.env.RUNWEFT_SMOKE_CLAUDE || Bun.which('iclaude') || Bun.which('claude');
 assert(nativeClaude && Bun.which('codex'), 'Both native clients and model authentication are required');
-function copy(source: string, target: string) { if (existsSync(source)) { mkdirSync(dirname(target), { recursive: true, mode: 0o700 }); copyFileSync(source, target); chmodSync(target, 0o600); } }
-const sourceCodex = process.env.CODEX_HOME ?? join(homedir(), '.codex');
-for (const file of ['config.toml', 'auth.json']) copy(join(sourceCodex, file), join(codexHome, file));
-const sourceClaude = process.env.CLAUDE_CONFIG_DIR ?? join(homedir(), '.claude');
-copy(process.env.CLAUDE_CONFIG_DIR ? join(sourceClaude, '.claude.json') : join(homedir(), '.claude.json'), join(claudeHome, '.claude.json'));
-for (const file of ['settings.json', '.credentials.json']) copy(join(sourceClaude, file), join(claudeHome, file));
-Object.assign(env, { CODEX_HOME: codexHome, CLAUDE_CONFIG_DIR: claudeHome, GIT_CEILING_DIRECTORIES: root, HAPI_CLAUDE_PATH: nativeClaude });
-const original = Bun.TOML.parse(readFileSync(join(codexHome, 'config.toml'), 'utf8')) as any;
-for (const name of Object.keys(original.mcp_servers ?? {})) assert.equal(spawnSync('codex', ['mcp', 'remove', name], { env, stdio: 'pipe' }).status, 0);
-const prefsPath = join(claudeHome, '.claude.json');
-const prefs = existsSync(prefsPath) ? JSON.parse(readFileSync(prefsPath, 'utf8')) : {};
-prefs.mcpServers = {}; writeFileSync(prefsPath, JSON.stringify(prefs), { mode: 0o600 });
+const agents: Record<string, string> = {};
 const evidence: { [key: string]: any; checks: string[]; cases: any[]; cleanupErrors: string[] } = {
-    root, executable, selectedHost, hapiRevision: pkg.hapi.revision, startedAt: new Date().toISOString(), success: false, checks: [], cases: [], cleanupErrors: [],
+    root, executable, nonGitProject: { root: nonGit.root, project }, selectedHost, hapiRevision: pkg.hapi.revision, startedAt: new Date().toISOString(), success: false, checks: [], cases: [], cleanupErrors: [],
 };
-let started = false, token: string | undefined, hapi: HapiClient | undefined;
+let fixture: Awaited<ReturnType<typeof taskSmoke>> | undefined, hapi: HapiHttp | undefined;
 const pids = new Set<number>();
 function alive(pid: number) { try { process.kill(pid, 0); return true; } catch { return false; } }
 function cli(args: string[]) {
-    const result = spawnSync(executable, ['--home', home, '--json', ...args], { cwd: project, env, encoding: 'utf8', timeout: 60_000 });
-    if (token) assert(!`${result.stdout}${result.stderr}`.includes(token), 'Credential leaked');
+    const result = fixture!.run(fixture!.home, args, { cwd: project, timeout: 60_000 });
     assert.equal(result.status, 0, `${args[0]}: ${result.stderr || result.error || result.signal}`);
     return JSON.parse(result.stdout);
 }
@@ -52,9 +39,9 @@ function values(value: any): any[] {
     return Object.values(value).flatMap(values);
 }
 async function hostCall(host: 'codex' | 'claude', helper: string, proof: string) {
-    const childMessage = `专用验收：只执行一次命令 ${process.execPath} ${helper}，它验证本子会话不能通过 Runweft CLI 递归委派。不要自行委派，不要修改其他文件。完成后报告 MCP_CHILD_DONE。`;
+    const childMessage = `专用验收：只执行一次命令 ${process.execPath} ${helper}，它验证本子会话不能通过 Runweft CLI 递归委派。不要自行委派，不要修改其他文件，不要检查目录，不要运行 ls 或 git。若任何额外工具请求被拒绝，不要重试该请求；继续完成唯一的上述 helper 命令并报告 MCP_CHILD_DONE。`;
     const prompt = `你是 Runweft 原生 MCP 验收主会话。只使用 runweft MCP 工具，不使用 shell、内置 subagent 或其他工具。严格顺序：
-1. list_agent_definitions，然后只调用一次 spawn_agent，agent_type=${host}，message=${JSON.stringify(childMessage)}。
+1. list_agent_definitions，然后只调用一次 spawn_agent，agent_type=${agents[host]}，message=${JSON.stringify(childMessage)}。
 2. 用 wait 等待该 agent_id，timeout_ms=30000，必要时继续等待，直到 completed；不要再次 spawn。若 needs_attention，read_agent 查看即可，测试控制器会处理预期的原生审批。
 3. completed 后必须调用 read_agent，核对 report 含 MCP_CHILD_DONE。记住这次 read_agent 返回的 revision。
 4. 调用一次 wait，ids=[该 agent_id]，timeout_ms=65000，after_revision={该 agent_id:第3步 revision}。必须实际等待返回 timed_out=true；不要缩短或取消这个等待。
@@ -62,7 +49,7 @@ async function hostCall(host: 'codex' | 'claude', helper: string, proof: string)
     const args = host === 'codex' ? ['exec', '--json', '--skip-git-repo-check', prompt]
         : ['-p', '--output-format', 'stream-json', '--verbose', '--tools', '', '--allowedTools', 'mcp__runweft__*', '--max-turns', '20', prompt];
     const calls = new Map<string, any>();
-    const item: any = { host, calls: [], approvedRequests: [] }; evidence.cases.push(item);
+    const item: any = { host, calls: [], approvedRequests: [], deniedRequests: [] }; evidence.cases.push(item);
     const child = spawn(host === 'codex' ? 'codex' : nativeClaude!, args, { cwd: project, env, stdio: ['ignore', 'pipe', 'pipe'] });
     assert(child.pid); pids.add(child.pid);
     let buffer = '', done = false, failure: Error | undefined, resultCode: number | null = null;
@@ -104,10 +91,9 @@ async function hostCall(host: 'codex' | 'claude', helper: string, proof: string)
                     if (approvals.has(requestId)) continue;
                     const expected = JSON.stringify(request.arguments).includes(helper)
                         || (request.tool === 'Read' && request.arguments?.file_path === proof);
-                    if (!expected) item.unexpectedPermission = request;
-                    assert(expected, 'Unexpected child permission request');
-                    cli(['task', 'permission', task.agent_id, '--round', detail.round_id, '--request', requestId, '--decision', 'approved']);
-                    approvals.add(requestId); item.approvedRequests.push(requestId);
+                    cli(['task', 'permission', task.agent_id, '--round', detail.round_id, '--request', requestId, '--decision', expected ? 'approved' : 'denied']);
+                    approvals.add(requestId);
+                    (expected ? item.approvedRequests : item.deniedRequests).push(requestId);
                 }
             }
         }
@@ -124,12 +110,12 @@ async function hostCall(host: 'codex' | 'claude', helper: string, proof: string)
         assert(longWait.finishedAt - longWait.startedAt >= 64_000, 'Native wait did not last beyond 60 seconds');
         item.longWaitMs = longWait.finishedAt - longWait.startedAt;
         const detail = cli(['task', 'show', accepted.agent_id]); item.detail = detail;
-        assert.equal(detail.parent.nativeSessionId, item.nativeId); assert.equal(detail.parent.host, host);
+        assert.equal(detail.parent.nativeSessionId, item.nativeId); assert.equal(detail.parent.host, host); assert.equal(detail.parent.cwd, project);
         assert.equal(detail.inputs[0].observation.phase, 'completed'); assert.equal(detail.inputs[0].observation.source, 'native');
         assert.equal(detail.stop, 'stopped'); assert.equal(detail.finish, 'complete');
         assert.equal(typeof detail.host_pid, 'number'); pids.add(detail.host_pid);
         const session = (await hapi!.request(`/api/sessions/${detail.session_id}`)).session;
-        assert.equal(session.active, false); assert.equal(session.metadata.lifecycleState, 'archived');
+        assert.equal(session.active, false); assert.equal(session.metadata.lifecycleState, 'archived'); assert.deepEqual(session.metadata.disabledMcpServers, ['runweft']);
         assert(!alive(detail.host_pid), 'Child host process did not exit');
         const denied = JSON.parse(readFileSync(proof, 'utf8')); item.childCli = denied;
         assert.deepEqual(denied.codes, ['subagent_delegation_denied', 'subagent_delegation_denied']);
@@ -145,15 +131,11 @@ async function hostCall(host: 'codex' | 'claude', helper: string, proof: string)
 
 console.log(`Evidence directory: ${root}`);
 try {
-    cli(['init']); cli(['config', 'set', 'server.port', String(await freePort())]);
-    const service = cli(['start']); started = true;
-    token = JSON.parse(readFileSync(join(home, 'server/hapi/settings.json'), 'utf8')).cliApiToken; assert(token);
-    hapi = new HapiClient(service.url, token); cli(['machine', 'register']);
-    for (const flavor of ['codex', 'claude']) {
-        const runtime = cli(['runtime', 'register', flavor]).runtime;
-        cli(['agent', 'init', flavor, '--runtime', runtime.id]);
-    }
-    cli(['mcp', 'install', '--client', 'all']); assert(cli(['mcp', 'check', '--client', 'all']).ok);
+    fixture = await taskSmoke(root, executable, env); hapi = fixture.runner.http; evidence.candidate = fixture.candidate;
+    for (const flavor of ['codex', 'claude'] as const) agents[flavor] = fixture.agent(flavor).id;
+    const installedMcp = cli(['mcp', 'install', '--client', 'all']);
+    if (installedMcp.backupPath) fixture.models.copies.push(installedMcp.backupPath);
+    assert(cli(['mcp', 'check', '--client', 'all']).ok);
     for (const host of ['codex', 'claude'] as const) {
         if (selectedHost !== 'all' && selectedHost !== host) continue;
         const helper = join(root, `child-${host}.mjs`), proof = join(root, `child-${host}.json`);
@@ -161,8 +143,8 @@ try {
 import { writeFileSync } from 'node:fs';
 import assert from 'node:assert/strict';
 const codes = [];
-for (const args of [['spawn', ${JSON.stringify(host)}, '--message', 'recursive probe'], ['send', crypto.randomUUID(), '--message', 'recursive probe']]) {
-    const r = spawnSync(${JSON.stringify(executable)}, ['--home', ${JSON.stringify(home)}, '--json', 'task', ...args], { encoding: 'utf8', timeout: 20000 });
+for (const args of [['spawn', ${JSON.stringify(agents[host])}, '--message', 'recursive probe'], ['send', crypto.randomUUID(), '--message', 'recursive probe']]) {
+    const r = spawnSync(${JSON.stringify(executable)}, ['--home', ${JSON.stringify(fixture.home)}, '--json', 'task', ...args], { encoding: 'utf8', timeout: 20000 });
     assert.equal(r.status, 1); const code = JSON.parse(r.stderr.trim().split('\\n').at(-1)).error.code;
     assert.equal(code, 'subagent_delegation_denied'); codes.push(code);
 }
@@ -174,11 +156,9 @@ console.log('CHILD_CLI_DENIED');
     evidence.success = true;
 } catch (error) { evidence.error = error instanceof Error ? error.message : String(error); process.exitCode = 1; }
 finally {
-    if (hapi) try {
-        for (const session of (await hapi.request('/api/sessions')).sessions) if (session.active) await hapi.request(`/api/sessions/${session.id}/archive`, { method: 'POST', signal: AbortSignal.timeout(45_000) });
-    } catch (error) { evidence.cleanupErrors.push(String(error)); }
-    if (started) try { cli(['stop']); } catch (error) { evidence.cleanupErrors.push(String(error)); }
-    for (const pid of pids) if (alive(pid)) evidence.cleanupErrors.push(`Process still alive: ${pid}`);
+    if (fixture) for (const pid of pids) fixture.ownedPids.add(pid);
+    try { await fixture?.close(evidence.success); } catch (error) { evidence.cleanupErrors.push(...(error instanceof AggregateError ? error.errors.map(String) : [String(error)])); }
+    try { nonGit.close(); } catch (error) { evidence.cleanupErrors.push(String(error)); }
     if (evidence.cleanupErrors.length) { evidence.success = false; process.exitCode = 1; }
     evidence.finishedAt = new Date().toISOString(); writeFileSync(join(root, 'evidence.json'), JSON.stringify(evidence, null, 2));
     console.log(`Evidence: ${join(root, 'evidence.json')}`); if (evidence.error) console.error(evidence.error);

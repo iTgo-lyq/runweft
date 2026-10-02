@@ -3,20 +3,20 @@ import { randomUUID } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { ArtifactClient } from '../src/artifacts/client';
-import { TaskClient } from '../src/tasks/client';
-import { loadConfig } from '../src/config';
-import { ExecutionClient } from '../src/execution';
-import type { HapiClient } from '../src/hapi';
+import { HubTaskClient } from '../src/hub/delegation/client';
+import { nativeUserSmoke } from './fixtures/native-user-smoke';
+import type { HapiHttp } from '../src/hapi';
 import type { TaskCoordinator } from '../src/tasks/coordinator';
 import { codexCatalog } from './fixtures/codex-catalog';
 
 type Detail = ReturnType<TaskCoordinator['read']>;
 export async function remoteTaskProbe(p: { root: string; center: string; sourceHome: string; targetHome: string; project: string; target: string;
-    hapi: HapiClient; env: NodeJS.ProcessEnv; base: string; selected?: string; context: string; skill: string; memory: string;
+    hapi: HapiHttp; env: NodeJS.ProcessEnv; base: string; selected?: string; context: string; skill: string; memory: string;
     claudeLog: string; probeLog: string; pids: Set<number>; cases: any[]; note: (message: string) => void;
+    fixture: Awaited<ReturnType<typeof nativeUserSmoke>>; targetRunner: Awaited<ReturnType<Awaited<ReturnType<typeof nativeUserSmoke>>['runner']>>;
     cli: (home: string, args: string[], cwd?: string, input?: string) => any; git: (cwd: string, ...args: string[]) => string }) {
-    const { cli, git } = p, cwd = join(p.project, 'app'), config = loadConfig(p.sourceHome, p.env);
-    const client = new TaskClient(config, cwd), artifacts = new ArtifactClient(p.hapi), execution = new ExecutionClient(p.hapi);
+    const { cli, git } = p, cwd = join(p.project, 'app');
+    const client = new HubTaskClient({ url: p.fixture.url, home: p.sourceHome, env: p.env }, cwd), artifacts = new ArtifactClient(p.hapi);
     const lines = (path: string): any[] => existsSync(path) ? readFileSync(path, 'utf8').split('\n').filter(Boolean).map(line => JSON.parse(line)) : [];
     const alive = (pid: number) => { try { process.kill(pid, 0); return true; } catch { return false; } };
     const until = async <T>(read: () => Promise<T>, done: (item: T) => boolean, label: string, ms = 300_000): Promise<T> => {
@@ -27,19 +27,22 @@ export async function remoteTaskProbe(p: { root: string; center: string; sourceH
     const flavors = (['codex', 'claude'] as const).filter(flavor => !p.selected || flavor === p.selected);
     const tasks: { id: string; flavor: string; last: Detail }[] = [];
     for (const flavor of flavors) {
-        const runtime = cli(p.targetHome, ['runtime', 'register', flavor]).runtime;
-        cli(p.sourceHome, ['agent', 'init', flavor, '--runtime', runtime.id], cwd);
+        const runtime = p.targetRunner.runtimes[flavor];
+        const repository = cli(p.sourceHome, ['repository', 'create', `Remote ${flavor}`, '--request-id', randomUUID()]).repository;
+        cli(p.sourceHome, ['repository', 'bind', repository.id, '--machine', client.parent.machineId, '--cwd', cwd]);
+        const definition = join(p.root, `task-agent-${flavor}.json`); writeFileSync(definition, JSON.stringify({ name: `Remote ${flavor}`, repositoryId: repository.id, runtimeId: runtime.id }));
+        const agent = cli(p.sourceHome, ['agent', 'create', '--request-id', randomUUID(), '--file', definition]).agent;
         let id = '', previous: Detail | undefined;
-        const result: any = { flavor, rounds: [] }; p.cases.push(result);
+        const result: any = { flavor, agentId: agent.id, repositoryId: repository.id, parentCwd: cwd, rounds: [] }; p.cases.push(result);
         for (let index = 0; index < 2; index++) {
             const marker = `${flavor.toUpperCase()}_ROUND_${index + 1}_${randomUUID()}`, inputFile = join(p.root, `input-${flavor}-${index}.txt`);
             writeFileSync(inputFile, marker); const input = await artifacts.upload(inputFile, randomUUID());
             const message = `这是已授权的 remote-probe 工程验收。使用工程 remote-probe skill，调用 keep_probe 的 probe_report。读取本轮输入附件并报告其完整内容；报告 pwd 和 app/note 的基线内容（当前 cwd 中的 note）。${index ? '复述上一轮 MEMORY_ 开头的完整记忆标记，不从文件读取。' : `记住并报告 ${p.memory}，不要把它写到文件中。`}
 在当前工作目录写入 ${flavor}.txt，内容仅为附件完整内容和换行。再写 ${flavor}.bin，字节为附件文本重复 1024 次（不含换行，UTF-8）。允许 Python 或原生文件工具；不运行 Git 写命令，不提交、不修改其他文件。收尾由 HAPI 自动封存。
-最后简短报告完整输入标记、工程/skill 标记、记忆标记、当前 cwd、note 内容和两个生成文件名；不要再次委派。`;
+最后简短报告完整输入标记、记忆标记、当前 cwd、note 内容和两个生成文件名；从本工程 AGENTS.md/CLAUDE.md 指令与 remote-probe skill 原样报告 PROJECT_ 和 SKILL_ 开头的完整标记，不能只写“工程标记/skill标记”或省略 UUID。若需核对，仅读取 ../AGENTS.md、../CLAUDE.md 和工程 remote-probe skill。不要再次委派。`;
             const requestId = randomUUID();
             const accepted = index ? cli(p.sourceHome, ['task', 'send', id, '--message', message, '--input', `input.txt=${input.id}`, '--output', `${flavor}.txt`, '--request-id', requestId], cwd)
-                : cli(p.sourceHome, ['task', 'spawn', flavor, '--message', message, '--workspace-mode', 'worktree', '--base', p.base, '--input', `input.txt=${input.id}`, '--output', `${flavor}.txt`, '--request-id', requestId], cwd);
+                : cli(p.sourceHome, ['task', 'spawn', agent.id, '--message', message, '--workspace-mode', 'worktree', '--base', p.base, '--input', `input.txt=${input.id}`, '--output', `${flavor}.txt`, '--request-id', requestId], cwd);
             id = accepted.agent_id; result.id = id;
             if (!index && flavor === flavors[0]) {
                 writeFileSync(join(cwd, 'note'), 'parent branch advanced'); git(p.project, 'add', 'app/note'); git(p.project, 'commit', '-qm', 'move parent after acceptance');
@@ -65,7 +68,7 @@ export async function remoteTaskProbe(p: { root: string; center: string; sourceH
             const pid = running.host_pid ?? session.metadata.hostPid; assert(pid); p.pids.add(pid);
             if (previous) { assert.equal(running.session_id, previous.session_id); assert.equal(running.native_session_id, previous.native_session_id); assert.equal(running.cwd, previous.cwd); }
             if (flavor === 'codex') {
-                const inventory = await until(() => codexCatalog(cli(p.targetHome, ['paths']).hapiClient, running.session_id!, running.native_session_id!, pid),
+                const inventory = await until(() => codexCatalog(p.targetRunner.hapiHome, running.session_id!, running.native_session_id!, pid),
                     rows => rows.some(row => row.name === 'keep_probe' && row.tools.includes('probe_report')), 'Codex tool inventory');
                 assert(!inventory.some(row => row.name === 'runweft' && row.tools.length));
             }
@@ -91,7 +94,7 @@ export async function remoteTaskProbe(p: { root: string; center: string; sourceH
                 assert(!alive(pid)); assert.equal(held.code.status, 'pending');
             } finally { repair(); }
             await client.retryFinish(id, accepted.round_id);
-            const done = await until(read, value => value.phase === 'finished', `${flavor} recovered finish`);
+            const done = await until(read, value => value.phase === 'finished' && value.code.status === 'available' && !value.code.cleanup_error && value.artifacts.status === 'delivered' && !value.artifacts.pending.length, `${flavor} recovered finish`);
             assert.equal(done.code.status, 'available'); assert.equal(done.artifacts.status, 'delivered'); assert.equal(done.stop, 'stopped'); assert(!alive(pid));
             assert(done.git !== 'not_applicable' && done.git.result_head && done.git.result_head !== done.git.start_head);
             for (const expected of [marker, p.context, p.skill, p.memory, running.cwd, 'committed baseline']) assert(done.report.text.includes(expected), `${flavor} missing report marker ${expected}`);
@@ -112,14 +115,14 @@ export async function remoteTaskProbe(p: { root: string; center: string; sourceH
         }
         tasks.push({ id, flavor, last: previous! });
     }
-    cli(p.targetHome, ['stop']);
+    cli(p.targetHome, ['runner', 'stop']);
     writeFileSync(join(p.project, 'dirty-untracked'), 'preserve');
     const indexBefore = readFileSync(join(p.project, '.git/index')), configBefore = readFileSync(join(p.project, '.git/config'));
     for (const task of tasks) {
         const accepted = cli(p.sourceHome, ['task', 'result', 'fetch', task.id, '--request-id', randomUUID()], cwd);
         const result = await until(() => client.result(task.id, accepted.round_id), value => {
             if (value.fetches.at(-1)?.status === 'failed') throw new Error(JSON.stringify(value.fetches.at(-1)?.error));
-            return value.fetches.at(-1)?.status === 'available';
+            return value.fetches.at(-1)?.status === 'available' && !!value.fetches.at(-1)?.released;
         }, `${task.flavor} offline fetch`);
         assert.deepEqual(readFileSync(join(p.project, '.git/index')), indexBefore); assert.deepEqual(readFileSync(join(p.project, '.git/config')), configBefore);
         task.last.code.ref = result.code.ref; assert(result.code.ref);

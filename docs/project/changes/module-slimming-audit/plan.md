@@ -61,9 +61,10 @@
 
 ### T6 工作区附件成果与原生 smoke 迁移
 
-- 状态：待开始
+- 状态：已完成
 - 交付：S02/U06；迁所有旧 agent init/client 流程到当前中心，保留原 test:* 名称/argv 和独有恢复/留存场景；十二 native MCP、十 consumers 不预设缩减。
 - 依赖：T4、T5。
+- 批次A窄产品修复：正常整体Socket停服使用transport关闭，让现有Runner自动重连；权限撤销/旋转仍显式断开。根测试保护重启/不重放/旧凭据拒绝，真实诊断保留正常Hub重启+存活Runner窗口；build后重跑相关compiled场景。
 - 验收：全部旧smoke场景映射有可执行替代，原test:*名称/argv保留；迁移原生/留存/重建场景已实际执行，十二/十组契约未减少，缺口明确列出。
 - 验证：逐场景运行真实 HAPI/Runner/原生模型与安装场景；记录 binary/hash、清理；实际远端缺口单列，不用转发空操作通过。
 
@@ -145,3 +146,5 @@ T14 开工前先以专用目录实验确定无写入核验与首次建库方式�
 文件不匹配使用稳定state_format_unsupported错误，损坏用state_format_invalid；503，提示使用独立新--home启动并自行保管原目录，程序不迁移/改写/清理，不推荐reset。schema19库内非法Task/Round按state_record_invalid拒绝该任务read/wait，恢复扫描不写/不恢复该项，stderr只报task ID与错误码，其他有效任务恢复；这是错误隔离，不是旧记录兼容。Task写入原JSON断言version=2与round.agent，无补字段。
 
 test:hub-upgrade两场景：现有schema18专用基线交候选明确无写拒绝；候选新schema19数据交同候选停服重启，身份/机器/Agent/仓库/附件/worktree保持，不声称不存在的schema19旧版升级。重启复用T1完整gateway restart。
+
+T6批次C逐家验收tasks/controls/task-mcp/task-inputs/task-outputs及其唯一retention consumer。六高层场景必须compiled真实coordinator，不用领域seed替代；空non-Git项目在本次tmpRoot/.dev-smoke下核验后独立回收。producer关闭模型并清认证副本，当前数据/连接handoff到retention；最终consumer实查所有原释放/历史/Git/物理spool保障后回收本次环境，仅留两家证据。六入口argv/HOST/--shared-only保持，默认inputs八轮、outputs八轮，不缩矩阵。

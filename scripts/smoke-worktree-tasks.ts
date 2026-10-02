@@ -1,53 +1,31 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { chmodSync, copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
-import { homedir } from 'node:os';
-import { dirname, join, resolve } from 'node:path';
-import { freePort } from '../src/services';
-import { HapiClient } from '../src/hapi';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { join, resolve } from 'node:path';
+import { freshWorktreeSmoke, hostAlive, worktreeEnv, type WorktreeFlavor } from './fixtures/worktree-task-smoke';
 import pkg from '../package.json';
 
-// Explicit native acceptance: private config/data homes, real model calls and scoped fixture edits.
-const executable = resolve(process.argv[2] ?? 'dist/runweft');
-const selectedFlavor = process.argv[3];
+// Compiled current Task coordinator, real native models, dedicated short paths.
+const executable = resolve(process.argv[2] ?? 'dist/runweft'), selectedFlavor = process.argv[3];
 assert(!selectedFlavor || ['codex', 'claude'].includes(selectedFlavor), 'Optional runtime must be codex or claude');
-mkdirSync('.dev-smoke', { recursive: true });
-const root = mkdtempSync(resolve('.dev-smoke/worktree-tasks-'));
-const home = join(root, 'runweft'), codexHome = join(root, 'codex'), claudeHome = join(root, 'claude');
-const env: NodeJS.ProcessEnv = { ...process.env };
-for (const key of Object.keys(env)) if (key.startsWith('RUNWEFT_')) delete env[key];
-delete env.HAPI_CODEX_APP_SERVER_BIN; delete env.HAPI_SESSION_ID;
-const nativeClaude = Bun.which('iclaude') ?? Bun.which('claude'); assert(nativeClaude && Bun.which('codex'));
-function copy(source: string, target: string) {
-    if (existsSync(source)) { mkdirSync(dirname(target), { recursive: true, mode: 0o700 }); copyFileSync(source, target); chmodSync(target, 0o600); }
-}
-const sourceCodex = process.env.CODEX_HOME ?? join(homedir(), '.codex'), sourceClaude = process.env.CLAUDE_CONFIG_DIR ?? join(homedir(), '.claude');
-for (const file of ['config.toml', 'auth.json']) copy(join(sourceCodex, file), join(codexHome, file));
-copy(process.env.CLAUDE_CONFIG_DIR ? join(sourceClaude, '.claude.json') : join(homedir(), '.claude.json'), join(claudeHome, '.claude.json'));
-for (const file of ['settings.json', '.credentials.json']) copy(join(sourceClaude, file), join(claudeHome, file));
-Object.assign(env, { CODEX_HOME: codexHome, CLAUDE_CONFIG_DIR: claudeHome, HAPI_CLAUDE_PATH: nativeClaude, GIT_CEILING_DIRECTORIES: root });
-const codexConfig = join(codexHome, 'config.toml');
-for (const name of Object.keys((Bun.TOML.parse(readFileSync(codexConfig, 'utf8')) as any).mcp_servers ?? {})) {
-    assert.equal(spawnSync('codex', ['mcp', 'remove', name], { env, stdio: 'pipe' }).status, 0);
-}
-const claudeConfig = join(claudeHome, '.claude.json'), settings = JSON.parse(readFileSync(claudeConfig, 'utf8'));
-settings.mcpServers = {}; writeFileSync(claudeConfig, JSON.stringify(settings));
-const evidence: { [key: string]: any; checks: string[]; cleanupErrors: string[]; cases: any[] } = {
-    root, executable, hapiRevision: pkg.hapi.revision, startedAt: new Date().toISOString(), success: false, checks: [], cases: [], cleanupErrors: [],
-};
-let started = false, token: string | undefined, hapi: HapiClient | undefined;
+assert(process.argv.length <= 4, 'Pass candidate and optional codex/claude runtime');
+const flavors: WorktreeFlavor[] = selectedFlavor ? [selectedFlavor as WorktreeFlavor] : ['codex', 'claude'];
+mkdirSync('.dev-smoke', { recursive: true }); const evidenceDir = mkdtempSync(resolve('.dev-smoke/worktree-tasks-'));
+const env = worktreeEnv();
+const evidence: any = { evidenceFormat: 'current-worktree-tasks-1', evidenceDir, invokedCLI: executable, hapiRevision: pkg.hapi.revision,
+    startedAt: new Date().toISOString(), success: false, checks: [], cases: [], cleanupErrors: [], hostPids: [], hapiSessionIds: [] };
+let fixture: Awaited<ReturnType<typeof freshWorktreeSmoke>> | undefined;
+let root = evidenceDir;
+const save = () => writeFileSync(join(evidenceDir, 'evidence.json'), JSON.stringify(evidence, null, 2), { mode: 0o600 });
 function cli(args: string[], cwd = root, timeout = 60_000) {
-    const result = spawnSync(executable, ['--home', home, '--json', ...args], { cwd, env, encoding: 'utf8', timeout });
-    if (token) assert(!`${result.stdout}${result.stderr}`.includes(token), 'Credential in CLI output');
-    assert.equal(result.status, 0, `${args[0]}: ${result.stderr || result.error || result.signal}`);
-    return JSON.parse(result.stdout);
+    return fixture!.cli(fixture!.home, args, { cwd, timeout });
 }
 function git(cwd: string, ...args: string[]) {
     const result = spawnSync('git', ['-C', cwd, ...args], { env, encoding: 'utf8', timeout: 20_000 });
     assert.equal(result.status, 0, result.stderr); return result.stdout.trim();
 }
-function alive(pid: number) { try { process.kill(pid, 0); return true; } catch { return false; } }
-function record(value: string) { evidence.checks.push(value); console.log(`PASS ${value}`); }
+const alive = hostAlive;
+function record(value: string) { evidence.checks.push(value); save(); console.log(`PASS ${value}`); }
 async function completed(id: string, roundId: string, cwd: string, item: any) {
     const deadline = Date.now() + 180_000, approvals = new Set<string>();
     do {
@@ -70,13 +48,12 @@ async function completed(id: string, roundId: string, cwd: string, item: any) {
                 if (approvals.has(requestId)) continue;
                 const args = JSON.stringify(permission.arguments);
                 const readGit = permission.tool === 'Bash' && typeof permission.arguments?.command === 'string'
-                    && permission.arguments.command.split('&&').every((command: string) => {
+                    && permission.arguments.command.split(/&&|;/).every((command: string) => {
                         const text = command.trim(), prefix = [`git -C ${detail.cwd} `, 'git '].find(prefix => text.startsWith(prefix));
-                        return !!prefix && /^(?:status(?: --(?:short|porcelain(?:=v1)?))?|log --oneline -\d+|diff --stat)$/.test(text.slice(prefix.length));
+                        return !!prefix && /^(?:status(?: --(?:short|porcelain(?:=v1)?))?|log --oneline -\d+|diff --stat|rev-parse HEAD)$/.test(text.slice(prefix.length));
                     });
                 if (!readGit && !/result\.txt|probe_report|project_probe|worktree-probe|AGENTS\.md|CLAUDE\.md/.test(args + permission.tool)) {
-                    if (item.pendingPermission !== requestId) console.log(`Fixture permission needs review: ${id}/${roundId}/${requestId} (${permission.tool})`);
-                    item.pendingPermission = requestId; continue;
+                    throw new Error(`Unreviewed fixture permission: ${permission.tool} (${id}/${roundId}/${requestId})`);
                 }
                 approvals.add(requestId); item.approvals.push({ roundId, requestId, tool: permission.tool });
                 cli(['task', 'permission', id, '--round', roundId, '--request', requestId, '--decision', 'approved'], cwd);
@@ -87,12 +64,9 @@ async function completed(id: string, roundId: string, cwd: string, item: any) {
 }
 console.log(`Evidence directory: ${root}`);
 try {
-    cli(['init']); cli(['config', 'set', 'server.port', String(await freePort())]);
-    const service = cli(['start']); started = true;
-    token = JSON.parse(readFileSync(join(home, 'server/hapi/settings.json'), 'utf8')).cliApiToken; assert(token);
-    hapi = new HapiClient(service.url, token); cli(['machine', 'register']);
-    for (const flavor of ['codex', 'claude'] as const) {
-        if (selectedFlavor && flavor !== selectedFlavor) continue;
+    fixture = await freshWorktreeSmoke(executable, env, flavors); root = fixture.root;
+    Object.assign(evidence, { root, ownedRoot: fixture.ownedRoot, candidate: fixture.candidate, handoff: fixture.handoff, sourceConfigurations: fixture.sourceConfigurations }); save();
+    for (const flavor of flavors) {
         const project = join(root, flavor + '-project'), cwd = join(project, 'app'); mkdirSync(cwd, { recursive: true });
         git(project, 'init', '-q'); git(project, 'config', 'user.name', 'Worktree Smoke'); git(project, 'config', 'user.email', 'worktree@example.invalid'); git(project, 'config', 'commit.gpgsign', 'false');
         const context = `PROJECT_${crypto.randomUUID()}`, skill = `SKILL_${crypto.randomUUID()}`, memory = `MEMORY_${crypto.randomUUID()}`, marker = `WRITE_${flavor}`;
@@ -108,8 +82,8 @@ try {
         writeFileSync(join(cwd, 'base.txt'), 'committed base\n'); git(project, 'add', '.'); git(project, 'commit', '-qm', 'fixture baseline');
         const base = git(project, 'rev-parse', 'HEAD'); writeFileSync(join(cwd, 'base.txt'), 'parent dirty only\n');
         const parentIndex = git(project, 'write-tree'), parentStatus = git(project, 'status', '--porcelain');
-        const runtime = cli(['runtime', 'register', flavor], cwd).runtime; cli(['agent', 'init', flavor, '--runtime', runtime.id], cwd);
-        const item: any = { flavor, project, base, approvals: [] }; evidence.cases.push(item);
+        const repositoryId: string = await fixture.bind(cwd); const agentId: string = fixture.agent(flavor, repositoryId).id;
+        const item: any = { flavor, project, parentCwd: cwd, repositoryId, agentId, base, parentIndex, parentStatus, memory, context, skill, probeLog, approvals: [], rounds: [] }; evidence.cases.push(item);
         if (flavor === 'claude') {
             const hooks = join(root, 'fixture-hooks'); mkdirSync(hooks);
             item.repairHook = join(hooks, 'pre-commit');
@@ -118,11 +92,11 @@ try {
         }
         const request = crypto.randomUUID();
         const message = `使用本项目 worktree-probe skill。在当前工作目录把 result.txt 写成 ${marker} 加一个换行，不修改其他文件，不提交。若有 project_probe MCP，调用一次它的 probe_report；若不可用，报告 PROJECT_MCP_UNAVAILABLE，不自行修改配置或安装。记住 ${memory}，不要把这个记忆标记写入文件。最终报告包括工程与 skill 标记和 WRITE_DONE，不委派。`;
-        const accepted = cli(['task', 'spawn', flavor, '--workspace-mode', 'worktree', '--base', 'HEAD', '--request-id', request, '--message', message], cwd);
-        item.accepted = accepted;
-        const first = await completed(accepted.agent_id, accepted.round_id, cwd, item); item.first = first;
+        const accepted = cli(['task', 'spawn', agentId, '--workspace-mode', 'worktree', '--base', 'HEAD', '--request-id', request, '--message', message], cwd);
+        item.accepted = accepted; item.taskId = accepted.agent_id; save();
+        const first = await completed(accepted.agent_id, accepted.round_id, cwd, item); item.rounds.push(first); evidence.hostPids.push(first.host_pid); evidence.hapiSessionIds.push(first.session_id); save();
         if (item.failedFinish) {
-            assert.equal(first.session_id, item.failedFinish.session_id); assert.deepEqual(first.inputs, item.failedFinish.inputs);
+            assert.equal(first.session_id, item.failedFinish.session_id); assert.deepEqual(first.inputs, item.failedFinish.inputs); assert.equal(first.inputs.length, 1);
             assert.equal(first.report.text, item.failedFinish.report.text);
             record(`${flavor}: explicit CLI retry-finish repairs a real failing hook without replaying model input`);
         }
@@ -133,16 +107,18 @@ try {
         const probeEvents = existsSync(probeLog) ? readFileSync(probeLog, 'utf8').trim().split('\n').map(line => JSON.parse(line)) : [];
         item.projectMcp = probeEvents.some(event => event.event === 'call') ? 'called' : 'unavailable';
         assert(item.projectMcp === 'called' || first.report.text.includes('PROJECT_MCP_UNAVAILABLE'), 'MCP availability was not reported');
-        item.projectMcpEvents = probeEvents;
+        item.projectMcpEvents = probeEvents; evidence.hostPids.push(...probeEvents.map((event: any) => event.pid));
+        if (item.projectMcp === 'called') assert(probeEvents.some((event: any) => event.event === 'call' && event.cwd === first.cwd));
         record(`${flavor}: native edit, instructions/skill, project MCP=${item.projectMcp}, automatic Git checkpoint`);
         const next = cli(['task', 'send', accepted.agent_id, '--message', '在 result.txt 末尾追加 SECOND 加一个换行。报告上一轮要求记住但不写入文件的 MEMORY_ 开头标记，原样复述，并附上 RESUME_DONE。不调用 MCP，不读取工程指令或 skill，不委派，不自行提交。'], cwd);
-        const second = await completed(accepted.agent_id, next.round_id, cwd, item); item.second = second;
+        item.secondAcceptance = next; save();
+        const second = await completed(accepted.agent_id, next.round_id, cwd, item); item.rounds.push(second); evidence.hostPids.push(second.host_pid); evidence.hapiSessionIds.push(second.session_id); save();
         assert.equal(second.cwd, first.cwd); assert.equal(second.native_session_id, first.native_session_id); assert.equal(second.resume.outcome, 'resumed');
         assert.equal(second.reconstruction, undefined); assert(second.report.text.includes(memory), 'Native history was not preserved');
         assert.equal(second.git.start_head, first.git.result_head); assert.equal(readFileSync(join(first.cwd, 'result.txt'), 'utf8'), `${marker}\nSECOND\n`);
         assert.equal(git(project, 'show', `${second.git.result_ref}:app/result.txt`), `${marker}\nSECOND`);
         assert.equal(git(project, 'rev-parse', 'HEAD'), base); assert.equal(git(project, 'write-tree'), parentIndex); assert.equal(git(project, 'status', '--porcelain'), parentStatus);
-        assert.deepEqual(cli(['task', 'spawn', flavor, '--workspace-mode', 'worktree', '--base', 'HEAD', '--request-id', request, '--message', message], cwd), accepted);
+        assert.deepEqual(cli(['task', 'spawn', agentId, '--workspace-mode', 'worktree', '--base', 'HEAD', '--request-id', request, '--message', message], cwd), accepted);
         for (const detail of [first, second]) {
             assert.equal(detail.stop, 'stopped'); assert.equal(detail.finish, 'complete');
             const deadline = Date.now() + 10_000; while (alive(detail.host_pid) && Date.now() < deadline) await Bun.sleep(100);
@@ -150,14 +126,18 @@ try {
         }
         record(`${flavor}: second round reuses cwd/native history, seals its own result, leaves parent HEAD/index/dirty files unchanged`);
     }
+    assert.equal(evidence.cases.length, flavors.length); assert.equal(evidence.cases.reduce((n: number, item: any) => n + item.rounds.length, 0), flavors.length * 2);
     evidence.success = true;
-} catch (error) { evidence.error = error instanceof Error ? error.message : String(error); process.exitCode = 1; }
+} catch (error) { evidence.error = error instanceof Error ? error.stack ?? error.message : String(error); process.exitCode = 1; }
 finally {
-    if (hapi) try { for (const session of (await hapi.request('/api/sessions')).sessions) if (session.active) {
-        await hapi.request(`/api/sessions/${session.id}/archive`, { method: 'POST', signal: AbortSignal.timeout(45_000) });
-    } } catch (error) { evidence.cleanupErrors.push(String(error)); }
-    if (started) try { cli(['stop']); } catch (error) { evidence.cleanupErrors.push(String(error)); }
+    for (const item of evidence.cases) if (item.probeLog && existsSync(item.probeLog)) try {
+        const events: any[] = [];
+        for (const line of readFileSync(item.probeLog, 'utf8').trim().split('\n').filter(Boolean)) try { events.push(JSON.parse(line)); }
+        catch { evidence.probeObservationIncomplete = true; evidence.cleanupErrors.push('Malformed owned project MCP observation: ' + item.probeLog); }
+        item.projectMcpEvents = events; evidence.hostPids.push(...events.map(event => event.pid));
+    } catch { evidence.probeObservationIncomplete = true; evidence.cleanupErrors.push('Cannot read owned project MCP observations: ' + item.probeLog); }
+    if (fixture) try { await fixture.close(evidence, evidence.success && !evidence.cleanupErrors.length); } catch (error) { evidence.cleanupErrors.push(...(error instanceof AggregateError ? error.errors.map(String) : [String(error)])); }
     if (evidence.cleanupErrors.length) { evidence.success = false; process.exitCode = 1; }
-    evidence.finishedAt = new Date().toISOString(); writeFileSync(join(root, 'evidence.json'), JSON.stringify(evidence, null, 2));
-    console.log(`Evidence: ${join(root, 'evidence.json')}`); if (evidence.error) console.error(evidence.error);
+    evidence.finishedAt = new Date().toISOString(); save();
+    console.log(`Evidence: ${join(evidenceDir, 'evidence.json')}`); if (evidence.error) console.error(evidence.error);
 }

@@ -1,54 +1,29 @@
 import assert from 'node:assert/strict';
-import { spawnSync } from 'node:child_process';
-import { chmodSync, copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
-import { homedir } from 'node:os';
-import { dirname, join, resolve } from 'node:path';
-import { stringify } from 'yaml';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { join, resolve } from 'node:path';
 import { parseTOML } from 'toml-eslint-parser';
-import { freePort } from '../src/services';
-import { HapiClient } from '../src/hapi';
+import type { HapiHttp } from '../src/hapi';
+import { nonGitSmokeProject } from './fixtures/non-git-smoke-project';
+import { taskSmoke } from './fixtures/task-smoke';
 import pkg from '../package.json';
 
 // Explicit real-runtime test, authorized fixtures only. Never prints copied model credentials.
 const executable = resolve(process.argv[2] ?? 'dist/runweft');
 mkdirSync('.dev-smoke', { recursive: true });
 const root = mkdtempSync(resolve('.dev-smoke/task-controls-'));
-const home = join(root, 'runweft'), project = join(root, 'project'), codexHome = join(root, 'codex'), claudeHome = join(root, 'claude');
-for (const path of [project, codexHome, claudeHome]) mkdirSync(path, { mode: 0o700 });
+const nonGit = nonGitSmokeProject(), project = nonGit.project;
 const env: NodeJS.ProcessEnv = { ...process.env };
-for (const key of Object.keys(env)) if (key.startsWith('RUNWEFT_')) delete env[key];
-delete env.HAPI_CODEX_APP_SERVER_BIN;
-function copy(source: string, target: string) { if (existsSync(source)) { mkdirSync(dirname(target), { recursive: true, mode: 0o700 }); copyFileSync(source, target); chmodSync(target, 0o600); } }
-const sourceCodex = process.env.CODEX_HOME ?? join(homedir(), '.codex');
-for (const file of ['config.toml', 'auth.json']) copy(join(sourceCodex, file), join(codexHome, file));
-const sourceClaude = process.env.CLAUDE_CONFIG_DIR ?? join(homedir(), '.claude');
-copy(process.env.CLAUDE_CONFIG_DIR ? join(sourceClaude, '.claude.json') : join(homedir(), '.claude.json'), join(claudeHome, '.claude.json'));
-for (const file of ['settings.json', '.credentials.json']) copy(join(sourceClaude, file), join(claudeHome, file));
-Object.assign(env, { CODEX_HOME: codexHome, CLAUDE_CONFIG_DIR: claudeHome, GIT_CEILING_DIRECTORIES: root,
-    HAPI_CLAUDE_PATH: process.env.RUNWEFT_SMOKE_CLAUDE || Bun.which('iclaude') || Bun.which('claude') });
-const nativeConfig = Bun.TOML.parse(readFileSync(join(codexHome, 'config.toml'), 'utf8')) as any;
-for (const name of Object.keys(nativeConfig.mcp_servers ?? {})) assert.equal(spawnSync('codex', ['mcp', 'remove', name], { env, stdio: 'pipe' }).status, 0);
-// Only the dedicated copy opts into native approval so this test can exercise explicit decisions.
-let copied = readFileSync(join(codexHome, 'config.toml'), 'utf8');
-const permissionKeys = new Set(['approval_policy', 'sandbox_mode']);
-const edits = parseTOML(copied).body[0].body.filter(node => node.type === 'TOMLKeyValue' && node.key.keys.length === 1
-    && permissionKeys.has(node.key.keys[0].type === 'TOMLBare' ? node.key.keys[0].name : node.key.keys[0].value));
-for (const node of edits.reverse()) copied = copied.slice(0, node.range[0]) + copied.slice(node.range[1]);
-writeFileSync(join(codexHome, 'config.toml'), 'approval_policy = "on-request"\nsandbox_mode = "workspace-write"\n' + copied);
-const claudeSettings = join(claudeHome, '.claude.json');
-const prefs = existsSync(claudeSettings) ? JSON.parse(readFileSync(claudeSettings, 'utf8')) : {};
-prefs.mcpServers = {}; writeFileSync(claudeSettings, JSON.stringify(prefs), { mode: 0o600 });
-const models = { codex: { model: process.env.RUNWEFT_SMOKE_CODEX_MODEL || nativeConfig.model, reasoningEffort: process.env.RUNWEFT_SMOKE_CODEX_EFFORT || nativeConfig.model_reasoning_effort },
-    claude: { model: process.env.RUNWEFT_SMOKE_CLAUDE_MODEL || 'claude-opus-5-5', reasoningEffort: process.env.RUNWEFT_SMOKE_CLAUDE_EFFORT || 'high' } };
+for (const key of Object.keys(env)) if (key.startsWith('RUNWEFT_') || key.startsWith('HAPI_') || ['CLI_API_TOKEN', 'DB_PATH'].includes(key)) delete env[key];
+env.GIT_CEILING_DIRECTORIES = root;
+let models: Record<'codex' | 'claude', { model: string; reasoningEffort: string }>;
 const evidence: { [key: string]: any; checks: string[]; cases: any[]; cleanupErrors: string[] } = {
-    root, executable, hapiRevision: pkg.hapi.revision, startedAt: new Date().toISOString(), models, success: false, checks: [], cases: [], cleanupErrors: [],
+    root, executable, nonGitProject: { root: nonGit.root, project }, hapiRevision: pkg.hapi.revision, startedAt: new Date().toISOString(), success: false, checks: [], cases: [], cleanupErrors: [],
 };
-let started = false, token: string | undefined, hapi: HapiClient | undefined;
+let fixture: Awaited<ReturnType<typeof taskSmoke>> | undefined, hapi: HapiHttp | undefined;
 const pids = new Set<number>();
 function alive(pid: number) { try { process.kill(pid, 0); return true; } catch { return false; } }
 function cli(args: string[], expected = 0) {
-    const result = spawnSync(executable, ['--home', home, '--json', ...args], { cwd: project, env, encoding: 'utf8', timeout: 65_000 });
-    if (token) assert(!`${result.stdout}${result.stderr}`.includes(token), 'Credential leaked');
+    const result = fixture!.run(fixture!.home, args, { cwd: project, timeout: 65_000 });
     assert.equal(result.status, expected, `${args[0]}: ${result.stderr || result.error || result.signal}`);
     return result.status === 0 ? JSON.parse(result.stdout) : JSON.parse(result.stderr.trim().split('\n').at(-1)!);
 }
@@ -82,25 +57,37 @@ async function complete(id: string, options: { file?: string; decision?: 'approv
 }
 console.log(`Evidence directory: ${root}`);
 try {
-    cli(['init']); cli(['config', 'set', 'server.port', String(await freePort())]);
-    const service = cli(['start']); started = true;
-    token = JSON.parse(readFileSync(join(home, 'server/hapi/settings.json'), 'utf8')).cliApiToken; assert(token);
-    hapi = new HapiClient(service.url, token); cli(['machine', 'register']);
+    fixture = await taskSmoke(root, executable, env); hapi = fixture.runner.http; evidence.candidate = fixture.candidate;
+    const nativeConfig = Bun.TOML.parse(readFileSync(join(env.CODEX_HOME!, 'config.toml'), 'utf8')) as any;
+// Only the dedicated copy opts into native approval so this test can exercise explicit decisions.
+let copied = readFileSync(join(env.CODEX_HOME!, 'config.toml'), 'utf8');
+const permissionKeys = new Set(['approval_policy', 'sandbox_mode']);
+const edits = parseTOML(copied).body[0].body.filter(node => node.type === 'TOMLKeyValue' && node.key.keys.length === 1
+    && permissionKeys.has(node.key.keys[0].type === 'TOMLBare' ? node.key.keys[0].name : node.key.keys[0].value));
+for (const node of edits.reverse()) copied = copied.slice(0, node.range[0]) + copied.slice(node.range[1]);
+writeFileSync(join(env.CODEX_HOME!, 'config.toml'), 'approval_policy = "on-request"\nsandbox_mode = "workspace-write"\n' + copied);
+const claudeSettings = join(env.CLAUDE_CONFIG_DIR!, '.claude.json');
+const prefs = existsSync(claudeSettings) ? JSON.parse(readFileSync(claudeSettings, 'utf8')) : {};
+prefs.mcpServers = {}; writeFileSync(claudeSettings, JSON.stringify(prefs), { mode: 0o600 });
+    models = { codex: { model: process.env.RUNWEFT_SMOKE_CODEX_MODEL || nativeConfig.model, reasoningEffort: process.env.RUNWEFT_SMOKE_CODEX_EFFORT || nativeConfig.model_reasoning_effort },
+        claude: { model: process.env.RUNWEFT_SMOKE_CLAUDE_MODEL || 'claude-opus-5-5', reasoningEffort: process.env.RUNWEFT_SMOKE_CLAUDE_EFFORT || 'high' } };
+    evidence.models = models;
     for (const flavor of ['codex', 'claude'] as const) {
         assert(models[flavor].model && models[flavor].reasoningEffort, 'Set explicit native model and effort for this acceptance');
-        const runtime = cli(['runtime', 'register', flavor]).runtime;
-        const definition = cli(['agent', 'init', flavor, '--runtime', runtime.id]).agent;
-        writeFileSync(definition.source.path, stringify({ runtime: runtime.id, flavor, ...models[flavor] }));
+        const definition: any = fixture.agent(flavor, { flavor, ...models[flavor] });
         const marker = `MEMORY_${crypto.randomUUID().slice(0, 8)}`;
-        const accepted = cli(['task', 'spawn', flavor, '--message', `专用任务：记住标记 ${marker}。不调用工具、不委派，只回复这个标记。`]);
+        const accepted = cli(['task', 'spawn', definition.id, '--message', `专用任务：记住标记 ${marker}。不调用工具、不委派，只回复这个标记。`]);
         const first = await complete(accepted.agent_id);
         assert(first.result.report.text.includes(marker));
         assert.equal(first.native.model, models[flavor].model);
         assert.equal(flavor === 'codex' ? first.native.modelReasoningEffort : first.native.effort, models[flavor].reasoningEffort);
         const item: any = { flavor, agentId: accepted.agent_id, first }; evidence.cases.push(item);
         record(`${flavor}: explicit model/effort produces real native completion and stopped process`);
-        // Changing the definition must not redirect an existing task's next round.
-        writeFileSync(definition.source.path, 'instructions: changed after acceptance\nruntime: null\n');
+        const changed = join(root, `updated-${flavor}.json`), instructions = '中心定义在首轮接受后仅更新instructions；保持相同目标及launch参数。';
+        writeFileSync(changed, JSON.stringify({ ...definition.definition, instructions }));
+        const updated: any = cli(['agent', 'update', definition.id, '--expected-version', String(definition.version), '--file', changed]).agent;
+        assert.deepEqual(show(accepted.agent_id, first.result.round_id).agent, first.result.agent);
+
         for (const decision of ['approved', 'denied'] as const) {
             const file = join(root, `${flavor}-${decision}.txt`);
             const action = flavor === 'codex'
@@ -109,13 +96,18 @@ try {
             cli(['task', 'send', accepted.agent_id, '--message', `唯一任务：${action} 被拒绝时不重试、不换工具。不委派。最后回复你在首轮记住的标记，不要读取文件找标记。`]);
             const round = await complete(accepted.agent_id, { file, decision, expected: flavor === 'claude' && decision === 'denied' ? ['interrupted'] : ['completed'] });
             item[decision] = round;
+            assert.equal(round.result.agent.hub.version, updated.version); assert.equal(round.result.agent.definition.instructions, instructions);
+            assert.deepEqual(round.result.agent.hub.launchOptions, first.result.agent.hub.launchOptions);
+            const { checkedAt: currentProbe, ...currentTarget } = round.result.agent.hub.target, { checkedAt: firstProbe, ...firstTarget } = first.result.agent.hub.target;
+            assert.deepEqual(currentTarget, firstTarget); assert(currentProbe >= firstProbe);
+            assert.deepEqual(show(accepted.agent_id, first.result.round_id).agent, first.result.agent);
             assert(round.permissions > 0, 'No native permission request observed');
             assert.equal(existsSync(file), decision === 'approved');
             assert.equal(round.result.native_session_id, first.result.native_session_id);
             assert.equal(round.result.cwd, project);
             if (decision === 'approved') assert(round.result.report.text.includes(marker), 'Native resume lost first-round memory');
         }
-        record(`${flavor}: resume retains history and fixed definition; real approval/denial govern only requested file effects`);
+        record(`${flavor}: resume retains history and fixed target while next resolves current instructions; real approval/denial govern only requested file effects`);
         if (flavor === 'codex') {
             const slow = cli(['task', 'send', accepted.agent_id, '--message', '请先运行 sleep 30，等待结束后回复 SLOW_DONE。不委派，不修改文件。']);
             await until(() => show(accepted.agent_id), value => value.round_id === slow.round_id && value.inputs[0]?.observation?.phase === 'accepted', 'slow native turn');
@@ -140,10 +132,9 @@ try {
     evidence.success = true;
 } catch (error) { evidence.error = error instanceof Error ? error.message : String(error); process.exitCode = 1; }
 finally {
-    if (hapi) try { for (const session of (await hapi.request('/api/sessions')).sessions) if (session.active) await hapi.request(`/api/sessions/${session.id}/archive`, { method: 'POST', signal: AbortSignal.timeout(45_000) }); }
-    catch (error) { evidence.cleanupErrors.push(String(error)); }
-    if (started) try { cli(['stop']); } catch (error) { evidence.cleanupErrors.push(String(error)); }
-    for (const pid of pids) if (alive(pid)) evidence.cleanupErrors.push(`Host still alive: ${pid}`);
+    if (fixture) for (const pid of pids) fixture.ownedPids.add(pid);
+    try { await fixture?.close(evidence.success); } catch (error) { evidence.cleanupErrors.push(...(error instanceof AggregateError ? error.errors.map(String) : [String(error)])); }
+    try { nonGit.close(); } catch (error) { evidence.cleanupErrors.push(String(error)); }
     if (evidence.cleanupErrors.length) { evidence.success = false; process.exitCode = 1; }
     evidence.finishedAt = new Date().toISOString(); writeFileSync(join(root, 'evidence.json'), JSON.stringify(evidence, null, 2));
     console.log(`Evidence: ${join(root, 'evidence.json')}`); if (evidence.error) console.error(evidence.error);

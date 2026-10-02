@@ -65,3 +65,22 @@ T14 启动入口补充：services.serve 在 serverToken 创建、目录初始化
 T2 迁接线实际复现中心 overview 库存请求没有原入口的3秒截止时间：`hub/delegation/api.ts`直接用request lease请求库存，原`tasks/coordinator.ts`另设3秒截止；真实RequestLease无deadline，显式signal覆盖fetch默认timeout，库存挂起可一直等待断联。经主agent确认，T2允许窄修复：`resources.machines`内部可选signal默认lease.signal，overview传入lease.signal与3秒timeout的组合；继续保留库存完成与失败降级后的lease.check，撤权/断联不能转换为成功降级。不新增重试或通用deadline框架。
 
 T3 中心接线复现本机省略baseRef/显式HEAD同requestId冲突：TaskStore.semantic虽然补HEAD，但Hub绕过旧AcceptSchema重排，taskIntent中hubRequest在baseRef之前或之后；contentVersion按JSON键序摘要，因此同值得到不同指纹。主agent确认窄修semantic：worktree先取出baseRef，按固定同一位置重建含baseRef ?? HEAD的意图。保留本机spawn/lookup等价与远端缺显式base拒绝，不改通用hash/validateWorkspaceTarget、不兼容旧hash、不迁移历史指纹；最终schema19仅新格式。
+
+### T6 批次A：正常停服与撤权的 Socket 关闭差异
+
+真实workspace-preparation在完整Hub重启且外部Runner存活的窗口复现：固定snapshot转unknown/machine_offline，Runner只记录Disconnected from bot、不重新注册RPC。最小实证根gWwAUQ及t6a-workspace-preparation-final.log；固定HAPI apiMachine的disconnect只清RPC注册和keepalive，Socket.IO收到server DISCONNECT不自动重连。Runweft sockets.close原先对所有连接down.disconnect(true)，混同了正常整体停服和权限撤销。
+
+本轮授权窄修：仅整体close预先置shuttingDown，连接清理仍幂等清timer/abort/up.disconnect，正常停服关闭Engine.IO transport；撤权、旋转、上游孤立断联继续显式Socket.IO disconnect。使用HAPI/Socket.IO既有重连，不新增重连器/业务重试，不模拟断网取代原正常重启。根测试区分正常transport关闭后既有客户端自动恢复、原RPC不重放、旋转io server disconnect且旧凭据新握手拒绝；实际无模型诊断继续完整Hub/私有HAPI重启与存活Runner。产品变化后build更新候选并重跑受影响compiled场景。
+
+### T6 批次C：高层Task接线与终止消费所有权
+
+六Task入口使用compiled当前Hub/CLI与真实coordinator，不借低层finished种子。当前observeRepository清GIT_CEILING，仓库下.dev-smoke不是non-Git；真实空工程放本次系统tmpRoot/.dev-smoke/project、先核验non_git并独立回收。Git工程包括shared真实create/bind；controls next仅更新当前instructions并重新resolve，首轮snapshot、固定target/launch/nativehistory保留。
+
+outputs→retention仅消费当前专属格式和同候选hash，producer关闭模型/Runner/服务并清模型认证副本，当前业务/连接凭据留给唯一consumer。仅只读当前公开manifest对应Runner receipt/spool作物理证明；不创建第二coordinator或公开机器RPC。consumer在场实查release保留Git/history、discard删spool、零重放后，确认停进程/恢复quota，回收本次可再生数据，留下紧凑两家evidence/log；失败保留诊断并清已可安全移除的本次秘密。
+
+### T6D 当前远端成果接线与验证环境
+
+- result-export/default、fetch 与 TaskResults 使用完整当前源码 gateway、真实中心身份/空间及受理领域记录的私有 taskClient；compiled CLI 对同进程源码 gateway 使用异步子进程，避免同步等待阻塞 HTTP。TaskResults 种子从真实中央 Agent snapshot/当前仓库关联创建，dispatcher 明确静止；持久终态和真实 HAPI seal 后完整重建 gateway 开启现行扫描，不能重启已 close 的协调器。重建后的 discovery 只确认后续 RPC 可用，不承诺 startup 初次 scan 已等 Runner。未知成果回执沿既有固定 operation 查询，不发新 export。
+- remote-native/default 保留两 runtime prepared 原生执行与独立当前域 Round；remote-tasks 为 compiled serve+CLI+真实 Task 协调器，无终态种子。显式第二 HAPI argv 真实配置到中心和每 Runner，候选 hash 使用实际二进制。
+- 当前 Claude 在 cwd 编码超过200字符时把 projects 名截断加 hash；固定 HAPI getProjectPath 仅替换字符，nativeResume 查不到真实 transcript。本次 Y8ptBq 的 cwd/期望编码长218，实际目录207且原 native jsonl 存在，第二轮确认 missing 并重新创建会话；该固定依赖长路径恢复缺口未修复，不改 HAPI、不复制历史目录。远端 smoke 使用本次唯一系统 tmpRoot/.dev-smoke 短运行目录，工作区 .dev-smoke 仅存 evidence/log；两个 runtime 仍须真实同 nativeID 续轮。
+- 当前 handoff 明确 ownedRoot/ownedTempRoot/evidenceDir、server/source/target home、连接身份/机器事实、当前库和真实案例 IDs；只有 current-remote-tasks-1 全双 runtime×两轮成功且清理无误的生产者可被 retention 消费。生产者先确认模型、Runner、中心退出再移除模型认证副本，保连接和业务现场；最终 retention 成功后回收精确 ownedTempRoot。remote-package 由 E 的 collaboration producer 同步迁，不在 D 假验收。

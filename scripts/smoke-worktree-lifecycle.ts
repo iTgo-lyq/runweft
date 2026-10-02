@@ -2,45 +2,41 @@ import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { appendFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { HapiClient } from '../src/hapi';
+import { retainedWorktreeSmoke } from './fixtures/worktree-task-smoke';
 import pkg from '../package.json';
 
-// Continue completed dedicated fixtures; never discover or mutate a user's tasks.
+// Every argument is a current worktree-tasks evidence file. Continue its existing identity/history.
 const sources = process.argv.slice(2);
 assert(sources.length, 'Pass evidence.json files produced by smoke-worktree-tasks.ts');
-const executable = resolve('dist/runweft');
-mkdirSync('.dev-smoke', { recursive: true });
-const root = mkdtempSync(resolve('.dev-smoke/worktree-lifecycle-'));
-const evidence: any = { root, executable, hapiRevision: pkg.hapi.revision, startedAt: new Date().toISOString(), success: false, cases: [], cleanupErrors: [] };
+// Preflight every source before starting or mutating any fixture; reject duplicates and accepted third rounds.
+const fixtures = sources.map(retainedWorktreeSmoke);
+assert.equal(new Set(fixtures.map(fixture => fixture.prior.ownedRoot)).size, fixtures.length, 'Do not consume the same fixture twice');
+mkdirSync('.dev-smoke', { recursive: true }); const root = mkdtempSync(resolve('.dev-smoke/worktree-lifecycle-'));
+const evidence: any = { evidenceFormat: 'current-worktree-lifecycle-1', root, hapiRevision: pkg.hapi.revision, startedAt: new Date().toISOString(), success: false,
+    cases: [], sources: [], cleanupErrors: [], hostPids: [], hapiSessionIds: [] };
+const save = () => writeFileSync(join(root, 'evidence.json'), JSON.stringify(evidence, null, 2), { mode: 0o600 });
 console.log(`Evidence directory: ${root}`);
 try {
-    for (const source of sources) {
-        const prior = JSON.parse(readFileSync(source, 'utf8'));
-        assert(resolve(prior.root).startsWith(resolve('.dev-smoke/worktree-tasks-')), 'Only dedicated worktree task fixtures are allowed');
-        for (const previous of prior.cases.filter((item: any) => item.second?.status === 'completed')) {
-            const home = join(prior.root, 'runweft'), cwd = join(previous.project, 'app'), id = previous.accepted.agent_id;
-            const env: NodeJS.ProcessEnv = { ...process.env };
-            for (const key of Object.keys(env)) if (key.startsWith('RUNWEFT_')) delete env[key];
-            delete env.HAPI_SESSION_ID; delete env.HAPI_CODEX_APP_SERVER_BIN;
-            Object.assign(env, { CODEX_HOME: join(prior.root, 'codex'), CLAUDE_CONFIG_DIR: join(prior.root, 'claude'),
-                HAPI_CLAUDE_PATH: Bun.which('iclaude') ?? Bun.which('claude'), GIT_CEILING_DIRECTORIES: prior.root });
-            const item: any = { flavor: previous.flavor, source, id, checks: [], approvals: [] }; evidence.cases.push(item);
-            const token = JSON.parse(readFileSync(join(home, 'server/hapi/settings.json'), 'utf8')).cliApiToken;
-            let hapi: HapiClient | undefined, started = false;
+    for (const [index, fixture] of fixtures.entries()) {
+        const prior = fixture.prior, source = resolve(sources[index]), env = fixture.env;
+        const sourceEvidence: any = { source, ownedRoot: prior.ownedRoot, invokedCLI: prior.invokedCLI, candidate: prior.candidate, handoff: prior.handoff,
+            hostPids: [...prior.hostPids], hapiSessionIds: [...prior.hapiSessionIds], cleanupOwner: 'smoke-worktree-lifecycle final consumer' };
+        evidence.sources.push(sourceEvidence); save();
+        try {
+        await fixture.start();
+        for (const previous of prior.cases) {
+            const cwd = previous.parentCwd, id = previous.taskId;
+            const item: any = { flavor: previous.flavor, source, id, agentId: previous.agentId, repositoryId: previous.repositoryId, checks: [], approvals: [] }; evidence.cases.push(item);
             function cli(args: string[], expectedError?: string) {
-                const result = spawnSync(executable, ['--home', home, '--json', ...args], { cwd, env, encoding: 'utf8', timeout: 60_000 });
-                assert(!`${result.stdout}${result.stderr}`.includes(token), 'Credential in CLI output');
-                if (expectedError) {
-                    assert.notEqual(result.status, 0); assert(`${result.stdout}${result.stderr}`.includes(expectedError)); return;
-                }
-                assert.equal(result.status, 0, `${args[0]}: ${result.stderr || result.error || result.signal}`);
-                return JSON.parse(result.stdout);
+                const result = fixture.run(prior.handoff.clientHome, args, { cwd });
+                if (expectedError) { assert.notEqual(result.status, 0); assert((result.stdout + result.stderr).includes(expectedError)); return; }
+                assert.equal(result.status, 0, `${args[0]}: ${result.stderr || result.error || result.signal}`); return JSON.parse(result.stdout);
             }
             function git(...args: string[]) {
                 const result = spawnSync('git', ['-C', previous.project, ...args], { env, encoding: 'utf8', timeout: 20_000 });
                 assert.equal(result.status, 0, result.stderr); return result.stdout.trim();
             }
-            function record(check: string) { item.checks.push(check); console.log(`PASS ${previous.flavor}: ${check}`); }
+            function record(check: string) { item.checks.push(check); save(); console.log(`PASS ${previous.flavor}: ${check}`); }
             async function until(taskId: string, condition: (detail: any) => boolean, model = false) {
                 const deadline = Date.now() + 240_000, approvals = new Set<string>();
                 do {
@@ -56,26 +52,24 @@ try {
                                 cli(['task', 'permission', taskId, '--round', detail.round_id, '--request', requestId, '--decision', 'approved']);
                                 approvals.add(requestId);
                                 item.approvals.push({ round: detail.round_id, requestId, tool: request.tool });
-                            } else if (item.pendingPermission !== requestId) {
-                                item.pendingPermission = requestId; console.log(`Fixture permission needs review: ${taskId}/${detail.round_id}/${requestId}`);
-                            }
+                            } else throw new Error(`Unreviewed fixture permission: ${request.tool} (${taskId}/${detail.round_id}/${requestId})`);
                         }
                     }
                     await Bun.sleep(200);
                 } while (Date.now() < deadline);
                 throw new Error(`Fixture timed out: ${taskId}`);
             }
-            try {
-                const service = cli(['start']); started = true; hapi = new HapiClient(service.url, token);
+            {
                 const old = cli(['task', 'show', id]); assert.equal(old.status, 'completed');
                 const snapshot = { head: git('rev-parse', 'HEAD'), index: git('write-tree'), status: git('status', '--porcelain') };
                 const common = git('rev-parse', '--path-format=absolute', '--git-common-dir'); appendFileSync(join(common, 'info/exclude'), '\ndeps/\n');
                 const dep = join(old.cwd, 'deps/probe.txt'), marker = `DEPENDENCY_${crypto.randomUUID()}`;
                 mkdirSync(join(old.cwd, 'deps'), { recursive: true }); writeFileSync(dep, marker);
-                const memory = previous.second.report.text.match(/MEMORY_[a-f0-9-]+/)?.[0]; assert(memory);
-                cli(['task', 'send', id, '--message', '只读当前目录的 deps/probe.txt，在报告中原样返回其标记，以及此前要求记住的 MEMORY_ 开头标记，附 RETENTION_OK。不要修改文件、调用 MCP、委派或执行 Git 命令。']);
-                const resumed = await until(id, detail => detail.status === 'completed', true); item.resumed = resumed;
-                assert.equal(resumed.native_session_id, previous.second.native_session_id); assert.equal(resumed.resume.outcome, 'resumed');
+                const memory = previous.memory; assert(memory && previous.rounds[1].report.text.includes(memory));
+                const thirdAcceptance = cli(['task', 'send', id, '--message', '只读当前目录的 deps/probe.txt，在报告中原样返回其标记，以及此前要求记住的 MEMORY_ 开头标记，附 RETENTION_OK。不要修改文件、调用 MCP、委派或执行 Git 命令。']);
+                item.thirdAcceptance = thirdAcceptance; save();
+                const resumed = await until(id, detail => detail.round_id === thirdAcceptance.round_id && detail.status === 'completed', true); item.resumed = resumed; evidence.hostPids.push(resumed.host_pid); evidence.hapiSessionIds.push(resumed.session_id); save();
+                assert.equal(resumed.native_session_id, previous.rounds[1].native_session_id); assert.equal(resumed.resume.outcome, 'resumed');
                 assert(resumed.report.text.includes(memory) && resumed.report.text.includes(marker));
                 assert.equal(resumed.git.start_head, old.git.result_head); assert.equal(resumed.git.result_head, old.git.result_head);
                 assert.equal(resumed.git.file_count, 0); assert.equal(resumed.git.checkpoint, undefined);
@@ -86,13 +80,14 @@ try {
                 assert(!alive(), 'Execution wrapper remains live');
                 record('service restart/native resume retain ignored dependencies and history; no changes create no commit');
 
-                const hookDirectory = join(root, `${previous.flavor}-hooks`); mkdirSync(hookDirectory);
+                const hookDirectory = join(prior.root, `${previous.flavor}-lifecycle-hooks`); mkdirSync(hookDirectory);
                 writeFileSync(join(hookDirectory, 'post-checkout'), '#!/bin/sh\nsleep 3\n', { mode: 0o755 });
                 const savedHooks = spawnSync('git', ['-C', previous.project, 'config', '--get', 'core.hooksPath'], { env, encoding: 'utf8' });
                 git('config', 'core.hooksPath', hookDirectory);
                 let cancelled: any;
                 try {
-                    const accepted = cli(['task', 'spawn', previous.flavor, '--workspace-mode', 'worktree', '--message', '专用准备取消验收，此输入不应发送给模型。']);
+                    const accepted = cli(['task', 'spawn', previous.agentId, '--workspace-mode', 'worktree', '--message', '专用准备取消验收，此输入不应发送给模型。']);
+                    item.preparationAcceptance = accepted; save();
                     await until(accepted.agent_id, detail => detail.phase === 'preparing');
                     writeFileSync(join(previous.project, 'parent-later.txt'), `PARENT_${crypto.randomUUID()}\n`);
                     git('add', 'parent-later.txt'); git('commit', '-qm', 'fixture parent advances after task acceptance');
@@ -111,12 +106,12 @@ try {
                 cli(['task', 'workspace', 'remove', id]);
                 const refused = await until(id, detail => detail.git.removal?.status === 'failed'); item.removalRefusal = refused.git.removal;
                 assert.equal(refused.git.removal.error.code, 'workspace_ignored_files'); assert.equal(refused.git.retained, 'retained'); assert(existsSync(dep));
-                cli(['restart']);
+                await fixture.restart();
                 assert.equal(cli(['task', 'show', id]).git.removal.status, 'failed');
                 cli(['task', 'workspace', 'remove', id, '--discard-ignored']);
                 const removed = await until(id, detail => detail.git.retained === 'removed'); item.removed = removed;
                 assert.equal(removed.report.text, resumed.report.text); assert(!existsSync(resumed.git.checkout));
-                for (const detail of [previous.first, previous.second, resumed]) assert.equal(git('rev-parse', detail.git.result_ref), detail.git.result_head);
+                for (const detail of [previous.rounds[0], previous.rounds[1], resumed]) assert.equal(git('rev-parse', detail.git.result_ref), detail.git.result_head);
                 cli(['task', 'send', id, '--message', 'Must refuse after explicit removal'], 'workspace_not_retained');
                 assert.equal(cli(['task', 'workspace', 'remove', id]).environment.status, 'removed');
                 cli(['task', 'workspace', 'remove', cancelled.agent_id]);
@@ -124,17 +119,23 @@ try {
                 assert.equal(git('rev-parse', cancelled.git.result_ref), cancelled.git.result_head);
                 assert.equal(cli(['task', 'list', '--all']).agents.find((task: any) => task.agent_id === id).git.retained, 'removed');
                 record('ignored files block deletion; explicit discard removes checkout after restart and retains every report/result ref; future send is refused');
-            } finally {
-                if (hapi) try { for (const session of (await hapi.request('/api/sessions')).sessions) if (session.active) {
-                    await hapi.request(`/api/sessions/${session.id}/archive`, { method: 'POST', signal: AbortSignal.timeout(45_000) });
-                } } catch (error) { evidence.cleanupErrors.push(String(error)); }
-                if (started) try { cli(['stop']); } catch (error) { evidence.cleanupErrors.push(String(error)); }
             }
         }
+        } finally {
+            for (const previous of prior.cases) if (previous.probeLog && existsSync(previous.probeLog)) try {
+                for (const line of readFileSync(previous.probeLog, 'utf8').trim().split('\n').filter(Boolean)) try { sourceEvidence.hostPids.push(JSON.parse(line).pid); }
+                catch { sourceEvidence.probeObservationIncomplete = true; evidence.cleanupErrors.push('Malformed owned project MCP observation: ' + previous.probeLog); }
+            } catch { sourceEvidence.probeObservationIncomplete = true; evidence.cleanupErrors.push('Cannot read owned project MCP observations: ' + previous.probeLog); }
+            sourceEvidence.hostPids.push(...evidence.cases.filter((item: any) => item.source === source && item.resumed).map((item: any) => item.resumed.host_pid));
+            sourceEvidence.hapiSessionIds.push(...evidence.cases.filter((item: any) => item.source === source && item.resumed).map((item: any) => item.resumed.session_id));
+            try { await fixture.close(sourceEvidence); } catch (error) { evidence.cleanupErrors.push(...(error instanceof AggregateError ? error.errors.map(String) : [String(error)])); }
+            save();
+        }
     }
-    assert(evidence.cases.length); assert.deepEqual(evidence.cleanupErrors, []); evidence.success = true;
-} catch (error) { evidence.error = String(error); process.exitCode = 1; }
+    assert.equal(evidence.cases.length, fixtures.reduce((count, fixture) => count + fixture.prior.cases.length, 0));
+    assert.deepEqual(evidence.cleanupErrors, []); evidence.success = true;
+} catch (error) { evidence.error = error instanceof Error ? error.stack ?? error.message : String(error); process.exitCode = 1; }
 finally {
-    evidence.finishedAt = new Date().toISOString(); writeFileSync(join(root, 'evidence.json'), JSON.stringify(evidence, null, 2));
+    evidence.finishedAt = new Date().toISOString(); save();
     console.log(`Evidence: ${join(root, 'evidence.json')}`); if (evidence.error) console.error(evidence.error);
 }

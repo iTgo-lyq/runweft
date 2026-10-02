@@ -1,9 +1,12 @@
 import assert from 'node:assert/strict';
 import { createHash, randomUUID } from 'node:crypto';
-import { mkdir, mkdtemp, open, readFile, stat, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, open, readFile, stat, writeFile, rm } from 'node:fs/promises';
 import { createServer } from 'node:net';
 import { join, resolve } from 'node:path';
-import { HapiClient } from '../src/hapi';
+import { HubClient } from '../src/hub/client';
+import { fileNamespace } from '../src/hub/access/transport';
+import { removeFileSmokeData } from './fixtures/native-file-smoke';
+import { closeSmoke } from './fixtures/smoke-lifecycle';
 
 // Real installed-format binaries and dedicated service homes; no model/session is started.
 const binary = resolve(process.argv[2] ?? 'dist/runweft'), hapiBinary = resolve(process.argv[3] ?? 'dist/hapi');
@@ -13,11 +16,11 @@ const evidence = { root, binary, hapiBinary, startedAt: new Date().toISOString()
     checks: [] as string[], cases: [] as Record<string, unknown>[], cleanupErrors: [] as string[], error: '' };
 const env: NodeJS.ProcessEnv = { ...process.env };
 for (const key of Object.keys(env)) if (key.startsWith('RUNWEFT_')) delete env[key];
-let token: string | undefined;
+let remoteUrl = ''; let token: string | undefined; let url = '', identityFile = '', spaceId = ''; const secrets: string[] = [];
 async function cli(selectedHome: string, args: string[], expected = 0) {
-    const child = Bun.spawn([binary, '--home', selectedHome, '--json', ...args], { env, stdout: 'pipe', stderr: 'pipe' });
+    const child = Bun.spawn([binary, '--home', selectedHome, '--json', ...(args[0] === 'artifact' ? ['hub', '--url', selectedHome === home ? url : remoteUrl, '--identity-file', identityFile, '--space', spaceId] : []), ...args], { env, stdout: 'pipe', stderr: 'pipe' });
     const [code, stdout, stderr] = await Promise.all([child.exited, new Response(child.stdout).text(), new Response(child.stderr).text()]);
-    if (token) assert(!`${stdout}${stderr}`.includes(token), 'Credential leaked');
+    for (const secret of secrets) assert(!`${stdout}${stderr}`.includes(secret), 'Credential leaked');
     assert.equal(code, expected, `${args.slice(0, 2).join(' ')}: ${stderr}`);
     return { value: stdout.trim() ? JSON.parse(stdout) : null, stderr };
 }
@@ -37,14 +40,14 @@ try {
     await cli(home, ['config', 'set', 'server.artifacts.namespaceQuotaGiB', '1']);
     await cli(home, ['start']);
     const paths = (await cli(home, ['paths'])).value;
-    token = JSON.parse(await readFile(join(paths.hapiServer, 'settings.json'), 'utf8')).cliApiToken; assert(token);
-    const hapi = new HapiClient(`http://127.0.0.1:${port}`, token);
-    assert.equal((await hapi.request('/health')).capabilities.artifacts, 1);
+    url = `http://127.0.0.1:${port}`; remoteUrl = url;
+    const user = await (await fetch(url + '/api/runweft/hub/identities', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: 'Artifact owner' }) })).json();
+    token = user.token; secrets.push(user.token); spaceId = user.personalSpace.id; identityFile = join(root, 'identity.txt'); await writeFile(identityFile, user.token, { mode: 0o600 });
+    const hapi = new HubClient({ url, identityFile, space: spaceId }, 'hubAccess', 'hub_access_unavailable').http;
+    const status = (await cli(home, ['status'])).value; assert.equal(status.runner.running, false);
     assert.equal((await hapi.request('/api/sessions')).sessions.length, 0);
-    assert.equal((await hapi.request('/api/machines')).machines.length, 0);
-    await cli(hubHome, ['init', '--mode', 'hub', '--url', `http://127.0.0.1:${port}`]);
-    await cli(hubHome, ['config', 'set', 'hub.tokenEnv', 'ARTIFACT_SMOKE_TOKEN']); env.ARTIFACT_SMOKE_TOKEN = token;
-    await cli(hubHome, ['config', 'set', 'server.artifacts.maxFileMiB', '1']);
+    assert.equal((await hapi.request('/api/runweft/resources/machines')).machines.length, 0);
+    await cli(hubHome, ['init']); await cli(hubHome, ['config', 'set', 'server.artifacts.maxFileMiB', '1']);
     const source = join(root, '材料 large.bin'), size = 72 * 1024 * 1024;
     const sourceFile = await open(source, 'w'); await sourceFile.truncate(size); await sourceFile.close();
     const hash = createHash('sha256'), block = Buffer.alloc(256 * 1024);
@@ -72,7 +75,7 @@ try {
     const stream = new ReadableStream<Uint8Array>({ start(controller) { controller.enqueue(Buffer.from('abc')); } });
     const interrupted = hapi.response(`/api/artifacts/${object.id}/content`, { method: 'PUT', headers: { 'content-type': 'application/octet-stream', 'content-length': '6' }, body: stream, signal: abort.signal })
         .then(() => 'unexpected response', () => 'interrupted');
-    const partialPath = join(paths.artifacts, createHash('sha256').update('default').digest('hex'), `${object.id}.part`);
+    const partialPath = join(paths.artifacts, createHash('sha256').update(fileNamespace(user.identity.id, spaceId)).digest('hex'), `${object.id}.part`);
     await until(() => stat(partialPath).then(value => value.size, () => 0), value => value === 3, 'partial bytes actually reached Hub');
     abort.abort(); assert.equal(await interrupted, 'interrupted');
     await until(() => hapi.request(`/api/artifacts/${object.id}`), value => !!value.artifact.error, 'Hub records disconnected upload');
@@ -84,11 +87,14 @@ try {
     assert((await cli(home, ['artifact', 'remove', object.id], 1)).stderr.includes('artifact_referenced'));
     await hapi.request(refPath, { method: 'DELETE' });
     assert.equal((await cli(home, ['artifact', 'remove', object.id])).value.state, 'deleted');
-    const other = new HapiClient(`http://127.0.0.1:${port}`, `${token}:other`);
+    const another = await (await fetch(url + '/api/runweft/hub/identities', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: 'Other owner' }) })).json();
+    secrets.push(another.token); const otherFile = join(root, 'other-identity.txt'); await writeFile(otherFile, another.token, { mode: 0o600 });
+    const other = new HubClient({ url, identityFile: otherFile, space: another.personalSpace.id }, 'hubAccess', 'hub_access_unavailable').http;
     await assert.rejects(() => other.request(`/api/artifacts/${evidence.cases[0]!.artifactId}`), { status: 404 });
-    const runnerRead = await fetch(`http://127.0.0.1:${port}/cli/artifacts/${evidence.cases[0]!.artifactId}`, { headers: { authorization: `Bearer ${token}` } });
-    assert.equal(runnerRead.status, 200); assert.equal((await runnerRead.json() as any).artifact.sha256, sha256);
-    record('actual JWT/CLI token routes, namespace rejection, retention protection and deletion tombstone');
+    const rootCredential = JSON.parse(await readFile(join(paths.hapiServer, 'settings.json'), 'utf8')).cliApiToken;
+    const runnerRead = await fetch(url + `/cli/artifacts/${evidence.cases[0]!.artifactId}`, { headers: { authorization: `Bearer ${rootCredential}` } });
+    assert.equal(runnerRead.status, 401); await runnerRead.arrayBuffer();
+    record('real other owner/space cannot read; root CLI credential has no public file authority; retention protection and deletion tombstone');
     const slowBlock = Buffer.alloc(64 * 1024, 83), slowHash = createHash('sha256');
     for (let index = 0; index < 12; index++) slowHash.update(slowBlock);
     const slow = (await hapi.request('/api/artifacts', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({
@@ -109,10 +115,21 @@ try {
     assert.equal((await cli(hubHome, ['artifact', 'show', String(evidence.cases[0]!.artifactId)])).value.state, 'available');
     assert.equal((await hapi.request('/api/sessions')).sessions.length, 0);
     record('files survive real service restart; no native session was created');
+    Object.assign(evidence, { candidate: { entry: 'compiled', cliSha256: createHash('sha256').update(await readFile(binary)).digest('hex'), hapiSha256: createHash('sha256').update(await readFile(hapiBinary)).digest('hex') } });
     evidence.success = true;
 } catch (error) { evidence.error = error instanceof Error ? error.message : String(error); process.exitCode = 1; }
 finally {
-    try { await cli(home, ['stop']); } catch (error) { evidence.cleanupErrors.push(String(error)); }
+    let serviceStopped = false;
+    try {
+        await closeSmoke([
+            async () => { assert(serviceStopped, 'Service still running; secrets retained');
+                await closeSmoke([identityFile, join(root, 'other-identity.txt'), join(home, 'server/hapi/settings.json'), join(home, 'server/hapi/jwt-secret.json')]
+                    .filter(Boolean).map(file => () => rm(file, { force: true }))); },
+            async () => { await cli(home, ['stop']); const status = (await cli(home, ['status'])).value;
+                assert.equal(status.service.running, false); assert.equal(status.runner.running, false); serviceStopped = true; },
+        ]);
+        if (evidence.success) await removeFileSmokeData(root);
+    } catch (error) { evidence.cleanupErrors.push(...(error instanceof AggregateError ? error.errors.map(String) : [String(error)])); }
     if (evidence.cleanupErrors.length) { evidence.success = false; process.exitCode = 1; }
     evidence.finishedAt = new Date().toISOString(); await writeFile(join(root, 'evidence.json'), JSON.stringify(evidence, null, 2));
     console.log(`Evidence: ${join(root, 'evidence.json')}`); if (evidence.error) console.error(evidence.error);

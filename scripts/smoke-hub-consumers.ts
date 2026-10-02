@@ -1,14 +1,15 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
-import { chmodSync, copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { chmodSync, copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
-import { homedir } from 'node:os';
 import { atomicWrite } from '../src/config';
 import { freePort } from '../src/services';
 import { HubClient } from '../src/hub/client';
 import { hubConnectionPaths } from '../src/hub/resources/connection';
-import { configureSmokeCodexModel } from './fixtures/codex-model';
+import { modelHomes } from './fixtures/model-homes';
+import { closeSmoke } from './fixtures/smoke-lifecycle';
+import { removeFileSmokeData } from './fixtures/native-file-smoke';
 import { installedBinaries } from './fixtures/installed-binaries.mjs';
 
 mkdirSync('.dev-smoke', { recursive: true });
@@ -18,38 +19,31 @@ const selected = process.env.RUNWEFT_SMOKE_CONSUMER_CASE;
 assert(!selected || ['codex', 'remote', 'prepare', 'controls'].includes(selected), 'Unknown consumer smoke case');
 const env: NodeJS.ProcessEnv = { ...process.env };
 for (const key of Object.keys(env)) if (key.startsWith('HAPI_') || key.startsWith('RUNWEFT_') || ['CLI_API_TOKEN', 'DB_PATH', 'TELEGRAM_BOT_TOKEN'].includes(key)) delete env[key];
-const codexHome = join(root, 'codex'), claudeHome = join(root, 'claude');
-for (const dir of [codexHome, claudeHome]) mkdirSync(dir, { mode: 0o700 });
+const project = join(root, 'project'); mkdirSync(project);
+const models = modelHomes(root, env), codexHome = env.CODEX_HOME!, claudeHome = env.CLAUDE_CONFIG_DIR!;
+const { codexModel, nativeClaude } = models;
+
 function copy(from: string, to: string) { if (existsSync(from)) { mkdirSync(dirname(to), { recursive: true, mode: 0o700 }); copyFileSync(from, to); chmodSync(to, 0o600); } }
-for (const file of ['config.toml', 'auth.json']) copy(join(process.env.CODEX_HOME ?? join(homedir(), '.codex'), file), join(codexHome, file));
-const codexModel = configureSmokeCodexModel(join(codexHome, 'config.toml'));
-const sourceClaude = process.env.CLAUDE_CONFIG_DIR ?? join(homedir(), '.claude');
-copy(process.env.CLAUDE_CONFIG_DIR ? join(sourceClaude, '.claude.json') : join(homedir(), '.claude.json'), join(claudeHome, '.claude.json'));
-for (const file of ['settings.json', '.credentials.json']) copy(join(sourceClaude, file), join(claudeHome, file));
-const nativeClaude = Bun.which('iclaude') ?? Bun.which('claude'); assert(nativeClaude && Bun.which('codex'));
+const pids = new Set<number>(), privateCopies: string[] = [];
 const quote = (text: string) => `'${text.replaceAll("'", "'\\''")}'`, wrapper = join(root, 'claude-observer');
-writeFileSync(wrapper, `#!/bin/sh\nexec ${quote(process.execPath)} ${quote(resolve('scripts/fixtures/claude-observer.mjs'))} "$@"\n`, { mode: 0o700 });
-Object.assign(env, { CODEX_HOME: codexHome, CLAUDE_CONFIG_DIR: claudeHome, GIT_CONFIG_GLOBAL: '/dev/null', GIT_CONFIG_NOSYSTEM: '1',
-    GIT_AUTHOR_NAME: 'Runweft smoke', GIT_AUTHOR_EMAIL: 'smoke@example.invalid', GIT_COMMITTER_NAME: 'Runweft smoke', GIT_COMMITTER_EMAIL: 'smoke@example.invalid',
-    HAPI_CLAUDE_PATH: wrapper, RUNWEFT_SMOKE_CLAUDE: nativeClaude, RUNWEFT_SMOKE_CLAUDE_LOG: join(root, 'claude-init.jsonl') });
-for (const name of Object.keys((Bun.TOML.parse(readFileSync(join(codexHome, 'config.toml'), 'utf8')) as any).mcp_servers ?? {})) {
-    execFileSync('codex', ['mcp', 'remove', name], { env, stdio: 'pipe' });
-}
-const prefsPath = join(claudeHome, '.claude.json'), prefs = existsSync(prefsPath) ? JSON.parse(readFileSync(prefsPath, 'utf8')) : {};
-prefs.mcpServers = {}; writeFileSync(prefsPath, JSON.stringify(prefs), { mode: 0o600 });
-const port = await freePort(), base = `http://127.0.0.1:${port}`, secrets: string[] = [];
+let port: number, base: string;
+const secrets: string[] = [];
 const homes = [join(root, 'source-client'), join(root, 'target-client')];
 const homeEnvironments = new Map<string, NodeJS.ProcessEnv>();
 let ownerClient: HubClient | undefined;
-const evidence: any = { root, binary, binaries, codexModel, selected, success: false, checks: [], tasks: [], cleanupErrors: [],
+const evidence: any = { root, binary, binaries, codexModel, selected, kind: 'hub-consumers', handoffRequested: process.env.RUNWEFT_SMOKE_HANDOFF === '1', success: false, checks: [], tasks: [], rounds: [], cleanupErrors: [],
     scope: 'installed default Hub and adjacent unchanged HAPI, real Codex/Claude runtimes and two CLI-managed Runners on one physical Linux machine' };
-const project = join(root, 'project'); mkdirSync(project);
+
 function git(...args: string[]) { return execFileSync('git', ['-C', project, ...args], { env, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim(); }
 async function cli(home: string, args: string[]) {
     const child = Bun.spawn([binary, '--home', home, '--json', ...args], { cwd: project, env: homeEnvironments.get(home) ?? env, stdout: 'pipe', stderr: 'pipe' });
     const [exit, stdout, stderr] = await Promise.all([child.exited, new Response(child.stdout).text(), new Response(child.stderr).text()]);
     for (const secret of secrets) assert(!(stdout + stderr).includes(secret), 'Credential in CLI output');
-    assert.equal(exit, 0, `${args[0]}: ${stderr}`); return JSON.parse(stdout);
+    assert.equal(exit, 0, `${args[0]}: ${stderr}`);
+    const value = JSON.parse(stdout);
+    if (args[0] === 'task' && ['spawn', 'send'].includes(args[1]) && value.accepted) evidence.rounds.push({ taskId: value.agent_id, roundId: value.round_id });
+    if (args[0] === 'task' && args[1] === 'show' && typeof value.host_pid === 'number') pids.add(value.host_pid);
+    return value;
 }
 function check(name: string) { evidence.checks.push(name); console.log('PASS ' + name); }
 async function hubApi(path: string, body: object, token?: string) {
@@ -72,8 +66,20 @@ async function finish(home: string, id: string, timeoutMs = 240_000): Promise<an
 }
 console.log('Evidence directory: ' + root);
 try {
+    assert(nativeClaude && Bun.which('codex'));
+writeFileSync(wrapper, `#!/bin/sh\nexec ${quote(process.execPath)} ${quote(resolve('scripts/fixtures/claude-observer.mjs'))} "$@"\n`, { mode: 0o700 });
+Object.assign(env, { CODEX_HOME: codexHome, CLAUDE_CONFIG_DIR: claudeHome, GIT_CONFIG_GLOBAL: '/dev/null', GIT_CONFIG_NOSYSTEM: '1',
+    GIT_AUTHOR_NAME: 'Runweft smoke', GIT_AUTHOR_EMAIL: 'smoke@example.invalid', GIT_COMMITTER_NAME: 'Runweft smoke', GIT_COMMITTER_EMAIL: 'smoke@example.invalid',
+    HAPI_CLAUDE_PATH: wrapper, RUNWEFT_SMOKE_CLAUDE: nativeClaude, RUNWEFT_SMOKE_CLAUDE_LOG: join(root, 'claude-init.jsonl') });
+for (const name of Object.keys((Bun.TOML.parse(readFileSync(join(codexHome, 'config.toml'), 'utf8')) as any).mcp_servers ?? {})) {
+    execFileSync('codex', ['mcp', 'remove', name], { env, stdio: 'pipe' });
+}
+const prefsPath = join(claudeHome, '.claude.json'), prefs = existsSync(prefsPath) ? JSON.parse(readFileSync(prefsPath, 'utf8')) : {};
+prefs.mcpServers = {}; writeFileSync(prefsPath, JSON.stringify(prefs), { mode: 0o600 });
+    port = await freePort(); base = `http://127.0.0.1:${port}`;
     await cli(serverHome, ['init']); await cli(serverHome, ['config', 'set', 'server.port', String(port)]); await cli(serverHome, ['start']);
     const owner = await hubApi('/identities', { name: 'Task owner' }), remote = await hubApi('/identities', { name: 'Runner owner' }), space = owner.personalSpace.id;
+    Object.assign(evidence, { serverHome, clientHomes: homes, ownerId: owner.identity.id, spaceId: space });
     const invitation = await hubApi(`/spaces/${space}/invitations`, { role: 'member' }, owner.token);
     await hubApi('/invitations/accept', { token: invitation.token }, remote.token); secrets.push(owner.token, remote.token, invitation.token);
     const machineIds: string[] = [];
@@ -125,7 +131,7 @@ try {
     evidence.tasks.push({ mode: 'shared', runtime: 'codex', id: accepted.agent_id, firstRound: first.round_id, secondRound: second.round_id, nativeSessionId: second.native_session_id });
     check('real Codex shared execution stops each round and resumes the same native session through the saved Hub identity');
     const emptyCodex = join(root, 'codex-without-history'); mkdirSync(emptyCodex, { mode: 0o700 });
-    for (const file of ['config.toml', 'auth.json']) copy(join(codexHome, file), join(emptyCodex, file));
+    for (const file of ['config.toml', 'auth.json']) { const path = join(emptyCodex, file); privateCopies.push(path); copy(join(codexHome, file), path); }
     await cli(homes[0], ['runner', 'stop']);
     homeEnvironments.set(homes[0], { ...env, CODEX_HOME: emptyCodex });
     await cli(homes[0], ['runner', 'start']);
@@ -170,6 +176,14 @@ try {
     assert.equal((await cli(homes[0], ['task', 'show', remoteTask.agent_id])).environment.status, 'retained');
     await cli(homes[0], ['task', 'result', 'release', remoteTask.agent_id, '--apply']);
     await cli(homes[0], ['task', 'artifacts', 'release', remoteTask.agent_id, '--apply']);
+    await until(async () => {
+        const detail = await cli(homes[0], ['task', 'show', remoteTask.agent_id]);
+        const result = await cli(homes[0], ['task', 'result', 'show', remoteTask.agent_id]);
+        return { detail, result };
+    }, ({ detail, result }) => result.fetches.every((fetch: any) => fetch.released === true)
+        && detail.code.retention.state === 'released' && detail.artifacts.retention.state === 'released'
+        && detail.artifacts.pending.length === 0 && detail.input_files.download_retention === 'released'
+        && detail.stop === 'stopped' && detail.finish === 'complete', 'remote result and artifact release before workspace removal');
     await cli(homes[0], ['task', 'workspace', 'remove', remoteTask.agent_id, '--discard-ignored']);
     await until(() => cli(homes[0], ['task', 'show', remoteTask.agent_id]), value => value.environment.status === 'removed', 'explicit remote workspace release');
     assert.equal(git('show', `${ref}:result.txt`), 'CENTRAL_INPUT_BYTES');
@@ -216,12 +230,45 @@ try {
     evidence.success = true;
 } catch (error) { evidence.error = error instanceof Error ? error.message : String(error); process.exitCode = 1; }
 finally {
-    if (ownerClient) try { const { sessions } = await ownerClient.http.request('/api/sessions'); for (const session of sessions) if (session.active) await ownerClient.http.request(`/api/sessions/${session.id}/archive`, { method: 'POST' }); }
-    catch (error) { evidence.cleanupErrors.push(String(error)); }
-    for (const home of [...homes, serverHome]) if (existsSync(join(home, 'config.yaml'))) {
-        try { await cli(home, ['stop']); } catch (error) { evidence.cleanupErrors.push(String(error)); }
+    const attempt = async (action: () => void | Promise<void>) => { try { await action(); } catch (error) { evidence.cleanupErrors.push(String(error)); } };
+    const client = ownerClient?.http;
+    let sessionsConfirmed = !client;
+    if (client) await attempt(async () => {
+        const { sessions } = await client.request('/api/sessions');
+        let archived = true;
+        for (const session of sessions) {
+            if (typeof session.metadata?.hostPid === 'number') pids.add(session.metadata.hostPid);
+            if (session.active) { let confirmed = false; await attempt(async () => { await client.request(`/api/sessions/${session.id}/archive`, { method: 'POST', signal: AbortSignal.timeout(45_000) }); confirmed = true; }); archived &&= confirmed; }
+        }
+        sessionsConfirmed = archived;
+    });
+    const fixtureHomes = [...homes, serverHome];
+    const paths: any[] = []; let stopsConfirmed = true;
+    for (const directory of fixtureHomes) if (existsSync(join(directory, 'config.yaml'))) {
+        await attempt(async () => { paths.push(await cli(directory, ['paths'])); });
+        await attempt(async () => { await cli(directory, ['stop']); });
+        let confirmed = false;
+        await attempt(async () => { const status = await cli(directory, ['status']);
+            assert.equal(status.service.running, false); assert.equal(status.runner.running, false); confirmed = true; });
+        stopsConfirmed &&= confirmed;
+    }
+    let hostsStopped = false;
+    await attempt(async () => { await models.waitHosts(pids); hostsStopped = true; });
+    const safe = sessionsConfirmed && stopsConfirmed && hostsStopped;
+    if (!safe) evidence.cleanupErrors.push('Process shutdown uncertain; configuration and connection secrets retained');
+    await attempt(() => models.verify());
+    if (safe) {
+        await attempt(() => models.remove());
+        await attempt(() => closeSmoke(privateCopies.map(path => () => rmSync(path, { force: true }))));
+        const handoff = evidence.success && !evidence.cleanupErrors.length && evidence.handoffRequested;
+        evidence.handoff = handoff;
+        if (handoff) { evidence.cleanupOwner = 'T7 final consumer'; evidence.paths = paths; evidence.nativeHomes = { codex: codexHome, claude: claudeHome }; }
+        else await attempt(() => closeSmoke(paths.flatMap(path => [path.identityConnection, path.machineConnection, path.pendingConnection, join(path.hapiClient, 'settings.json'), join(path.hapiServer, 'settings.json'), join(path.hapiServer, 'jwt-secret.json')]).filter(Boolean).map(path => () => rmSync(path, { force: true }))));
     }
     if (evidence.cleanupErrors.length) { evidence.success = false; process.exitCode = 1; }
+    evidence.hostPids = [...pids]; evidence.finishedAt = new Date().toISOString();
     writeFileSync(join(root, 'evidence.json'), JSON.stringify(evidence, null, 2), { mode: 0o600 });
+    if (evidence.success && !evidence.handoff) await attempt(() => removeFileSmokeData(root));
+    if (evidence.cleanupErrors.length) { evidence.success = false; process.exitCode = 1; writeFileSync(join(root, 'evidence.json'), JSON.stringify(evidence, null, 2), { mode: 0o600 }); }
     console.log('Evidence: ' + join(root, 'evidence.json')); if (evidence.error) console.error(evidence.error);
 }

@@ -3,11 +3,13 @@ import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
 import { ArtifactClient } from '../src/artifacts/client';
 import { randomUUID, createHash } from 'node:crypto';
-import { spawn, spawnSync, type ChildProcess } from 'node:child_process';
-import { chmodSync, closeSync, existsSync, mkdirSync, mkdtempSync, openSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
-import { HapiClient } from '../src/hapi';
-import { freePort } from '../src/services';
+import type { HapiHttp } from '../src/hapi';
+import { agentSnapshot } from '../src/hub/delegation/context';
+import type { AgentSnapshot } from '../src/tasks/types';
+import { nativeFileSmoke } from './fixtures/native-file-smoke';
 import type { RepositoryOperation } from '../hapi/shared/src/repositories';
 import type { ArtifactTransfer } from '../hapi/shared/src/artifactTransfers';
 import type { ManagedWorkspace, WorkspaceSource } from '../hapi/shared/src/workspaces';
@@ -17,16 +19,18 @@ const taskResults = process.argv.includes('--tasks'), fetchResults = process.arg
 const binary = resolve(paths[0] ?? 'dist/runweft'), hapiBinary = resolve(paths[1] ?? 'dist/hapi');
 mkdirSync('.dev-smoke', { recursive: true }); const root = mkdtempSync(resolve(taskResults ? '.dev-smoke/task-result-delivery-' : fetchResults ? '.dev-smoke/repository-result-fetch-' : '.dev-smoke/repository-result-export-'));
 const center = join(root, 'center'), sourceHome = join(root, 'source-runner'), targetHome = join(root, 'target-runner');
-const env = { ...process.env }; for (const key of Object.keys(env)) if (key.startsWith('RUNWEFT_')) delete env[key];
+const env = { ...process.env }; for (const key of Object.keys(env)) if (key.startsWith('RUNWEFT_') || key.startsWith('HAPI_') || ['CLI_API_TOKEN', 'DB_PATH', 'TELEGRAM_BOT_TOKEN'].includes(key)) delete env[key];
 env.GIT_CONFIG_GLOBAL = '/dev/null'; env.GIT_CONFIG_NOSYSTEM = '1';
 const evidence = { root, binary, hapiBinary, startedAt: new Date().toISOString(), finishedAt: '', success: false,
     sourceMachineId: '', targetMachineId: '', exportId: '', importId: '', resultExports: [] as RepositoryOperation[], fetches: [] as RepositoryOperation[], lostResponses: [] as string[], environments: [] as string[], checks: [] as string[], error: '', cleanupErrors: [] as string[] };
-let token: string | undefined, hapi: HapiClient, foreground: ChildProcess | undefined;
-const homes: string[] = [];
-function cli(home: string, args: string[], input?: string) {
-    const result = spawnSync(binary, ['--home', home, '--json', ...args], { env, input, encoding: 'utf8', timeout: 45_000 });
-    if (token) assert(!`${result.stdout}${result.stderr}`.includes(token), 'Credential leaked');
-    assert.equal(result.status, 0, `${args.slice(0, 2).join(' ')}: ${result.stderr || result.error || result.signal}`); return JSON.parse(result.stdout);
+let hapi: HapiHttp, fixture: Awaited<ReturnType<typeof nativeFileSmoke>> | undefined;
+let sourceRunner: Awaited<ReturnType<NonNullable<typeof fixture>['addRunner']>>, targetRunner: typeof sourceRunner;
+let probeAgent: AgentSnapshot;
+let sourceScope: Awaited<ReturnType<NonNullable<typeof fixture>['scoped']>>, targetScope: typeof sourceScope;
+async function runnerAction(home: string, action: 'start' | 'stop' | 'restart') {
+    const item = home === sourceHome ? sourceRunner : targetRunner;
+    if (action !== 'start') await fixture!.stopRunner(item);
+    if (action !== 'stop') await fixture!.startRunner(item);
 }
 function git(cwd: string, ...args: string[]) {
     const result = spawnSync('git', ['-C', cwd, ...args], { env: { ...env, GIT_LFS_SKIP_SMUDGE: '1' }, encoding: 'utf8' });
@@ -39,7 +43,7 @@ function init(path: string) {
 function commit(path: string) { git(path, 'add', '.'); git(path, 'commit', '-qm', 'baseline'); }
 const note = (message: string) => { evidence.checks.push(message); console.log(message); };
 async function call(machine: string, domain: string, body: unknown) {
-    return hapi.request(`/api/machines/${machine}/${domain}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+    return (machine === evidence.sourceMachineId ? sourceScope : targetScope).native.request(`/api/machines/${machine}/${domain}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
 }
 async function loseResponse(url: string, machine: string, request: { action: string; operationId: string }) {
     let dropped = false;
@@ -49,7 +53,7 @@ async function loseResponse(url: string, machine: string, request: { action: str
             const headers = new Headers(); for (const [key, value] of Object.entries(incoming.headers)) if (value && !['host', 'connection', 'content-length'].includes(key)) headers.set(key, Array.isArray(value) ? value.join(',') : value);
             const response = await fetch(url + incoming.url, { method: incoming.method, headers, body: body.length ? body : undefined });
             const bytes = Buffer.from(await response.arrayBuffer());
-            if (incoming.url?.endsWith('/repositories') && body.length && JSON.parse(body.toString()).action === request.action && response.ok) {
+            if (incoming.url?.endsWith('/repositories') && body.length && JSON.parse(body.toString()).action === request.action && JSON.parse(body.toString()).operationId === request.operationId && !dropped && response.ok) {
                 dropped = true; outgoing.socket?.destroy(); outgoing.destroy(); return;
             }
             outgoing.writeHead(response.status, { 'content-type': response.headers.get('content-type') ?? 'application/json' }); outgoing.end(bytes);
@@ -57,7 +61,7 @@ async function loseResponse(url: string, machine: string, request: { action: str
     });
     try {
         await new Promise<void>(resolve => proxy.listen(0, '127.0.0.1', resolve)); const address = proxy.address(); assert(address && typeof address !== 'string');
-        const losing = new HapiClient(`http://127.0.0.1:${address.port}`, token!);
+        const losing = fixture!.losingNative((machine === evidence.sourceMachineId ? sourceScope : targetScope).native, `http://127.0.0.1:${address.port}`);
         await assert.rejects(() => losing.request(`/api/machines/${machine}/repositories`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(request) }), { code: 'connection_failed' }); assert(dropped);
     } finally { proxy.closeAllConnections(); await new Promise<void>(resolve => proxy.close(() => resolve())); }
     evidence.lostResponses.push(request.operationId);
@@ -81,25 +85,12 @@ async function prepare(source: WorkspaceSource, prior?: ManagedWorkspace) {
     if (!evidence.environments.includes(environmentId)) evidence.environments.push(environmentId);
     return { workspace, request };
 }
-async function startHub(url: string) {
-    const fd = openSync(join(root, 'hub.log'), 'a', 0o600);
-    try { foreground = spawn(binary, ['--home', center, 'serve', '--public'], { env, stdio: ['ignore', fd, fd] }); } finally { closeSync(fd); }
-    await until(async () => { if (foreground!.exitCode !== null) throw new Error('Hub exited'); return fetch(`${url}/api/runweft/health`).then(r => r.ok).catch(() => false); }, ready => ready);
-}
 try {
-    const port = await freePort(), url = `http://127.0.0.1:${port}`;
-    cli(center, ['init']); homes.push(center); cli(center, ['config', 'set', 'server.port', String(port)]);
-    cli(center, ['config', 'set', 'server.runner', 'false']); cli(center, ['config', 'set', 'hapi.executable', hapiBinary]);
-    cli(center, ['config', 'set', 'server.publicUrl', url]); cli(center, ['start']);
-    token = JSON.parse(readFileSync(join(center, 'server/hapi/settings.json'), 'utf8')).cliApiToken; assert(token); cli(center, ['stop']);
-    await startHub(url);
-    hapi = new HapiClient(url, token); assert.equal((await hapi.request('/api/machines')).machines.length, 0);
-    for (const home of [sourceHome, targetHome]) {
-        cli(home, ['init', '--url', url]); homes.push(home); cli(home, ['config', 'set', 'hapi.executable', hapiBinary]);
-        cli(home, ['auth', 'login', '--token-stdin'], token); cli(home, ['start']);
-        const machineId = cli(home, ['machine', 'register']).machine.id;
-        if (home === sourceHome) evidence.sourceMachineId = machineId; else evidence.targetMachineId = machineId;
-    }
+    fixture = await nativeFileSmoke(root, [binary], hapiBinary, env); Object.assign(evidence, { candidate: fixture.candidate });
+    sourceRunner = await fixture.addRunner(); targetRunner = await fixture.addRunner();
+    evidence.sourceMachineId = sourceRunner.machineId; evidence.targetMachineId = targetRunner.machineId; hapi = fixture.http;
+    sourceScope = await fixture.scoped(sourceRunner.machineId); targetScope = await fixture.scoped(targetRunner.machineId);
+    const url = fixture.nativeUrl;
     assert.notEqual(evidence.sourceMachineId, evidence.targetMachineId);
     const repo = init(join(root, 'source/project')), child = init(join(root, 'source/child'));
     git(child, 'lfs', 'install', '--local'); writeFileSync(join(child, '.gitattributes'), '*.bin filter=lfs diff=lfs merge=lfs -text\n');
@@ -122,7 +113,17 @@ try {
     const delivered = await done<ArtifactTransfer>(evidence.sourceMachineId, 'artifacts', deliveryId); assert.equal(delivered.status, 'succeeded', JSON.stringify(delivered.error));
     await call(evidence.sourceMachineId, 'artifacts', { action: 'release', operationId: captureId });
     await call(evidence.sourceMachineId, 'repositories', { action: 'release', operationId: evidence.exportId });
-    renameSync(join(root, 'source'), join(root, 'source-offline')); cli(sourceHome, ['stop']); assert(!existsSync(repo)); assert(!existsSync(exported.directory));
+    if (taskResults) {
+        const repository = (await fixture.cli(['repository', 'create', 'Result probe', '--request-id', randomUUID()])).repository;
+        await fixture.cli(['repository', 'bind', repository.id, '--machine', sourceRunner.machineId, '--cwd', repo]);
+        const runtime = (await fixture.cli(['runtime', 'register', 'codex', '--machine', targetRunner.machineId])).runtime;
+        const definition = join(root, 'result-agent.json'); writeFileSync(definition, JSON.stringify({ name: 'Result probe', runtimeId: runtime.id, repositoryId: repository.id }));
+        const agent = (await fixture.cli(['agent', 'create', '--request-id', randomUUID(), '--file', definition])).agent;
+        const resolved = (await fixture.cli(['agent', 'resolve', '--agent', agent.id, '--repository', repository.id])).resolution;
+        const actor = fixture.gateway.store.authenticate(fixture.user.token, fixture.space);
+        probeAgent = agentSnapshot(fixture.gateway.delegation.scopes.ensure(actor), resolved);
+    }
+    renameSync(join(root, 'source'), join(root, 'source-offline')); await runnerAction(sourceHome, 'stop'); assert(!existsSync(repo)); assert(!existsSync(exported.directory));
     note('Hub without a Runner retains published Git/LFS objects; source paths, export candidates and capture spool are gone and source Runner is stopped');
     const materializeId = randomUUID();
     await call(evidence.targetMachineId, 'artifacts', { action: 'materialize', operationId: materializeId, files: delivered.deliveries!.map(file => {
@@ -137,16 +138,9 @@ try {
     assert(materialized.files.every(file => !existsSync(file.path))); assert(!existsSync(imported.directory));
     const targetSource = { ...imported.imported.source, relativePath: source.relativePath };
     if (taskResults) {
-        await taskResultsProbe({ root, center, sourceHome, targetHome, repo, binary, env, hapi, source, targetSource, imported, exported, delivered, note, restartHub: async () => { cli(center, ['stop']); await startHub(url); },
-            editTasks: async edit => {
-                cli(center, ['stop']);
-                try { return edit(); } finally {
-                    await startHub(url);
-                    // Hub readiness precedes Runner RPC re-registration; query an existing receipt before the next prepare.
-                    await until(() => call(evidence.targetMachineId, 'repositories', { action: 'inspect', operationId: evidence.importId })
-                        .then(value => value.operation?.status === 'succeeded').catch(() => false), ready => ready);
-                }
-            } });
+        await taskResultsProbe({ root, center, sourceHome: sourceRunner.home, targetHome: targetRunner.home, repo, binary, env, hapi, source, targetSource, imported, exported, delivered,
+            fixture, sourceRunner, targetRunner, agent: probeAgent!, note, restartHub: () => fixture!.restart(true), editTasks: async edit => { await fixture!.reopenGateway(false); return edit(); } });
+        Object.assign(evidence, { taskResults: JSON.parse(readFileSync(join(root, 'task-results.json'), 'utf8')) });
     } else {
     const [a, b] = await Promise.all([prepare(targetSource), prepare(targetSource)]);
     assert.notEqual(a.workspace.branch, b.workspace.branch); assert.equal(a.workspace.source.commonDir, b.workspace.source.commonDir);
@@ -158,13 +152,13 @@ try {
     const sealed = await until(async () => (await call(evidence.targetMachineId, 'workspaces', { action: 'inspect', environmentId: a.request.environmentId })).workspace as ManagedWorkspace,
         item => !['accepted', 'running'].includes(item.operations[`finalize:${a.request.roundId}:${attemptId}`]!.status));
     assert(sealed.results[a.request.roundId], JSON.stringify(sealed.operations));
-    assert.equal((await hapi.request('/api/machines')).machines.find((item: any) => item.id === evidence.targetMachineId).runnerState.capabilities.repositoryResults, 1);
+    assert.equal((await targetScope.native.request('/api/machines')).machines.find((item: any) => item.id === evidence.targetMachineId).runnerState.capabilities.repositoryResults, 1);
     const resultRequest = { action: 'export-result', operationId: randomUUID(), environmentId: a.request.environmentId, roundId: a.request.roundId };
     await loseResponse(url, evidence.targetMachineId, resultRequest);
     const first = await done<RepositoryOperation>(evidence.targetMachineId, 'repositories', resultRequest.operationId);
     assert.equal(first.status, 'succeeded', JSON.stringify(first.error)); assert.deepEqual(first.sealed!.result, sealed.results[a.request.roundId]); evidence.resultExports.push(first);
     const frozen = readFileSync(join(first.directory, first.snapshot!.repositories[0]!.file));
-    cli(targetHome, ['restart']); assert.deepEqual((await call(evidence.targetMachineId, 'repositories', resultRequest)).operation, first);
+    await runnerAction(targetHome, 'restart'); assert.deepEqual((await call(evidence.targetMachineId, 'repositories', resultRequest)).operation, first);
     const resumed = await prepare(targetSource, sealed); assert.equal(readFileSync(join(resumed.workspace.cwd, 'note'), 'utf8'), 'retained checkpoint');
     writeFileSync(join(resumed.workspace.checkout, 'root.bin'), Buffer.from('partial second binary result\0'.repeat(1024))); rmSync(resumed.workspace.cwd, { recursive: true });
     const finishId = randomUUID(); await call(evidence.targetMachineId, 'workspaces', { action: 'finalize', environmentId: resumed.request.environmentId,
@@ -193,7 +187,7 @@ try {
         assert(!existsSync(result.directory));
     }
     const refs = git(targetSource.commonDir, 'show-ref'); assert(refs.includes(first.sealed!.result.resultRef)); assert(refs.includes(second.sealed!.result.resultRef));
-    assert.equal((await hapi.request('/api/sessions')).sessions.length, 0); cli(targetHome, ['stop']);
+    assert.equal((await hapi.request('/api/sessions')).sessions.length, 0); await runnerAction(targetHome, 'stop');
     const workspaceRoot = resolve(targetSource.commonDir, '../../..'); renameSync(workspaceRoot, `${workspaceRoot}-offline`);
     const artifacts = new ArtifactClient(hapi);
     for (const { operation: result, transfer } of published) {
@@ -213,8 +207,8 @@ try {
     }
     note('both source/target Runners are stopped and target Git storage hidden; center downloads restore each full root/module bundle and binary LFS with exact hashes and independent ancestry/fsck checks, without native sessions');
     if (fetchResults) {
-        renameSync(join(root, 'source-offline'), join(root, 'source')); cli(sourceHome, ['start']);
-        await until(async () => (await hapi.request('/api/machines')).machines.find((item: any) => item.id === evidence.sourceMachineId)?.active, active => active === true);
+        renameSync(join(root, 'source-offline'), join(root, 'source')); await runnerAction(sourceHome, 'start');
+        // startRunner waits for actual discovery RPC, not stale presence.
         git(repo, 'checkout', '--detach', source.baseCommit);
         for (const ref of git(repo, 'for-each-ref', '--format=%(refname)', 'refs/heads').split('\n').filter(Boolean)) git(repo, 'update-ref', '-d', ref);
         git(repo, 'submodule', 'deinit', '-f', '--all'); renameSync(join(repo, '.git/modules'), join(root, 'old-parent-modules'));
@@ -247,7 +241,7 @@ try {
             assert.deepEqual(state(), before); assert(!existsSync(marker)); assert.equal(git(repo, 'rev-parse', fetched.fetched.ref), item.operation.sealed!.result.resultHead);
             for (const file of fetched.fetched.lfs) assert.equal(createHash('sha256').update(readFileSync(file.path)).digest('hex'), file.oid);
             await call(evidence.sourceMachineId, 'artifacts', { action: 'release', operationId: output.operationId });
-            cli(sourceHome, ['restart']); assert.deepEqual((await call(evidence.sourceMachineId, 'repositories', request)).operation, fetched);
+            await runnerAction(sourceHome, 'restart'); assert.deepEqual((await call(evidence.sourceMachineId, 'repositories', request)).operation, fetched);
             await call(evidence.sourceMachineId, 'repositories', { action: 'release', operationId: request.operationId });
             assert.equal(git(repo, 'rev-parse', fetched.fetched.ref), item.operation.sealed!.result.resultHead);
         }
@@ -262,14 +256,13 @@ try {
         assert.deepEqual(readFileSync(join(repo, 'vendor/module/asset.bin')), content); assert(!existsSync(join(repo, 'app')));
         assert.equal(readFileSync(join(repo, 'untracked'), 'utf8'), 'parent untracked');
         assert.equal(readFileSync(join(repo, '.gitattributes'), 'utf8'), '*.bin filter=lfs diff=lfs merge=lfs -text\n# unstaged parent change\n');
-        note('public fetch-result restores both rounds and baseline/result LFS from center with executor offline, preserves staged/unstaged/untracked/index/config/HEAD/FETCH_HEAD, suppresses configured hooks, recovers lost responses/restarts, and then explicit merge/module initialization succeeds offline');
+        note('trusted current fetch-result restores both rounds and baseline/result LFS from center with executor offline, preserves staged/unstaged/untracked/index/config/HEAD/FETCH_HEAD, suppresses configured hooks, recovers lost responses/restarts, and then explicit merge/module initialization succeeds offline');
     }
     }
     evidence.success = true;
 } catch (error) { evidence.error = error instanceof Error ? error.stack ?? error.message : String(error); process.exitCode = 1; }
 finally {
-    for (const home of [...homes].reverse()) { try { cli(home, ['stop']); } catch (error) { evidence.cleanupErrors.push(String(error)); } }
-    if (foreground?.exitCode === null) { foreground.kill('SIGTERM'); await new Promise<void>(resolve => foreground!.once('exit', () => resolve())); }
+    try { await fixture?.close(evidence.success); } catch (error) { evidence.cleanupErrors.push(...(error instanceof AggregateError ? error.errors.map(String) : [String(error)])); }
     if (evidence.cleanupErrors.length) { evidence.success = false; process.exitCode = 1; }
     evidence.finishedAt = new Date().toISOString(); writeFileSync(join(root, 'evidence.json'), JSON.stringify(evidence, null, 2));
     console.log(`Evidence: ${join(root, 'evidence.json')}`); if (evidence.error) console.error(evidence.error);

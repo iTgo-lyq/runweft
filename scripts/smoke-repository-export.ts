@@ -4,30 +4,27 @@ import { spawnSync } from 'node:child_process';
 import { createServer } from 'node:http';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { HapiClient } from '../src/hapi';
+import type { HapiHttp } from '../src/hapi';
+import { nativeFileSmoke } from './fixtures/native-file-smoke';
+import { closeSmoke } from './fixtures/smoke-lifecycle';
 import { ArtifactClient } from '../src/artifacts/client';
-import { freePort } from '../src/services';
 import type { RepositoryFile, RepositoryOperation, RepositorySnapshot } from '../hapi/shared/src/repositories';
 import type { ArtifactTransfer } from '../hapi/shared/src/artifactTransfers';
 
 // A real Hub/Runner and HTTP response loss. No native agent or global configuration changes.
 const binary = resolve(process.argv[2] ?? 'dist/runweft'), hapiBinary = resolve(process.argv[3] ?? 'dist/hapi');
-mkdirSync('.dev-smoke', { recursive: true }); const root = mkdtempSync(resolve('.dev-smoke/repository-export-')), home = join(root, 'home');
+mkdirSync('.dev-smoke', { recursive: true }); const root = mkdtempSync(resolve('.dev-smoke/repository-export-'));
 const env = { ...process.env }; for (const key of Object.keys(env)) if (key.startsWith('RUNWEFT_')) delete env[key];
 const evidence = { root, binary, hapiBinary, startedAt: new Date().toISOString(), finishedAt: '', success: false,
     operationId: randomUUID(), proxyRequests: [] as { path: string; action: string; status: number }[], checks: [] as string[], artifactIds: [] as string[], error: '', cleanupErrors: [] as string[] };
-let token: string | undefined, hapi: HapiClient | undefined, machineId = '', proxy: ReturnType<typeof createServer> | undefined;
-function cli(args: string[]) {
-    const result = spawnSync(binary, ['--home', home, '--json', ...args], { env, encoding: 'utf8', timeout: 45_000 });
-    if (token) assert(!`${result.stdout}${result.stderr}`.includes(token), 'Credential leaked');
-    assert.equal(result.status, 0, `${args.slice(0, 2).join(' ')}: ${result.stderr || result.error || result.signal}`); return JSON.parse(result.stdout);
-}
+let hapi: HapiHttp | undefined, machineId = '', proxy: ReturnType<typeof createServer> | undefined;
+let fixture: Awaited<ReturnType<typeof nativeFileSmoke>> | undefined, scope: Awaited<ReturnType<Awaited<ReturnType<typeof nativeFileSmoke>>['scoped']>>;
 function git(cwd: string, ...args: string[]) {
     const result = spawnSync('git', ['-C', cwd, ...args], { env: { ...env, GIT_LFS_SKIP_SMUDGE: '1' }, encoding: 'utf8' });
     assert.equal(result.status, 0, result.stderr); return result.stdout.trim();
 }
 const note = (message: string) => { evidence.checks.push(message); console.log(message); };
-async function call(domain: string, body: unknown, client = hapi!) {
+async function call(domain: string, body: unknown, client = scope.native) {
     return await client.request(`/api/machines/${machineId}/${domain}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
 }
 async function done<T extends { status: string }>(domain: string, operationId: string): Promise<T> {
@@ -40,10 +37,9 @@ async function done<T extends { status: string }>(domain: string, operationId: s
     throw new Error(`Operation still unconfirmed: ${domain}/${operationId}`);
 }
 try {
-    cli(['init']); cli(['config', 'set', 'server.port', String(await freePort())]); cli(['config', 'set', 'hapi.executable', hapiBinary]); const started = cli(['start']);
-    token = JSON.parse(readFileSync(join(home, 'server/hapi/settings.json'), 'utf8')).cliApiToken; assert(token);
-    hapi = new HapiClient(started.url, token); const artifacts = new ArtifactClient(hapi);
-    const machine = (await hapi.request('/api/machines')).machines[0]; machineId = machine.id; assert.equal(machine.runnerState.capabilities.repositoryExport, 1);
+    fixture = await nativeFileSmoke(root, [binary], hapiBinary, env); Object.assign(evidence, { candidate: fixture.candidate });
+    const runner = await fixture.addRunner(); machineId = runner.machineId; hapi = fixture.http; const artifacts = new ArtifactClient(hapi);
+    scope = await fixture.scoped(machineId);
     const repo = join(root, 'project'); mkdirSync(repo); git(repo, 'init', '-q'); git(repo, 'lfs', 'install', '--local');
     git(repo, 'config', 'user.name', 'Export Smoke'); git(repo, 'config', 'user.email', 'smoke@example.invalid'); git(repo, 'config', 'commit.gpgsign', 'false');
     writeFileSync(join(repo, '.gitattributes'), '*.bin filter=lfs diff=lfs merge=lfs -text\n');
@@ -57,7 +53,7 @@ try {
         try {
             const chunks: Buffer[] = []; for await (const chunk of request) chunks.push(Buffer.from(chunk)); const body = Buffer.concat(chunks);
             const headers = new Headers(); for (const [name, value] of Object.entries(request.headers)) if (value && !['host', 'connection', 'content-length'].includes(name)) headers.set(name, Array.isArray(value) ? value.join(',') : value);
-            const upstream = await fetch(started.url + request.url, { method: request.method, headers, body: body.length ? body : undefined });
+            const upstream = await fetch(fixture!.nativeUrl + request.url, { method: request.method, headers, body: body.length ? body : undefined });
             const bytes = Buffer.from(await upstream.arrayBuffer());
             evidence.proxyRequests.push({ path: request.url ?? '', action: body.length ? JSON.parse(body.toString()).action ?? 'auth' : '', status: upstream.status });
             if (request.url?.endsWith('/repositories') && body.length && JSON.parse(body.toString()).action === 'export' && upstream.ok) { dropped = true; response.socket?.destroy(); response.destroy(); return; }
@@ -65,11 +61,11 @@ try {
         } catch { response.writeHead(502); response.end(); }
     });
     await new Promise<void>(resolve => proxy!.listen(0, '127.0.0.1', resolve)); const address = proxy.address(); assert(address && typeof address !== 'string');
-    const losing = new HapiClient(`http://127.0.0.1:${address.port}`, token), request = { action: 'export', operationId: evidence.operationId, source };
+    const losing = fixture.losingNative(scope.native, `http://127.0.0.1:${address.port}`), request = { action: 'export', operationId: evidence.operationId, source };
     await assert.rejects(() => call('repositories', request, losing), { code: 'connection_failed' }); assert(dropped);
     const exported = await done<RepositoryOperation>('repositories', evidence.operationId); assert.equal(exported.status, 'succeeded', JSON.stringify(exported.error)); assert(exported.snapshot);
     assert.equal(exported.snapshot.baseCommit, source.baseCommit); assert.equal(git(repo, 'show-ref'), refs); assert.deepEqual(readFileSync(join(repo, '.git/index')), index); assert.deepEqual(readFileSync(join(repo, '.git/config')), config);
-    cli(['restart']); assert.deepEqual((await call('repositories', request)).operation, exported);
+    await fixture.restart(); assert.deepEqual((await call('repositories', request)).operation, exported);
     note('actual HTTP response loss recovers the same fixed export after Hub/Runner restart; source branch/index/config remain unchanged');
     const captureId = randomUUID(); await call('artifacts', { action: 'capture', operationId: captureId, cwd: exported.directory, files: exported.snapshot.files.map(file => ({ name: file.name, relativePath: file.name })) });
     assert.equal((await done<ArtifactTransfer>('artifacts', captureId)).status, 'succeeded');
@@ -91,8 +87,8 @@ try {
     evidence.success = true;
 } catch (error) { evidence.error = error instanceof Error ? error.stack ?? error.message : String(error); process.exitCode = 1; }
 finally {
-    if (proxy) { proxy.closeAllConnections(); await new Promise<void>(resolve => proxy!.close(() => resolve())); }
-    try { cli(['stop']); } catch (error) { evidence.cleanupErrors.push(String(error)); }
+    try { await closeSmoke([() => fixture?.close(evidence.success), async () => { if (proxy) { proxy.closeAllConnections(); await new Promise<void>(resolve => proxy!.close(() => resolve())); } }]); }
+    catch (error) { evidence.cleanupErrors.push(...(error instanceof AggregateError ? error.errors.map(String) : [String(error)])); }
     if (evidence.cleanupErrors.length) { evidence.success = false; process.exitCode = 1; }
     evidence.finishedAt = new Date().toISOString(); writeFileSync(join(root, 'evidence.json'), JSON.stringify(evidence, null, 2));
     console.log(`Evidence: ${join(root, 'evidence.json')}`); if (evidence.error) console.error(evidence.error);

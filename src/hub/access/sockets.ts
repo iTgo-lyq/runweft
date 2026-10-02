@@ -39,6 +39,7 @@ export function attachAccessSockets(server: HttpServer, store: AccessStore, auth
     const bridge = new Server(server, { maxHttpBufferSize: SOCKET_MAX_HTTP_BUFFER_SIZE, serveClient: false });
     bridge.of('/').use((_socket, next) => next(new Error('Runweft socket namespace unavailable.')));
     const closeConnections = new Set<() => void>();
+    let shuttingDown = false;
     // Engine.IO handles its exact path. Other upgrades have no forwarding path.
     server.on('upgrade', (request, socket) => {
         if (new URL(request.url ?? '/', 'http://runweft.invalid').pathname !== '/socket.io/') socket.end('HTTP/1.1 403 Forbidden\r\nConnection: close\r\n\r\n');
@@ -74,7 +75,9 @@ export function attachAccessSockets(server: HttpServer, store: AccessStore, auth
         let timer: ReturnType<typeof setInterval> | undefined, closed = false;
         const close = () => {
             if (closed) return; closed = true; clearInterval(timer); controller.abort();
-            up.disconnect(); down.disconnect(true); closeConnections.delete(close);
+            up.disconnect();
+            if (shuttingDown) down.conn.close(); else down.disconnect(true);
+            closeConnections.delete(close);
         };
         closeConnections.add(close);
         const check = () => {
@@ -223,5 +226,5 @@ export function attachAccessSockets(server: HttpServer, store: AccessStore, auth
             check();
         } catch (error) { close(); throw error; }
     }
-    return { bridge, close() { for (const close of closeConnections) close(); bridge.disconnectSockets(true); bridge.engine.close(); } };
+    return { bridge, close() { shuttingDown = true; for (const close of closeConnections) close(); bridge.engine.close(); } };
 }

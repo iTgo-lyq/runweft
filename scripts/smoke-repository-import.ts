@@ -1,10 +1,10 @@
 import assert from 'node:assert/strict';
 import { randomUUID, createHash } from 'node:crypto';
-import { spawn, spawnSync, type ChildProcess } from 'node:child_process';
-import { closeSync, existsSync, mkdirSync, mkdtempSync, openSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
-import { HapiClient } from '../src/hapi';
-import { freePort } from '../src/services';
+import type { HapiHttp } from '../src/hapi';
+import { nativeFileSmoke } from './fixtures/native-file-smoke';
 import type { RepositoryOperation } from '../hapi/shared/src/repositories';
 import type { ArtifactTransfer } from '../hapi/shared/src/artifactTransfers';
 import type { ManagedWorkspace, WorkspaceSource } from '../hapi/shared/src/workspaces';
@@ -12,18 +12,12 @@ import type { ManagedWorkspace, WorkspaceSource } from '../hapi/shared/src/works
 // Real Hub and two Runner identities/data roots; source paths disappear before import.
 const binary = resolve(process.argv[2] ?? 'dist/runweft'), hapiBinary = resolve(process.argv[3] ?? 'dist/hapi');
 mkdirSync('.dev-smoke', { recursive: true }); const root = mkdtempSync(resolve('.dev-smoke/repository-import-'));
-const center = join(root, 'center'), sourceHome = join(root, 'source-runner'), targetHome = join(root, 'target-runner');
 const env = { ...process.env }; for (const key of Object.keys(env)) if (key.startsWith('RUNWEFT_')) delete env[key];
 env.GIT_CONFIG_GLOBAL = '/dev/null'; env.GIT_CONFIG_NOSYSTEM = '1';
 const evidence = { root, binary, hapiBinary, startedAt: new Date().toISOString(), finishedAt: '', success: false,
     sourceMachineId: '', targetMachineId: '', exportId: '', importId: '', environments: [] as string[], checks: [] as string[], error: '', cleanupErrors: [] as string[] };
-let token: string | undefined, hapi: HapiClient, foreground: ChildProcess | undefined;
-const homes: string[] = [];
-function cli(home: string, args: string[], input?: string) {
-    const result = spawnSync(binary, ['--home', home, '--json', ...args], { env, input, encoding: 'utf8', timeout: 45_000 });
-    if (token) assert(!`${result.stdout}${result.stderr}`.includes(token), 'Credential leaked');
-    assert.equal(result.status, 0, `${args.slice(0, 2).join(' ')}: ${result.stderr || result.error || result.signal}`); return JSON.parse(result.stdout);
-}
+let hapi: HapiHttp;
+let fixture: Awaited<ReturnType<typeof nativeFileSmoke>> | undefined, sourceScope: Awaited<ReturnType<Awaited<ReturnType<typeof nativeFileSmoke>>['scoped']>>, targetScope: typeof sourceScope;
 function git(cwd: string, ...args: string[]) {
     const result = spawnSync('git', ['-C', cwd, ...args], { env: { ...env, GIT_LFS_SKIP_SMUDGE: '1' }, encoding: 'utf8' });
     assert.equal(result.status, 0, result.stderr); return result.stdout.trim();
@@ -35,7 +29,7 @@ function init(path: string) {
 function commit(path: string) { git(path, 'add', '.'); git(path, 'commit', '-qm', 'baseline'); }
 const note = (message: string) => { evidence.checks.push(message); console.log(message); };
 async function call(machine: string, domain: string, body: unknown) {
-    return hapi.request(`/api/machines/${machine}/${domain}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+    return (machine === evidence.sourceMachineId ? sourceScope : targetScope).native.request(`/api/machines/${machine}/${domain}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
 }
 async function until<T>(read: () => Promise<T>, complete: (value: T) => boolean): Promise<T> {
     const deadline = Date.now() + 120_000;
@@ -57,21 +51,10 @@ async function prepare(source: WorkspaceSource, prior?: ManagedWorkspace) {
     return { workspace, request };
 }
 try {
-    const port = await freePort(), url = `http://127.0.0.1:${port}`;
-    cli(center, ['init']); homes.push(center); cli(center, ['config', 'set', 'server.port', String(port)]);
-    cli(center, ['config', 'set', 'server.runner', 'false']); cli(center, ['config', 'set', 'hapi.executable', hapiBinary]);
-    cli(center, ['config', 'set', 'server.publicUrl', url]); cli(center, ['start']);
-    token = JSON.parse(readFileSync(join(center, 'server/hapi/settings.json'), 'utf8')).cliApiToken; assert(token); cli(center, ['stop']);
-    const fd = openSync(join(root, 'hub.log'), 'a', 0o600);
-    try { foreground = spawn(binary, ['--home', center, 'serve', '--public'], { env, stdio: ['ignore', fd, fd] }); } finally { closeSync(fd); }
-    await until(async () => { if (foreground!.exitCode !== null) throw new Error('Hub exited'); return fetch(`${url}/api/runweft/health`).then(r => r.ok).catch(() => false); }, ready => ready);
-    hapi = new HapiClient(url, token); assert.equal((await hapi.request('/api/machines')).machines.length, 0);
-    for (const home of [sourceHome, targetHome]) {
-        cli(home, ['init', '--url', url]); homes.push(home); cli(home, ['config', 'set', 'hapi.executable', hapiBinary]);
-        cli(home, ['auth', 'login', '--token-stdin'], token); cli(home, ['start']);
-        const machineId = cli(home, ['machine', 'register']).machine.id;
-        if (home === sourceHome) evidence.sourceMachineId = machineId; else evidence.targetMachineId = machineId;
-    }
+    fixture = await nativeFileSmoke(root, [binary], hapiBinary, env); Object.assign(evidence, { candidate: fixture.candidate });
+    const sourceRunner = await fixture.addRunner(), targetRunner = await fixture.addRunner();
+    evidence.sourceMachineId = sourceRunner.machineId; evidence.targetMachineId = targetRunner.machineId; hapi = fixture.http;
+    sourceScope = await fixture.scoped(sourceRunner.machineId); targetScope = await fixture.scoped(targetRunner.machineId);
     assert.notEqual(evidence.sourceMachineId, evidence.targetMachineId);
     const repo = init(join(root, 'source/project')), child = init(join(root, 'source/child'));
     git(child, 'lfs', 'install', '--local'); writeFileSync(join(child, '.gitattributes'), '*.bin filter=lfs diff=lfs merge=lfs -text\n');
@@ -92,7 +75,7 @@ try {
     const delivered = await done<ArtifactTransfer>(evidence.sourceMachineId, 'artifacts', deliveryId); assert.equal(delivered.status, 'succeeded', JSON.stringify(delivered.error));
     await call(evidence.sourceMachineId, 'artifacts', { action: 'release', operationId: captureId });
     await call(evidence.sourceMachineId, 'repositories', { action: 'release', operationId: evidence.exportId });
-    renameSync(join(root, 'source'), join(root, 'source-offline')); cli(sourceHome, ['stop']); assert(!existsSync(repo)); assert(!existsSync(exported.directory));
+    renameSync(join(root, 'source'), join(root, 'source-offline')); await fixture.stopRunner(sourceRunner); assert(!existsSync(repo)); assert(!existsSync(exported.directory));
     note('Hub without a Runner retains published Git/LFS objects; source paths, export candidates and capture spool are gone and source Runner is stopped');
     const materializeId = randomUUID();
     await call(evidence.targetMachineId, 'artifacts', { action: 'materialize', operationId: materializeId, files: delivered.deliveries!.map(file => {
@@ -114,7 +97,7 @@ try {
     await call(evidence.targetMachineId, 'workspaces', { action: 'finalize', environmentId: a.request.environmentId, preparationId: a.request.preparationId, roundId: a.request.roundId, attemptId });
     const sealed = await until(async () => (await call(evidence.targetMachineId, 'workspaces', { action: 'inspect', environmentId: a.request.environmentId })).workspace as ManagedWorkspace,
         item => !['accepted', 'running'].includes(item.operations[`finalize:${a.request.roundId}:${attemptId}`]!.status));
-    assert(sealed.results[a.request.roundId], JSON.stringify(sealed.operations)); cli(targetHome, ['restart']);
+    assert(sealed.results[a.request.roundId], JSON.stringify(sealed.operations)); await fixture.stopRunner(targetRunner); await fixture.startRunner(targetRunner);
     assert.deepEqual((await call(evidence.targetMachineId, 'repositories', request)).operation, imported);
     const resumed = await prepare(targetSource, sealed); assert.equal(readFileSync(join(resumed.workspace.cwd, 'note'), 'utf8'), 'retained checkpoint');
     assert.equal(resumed.workspace.preparations[resumed.request.preparationId]!.startHead, sealed.results[a.request.roundId]!.resultHead);
@@ -134,8 +117,7 @@ try {
     evidence.success = true;
 } catch (error) { evidence.error = error instanceof Error ? error.stack ?? error.message : String(error); process.exitCode = 1; }
 finally {
-    for (const home of [...homes].reverse()) { try { cli(home, ['stop']); } catch (error) { evidence.cleanupErrors.push(String(error)); } }
-    if (foreground?.exitCode === null) { foreground.kill('SIGTERM'); await new Promise<void>(resolve => foreground!.once('exit', () => resolve())); }
+    try { await fixture?.close(evidence.success); } catch (error) { evidence.cleanupErrors.push(...(error instanceof AggregateError ? error.errors.map(String) : [String(error)])); }
     if (evidence.cleanupErrors.length) { evidence.success = false; process.exitCode = 1; }
     evidence.finishedAt = new Date().toISOString(); writeFileSync(join(root, 'evidence.json'), JSON.stringify(evidence, null, 2));
     console.log(`Evidence: ${join(root, 'evidence.json')}`); if (evidence.error) console.error(evidence.error);

@@ -1,76 +1,156 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { createHash } from 'node:crypto';
-import { chmodSync, copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
-import { homedir } from 'node:os';
-import { dirname, join, resolve } from 'node:path';
-import { freePort } from '../src/services';
-import { HapiClient } from '../src/hapi';
-import pkg from '../package.json';
+import { createHash, randomUUID } from 'node:crypto';
+import { chmodSync, copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import { homedir, tmpdir } from 'node:os';
+import { join, resolve } from 'node:path';
 import { Database } from 'bun:sqlite';
-import { configureSmokeCodexModel } from './fixtures/codex-model';
+import type { HapiHttp } from '../src/hapi';
+import { HubClient } from '../src/hub/client';
+import { hubConnectionPaths } from '../src/hub/resources/connection';
+import { observeRepository } from '../src/hub/repositories/observation';
+import { modelHomes } from './fixtures/model-homes';
+import { nativeUserSmoke } from './fixtures/native-user-smoke';
+import { nonGitSmokeProject } from './fixtures/non-git-smoke-project';
+import { installedBinaries } from './fixtures/installed-binaries.mjs';
+import { closeSmoke } from './fixtures/smoke-lifecycle';
+import { removeFileSmokeData } from './fixtures/native-file-smoke';
+import pkg from '../package.json';
 
-// Real missing-history acceptance. Every writable native home is a dedicated copy.
-const executable = resolve(process.argv[2] ?? 'dist/runweft'), hapiExecutable = resolve(process.argv[3] ?? 'dist/hapi');
-const previous = process.argv[4] ? JSON.parse(readFileSync(resolve(process.argv[4]), 'utf8')) : undefined;
-mkdirSync('.dev-smoke', { recursive: true });
-const root = previous?.root ?? mkdtempSync(resolve('.dev-smoke/reconstruction-'));
-chmodSync(root, 0o700);
-const home = join(root, 'runweft'), project = join(root, 'project');
-mkdirSync(project, { mode: 0o700, recursive: true });
-const env: NodeJS.ProcessEnv = { ...process.env };
-for (const key of Object.keys(env)) if (key.startsWith('RUNWEFT_')) delete env[key];
-delete env.HAPI_CODEX_APP_SERVER_BIN; delete env.HAPI_SESSION_ID;
-const claude = process.env.RUNWEFT_SMOKE_CLAUDE || Bun.which('iclaude') || Bun.which('claude');
-assert(claude && Bun.which('codex'), 'Both authenticated native clients are required');
-Object.assign(env, { HAPI_CLAUDE_PATH: claude, GIT_CEILING_DIRECTORIES: root });
-const sourceCodex = process.env.CODEX_HOME ?? join(homedir(), '.codex');
-const sourceClaude = process.env.CLAUDE_CONFIG_DIR ?? join(homedir(), '.claude');
-function copy(source: string, target: string) {
-    if (!existsSync(source)) return;
-    mkdirSync(dirname(target), { recursive: true, mode: 0o700 });
-    copyFileSync(source, target); chmodSync(target, 0o600);
-}
-function use(stage: string) {
-    env.CODEX_HOME = join(root, stage, 'codex'); env.CLAUDE_CONFIG_DIR = join(root, stage, 'claude');
-}
-for (const stage of previous ? [] : ['original', 'empty-history']) {
-    use(stage);
-    for (const file of ['config.toml', 'auth.json']) copy(join(sourceCodex, file), join(env.CODEX_HOME!, file));
-    configureSmokeCodexModel(join(env.CODEX_HOME!, 'config.toml'));
-    copy(process.env.CLAUDE_CONFIG_DIR ? join(sourceClaude, '.claude.json') : join(homedir(), '.claude.json'), join(env.CLAUDE_CONFIG_DIR!, '.claude.json'));
-    for (const file of ['settings.json', '.credentials.json']) copy(join(sourceClaude, file), join(env.CLAUDE_CONFIG_DIR!, file));
-    const codexConfig = Bun.TOML.parse(readFileSync(join(env.CODEX_HOME!, 'config.toml'), 'utf8')) as any;
-    for (const name of Object.keys(codexConfig.mcp_servers ?? {})) {
-        assert.equal(spawnSync('codex', ['mcp', 'remove', name], { env, stdio: 'pipe' }).status, 0);
-    }
-    const preferences = join(env.CLAUDE_CONFIG_DIR!, '.claude.json');
-    const config = existsSync(preferences) ? JSON.parse(readFileSync(preferences, 'utf8')) : {};
-    config.mcpServers = {}; mkdirSync(dirname(preferences), { recursive: true, mode: 0o700 });
-    writeFileSync(preferences, JSON.stringify(config), { mode: 0o600 });
-}
-use('original');
+// Compiled Task execution against empty native histories, never a format migration.
+const invokedCLI = resolve(process.argv[2] ?? 'dist/runweft'), executable = installedBinaries(invokedCLI).runweft.path;
+const hapiExecutable = realpathSync(resolve(process.argv[3] ?? installedBinaries(executable).hapi.path));
 const hash = (path: string) => createHash('sha256').update(readFileSync(path)).digest('hex');
-const evidence: any = previous ?? { root, executable, hapiExecutable, hapiRevision: pkg.hapi.revision,
-    codexModel: configureSmokeCodexModel(join(root, 'original/codex/config.toml')),
-    binaries: { runweft: hash(executable), hapi: hash(hapiExecutable) }, startedAt: new Date().toISOString(),
-    success: false, cases: [], checks: [], cleanupErrors: [] };
-if (previous) {
-    assert.equal(evidence.success, false); assert.deepEqual(evidence.cleanupErrors, []);
-    assert.deepEqual(evidence.binaries, { runweft: hash(executable), hapi: hash(hapiExecutable) }, 'Continuation requires the same product binaries');
-    assert(evidence.cases.every((item: any) => item.first?.status === 'completed' && item.first.stop === 'stopped' && !item.accepted));
-    evidence.attempts ??= []; evidence.attempts.push({ finishedAt: evidence.finishedAt, error: evidence.error });
-    delete evidence.error; delete evidence.finishedAt;
-}
-let started = false, token: string | undefined, hapi: HapiClient | undefined;
-function save() { writeFileSync(join(root, 'evidence.json'), JSON.stringify(evidence, null, 2), { mode: 0o600 }); }
-function record(check: string) { evidence.checks.push(check); save(); console.log(`PASS ${check}`); }
+const candidate = { cliBinary: executable, hapiBinary: hapiExecutable, hapiRevision: pkg.hapi.revision,
+    hashes: { cli: hash(executable), hapi: hash(hapiExecutable) }, entry: 'compiled center/CLI + real HAPI/Runner + native histories' };
+const previousFile = process.argv[4] ? realpathSync(resolve(process.argv[4])) : undefined;
+const previous = previousFile ? JSON.parse(readFileSync(previousFile, 'utf8')) : undefined;
+const failBeforeNext = process.env.RUNWEFT_SMOKE_RECONSTRUCTION_FAIL_BEFORE_NEXT === '1';
+const env: NodeJS.ProcessEnv = { ...process.env };
+for (const key of Object.keys(env)) if (key.startsWith('RUNWEFT_') || key.startsWith('HAPI_') || ['CLI_API_TOKEN', 'DB_PATH', 'TELEGRAM_BOT_TOKEN'].includes(key)) delete env[key];
+const flavors = ['codex', 'claude'] as const;
+type Flavor = typeof flavors[number];
+const credentials = new Set<string>(), pids = new Set<number>(), sessionIds = new Set<string>();
+let center: Awaited<ReturnType<typeof nativeUserSmoke>> | undefined, hapi: HapiHttp | undefined;
+let constructorCleanupUncertain = false;
+let nonGit: ReturnType<typeof nonGitSmokeProject> | undefined;
+const models: ReturnType<typeof modelHomes>[] = [];
+
 function alive(pid: number) { try { process.kill(pid, 0); return true; } catch (error: any) { assert.equal(error.code, 'ESRCH'); return false; } }
-function cli(args: string[]) {
-    const result = spawnSync(executable, ['--home', home, '--json', ...args], { cwd: project, env, encoding: 'utf8', timeout: 65_000 });
-    if (token) assert(!`${result.stdout}${result.stderr}`.includes(token), 'Credential leaked into CLI output');
-    assert.equal(result.status, 0, `${args[0]} failed: ${result.stderr || result.error || result.signal}`);
+function files(directory: string): string[] {
+    if (!existsSync(directory)) return [];
+    return readdirSync(directory, { withFileTypes: true }).flatMap(entry => entry.isDirectory() ? files(join(directory, entry.name)) : entry.isFile() ? [join(directory, entry.name)] : []);
+}
+function inside(root: string, path: string) {
+    assert(realpathSync(path).startsWith(realpathSync(root) + '/'), 'Fixture path must remain inside its owned root');
+}
+function copiedState<T>(path: string, read: (db: Database) => T): T {
+    const temporary = mkdtempSync(resolve('.dev-smoke/reconstruction-state-'));
+    try {
+        const copy = join(temporary, 'state.sqlite'); copyFileSync(path, copy);
+        if (existsSync(path + '-wal')) copyFileSync(path + '-wal', copy + '-wal');
+        const db = new Database(copy, { readonly: true });
+        try { return read(db); } finally { db.close(); }
+    } finally { rmSync(temporary, { recursive: true, force: true }); }
+}
+function validateFirst(db: Database, item: any, handoff: any, project: string) {
+    assert(flavors.includes(item.flavor) && item.rounds.length === 1 && !item.secondAcceptance, 'Continuation cannot replay an accepted second round');
+    const first = item.rounds[0];
+    assert.equal(first.status, 'completed'); assert.equal(first.stop, 'stopped'); assert.equal(first.finish, 'complete');
+    assert(!alive(first.host_pid), 'Continuation requires exited native hosts');
+    const taskRow = db.query('SELECT data FROM delegation_tasks WHERE id=?').get(item.taskId) as any;
+    assert(taskRow, 'Retained Task is missing');
+    const task = JSON.parse(taskRow.data);
+    assert.equal(task.version, 2); assert.equal(task.id, item.taskId); assert.equal(task.agent.id, item.agentId);
+    assert.equal(task.parent.cwd, project); assert.equal(task.parent.machineId, handoff.machineId);
+    assert.equal(task.hub.ownerId, handoff.ownerId); assert.equal(task.hub.spaceId, handoff.spaceId);
+    assert.equal(task.target.runtimeId, item.runtime.id); assert.equal(task.target.machineId, handoff.machineId);
+    const rows = db.query('SELECT data FROM delegation_rounds WHERE taskId=? ORDER BY ordinal').all(item.taskId) as any[];
+    assert.equal(rows.length, 1, 'A second round was already accepted; do not send again');
+    const round = JSON.parse(rows[0].data);
+    assert.equal(round.id, first.round_id); assert.equal(round.phase, 'finished'); assert.equal(round.stop, 'stopped'); assert.equal(round.finish, 'complete');
+    assert.equal(round.report, first.report.text); assert.equal(round.agent.hub.actorId, handoff.ownerId);
+    assert.equal(round.sessionId, first.session_id); assert.equal(round.nativeSessionId, first.native_session_id);
+    assert(round.message.includes(item.marker)); assert(!first.report.text.includes(item.marker), 'First report must not contain the memory marker in any field');
+    assert.equal(hash(item.originalHistory.path), item.originalHistory.sha256);
+}
+function raw(home: string, args: string[], project: string) {
+    const result = spawnSync(invokedCLI, ['--home', home, '--json', ...args], { cwd: project, env, encoding: 'utf8', timeout: 65_000 });
+    for (const secret of credentials) assert(!(result.stdout + result.stderr).includes(secret), 'Credential leaked into CLI output');
+    assert.equal(result.status, 0, args[0] + ' failed: ' + (result.stderr || result.error || result.signal));
     return JSON.parse(result.stdout);
+}
+
+// All retained-source checks precede chmod, stage changes or starting its service.
+if (previous) {
+    assert.equal(previous.evidenceFormat, 'current-reconstruction-1');
+    assert(Array.isArray(previous.cases) && previous.cases.every((item: any) => !item.secondAcceptance && item.rounds?.length === 1), 'A second round was already accepted; do not send again');
+    assert.equal(previous.success, false); assert.deepEqual(previous.cleanupErrors, []);
+    assert.equal(previous.continuationReady, true, 'Only the explicit pre-second-round failure window may continue');
+    assert.deepEqual(previous.candidate, candidate, 'Continuation requires the same CLI and HAPI candidates');
+    assert.equal(realpathSync(previous.root), previous.root);
+    assert(previous.root.startsWith(resolve('.dev-smoke/reconstruction-')));
+    assert.equal(previousFile, join(previous.root, 'evidence.json'));
+    const handoff = previous.handoff;
+    assert.equal(handoff.serverHome, join(previous.root, 'center')); assert.equal(handoff.clientHome, join(previous.root, 'client'));
+    assert.equal(handoff.statePath, join(handoff.serverHome, 'server/runweft/state.sqlite'));
+    assert.equal(previous.project, join(previous.nonGitRoot, '.dev-smoke/project'));
+    assert(realpathSync(previous.nonGitRoot).startsWith(join(realpathSync(tmpdir()), 'runweft-non-git-')));
+    inside(previous.nonGitRoot, previous.project); assert.equal(observeRepository(previous.project).kind, 'non_git');
+    assert.deepEqual(readdirSync(previous.project), []);
+    for (const stage of ['original', 'empty-history']) for (const flavor of flavors) {
+        assert.equal(previous.stageHomes[stage][flavor], join(previous.root, stage, flavor + '-home'));
+        inside(previous.root, previous.stageHomes[stage][flavor]);
+    }
+    assert(!existsSync(join(previous.stageHomes['empty-history'].codex, 'sessions')));
+    assert(!existsSync(join(previous.stageHomes['empty-history'].claude, 'projects')));
+    assert(previous.cases.length > 0 && previous.cases.length <= 2);
+    assert.equal(new Set(previous.cases.map((item: any) => item.flavor)).size, previous.cases.length);
+    for (const item of previous.cases) inside(previous.stageHomes.original[item.flavor], item.originalHistory.path);
+    const connection = hubConnectionPaths(handoff.clientHome, handoff.url);
+    assert.equal(handoff.runnerNativeHome, join(connection.connection, 'hapi'));
+    assert.equal(handoff.identityFile, join(previous.root, 'identity.txt'));
+    const identity = JSON.parse(readFileSync(connection.identityConnection, 'utf8')), machine = JSON.parse(readFileSync(connection.machineConnection, 'utf8'));
+    assert.equal(identity.ownerId, handoff.ownerId); assert.equal(identity.spaceId, handoff.spaceId); assert.equal(machine.machineId, handoff.machineId);
+    credentials.add(identity.token); credentials.add(machine.active.token);
+    env.CODEX_HOME = previous.stageHomes.original.codex; env.CLAUDE_CONFIG_DIR = previous.stageHomes.original.claude;
+    env.HAPI_CLAUDE_PATH = previous.nativeClaude;
+    assert.equal(raw(handoff.serverHome, ['status'], previous.project).service.running, false);
+    assert.equal(raw(handoff.clientHome, ['status'], previous.project).runner.running, false);
+    copiedState(handoff.statePath, db => {
+        assert.equal((db.query('SELECT COUNT(*) AS count FROM delegation_tasks').get() as any).count, previous.cases.length);
+        for (const item of previous.cases) validateFirst(db, item, handoff, previous.project);
+    });
+    for (const source of previous.sourceConfigurations) assert.equal(hash(source.path), source.sha256, 'Source model configuration changed');
+}
+mkdirSync('.dev-smoke', { recursive: true });
+const root: string = previous?.root ?? mkdtempSync(resolve('.dev-smoke/reconstruction-'));
+const evidence: any = previous ?? { evidenceFormat: 'current-reconstruction-1', root, candidate, startedAt: new Date().toISOString(),
+    success: false, continuationReady: false, cleanupOwner: 'smoke-reconstruction final invocation', cases: [], checks: [], cleanupErrors: [] };
+evidence.invokedCLI = invokedCLI;
+for (const item of evidence.cases) for (const round of item.rounds) { pids.add(round.host_pid); sessionIds.add(round.session_id); }
+if (previous) {
+    evidence.attempts ??= []; evidence.attempts.push({ finishedAt: evidence.finishedAt, error: evidence.error });
+    delete evidence.error; delete evidence.finishedAt; evidence.continuationReady = false;
+}
+function save() { writeFileSync(join(root, 'evidence.json'), JSON.stringify(evidence, null, 2), { mode: 0o600 }); }
+function record(check: string) { evidence.checks.push(check); save(); console.log('PASS ' + check); }
+function use(stage: 'original' | 'empty-history') {
+    env.CODEX_HOME = evidence.stageHomes[stage].codex; env.CLAUDE_CONFIG_DIR = evidence.stageHomes[stage].claude;
+    env.HAPI_CLAUDE_PATH = evidence.nativeClaude;
+}
+function cli(args: string[], home = evidence.handoff.clientHome) { return raw(home, args, evidence.project); }
+async function ready() {
+    const deadline = Date.now() + 40_000;
+    while (Date.now() < deadline) {
+        const list = cli(['machine', 'list']).machines;
+        if (list.some((machine: any) => machine.id === evidence.handoff.machineId && machine.online)) {
+            const discovered = cli(['machine', 'discover', evidence.handoff.machineId]);
+            if (flavors.every(flavor => discovered.tools.some((tool: any) => tool.flavor === flavor))) return;
+        }
+        await Bun.sleep(200);
+    }
+    throw new Error('Existing Runner discovery timed out');
 }
 async function complete(id: string) {
     let current: any;
@@ -78,133 +158,205 @@ async function complete(id: string) {
     do {
         current = cli(['task', 'show', id]);
         if (['completed', 'failed', 'interrupted'].includes(current.status)) break;
-        assert(!['unknown', 'needs_attention'].includes(current.status), `Execution needs attention: ${JSON.stringify(current.attention)}`);
+        assert(!['unknown', 'needs_attention'].includes(current.status), 'Execution needs attention: ' + JSON.stringify(current.attention));
         await Bun.sleep(500);
     } while (Date.now() < deadline);
-    assert.equal(current.status, 'completed', `Round did not complete: ${current.status}`);
-    assert.equal(current.stop, 'stopped'); assert.equal(current.finish, 'complete');
+    assert.equal(current.status, 'completed'); assert.equal(current.stop, 'stopped'); assert.equal(current.finish, 'complete');
     assert.equal(current.inputs.length, 1); assert.equal(current.inputs[0].observation.phase, 'completed');
-    assert.equal(current.inputs[0].observation.source, 'native');
-    assert.equal(typeof current.host_pid, 'number');
-    const stopDeadline = Date.now() + 10_000;
-    while (alive(current.host_pid) && Date.now() < stopDeadline) await Bun.sleep(100);
+    assert.equal(current.inputs[0].observation.source, 'native'); sessionIds.add(current.session_id); assert.equal(typeof current.host_pid, 'number'); pids.add(current.host_pid);
+    const deadlineStop = Date.now() + 10_000;
+    while (alive(current.host_pid) && Date.now() < deadlineStop) await Bun.sleep(100);
     assert(!alive(current.host_pid), 'Native process did not exit');
-    const native = (await hapi!.request(`/api/sessions/${current.session_id}`)).session;
+    const native = (await hapi!.request('/api/sessions/' + current.session_id)).session;
     assert.equal(native.active, false); assert.equal(native.metadata.lifecycleState, 'archived');
-    assert.deepEqual(native.metadata.disabledMcpServers, ['runweft']);
-    assert.equal(native.metadata.path, project);
+    assert.deepEqual(native.metadata.disabledMcpServers, ['runweft']); assert.equal(native.metadata.path, evidence.project);
     return current;
 }
-function files(directory: string): string[] {
-    if (!existsSync(directory)) return [];
-    return readdirSync(directory, { withFileTypes: true }).flatMap(entry => entry.isDirectory() ? files(join(directory, entry.name)) : entry.isFile() ? [join(directory, entry.name)] : []);
-}
-function history(flavor: string, id: string) {
-    const directories = flavor === 'codex' ? ['original/codex/sessions', 'original/codex/archived_sessions'] : ['original/claude/projects'];
-    const found = directories.flatMap(directory => files(join(root, directory))).filter(path => path.endsWith(`${id}.jsonl`));
-    assert.equal(found.length, 1, `${flavor} original transcript must exist`);
+function history(stage: 'original' | 'empty-history', flavor: Flavor, id: string) {
+    const directories = flavor === 'codex' ? ['sessions', 'archived_sessions'] : ['projects'];
+    const found = directories.flatMap(directory => files(join(evidence.stageHomes[stage][flavor], directory))).filter(path => path.endsWith(id + '.jsonl'));
+    assert.equal(found.length, 1, flavor + ' native transcript must exist');
     return { path: found[0]!, sha256: hash(found[0]!) };
 }
-console.log(`Evidence directory: ${root}`); save();
+function businessRound(roundId: string) {
+    return copiedState(evidence.handoff.statePath, db => {
+        const row = db.query('SELECT data FROM delegation_rounds WHERE id=?').get(roundId) as any; assert(row); return JSON.parse(row.data);
+    });
+}
+console.log('Evidence directory: ' + root);
 try {
-    if (previous) assert.equal(cli(['status']).running, false, 'Acceptance continuation requires the existing service to be stopped');
-    else {
-        cli(['init']); cli(['config', 'set', 'server.port', String(await freePort())]);
-        cli(['config', 'set', 'hapi.executable', hapiExecutable]);
+    chmodSync(root, 0o700);
+    if (!previous) {
+        nonGit = nonGitSmokeProject(); evidence.nonGitRoot = nonGit.root; evidence.project = nonGit.project;
+        evidence.sourceConfigurations = [
+            ...['config.toml', 'auth.json'].map(name => join(process.env.CODEX_HOME ?? join(homedir(), '.codex'), name)),
+            process.env.CLAUDE_CONFIG_DIR ? join(process.env.CLAUDE_CONFIG_DIR, '.claude.json') : join(homedir(), '.claude.json'),
+            ...['settings.json', '.credentials.json'].map(name => join(process.env.CLAUDE_CONFIG_DIR ?? join(homedir(), '.claude'), name)),
+        ].filter(existsSync).map(path => ({ path, sha256: hash(path) }));
+        evidence.stageHomes = {};
+        for (const stage of ['original', 'empty-history'] as const) {
+            const stageEnv = { ...env }, model = modelHomes(join(root, stage), stageEnv); models.push(model);
+            evidence.stageHomes[stage] = { codex: stageEnv.CODEX_HOME, claude: stageEnv.CLAUDE_CONFIG_DIR };
+            evidence.nativeClaude = model.nativeClaude; evidence.codexModel = model.codexModel;
+            const config = join(stageEnv.CODEX_HOME!, 'config.toml');
+            if (existsSync(config)) for (const name of Object.keys((Bun.TOML.parse(readFileSync(config, 'utf8')) as any).mcp_servers ?? {}))
+                assert.equal(spawnSync('codex', ['mcp', 'remove', name], { env: stageEnv, stdio: 'pipe' }).status, 0);
+            const prefs = join(stageEnv.CLAUDE_CONFIG_DIR!, '.claude.json'), value = existsSync(prefs) ? JSON.parse(readFileSync(prefs, 'utf8')) : {};
+            value.mcpServers = {}; writeFileSync(prefs, JSON.stringify(value), { mode: 0o600 });
+        }
+        assert(Bun.which('codex')); use('original');
+        try { center = await nativeUserSmoke(root, executable, env, hapiExecutable); }
+        catch (error) { constructorCleanupUncertain = error instanceof AggregateError; throw error; }
+        const home = join(root, 'client'), runner = await center.runner(home);
+        credentials.add(center.user.token);
+        evidence.handoff = { serverHome: center.server, clientHome: home, url: center.url, ownerId: center.user.identity.id,
+            spaceId: center.space, machineId: runner.machineId, runnerNativeHome: runner.hapiHome,
+            statePath: center.cli(center.server, ['paths']).state, identityFile: center.identityFile };
+        credentials.add(JSON.parse(readFileSync(hubConnectionPaths(home, center.url).machineConnection, 'utf8')).active.token);
+        hapi = runner.http; evidence.runtimes = {};
+        for (const flavor of flavors) {
+            const runtime = runner.runtimes[flavor], definition = join(root, flavor + '-agent.json');
+            writeFileSync(definition, JSON.stringify({ name: 'Reconstruction ' + flavor, repositoryId: null, runtimeId: runtime.id }));
+            const agent = cli(['agent', 'create', '--request-id', randomUUID(), '--file', definition]);
+            evidence.runtimes[flavor] = { runtime: { id: runtime.id, flavor, version: runtime.inspection?.details?.version }, agentId: agent.agent.id };
+        }
+    } else {
+        use('original'); cli(['start'], evidence.handoff.serverHome); cli(['runner', 'start']); await ready();
+        hapi = new HubClient({ url: evidence.handoff.url, home: evidence.handoff.clientHome, env, space: evidence.handoff.spaceId }, 'hubAccess', 'unavailable').http;
     }
-    const service = cli(['start']); started = true;
-    token = JSON.parse(readFileSync(join(home, 'server/hapi/settings.json'), 'utf8')).cliApiToken; assert(token);
-    hapi = new HapiClient(service.url, token); cli(['machine', 'register']);
-    evidence.machineId = JSON.parse(readFileSync(join(home, 'connections/local/hapi/settings.json'), 'utf8')).machineId;
-    for (const flavor of ['codex', 'claude']) {
+    save();
+    for (const flavor of flavors) {
         const retained = evidence.cases.find((item: any) => item.flavor === flavor);
         if (retained) {
-            const current = cli(['task', 'show', retained.agentId]);
-            assert.equal(current.round_id, retained.first.round_id); assert.equal(current.status, 'completed');
-            assert.equal(current.stop, 'stopped'); assert(!alive(current.host_pid));
-            retained.originalHistory = history(flavor, retained.first.native_session_id);
-            const database = new Database(join(home, 'server/runweft/state.sqlite'), { readonly: true });
-            try {
-                const row: any = database.query('SELECT data FROM delegation_rounds WHERE id=?').get(current.round_id);
-                retained.marker = JSON.parse(row.data).message.match(/RECONSTRUCTION_MEMORY_[a-f0-9-]+/)?.[0]; assert(retained.marker);
-            } finally { database.close(); }
-            record(`${flavor}: retained completed first round verified from native archive without model replay`);
+            const current = await complete(retained.taskId);
+            assert.equal(current.round_id, retained.rounds[0].round_id); assert.deepEqual(current.report, retained.rounds[0].report);
+            assert.deepEqual(history('original', flavor, current.native_session_id), retained.originalHistory);
+            record(flavor + ': retained first round and native history verified without model replay');
             continue;
         }
-        const runtime = cli(['runtime', 'register', flavor]).runtime;
-        cli(['agent', 'init', flavor, '--runtime', runtime.id]);
-        const marker = `RECONSTRUCTION_MEMORY_${crypto.randomUUID()}`;
-        const first = cli(['task', 'spawn', flavor, '--message', `这是专用验证任务。记住 ${marker}，不要写入任何文件。不调用工具、不委派。只回复 FIRST_ROUND_OK，不要在回复中输出记忆标记。`]);
-        const item: any = { flavor, runtime: { id: runtime.id, version: runtime.inspection.details.version }, agentId: first.agent_id };
+        const marker = 'RECONSTRUCTION_MEMORY_' + randomUUID(), target = evidence.runtimes[flavor];
+        const accepted = cli(['task', 'spawn', target.agentId, '--request-id', randomUUID(), '--message',
+            '这是专用验证任务。记住 ' + marker + '，不要写入任何文件。不调用工具、不委派。只回复 FIRST_ROUND_OK。记忆标记不得出现在回复正文或任何结构化报告字段中，包括 summary、changes、tests、remaining；summary 只写 FIRST_ROUND_OK，其他字段保持为空，不复述任务要求。']);
+        const item: any = { flavor, ...target, taskId: accepted.agent_id, firstAcceptance: accepted, rounds: [], marker };
         evidence.cases.push(item); save();
-        item.first = await complete(first.agent_id);
-        assert(item.first.report.text.includes('FIRST_ROUND_OK')); assert(!item.first.report.text.includes(marker));
-        item.originalHistory = history(flavor, item.first.native_session_id);
-        // Marker is only in the prior business input, not the next input or old report.
-        item.marker = marker;
-        record(`${flavor}: first native round completes and exits; original transcript is retained`);
+        const first = await complete(item.taskId); item.rounds.push(first); save();
+        assert(first.report.text.includes('FIRST_ROUND_OK')); assert(!first.report.text.includes(marker), 'First report must not contain the memory marker in any field');
+        item.originalHistory = history('original', flavor, first.native_session_id);
+        assert(businessRound(first.round_id).message.includes(marker));
+        record(flavor + ': first native round exits; memory is only in the business input and original transcript');
     }
-    cli(['stop']); started = false; hapi = undefined;
+    if (failBeforeNext) throw new Error('reconstruction_smoke_before_next: intentional failure before any second-round acceptance');
+    cli(['runner', 'stop']); cli(['stop'], evidence.handoff.serverHome); hapi = undefined;
     use('empty-history');
-    assert(!existsSync(join(env.CODEX_HOME!, 'sessions')));
-    assert(!existsSync(join(env.CLAUDE_CONFIG_DIR!, 'projects')));
-    const service2 = cli(['start']); started = true; hapi = new HapiClient(service2.url, token);
-    assert.equal(JSON.parse(readFileSync(join(home, 'connections/local/hapi/settings.json'), 'utf8')).machineId, evidence.machineId);
+    assert(!existsSync(join(env.CODEX_HOME!, 'sessions'))); assert(!existsSync(join(env.CLAUDE_CONFIG_DIR!, 'projects')));
+    cli(['start'], evidence.handoff.serverHome); cli(['runner', 'start']); await ready();
+    hapi = new HubClient({ url: evidence.handoff.url, home: evidence.handoff.clientHome, env, space: evidence.handoff.spaceId }, 'hubAccess', 'unavailable').http;
+    assert.equal(JSON.parse(readFileSync(hubConnectionPaths(evidence.handoff.clientHome, evidence.handoff.url).machineConnection, 'utf8')).machineId, evidence.handoff.machineId);
     const before = (await hapi.request('/api/sessions')).sessions;
-    assert.equal(before.length, 2); assert(before.every((session: any) => !session.active));
-    record('same machine/runtime/business data restarted against empty native histories; original histories preserved');
+    assert.equal(before.length, 2); assert(before.every((session: any) => !session.active && session.metadata.lifecycleState === 'archived'));
+    record('same Hub, machine, runtime and Tasks restart against empty native histories');
     for (const item of evidence.cases) {
-        const roundMarker = `CURRENT_ROUND_${crypto.randomUUID()}`;
-        item.accepted = cli(['task', 'send', item.agentId, '--message', `这是本轮新任务：从提供的历史中找出上一轮要求记住的 RECONSTRUCTION_MEMORY_ 标记，原样回复它和 ${roundMarker}。不要执行旧任务；不调用任何工具、不读写文件、不委派。`]);
-        save(); item.second = await complete(item.agentId);
-        assert.equal(item.second.resume.outcome, 'missing');
-        assert.equal(item.second.resume.previousSessionId, item.first.session_id);
-        assert.equal(item.second.resume.previousNativeSessionId, item.first.native_session_id);
-        assert.equal(item.second.reconstruction.reason, 'native_session_missing');
-        assert.deepEqual(item.second.reconstruction.source_round_ids, [item.first.round_id]);
-        assert.notEqual(item.second.native_session_id, item.first.native_session_id);
-        assert.notEqual(item.second.session_id, item.first.session_id);
-        assert.equal(item.second.cwd, item.first.cwd);
-        assert(item.second.report.text.includes(item.marker)); assert(item.second.report.text.includes(roundMarker));
-        assert.equal(item.second.inputs.length, 1);
-        const old = cli(['task', 'show', item.agentId, '--round', item.first.round_id]);
-        assert.equal(old.report.text, item.first.report.text);
-        assert.equal(hash(item.originalHistory.path), item.originalHistory.sha256);
-        record(`${item.flavor}: genuine missing session triggers bounded business reconstruction, exactly one new input, new native ID, correct memory and process exit`);
+        const first = item.rounds[0], roundMarker = 'CURRENT_ROUND_' + randomUUID(); item.currentRoundMarker = roundMarker;
+        item.secondAcceptance = cli(['task', 'send', item.taskId, '--request-id', randomUUID(), '--message',
+            '这是本轮新任务：从提供的历史中找出上一轮要求记住的 RECONSTRUCTION_MEMORY_ 标记，原样回复它和 ' + roundMarker + '。不要执行旧任务；不调用任何工具、不读写文件、不委派。']);
+        save();
+        const second = await complete(item.taskId); item.rounds.push(second); save();
+        assert.equal(second.resume.outcome, 'missing'); assert.equal(second.resume.previousSessionId, first.session_id);
+        assert.equal(second.resume.previousNativeSessionId, first.native_session_id);
+        assert.equal(second.reconstruction.reason, 'native_session_missing'); assert.deepEqual(second.reconstruction.source_round_ids, [first.round_id]);
+        assert.notEqual(second.native_session_id, first.native_session_id); assert.notEqual(second.session_id, first.session_id);
+        assert.equal(second.cwd, first.cwd); assert(second.report.text.includes(item.marker)); assert(second.report.text.includes(roundMarker));
+        const old = cli(['task', 'show', item.taskId, '--round', first.round_id]);
+        assert.deepEqual(old.report, first.report); assert.equal(hash(item.originalHistory.path), item.originalHistory.sha256);
+        record(item.flavor + ': missing native history reconstructs one new input, new session and old business memory');
     }
     const after = (await hapi.request('/api/sessions')).sessions;
-    assert.equal(after.length, 4); assert(after.every((session: any) => !session.active));
-    assert.deepEqual(readdirSync(project), []);
-    record('four archived sessions for four business rounds; unchanged shared cwd and original transcripts');
-    const state = new Database(join(home, 'server/runweft/state.sqlite'), { readonly: true });
-    try {
-        for (const item of evidence.cases) {
-            const transcript = files(join(root, 'empty-history', item.flavor)).filter(path => path.endsWith(`${item.second.native_session_id}.jsonl`));
-            assert.equal(transcript.length, 1);
-            const row: any = state.query('SELECT data FROM delegation_rounds WHERE id=?').get(item.second.round_id);
-            const round = JSON.parse(row.data), marker = round.message.match(/CURRENT_ROUND_[a-f0-9-]+/)?.[0];
-            assert(marker); assert(!round.message.includes(item.marker), 'The new business input must not supply the remembered marker');
-            const events = readFileSync(transcript[0]!, 'utf8').split('\n').filter(Boolean).map(line => JSON.parse(line));
-            const users = events.filter(event => item.flavor === 'codex'
-                ? event.type === 'response_item' && event.payload?.type === 'message' && event.payload.role === 'user'
-                : event.type === 'user' && event.message?.role === 'user');
-            const matches = users.filter(event => JSON.stringify(event).includes(marker));
-            assert.equal(matches.length, 1, 'Exactly one current-round input must reach the native transcript');
-            assert(JSON.stringify(matches[0]).includes(item.marker), 'Reconstructed history must reach the native input');
-            assert.equal(hash(item.originalHistory.path), item.originalHistory.sha256);
-            item.nativeInputAudit = { transcript: transcript[0], currentRoundInputs: matches.length, reconstructedMemoryIncluded: true, originalHistoryUnchanged: true };
-        }
-    } finally { state.close(); }
+    assert.equal(after.length, 4); assert(after.every((session: any) => !session.active && session.metadata.lifecycleState === 'archived'));
+    assert.deepEqual(readdirSync(evidence.project), []);
+    record('four archived native sessions for four business rounds, with an unchanged empty shared project');
+    for (const item of evidence.cases) {
+        const second = item.rounds[1], transcript = history('empty-history', item.flavor, second.native_session_id);
+        const round = businessRound(second.round_id); assert(round.message.includes(item.currentRoundMarker)); assert(!round.message.includes(item.marker));
+        const events = readFileSync(transcript.path, 'utf8').split('\n').filter(Boolean).map(line => JSON.parse(line));
+        const users = events.filter(event => item.flavor === 'codex'
+            ? event.type === 'response_item' && event.payload?.type === 'message' && event.payload.role === 'user'
+            : event.type === 'user' && event.message?.role === 'user');
+        const matches = users.filter(event => JSON.stringify(event).includes(item.currentRoundMarker));
+        assert.equal(matches.length, 1, 'Exactly one current-round user input must reach the native transcript');
+        assert(JSON.stringify(matches[0]).includes(item.marker), 'Native input must include reconstructed prior memory');
+        assert.equal(hash(item.originalHistory.path), item.originalHistory.sha256);
+        item.nativeInputAudit = { transcript, currentRoundInputs: 1, reconstructedMemoryIncluded: true, originalHistoryUnchanged: true };
+    }
     evidence.nativeInputAudit = { passed: true, checkedAt: new Date().toISOString() };
-    record('native transcripts prove exactly one new input with reconstructed memory; original histories remain byte-identical');
+    record('actual native JSONL contains exactly one current-round input with memory; original history SHA is unchanged');
     evidence.success = true;
 } catch (error) { evidence.error = String(error); process.exitCode = 1; }
 finally {
-    if (hapi) try { for (const session of (await hapi.request('/api/sessions')).sessions) if (session.active) {
-        await hapi.request(`/api/sessions/${session.id}/archive`, { method: 'POST', signal: AbortSignal.timeout(45_000) });
-    } } catch (error) { evidence.cleanupErrors.push(String(error)); }
-    if (started) try { cli(['stop']); } catch (error) { evidence.cleanupErrors.push(String(error)); }
-    if (evidence.cleanupErrors.length) { evidence.success = false; process.exitCode = 1; }
-    evidence.finishedAt = new Date().toISOString(); save(); console.log(`Evidence: ${join(root, 'evidence.json')}`);
+    let shutdownSafe = !constructorCleanupUncertain;
+    if (hapi) {
+        let sessions: any[] = [];
+        try { sessions = (await hapi.request('/api/sessions')).sessions; }
+        catch (error) { shutdownSafe = false; evidence.cleanupErrors.push(String(error)); }
+        for (const session of sessions) {
+            sessionIds.add(session.id);
+            if (session.metadata?.hostPid) pids.add(session.metadata.hostPid);
+            if (session.active) try { await hapi.request('/api/sessions/' + session.id + '/archive', { method: 'POST', signal: AbortSignal.timeout(45_000) }); }
+            catch (error) { shutdownSafe = false; evidence.cleanupErrors.push(String(error)); }
+        }
+    }
+    if (evidence.handoff) {
+        for (const [home, args] of [[evidence.handoff.clientHome, ['runner', 'stop']], [evidence.handoff.serverHome, ['stop']]] as const)
+            try { cli([...args], home); } catch (error) { shutdownSafe = false; evidence.cleanupErrors.push(String(error)); }
+        for (const [home, kind] of [[evidence.handoff.clientHome, 'runner'], [evidence.handoff.serverHome, 'service']] as const)
+            try { assert.equal(cli(['status'], home)[kind].running, false); }
+            catch (error) { shutdownSafe = false; evidence.cleanupErrors.push(String(error)); }
+    }
+    try {
+        const deadline = Date.now() + 10_000;
+        while ([...pids].some(alive) && Date.now() < deadline) await Bun.sleep(100);
+        assert(![...pids].some(alive), 'Native host is still running');
+    } catch (error) { shutdownSafe = false; evidence.cleanupErrors.push(String(error)); }
+    for (const model of models) try { model.verify(); } catch (error) { evidence.cleanupErrors.push(String(error)); }
+    for (const source of evidence.sourceConfigurations ?? []) try { assert.equal(hash(source.path), source.sha256, 'Source model configuration changed'); }
+    catch (error) { evidence.cleanupErrors.push(String(error)); }
+    // Preserve only the current, completed-first/no-second window, never accepted work for replay.
+    let retain = false;
+    if (shutdownSafe && !evidence.success && !evidence.cleanupErrors.length && evidence.handoff && evidence.cases.length) try {
+        copiedState(evidence.handoff.statePath, db => {
+            assert.equal((db.query('SELECT COUNT(*) AS count FROM delegation_tasks').get() as any).count, evidence.cases.length);
+            for (const item of evidence.cases) validateFirst(db, item, evidence.handoff, evidence.project);
+        });
+        assert(!existsSync(join(evidence.stageHomes['empty-history'].codex, 'sessions')));
+        assert(!existsSync(join(evidence.stageHomes['empty-history'].claude, 'projects')));
+        retain = true;
+    } catch { /* The failure is outside the explicitly resumable window. */ }
+    evidence.continuationReady = retain;
+    evidence.cleanupOwner = retain ? 'smoke-reconstruction authorized continuation of this current failed evidence' : 'smoke-reconstruction final invocation';
+    if (center) try { await center.close(false, retain || !shutdownSafe); }
+    catch (error) { if (!evidence.handoff) shutdownSafe = false; evidence.cleanupErrors.push(String(error)); }
+    if (shutdownSafe && !retain) {
+        const secrets: string[] = [];
+        if (evidence.handoff) {
+            const paths = hubConnectionPaths(evidence.handoff.clientHome, evidence.handoff.url);
+            secrets.push(paths.identityConnection, paths.machineConnection, evidence.handoff.identityFile,
+                join(evidence.handoff.runnerNativeHome, 'settings.json'),
+                join(evidence.handoff.serverHome, 'server/hapi/settings.json'), join(evidence.handoff.serverHome, 'server/hapi/jwt-secret.json'));
+        }
+        for (const stage of ['original', 'empty-history']) for (const flavor of flavors) {
+            const home = evidence.stageHomes?.[stage]?.[flavor]; if (!home) continue;
+            for (const name of flavor === 'codex' ? ['config.toml', 'auth.json'] : ['.claude.json', 'settings.json', '.credentials.json']) secrets.push(join(home, name));
+        }
+        try { await closeSmoke([...models.map(model => () => model.remove()), ...secrets.map(path => () => rmSync(path, { force: true }))]); }
+        catch (error) { evidence.cleanupErrors.push(String(error)); }
+        if (evidence.success && !evidence.cleanupErrors.length) try {
+            if (nonGit) nonGit.close(); else rmSync(evidence.nonGitRoot, { recursive: true, force: true });
+            await removeFileSmokeData(root); evidence.disposableDataRemoved = true;
+        } catch (error) { evidence.cleanupErrors.push(String(error)); }
+        else try { if (nonGit) nonGit.close(); else if (evidence.nonGitRoot) rmSync(evidence.nonGitRoot, { recursive: true, force: true }); }
+        catch (error) { evidence.cleanupErrors.push(String(error)); }
+    }
+    evidence.hostPids = [...pids]; evidence.hapiSessionIds = [...sessionIds];
+    if (evidence.cleanupErrors.length) { evidence.success = false; evidence.continuationReady = false; process.exitCode = 1; }
+    evidence.finishedAt = new Date().toISOString(); save(); console.log('Evidence: ' + join(root, 'evidence.json'));
     if (evidence.error) console.error(evidence.error);
 }

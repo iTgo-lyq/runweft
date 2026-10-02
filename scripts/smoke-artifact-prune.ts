@@ -1,9 +1,11 @@
 import assert from 'node:assert/strict';
 import { Database } from 'bun:sqlite';
 import { createHash, randomUUID } from 'node:crypto';
-import { mkdir, mkdtemp, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, writeFile, rm } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
-import { HapiClient } from '../src/hapi';
+import { HubClient } from '../src/hub/client';
+import { removeFileSmokeData } from './fixtures/native-file-smoke';
+import { closeSmoke } from './fixtures/smoke-lifecycle';
 import { freePort } from '../src/services';
 import type { Artifact } from '../hapi/shared/src/artifacts';
 
@@ -13,24 +15,26 @@ const root = await mkdtemp(resolve('.dev-smoke/artifact-prune-')), home = join(r
 const evidence = { root, binary, startedAt: new Date().toISOString(), finishedAt: '', success: false, checks: [] as string[], cleanupErrors: [] as string[], error: '' };
 const env = { ...process.env };
 for (const key of Object.keys(env)) if (key.startsWith('RUNWEFT_')) delete env[key];
-let token = '', proxy: ReturnType<typeof Bun.serve> | undefined;
+let remoteUrl = ''; let token = '', url = '', identityFile = '', spaceId = ''; const secrets: string[] = [];
+let proxy: ReturnType<typeof Bun.serve> | undefined;
 async function cli(selectedHome: string, args: string[], expected = 0) {
-    const child = Bun.spawn([binary, '--home', selectedHome, '--json', ...args], { env, stdout: 'pipe', stderr: 'pipe' });
+    const child = Bun.spawn([binary, '--home', selectedHome, '--json', ...(args[0] === 'artifact' ? ['hub', '--url', selectedHome === home ? url : remoteUrl, '--identity-file', identityFile, '--space', spaceId] : []), ...args], { env, stdout: 'pipe', stderr: 'pipe' });
     const [code, stdout, stderr] = await Promise.all([child.exited, new Response(child.stdout).text(), new Response(child.stderr).text()]);
-    if (token) assert(!`${stdout}${stderr}`.includes(token), 'Credential leaked');
+    for (const secret of secrets) assert(!`${stdout}${stderr}`.includes(secret), 'Credential leaked');
     assert.equal(code, expected, `${args.slice(0, 2).join(' ')}: ${stderr}`);
     return { value: stdout.trim() ? JSON.parse(stdout) : null, stderr };
 }
 const record = (value: string) => { evidence.checks.push(value); console.log(value); };
 try {
-    const port = await freePort(), url = `http://127.0.0.1:${port}`;
+    const port = await freePort(); url = `http://127.0.0.1:${port}`;
     await cli(home, ['init']); await cli(home, ['config', 'set', 'server.port', String(port)]);
     await cli(home, ['config', 'set', 'hapi.executable', hapiBinary]); await cli(home, ['config', 'set', 'server.runner', 'false']);
     await cli(home, ['config', 'set', 'server.artifacts.unreferencedDays', '1']);
     await cli(home, ['config', 'set', 'server.artifacts.pendingHours', '1']); await cli(home, ['start']);
     const paths = (await cli(home, ['paths'])).value;
-    token = JSON.parse(await readFile(join(paths.hapiServer, 'settings.json'), 'utf8')).cliApiToken; assert(token);
-    const hapi = new HapiClient(url, token);
+    const user = await (await fetch(url + '/api/runweft/hub/identities', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: 'Prune owner' }) })).json();
+    token = user.token; secrets.push(token); spaceId = user.personalSpace.id; identityFile = join(root, 'identity.txt'); await writeFile(identityFile, token, { mode: 0o600 });
+    const hapi = new HubClient({ url, identityFile, space: spaceId }, 'hubAccess', 'hub_access_unavailable').http;
     let losePruneResponse = false;
     proxy = Bun.serve({ port: 0, hostname: '127.0.0.1', async fetch(request) {
         const input = new URL(request.url);
@@ -44,9 +48,8 @@ try {
         headers.delete('content-encoding'); headers.delete('content-length');
         return new Response(response.body, { status: response.status, headers });
     } });
-    await cli(remote, ['init', '--mode', 'hub', '--url', `http://127.0.0.1:${proxy.port}`]);
-    await cli(remote, ['config', 'set', 'hub.tokenEnv', 'ARTIFACT_PRUNE_SMOKE_TOKEN']); env.ARTIFACT_PRUNE_SMOKE_TOKEN = token;
-    await cli(remote, ['config', 'set', 'server.artifacts.unreferencedDays', '99']);
+    remoteUrl = `http://127.0.0.1:${proxy.port}`;
+    await cli(remote, ['init']); await cli(remote, ['config', 'set', 'server.artifacts.unreferencedDays', '99']);
     const source = join(root, 'report.txt'); await writeFile(source, 'retained file bytes');
     const pinned: Artifact[] = [], expiring: Artifact[] = [];
     for (const purpose of ['input', 'output', 'recovery', 'external', null, null]) {
@@ -75,10 +78,9 @@ try {
     const limits = (await cli(remote, ['artifact', 'limits'])).value;
     assert.equal(limits.limits.unreferencedDays, 1); assert.equal(limits.usage.referencedCount, 4);
     assert.equal(limits.usage.referencedBytes, pinned.reduce((sum, file) => sum + file.size, 0));
-    const doctor = (await cli(home, ['doctor'])).value;
-    const storage = doctor.checks.find((check: any) => check.name === 'artifacts');
-    assert(storage.ok); assert.equal(storage.detail.hostedStorage, paths.artifacts); assert.equal(storage.detail.localTransfers, paths.artifactTransfers);
-    record('compiled local/Hub preview agrees after real service restart; server policy and doctor usage/paths are authoritative');
+    const currentPaths = (await cli(home, ['paths'])).value;
+    assert.equal(currentPaths.artifacts, paths.artifacts); assert.equal(currentPaths.hapiServer, paths.hapiServer);
+    record('compiled local/Hub preview agrees after real service restart; server policy, current paths and file usage are authoritative');
     losePruneResponse = true;
     assert((await cli(remote, ['artifact', 'prune', '--apply', '--limit', '1'], 1)).stderr.includes('502'));
     const first = [...expiring].sort((left, right) => left.id.localeCompare(right.id))[0]!;
@@ -102,15 +104,28 @@ try {
     const download = join(root, 'protected-download.txt');
     await cli(remote, ['artifact', 'download', pinned[0]!.id, '--output', download]);
     assert.equal(await readFile(download, 'utf8'), 'retained file bytes');
-    const other = new HapiClient(url, `${token}:other`);
+    const otherUser = await (await fetch(url + '/api/runweft/hub/identities', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: 'Other prune owner' }) })).json();
+    secrets.push(otherUser.token); const otherFile = join(root, 'other-identity.txt'); await writeFile(otherFile, otherUser.token, { mode: 0o600 });
+    const other = new HubClient({ url, identityFile: otherFile, space: otherUser.personalSpace.id }, 'hubAccess', 'hub_access_unavailable').http;
     assert.equal((await other.request('/api/artifacts/prune', { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' })).candidates.length, 0);
     assert.equal((await hapi.request('/api/sessions')).sessions.length, 0);
     record('apply pagination frees quota, preserves input/output/recovery/external pins and recent files; tombstones survive restart; zero agents');
+    Object.assign(evidence, { candidate: { entry: 'compiled', cliSha256: createHash('sha256').update(await readFile(binary)).digest('hex'), hapiSha256: createHash('sha256').update(await readFile(hapiBinary)).digest('hex') } });
     evidence.success = true;
 } catch (error) { evidence.error = error instanceof Error ? error.message : String(error); process.exitCode = 1; }
 finally {
-    try { await cli(home, ['stop']); } catch (error) { evidence.cleanupErrors.push(String(error)); }
-    try { await proxy?.stop(true); } catch (error) { evidence.cleanupErrors.push(String(error)); }
+    let serviceStopped = false;
+    try {
+        await closeSmoke([
+            async () => { assert(serviceStopped, 'Service still running; secrets retained');
+                await closeSmoke([identityFile, join(root, 'other-identity.txt'), join(home, 'server/hapi/settings.json'), join(home, 'server/hapi/jwt-secret.json')]
+                    .filter(Boolean).map(file => () => rm(file, { force: true }))); },
+            async () => { await cli(home, ['stop']); const status = (await cli(home, ['status'])).value;
+                assert.equal(status.service.running, false); assert.equal(status.runner.running, false); serviceStopped = true; },
+            async () => { await proxy?.stop(true); },
+        ]);
+        if (evidence.success) await removeFileSmokeData(root);
+    } catch (error) { evidence.cleanupErrors.push(...(error instanceof AggregateError ? error.errors.map(String) : [String(error)])); }
     if (evidence.cleanupErrors.length) { evidence.success = false; process.exitCode = 1; }
     evidence.finishedAt = new Date().toISOString(); await writeFile(join(root, 'evidence.json'), JSON.stringify(evidence, null, 2));
     console.log(`Evidence: ${join(root, 'evidence.json')}`); if (evidence.error) console.error(evidence.error);
