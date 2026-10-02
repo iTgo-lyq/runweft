@@ -3,7 +3,7 @@ import { createHash } from 'node:crypto';
 import { appendFile, lstat, mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { packageNames, registry } from '../scripts/npm-publish.mjs';
+import { packageNames, registry, releaseChannel } from '../scripts/npm-publish.mjs';
 
 const siteFiles = {
   'index.html': 'text/html', 'guide.html': 'text/html', 'manual.html': 'text/html',
@@ -14,6 +14,13 @@ const siteFiles = {
 const digest = bytes => createHash('sha256').update(bytes).digest('hex');
 const noDownloads = html => assert(!/<a\b[^>]*\bdownload(?:\s|=|>)/i.test(html)
   && !/(?:href|src)=["'][^"']*(?:\/downloads\/|\.(?:tgz|tar\.gz|zip|sha256)(?:["'?#]))/i.test(html), '官网不能提供包下载。');
+
+export function siteEligibility(env, version) {
+  if (releaseChannel(version) === 'latest') return true;
+  assert(['push', 'workflow_dispatch'].includes(env.GITHUB_EVENT_NAME) && env.GITHUB_REF_TYPE === 'branch'
+    && env.GITHUB_REF_NAME?.startsWith('codex/'), 'Beta 官网只允许开发分支跳过；main 和 PR 必须使用稳定版本。');
+  return false;
+}
 
 export function deploymentTarget(env) {
   const branch = env.GITHUB_REF_NAME;
@@ -168,6 +175,14 @@ async function main() {
   const env = process.env;
   const directory = resolve('dist/website');
   switch (process.argv[2]) {
+    case 'eligibility': {
+      const version = JSON.parse(await readFile('package.json', 'utf8')).version;
+      const build = siteEligibility(env, version);
+      await outputs({ build });
+      await save('eligibility', { version, build, sourceRevision: env.GITHUB_SHA });
+      if (!build) await summary(`开发分支版本 ${version} 为 Beta：部署检查已执行，官网保持稳定版本，跳过构建与上传。`);
+      break;
+    }
     case 'check': {
       const site = await validateSite(directory);
       const packages = await checkNpmRelease(site.release);
@@ -214,7 +229,7 @@ async function main() {
       console.log(`Pages ${result.mode} 在线校验通过：${result.url}`);
       break;
     }
-    default: throw new Error('用法：node website/publish.mjs check|prepare|verify');
+    default: throw new Error('用法：node website/publish.mjs eligibility|check|prepare|verify');
   }
 }
 

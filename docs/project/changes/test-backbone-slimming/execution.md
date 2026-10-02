@@ -36,3 +36,11 @@
 - 初次N1：native-backbone-P97jP0 / collaboration-dz8oeB / shared-package-hrdPxT通过，包含真实local Codex→Codex两轮、65秒wait、子CLI拒绝、历史网页、重启无重放和清理。注入N2 producer前失败时，QEUI3S实际复用N1且未调用N2模型，退出1符合预期。
 - 初次N2：S5Kht4 / collaboration-OZ5Qya失败，已停止自建进程、cleanupErrors=[]。子CLI探针已写入两个subagent_delegation_denied证明且退出0，但无stdout；Claude为了确认探针结果读取helper，超出宿主当时的验收白名单，宿主按指令停止，尚未send_input。不是服务商失败或产品权限错误，不盲目重发已接受任务。
 - 修正：helper输出明确成功标记；任务说明控制器负责证明检查，避免额外读取；只读专用helper/proof精确路径进入验收白名单。产品源码和二进制不变。因共享脚本变化，原N1保留为历史事实但不作为最终指纹下通过，不复用旧ledger；新现场重新验收。
+
+## T5 CI选择与发行入口
+
+- 结果：新增普通提交核心/相关Linux集成工作流；固定路径规则只选择受影响组，未知产品/构建路径和新分支默认全组，Git差异读取失败直接失败。同仓codex PR复用push检查。四平台候选仅tag/手动触发，完整根/Node/四组无模型gate不按差异跳过；npm同run等待四平台安装，手动只预演。开发说明改为当前四组、六链/专项与按case恢复入口，移除已删命令引用。
+- 交叉变更：从已完成Beta工作区提交 `b698609` 核对并吸收发布通道、回执恢复、同版本完整性和官网Beta保护；保留本分支已删除reset/旧格式验收的决定。发布测试转换为Node原生assert并移到scripts/tests（17项，含Beta新增9项），不再同时用Bun重复跑同一文件。网站14项与路径选择2项独立。
+- 验证：Node三文件33 pass/0 fail；typecheck通过；actionlint1.7.12通过；官网稳定源码实际构建通过；当前包输入与6a7e559冻结候选无差异。使用CI相同固定版本在专用prefix实际安装Codex/Claude并运行version，不读取模型认证。没有推送或远端CI结果。
+- 前置发现：初次Node运行暴露原Bun import不兼容，转换后又由负例发现not.toMatch转换反向错误，均修正后通过。实际安装暴露Claude在ignore-scripts下只有占位入口，改为显式运行已检查的包内install.cjs并检查两个version后通过；Beta候选不运行stable-only网站构建，网站单独做版本资格判断。以上均在本地、零模型阶段发现，未伪称CI成功。
+- Commit：`test-backbone-slimming T5: select local checks and build one release candidate`

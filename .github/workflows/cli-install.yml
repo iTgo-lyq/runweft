@@ -1,9 +1,6 @@
 name: CLI installation
 
 on:
-  push:
-    branches: [main, 'codex/**']
-    paths: ['src/**', 'scripts/**', 'skills/**', 'test/**', 'docs/usage.md', 'package.json', 'bun.lock', '.npmrc', 'tsconfig.json', 'hapi', '.github/workflows/cli-install.yml']
   workflow_dispatch:
   workflow_call:
     inputs:
@@ -27,7 +24,10 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-24.04
-    timeout-minutes: 35
+    timeout-minutes: 45
+    env:
+      CODEX_HOME: ${{ github.workspace }}/.dev-smoke/ci-codex
+      CLAUDE_CONFIG_DIR: ${{ github.workspace }}/.dev-smoke/ci-claude
     outputs:
       candidate-name: ${{ steps.candidate.outputs.name }}
     steps:
@@ -39,19 +39,16 @@ jobs:
         env:
           CANDIDATE_NAME: ${{ inputs.candidate-name || 'cli-candidate' }}
         run: echo "name=$CANDIDATE_NAME" >> "$GITHUB_OUTPUT"
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '24'
       - name: Check release tag version
         run: |
           node --input-type=module <<'NODE'
           import fs from 'node:fs';
-          const version = JSON.parse(fs.readFileSync('package.json')).version;
-          if (process.env.GITHUB_EVENT_NAME === 'push' && process.env.GITHUB_REF_TYPE === 'tag' &&
-              (!/^v\d+\.\d+\.\d+$/.test(process.env.GITHUB_REF_NAME) || process.env.GITHUB_REF_NAME !== `v${version}`)) {
-            throw new Error('Release tag must match the stable package version');
-          }
+          import { isRelease } from './scripts/npm-publish.mjs';
+          isRelease(process.env, JSON.parse(fs.readFileSync('package.json')).version);
           NODE
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
-        with:
-          node-version: '24'
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
           bun-version: '1.4.2'
@@ -59,9 +56,22 @@ jobs:
       - run: bun install --frozen-lockfile
         working-directory: hapi
       - run: bun run typecheck && bun run test
+      - run: node --test ./scripts/tests/*.test.mjs ./website/publish.test.mjs
+      - name: Install native clients for version and tool discovery only
+        run: |
+          mkdir -p "$CODEX_HOME" "$CLAUDE_CONFIG_DIR"
+          npm install --prefix .dev-smoke/native-tools --ignore-scripts --registry=https://registry.npmjs.org/ @openai/codex@0.159.2 @anthropic-ai/claude-code@2.1.283
+          node .dev-smoke/native-tools/node_modules/@anthropic-ai/claude-code/install.cjs
+          .dev-smoke/native-tools/node_modules/.bin/codex --version
+          .dev-smoke/native-tools/node_modules/.bin/claude --version
+          echo "$GITHUB_WORKSPACE/.dev-smoke/native-tools/node_modules/.bin" >> "$GITHUB_PATH"
+      - run: bunx playwright install --with-deps chromium
       - run: bun run package --all
-      - run: bun run test:packages
-      - run: node scripts/smoke-install.mjs
+      - name: Check every model-free integration group on the candidate
+        run: |
+          for group in access storage web service-package; do
+            bun scripts/smoke-integration.ts "$group" dist/packages/runweft-linux-x64/bin/runweft || exit $?
+          done
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: ${{ steps.candidate.outputs.name }}

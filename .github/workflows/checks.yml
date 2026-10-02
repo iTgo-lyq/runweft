@@ -1,0 +1,102 @@
+name: Development checks
+
+on:
+  push:
+    branches: [main, 'codex/**']
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: checks-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  core:
+    # Same-repository codex branches already receive the push check.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository || !startsWith(github.event.pull_request.head.ref, 'codex/')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    outputs:
+      groups: ${{ steps.scope.outputs.groups }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          submodules: true
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '24'
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: '1.4.2'
+      - run: bun install --frozen-lockfile
+      - run: bun install --frozen-lockfile
+        working-directory: hapi
+      - run: bun run typecheck && bun run test
+      - run: node --test ./scripts/tests/*.test.mjs
+      - run: go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.12
+      - id: scope
+        env:
+          CI_BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+          CI_HEAD: ${{ github.sha }}
+        run: node scripts/ci-scope.mjs
+
+  integration:
+    needs: core
+    if: needs.core.outputs.groups != '[]'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      CODEX_HOME: ${{ github.workspace }}/.dev-smoke/ci-codex
+      CLAUDE_CONFIG_DIR: ${{ github.workspace }}/.dev-smoke/ci-claude
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          submodules: true
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '24'
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: '1.4.2'
+      - run: bun install --frozen-lockfile
+      - run: bun install --frozen-lockfile
+        working-directory: hapi
+      - name: Install native clients for version and tool discovery only
+        run: |
+          mkdir -p "$CODEX_HOME" "$CLAUDE_CONFIG_DIR"
+          npm install --prefix .dev-smoke/native-tools --ignore-scripts --registry=https://registry.npmjs.org/ @openai/codex@0.159.2 @anthropic-ai/claude-code@2.1.283
+          node .dev-smoke/native-tools/node_modules/@anthropic-ai/claude-code/install.cjs
+          .dev-smoke/native-tools/node_modules/.bin/codex --version
+          .dev-smoke/native-tools/node_modules/.bin/claude --version
+          echo "$GITHUB_WORKSPACE/.dev-smoke/native-tools/node_modules/.bin" >> "$GITHUB_PATH"
+      - if: contains(fromJSON(needs.core.outputs.groups), 'web')
+        run: bunx playwright install --with-deps chromium
+      - run: bun run build:hapi && bun run build
+      - name: Run selected local integration groups
+        env:
+          CI_GROUPS: ${{ needs.core.outputs.groups }}
+        run: |
+          node --input-type=module <<'NODE'
+          import { spawnSync } from 'node:child_process';
+          for (const group of JSON.parse(process.env.CI_GROUPS)) {
+            const commands = group === 'service'
+              ? [['node', 'scripts/smoke-service.mjs', 'dist/runweft'], ['bun', 'scripts/smoke-hub-service.ts', 'dist/runweft']]
+              : [['bun', 'scripts/smoke-integration.ts', group, 'dist/runweft']];
+            for (const [command, ...args] of commands) {
+              const result = spawnSync(command, args, { stdio: 'inherit' });
+              if (result.status !== 0) process.exit(result.status ?? 1);
+            }
+          }
+          NODE
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: integration-evidence
+          path: .dev-smoke/**/evidence.json
+          include-hidden-files: true
+          if-no-files-found: ignore

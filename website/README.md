@@ -23,7 +23,7 @@ node website/serve.mjs
 
 版本读取 package.json，安装成功后才运行版本检查。release.json 只保存 version、installation=npm、package=runweft 和公开 registry，不记录程序源码候选。构建全部成功后才原子替换旧网站；错误保留之前的输出，清理暂存。
 
-参考页读取 docs/usage.md，在末尾“离线完整交付（工程参考）”附录之前截取并转义；官网不展示离线安装命令。使用说明和 Skill 源码改变后，下次程序发行须重新冻结包输入。已公开 1.1.0 和历史离线整包不覆盖，包内旧 Skill 尚未随本次源码改动重新发布；网站接入对话明确全程使用 npm。
+参考页读取 docs/usage.md，在末尾“离线完整交付（工程参考）”附录之前截取并转义；官网不展示离线安装命令。使用说明和 Skill 源码改变后，下次程序发行须重新冻结包输入。当前源码 Skill 已随 npm 1.1.1 发布并通过匿名安装核对；网站接入对话明确全程使用 npm。已公开 1.1.0 和历史离线整包保留原样。
 
 ## Cloudflare Pages 自动部署
 
@@ -35,6 +35,8 @@ node website/serve.mjs
 | codex/** 的官网相关推送 | 检查通过后部署分支预览 |
 | pull_request 的官网相关变更 | 聚焦测试、构建和公共 npm 检查，不上传 |
 | workflow_dispatch | 所选 main/codex 分支按同一规则部署；tag/其他分支只检查 |
+
+仅规范稳定版本运行表中的构建/公开 npm/部署步骤。codex/** 的 push 或 dispatch 遇到 Beta 根版本时执行聚焦检查并写 summary，跳过构建、准备/上传和 website-static 产物；main 或 PR 遇到 Beta 版本直接失败，避免生产更新被静默跳过。真实 builder 仍只接受稳定版本，不生成 Beta 产品站点。
 
 相关路径为 website/**、package.json、docs/usage.md、scripts/npm-publish.mjs 和该工作流。默认分支 main 已包含产品与工作流，生产和 codex 预览推送均已实测；PR 和手动入口的真实触发尚未实测。
 
@@ -69,7 +71,7 @@ node website/build.mjs
 node website/publish.mjs check
 ```
 
-最后一步访问公共 npm；API/路由失败路径用专用夹具测试。[正式官网](https://runweft.pages.dev/)已由 main 推送部署，[生产 CI](https://github.com/iTgo-lyq/runweft/actions/runs/36912561909)全部通过，唯一部署 URL 为 [bea1f782.runweft.pages.dev](https://bea1f782.runweft.pages.dev/)。13 项部署测试、唯一 URL 与正式域名的八文件摘要/MIME，以及正式域名三页 Playwright 检查通过；产物为 91,064 字节，安装版本为 npm 1.1.0。
+最后一步访问公共 npm；API/路由失败路径用专用夹具测试。[正式官网](https://runweft.pages.dev/)已由 main 推送部署，[生产 CI](https://github.com/iTgo-lyq/runweft/actions/runs/36921038133)全部通过，唯一部署 URL 为 [08c3e5b5.runweft.pages.dev](https://08c3e5b5.runweft.pages.dev/)。14 项部署测试、唯一 URL 与正式域名的八文件摘要/MIME，以及正式域名三页 Playwright 检查通过；产物为 91,064 字节，安装版本为 npm 1.1.1。
 
 [codex 分支在线预览](https://codex-cli-foundation.runweft.pages.dev/)仍可访问，预览验收范围见[归档记录](../docs/project/archive/2026-10-02-website-cloudflare-pages/acceptance.md)。生产/分支别名会跟随后续部署变化，固定构建验收使用唯一 URL；手动和 PR 的真实触发尚未实测。
 

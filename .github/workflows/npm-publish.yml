@@ -2,9 +2,7 @@ name: npm publishing
 
 on:
   push:
-    branches: [main, 'codex/**']
     tags: ['v*']
-    paths: ['.github/workflows/npm-publish.yml', '.github/workflows/cli-install.yml', 'scripts/npm-publish.mjs', 'scripts/check-npm-trust.mjs', 'test/npm-publish.test.js']
   workflow_dispatch:
 
 permissions:
