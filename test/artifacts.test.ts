@@ -1,3 +1,4 @@
+import { compiledCli } from './compiled-cli';
 import { atomicWrite } from '../src/config';
 import { hubConnectionPaths } from '../src/hub/resources/connection';
 import { afterEach, describe, expect, test } from 'bun:test';
@@ -46,8 +47,9 @@ async function fixture() {
     atomicWrite(hubConnectionPaths(home, url).identityConnection, JSON.stringify({ schemaVersion: 1, hub: url, ownerId: owner, spaceId: space, token: identityToken, requestId: randomUUID(), createdAt: Date.now() }));
     const env: NodeJS.ProcessEnv = { ...process.env, ARTIFACT_TEST_TOKEN: 'test-access' };
     for (const key of Object.keys(env)) if (key.startsWith('RUNWEFT_')) delete env[key];
+    const binary = await compiledCli();
     async function cli(args: string[], code = 0) {
-        const process = Bun.spawn([Bun.which('bun')!, resolve('src/cli.ts'), '--home', home, '--json', 'artifact', ...args], { env, stdout: 'pipe', stderr: 'pipe' });
+        const process = Bun.spawn([binary, '--home', home, '--json', 'artifact', ...args], { env, stdout: 'pipe', stderr: 'pipe' });
         const [status, stdout, stderr] = await Promise.all([process.exited, new Response(process.stdout).text(), new Response(process.stderr).text()]);
         expect(status).toBe(code); expect(stdout + stderr).not.toContain('test-access');
         return { value: stdout.trim() ? JSON.parse(stdout) : null, stderr };

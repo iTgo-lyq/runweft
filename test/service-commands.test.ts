@@ -1,8 +1,9 @@
+import { compiledCli } from './compiled-cli';
 import { fixtureCleanup } from './fixture-cleanup';
 import { afterEach, expect, test } from 'bun:test';
 import { spawn } from 'node:child_process';
 import { chmodSync, existsSync, readFileSync, writeFileSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { join } from 'node:path';
 import { fixture } from './helpers';
 import { requireRunweft } from '../src/services';
 import { browserAddress } from '../src/service-commands';
@@ -26,9 +27,9 @@ if (process.argv[2] === 'wait') {
 `);
     chmodSync(executable, 0o755);
     const env = { ...process.env, RUNWEFT_HAPI_EXECUTABLE: executable };
-    const args = [resolve('src/cli.ts'), '--home', root, 'hapi'];
+    const binary = await compiledCli(), args = ['--home', root, 'hapi'];
     const input = ['--native-flag', 'a b', '$(must-not-run)', "'literal'"];
-    const result = Bun.spawn([process.execPath, ...args, ...input], { env, stdout: 'pipe', stderr: 'pipe' });
+    const result = Bun.spawn([binary, ...args, ...input], { env, stdout: 'pipe', stderr: 'pipe' });
     const stdout = await new Response(result.stdout).text();
     const stderr = await new Response(result.stderr).text();
     expect(stderr).toBe('');
@@ -36,7 +37,7 @@ if (process.argv[2] === 'wait') {
     const output = JSON.parse(stdout);
     expect(output.args).toEqual(input);
     expect(output.home).toBe(join(root, 'connections/unconnected/hapi'));
-    const child = spawn(process.execPath, [...args, 'wait'], { env, stdio: 'ignore' });
+    const child = spawn(binary, [...args, 'wait'], { env, stdio: 'ignore' });
     const ended = new Promise<{ code: number | null; signal: NodeJS.Signals | null }>(resolve => child.once('exit', (code, signal) => resolve({ code, signal })));
     try {
         const deadline = Date.now() + 5000;
@@ -65,7 +66,7 @@ test('open uses public Hub entry and never puts a credential in browser argument
     const root = fixture('dashboard-open', cleanups), captured = join(root, 'browser-url');
     const command = join(root, process.platform === 'darwin' ? 'open' : 'xdg-open');
     writeFileSync(command, '#!/usr/bin/env node\nimport { writeFileSync } from "node:fs"; writeFileSync(process.env.DASHBOARD_OPEN_CAPTURE, process.argv[2]);\n'); chmodSync(command, 0o755);
-    const run = Bun.spawn([process.execPath, resolve('src/cli.ts'), '--home', root, '--json', 'open'], {
+    const run = Bun.spawn([await compiledCli(), '--home', root, '--json', 'open'], {
         env: { ...process.env, PATH: `${root}:${process.env.PATH}`, RUNWEFT_MODE: 'hub', RUNWEFT_HUB_URL: server.url.origin, RUNWEFT_HUB_TOKEN: 'legacy-secret', DASHBOARD_OPEN_CAPTURE: captured }, stdout: 'pipe', stderr: 'pipe',
     });
     const stdout = await new Response(run.stdout).text(), stderr = await new Response(run.stderr).text();

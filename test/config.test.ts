@@ -36,6 +36,8 @@ describe('configuration', () => {
         const paths = dataPaths(c);
         expect(paths.hapiClient).toContain('connections/hub.example-');
         expect(paths.hapiClient).not.toBe(dataPaths(loadConfig(home, {})).hapiClient);
+        writeFileSync(join(home, 'config.yaml'), 'mode: hub\n');
+        expect(loadConfig(home, { RUNWEFT_HUB_URL: 'http://localhost:4321' }).config.hub.url).toBe('http://localhost:4321');
     });
 
     test('invalid edits never replace working configuration', () => {
@@ -63,9 +65,4 @@ describe('configuration', () => {
         expect(initializeConfig(home, { url: 'https://hub.example' }, {}).config.mode).toBe('hub');
     });
 
-    test('Hub URL may be supplied by environment while mode is persisted', () => {
-        const home = fixture('env hub', cleanupOwner.resources);
-        writeFileSync(join(home, 'config.yaml'), 'mode: hub\n');
-        expect(loadConfig(home, { RUNWEFT_HUB_URL: 'http://localhost:4321' }).config.hub.url).toBe('http://localhost:4321');
-    });
 });

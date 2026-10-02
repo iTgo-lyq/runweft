@@ -1,13 +1,11 @@
 import { setupHubResources, hubResourceFixture } from './hub-resources-fixture';
 import { afterEach, expect, test } from 'bun:test';
-import { Database } from 'bun:sqlite';
 import { randomBytes, randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { AccessStore } from '../src/hub/access/store';
 import { HubResourceStore } from '../src/hub/resources/store';
 import { createIdentityToken } from '../src/hub/store';
-import { STATE_SCHEMA_VERSION, openState } from '../src/state';
 import { resourceInspection } from './native-fixture';
 
 const cleanups: (() => void | Promise<void>)[] = [];
@@ -351,15 +349,4 @@ test('out-of-order inspections retain newer facts while later and equal timestam
     expect(h.second.runtime(h.actor, runtime.id).inspection).toEqual(later);
     const equal = inspection(300, 'same millisecond'); h.second.saveInspections(h.actor, machineId, [equal]);
     expect(h.store.runtime(h.actor, runtime.id)).toMatchObject({ id: runtime.id, name: runtime.name, registered: true, inspection: equal });
-});
-
-test('openState retains the current schema and refuses a higher version without overwriting it', () => {
-    const h = setup(), db = new Database(h.path);
-    try {
-        expect(db.query('PRAGMA user_version').get()).toEqual({ user_version: STATE_SCHEMA_VERSION });
-        expect(db.query('PRAGMA journal_mode').get()).toEqual({ journal_mode: 'wal' });
-        db.exec(`PRAGMA user_version=${STATE_SCHEMA_VERSION + 1}`);
-        expect(() => openState(h.path)).toThrow('当前支持的格式');
-        expect(db.query('PRAGMA user_version').get()).toEqual({ user_version: STATE_SCHEMA_VERSION + 1 });
-    } finally { db.close(); }
 });

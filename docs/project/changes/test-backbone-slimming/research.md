@@ -72,3 +72,15 @@
 - 远端同宿主/runtime 配对是否还存在独立耦合：快测仍覆盖四配对；涉及 host/native 映射、HAPI pin 或 workspace 分支时扩展原生矩阵。
 - 六主链整合后的固定案例运行时间、两个隔离 case 并发是否互相争用、消费者如何消费最小历史，需要真实验证。默认先串行，不用全局并发隐藏重复。
 - 72MiB 流式传输、库存 deadline 和真实 heartbeat 过期测试有不同故障来源，保留在对应集成层，不直接替换为小文件、假时钟或静态状态。
+
+## T2 实际删除与保留映射
+
+| 删除/收敛 | 接替保障 | 实施判断 |
+| --- | --- | --- |
+| hub-console 中 JS 源码拼写、六条纯标签映射 | hub-console 的 HTTP MIME/CSP/授权；tasks-overview 的 unknown/停止/留存语义；consoleTasks 的真实浏览器 token/401/迟到响应 | 删除实现复述，浏览器集成归 T3 |
+| resource-commands 独立文件 | cli 的四资源入口错误出口，仍逐个启动实际编译 CLI | 收敛文件与准备环境，未删除四个入口验证 |
+| config 单独的 env URL 用例 | sources 优先级用例保留同一行为断言 | 合并同一职责 |
+| hub-resources 重复 schema 用例 | state 的 fresh/WAL/unsupported 无写拒绝；保留 WAL 模式断言 | 删除重复领域覆盖；临时取消版本拒绝后保留用例实际失败 |
+| artifacts/state/service-commands/mcp/cli 的源码 CLI 启动 | 共享现有 compiledCli；实际进程、argv、退出信号和 stdio 仍检查 | 减少每次解释源码，不新增编译缓存 |
+
+执行层审批测试保留：上层替身不验证其 HTTP path/body/409。resource CLI 的权限、CAS、丢回执与命令参数接线也保留；仅凭耗时没有证据删除。K1–K12 的其他领域骨干不变，不把少量文件合并包装成大幅用例删减。

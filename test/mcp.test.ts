@@ -1,3 +1,4 @@
+import { compiledCli } from './compiled-cli';
 import { fixtureCleanup } from './fixture-cleanup';
 import { afterEach, expect, test } from 'bun:test';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
@@ -5,7 +6,7 @@ import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js'
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { Database } from 'bun:sqlite';
 import { existsSync, mkdirSync, readFileSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { join } from 'node:path';
 import { loadConfig } from '../src/config';
 import { HapiClient } from '../src/hapi';
 import { hubOptions } from '../src/hub/delegation/client';
@@ -136,7 +137,7 @@ test('request cancellation and disconnect reach waiting handlers without executi
 
 test('stdio CLI uses protocol-only stdout and closes on EOF without touching the data home', async () => {
     const { c, cwd } = setup();
-    const transport = new StdioClientTransport({ command: process.execPath, args: [resolve('src/cli.ts'), '--home', c.home, 'mcp', 'serve', '--client', 'codex'], cwd, stderr: 'pipe' });
+    const transport = new StdioClientTransport({ command: await compiledCli(), args: [ '--home', c.home, 'mcp', 'serve', '--client', 'codex'], cwd, stderr: 'pipe' });
     let stderr = ''; transport.stderr?.on('data', chunk => { stderr += chunk; });
     const client = new Client({ name: 'stdio-test', version: '1' });
     await client.connect(transport);

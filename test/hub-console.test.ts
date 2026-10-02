@@ -6,7 +6,6 @@ import { hubResourceFixture } from './hub-resources-fixture';
 import { until } from './helpers';
 import { authorizeTerminal } from '../src/hub/access/sockets';
 import { createIdentityToken } from '../src/hub/store';
-import { stopText, codeText, filesText } from '../src/hub/tasks-page';
 
 const cleanups: (() => void | Promise<void>)[] = [];
 afterEach(async () => { for (const cleanup of cleanups.splice(0).reverse()) await cleanup(); });
@@ -62,10 +61,7 @@ test('native browser reauthentication preserves exact JWT scope and lifetime, re
     expect((await fetch(fixture.url + '/sessions/example/terminal')).status).toBe(403);
     const script = await fetch(fixture.url + '/hub/native.js');
     expect(script.status).toBe(200);
-    const javascript = await script.text();
-    expect(javascript).toContain('runweft.native.access'); expect(javascript).not.toContain('export default');
-    expect(javascript).toContain('url.searchParams.delete("token")');
-    expect(javascript).toContain('authorization: `Bearer ${credential}`');
+    expect(script.headers.get('content-type')).toContain('text/javascript');
 });
 
 test('console task detail and pagination are owner scoped without requiring a live parent', async () => {
@@ -121,14 +117,4 @@ test('current console publishes public assets with strict headers, MIME and meth
     }
     expect((await fetch(fixture.url + '/hub/not-a-file')).status).toBe(404);
     expect((await fetch(fixture.url + '/api/runweft/tasks/overview')).status).toBe(401);
-});
-
-
-test('current console labels distinguish uncertain starts, stopped processes and delivery retention', () => {
-    expect(stopText({ stop: 'not_started', execution_not_started: false })).toBe('尚未确认进程结束');
-    expect(stopText({ stop: 'not_started', execution_not_started: true })).toBe('已确认未启动');
-    expect(stopText({ stop: 'stopped', execution_not_started: false })).toBe('进程已结束');
-    expect(codeText({ status: 'not_applicable' })).toBe('不适用');
-    expect(filesText({ status: 'none', retention: 'retained', count: 0, available: 0 })).toBe('未声明');
-    expect(filesText({ status: 'delivered', retention: 'released', count: 1, available: 1 })).toBe('已释放');
 });

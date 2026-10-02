@@ -1,3 +1,4 @@
+import { compiledCli } from './compiled-cli';
 import { afterEach, expect, test } from 'bun:test';
 import { Database } from 'bun:sqlite';
 import { chmodSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
@@ -25,6 +26,7 @@ function refuse(root: string, path: string, code: string) {
 test('fresh state has only the current schema and reopens without changing stored identities', () => {
     const { root, path } = location(); const db = openState(path);
     expect(db.query('PRAGMA user_version').get()).toEqual({ user_version: STATE_SCHEMA_VERSION });
+    expect(db.query('PRAGMA journal_mode').get()).toEqual({ journal_mode: 'wal' });
     expect(db.query("SELECT name FROM sqlite_schema WHERE name IN ('machine_registrations', 'runtime_registrations')").all()).toEqual([]);
     db.query('INSERT INTO hub_users VALUES (?, ?, ?, ?)').run('owner', 'Owner', 'digest', 1); db.close();
     expect(statSync(path).mode & 0o777).toBe(0o600);
@@ -65,13 +67,14 @@ test('concurrent fresh creators keep every committed row and leave no constructi
     expect(readdirSync(root).some(name => name.startsWith('.state-create-'))).toBe(false);
 });
 test('service start, serve and restart reject an unsupported database before changing the home', async () => {
+    const binary = await compiledCli();
     for (const kind of ['state', 'clientState'] as const) {
     const { root } = location(); const config = loadConfig(root, {}), path = dataPaths(config)[kind];
     const { mkdirSync } = await import('node:fs'); const { dirname } = await import('node:path'); mkdirSync(dirname(path), { recursive: true });
     const db = new Database(path); db.exec('CREATE TABLE keep(value TEXT); PRAGMA user_version=18;'); db.close();
     const before = files(root);
     for (const action of ['start', 'serve', 'restart']) {
-        const child = Bun.spawn([process.execPath, 'src/cli.ts', '--home', root, '--json', action], { stdout: 'pipe', stderr: 'pipe' });
+        const child = Bun.spawn([binary, '--home', root, '--json', action], { stdout: 'pipe', stderr: 'pipe' });
         const [code, out, err] = await Promise.all([child.exited, new Response(child.stdout).text(), new Response(child.stderr).text()]);
         expect(code).toBe(1); expect(out + err).toContain('state_format_unsupported'); expect(files(root)).toEqual(before);
     }
