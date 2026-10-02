@@ -28,8 +28,10 @@ const previous = previousFile ? JSON.parse(readFileSync(previousFile, 'utf8')) :
 const failBeforeNext = process.env.RUNWEFT_SMOKE_RECONSTRUCTION_FAIL_BEFORE_NEXT === '1';
 const env: NodeJS.ProcessEnv = { ...process.env };
 for (const key of Object.keys(env)) if (key.startsWith('RUNWEFT_') || key.startsWith('HAPI_') || ['CLI_API_TOKEN', 'DB_PATH', 'TELEGRAM_BOT_TOKEN'].includes(key)) delete env[key];
-const flavors = ['codex', 'claude'] as const;
-type Flavor = typeof flavors[number];
+type Flavor = 'codex' | 'claude';
+const selectedRuntime = process.env.RUNWEFT_SMOKE_RUNTIME;
+assert(!selectedRuntime || ['codex', 'claude'].includes(selectedRuntime));
+const flavors = (['codex', 'claude'] as Flavor[]).filter(flavor => !selectedRuntime || selectedRuntime === flavor);
 const credentials = new Set<string>(), pids = new Set<number>(), sessionIds = new Set<string>();
 let center: Awaited<ReturnType<typeof nativeUserSmoke>> | undefined, hapi: HapiHttp | undefined;
 let constructorCleanupUncertain = false;

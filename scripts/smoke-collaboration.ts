@@ -15,10 +15,13 @@ import pkg from '../package.json';
 type Flavor = 'codex' | 'claude';
 const executable = resolve(process.argv[2] ?? 'dist/runweft'), binaries = preflightBinaries(executable);
 const selected = process.env.RUNWEFT_SMOKE_CASE;
+assert(selected, 'Select one case explicitly; test:native owns the acceptance matrix');
+const longWait = process.env.RUNWEFT_SMOKE_LONG_WAIT === '1';
 const remote = process.env.RUNWEFT_SMOKE_REMOTE === '1';
 // Two remote rounds include model-driven approvals and fetches; this bounds the whole host, not an MCP request.
 const hostTimeoutMs = remote ? 900_000 : 420_000;
 const controls = process.env.RUNWEFT_SMOKE_CONTROLS === '1';
+const disconnectRequested = process.env.RUNWEFT_SMOKE_DISCONNECT === '1';
 const worktree = remote || process.env.RUNWEFT_SMOKE_WORKSPACE === 'worktree';
 const retryFinish = process.env.RUNWEFT_SMOKE_RETRY_FINISH === '1';
 assert(!controls || selected, 'Control acceptance selects one explicit combination');
@@ -30,7 +33,7 @@ assert(!selected || cases.some(item => item.id === selected), 'RUNWEFT_SMOKE_CAS
 mkdirSync('.dev-smoke', { recursive: true });
 const evidenceDir = mkdtempSync(resolve(remote ? '.dev-smoke/remote-mcp-' : worktree ? '.dev-smoke/worktree-mcp-' : '.dev-smoke/collaboration-'));
 const ownedRoot = mkdtempSync(join(tmpdir(), 'rw-collab-')), root = join(ownedRoot, '.dev-smoke'); mkdirSync(root, { mode: 0o700 });
-const local = join(root, 'c'), hub = join(root, 'h');
+const hub = join(root, 'h');
 const targetHome = join(root, 't');
 const probeLog = join(root, 'probe.jsonl'), claudeLog = join(root, 'claude-init.jsonl');
 const env: NodeJS.ProcessEnv = { ...process.env };
@@ -43,6 +46,7 @@ function nativeConfig(args: string[]) { assert.equal(spawnSync('codex', ['mcp', 
 const evidence: { [key: string]: any; cases: any[]; cleanupErrors: string[] } = {
     kind: 'collaboration-current', ownedRoot, root, evidenceDir, executable, candidate: { binaries, hapiRevision: pkg.hapi.revision, entry: 'compiled CLI + compiled serve + actual HAPI/Runner' }, selected, controls, worktree, remote, retryFinish, startedAt: new Date().toISOString(), success: false, cases: [], cleanupErrors: [],
 };
+const save = () => writeFileSync(join(evidenceDir, 'evidence.json'), JSON.stringify(evidence, (key, value) => key === 'message' && typeof value === 'string' ? { omitted: true, length: value.length } : value, 2), { mode: 0o600 });
 let hapi: HapiHttp | undefined, constructorCleanupUncertain = false;
 const runners = new Map<string, Awaited<ReturnType<Awaited<ReturnType<typeof nativeUserSmoke>>['runner']>>>();
 const touchedHomes = new Set<string>();
@@ -83,6 +87,8 @@ function instrument(home: string, cutLog: string, disconnect: boolean) {
 
 async function runCase(spec: typeof cases[number], home: string) {
     const { mode, host, flavor, id } = spec;
+    assert.equal(cli(home, ['config', 'show']).config.mode, mode, 'Case label must match actual configured hosting mode');
+    const filesCase = remote || (worktree && mode === 'local');
     const cwd = join(root, id); mkdirSync(cwd);
     const file = join(cwd, 'result.txt'), marker = `SHARED_${crypto.randomUUID()}`, memory = `MEMORY_${crypto.randomUUID()}`;
     const contextMarker = `CONTEXT_${crypto.randomUUID()}`, skillMarker = `SKILL_${crypto.randomUUID()}`;
@@ -120,7 +126,8 @@ async function runCase(spec: typeof cases[number], home: string) {
         git('add', '.'); git('commit', '-qm', 'versioned project context'); baseline = git('rev-parse', 'HEAD'); git('tag', 'runweft-smoke-base');
         writeFileSync(join(cwd, 'parent-newer.txt'), 'newer parent commit\n'); git('add', '.'); git('commit', '-qm', 'parent advances beyond selected base');
         writeFileSync(join(cwd, 'parent-newer.txt'), 'parent uncommitted change\n');
-        if (remote) for (const [index, name] of ['input-first.txt', 'input-next.txt'].entries()) writeFileSync(join(cwd, name), inputMarkers[index]!);
+        if (filesCase) for (const [index, name] of ['input-first.txt', 'input-next.txt'].entries()) writeFileSync(join(cwd, name), inputMarkers[index]!);
+        if (remote) writeFileSync(join(cwd, 'downloaded.txt'), 'explicitly replace this fixture destination');
         parentState = { head: git('rev-parse', 'HEAD'), index: git('write-tree'), status: git('status', '--porcelain') };
         if (retryFinish) {
             const hooks = join(root, `${id}-hooks`); mkdirSync(hooks); git('config', 'core.hooksPath', hooks);
@@ -137,38 +144,48 @@ async function runCase(spec: typeof cases[number], home: string) {
     const definition = join(root, `${id}-agent.json`); writeFileSync(definition, JSON.stringify({ name: id, repositoryId, runtimeId: targetRunner.runtimes[flavor].id }));
     const agent = cli(home, ['agent', 'create', '--request-id', crypto.randomUUID(), '--file', definition], cwd).agent;
     const cutLog = join(root, `${id}-cut.jsonl`);
-    // Both real native hosts lose one MCP connection in Hub mode, on opposite runtime flavors.
-    const disconnect = !remote && !controls && mode === 'hub' && host !== flavor;
+    // Transport-cut acceptance is an explicit separate probe, not a third round on every main case.
+    const disconnect = process.env.RUNWEFT_SMOKE_DISCONNECT === '1';
+    assert(!disconnect || (!worktree && !!selected), 'Disconnect probe requires one explicit shared case');
     instrument(home, cutLog, disconnect);
     if (!worktree) assert.notEqual(spawnSync('git', ['-C', cwd, 'rev-parse', '--show-toplevel'], { env, stdio: 'pipe' }).status, 0);
     const memoryBoundary = flavor === 'claude' && worktree ? ' MEMORY 标记仅保留在当前原生会话上下文，不使用持久记忆；不查询、创建、读取或写入 cwd 外任何 persistent memory 目录或文件，不创建 claude-home 或 memory 文件。' : '';
-    const firstMessage = remote
+    const helper = join(root, `${id}-child-boundary.mjs`), proof = join(root, `${id}-child-boundary.json`);
+    writeFileSync(helper, `import {spawnSync} from 'node:child_process'; import {writeFileSync} from 'node:fs'; import assert from 'node:assert/strict';
+const codes=[]; for (const args of [['spawn', ${JSON.stringify(agent.id)}, '--message', 'recursive probe'], ['send', crypto.randomUUID(), '--message', 'recursive probe']]) {
+ const child=spawnSync(${JSON.stringify(executable)}, ['--home', ${JSON.stringify(home)}, '--json', 'task', ...args], {encoding:'utf8', timeout:20000});
+ assert.equal(child.status,1); const code=JSON.parse(child.stderr.trim().split('\\n').at(-1)).error.code; assert.equal(code,'subagent_delegation_denied'); codes.push(code); }
+writeFileSync(${JSON.stringify(proof)}, JSON.stringify({codes,hapiSessionId:process.env.HAPI_SESSION_ID}));
+`);
+    const boundaryMessage = `先执行一次 ${process.execPath} ${helper} 验证子 CLI 递归拒绝；该 helper 只写专用验收证明。`;
+    const firstMessage = boundaryMessage + (remote
         ? `这是专用远端 worktree 验收。使用 worktree-mcp skill，各调用一次 keep_probe/project_probe 的 probe_report。所有工程相对路径都相对于任务的真实 worktree cwd。读取本轮 input.txt 附件；用 Python 以二进制方式读取 cwd 下的 asset.bin（内含 NUL），读取 vendor/module/leaf/note，最终报告完整附件文本与 nested module baseline。附件使用任务提供的绝对路径，工程文件在 cwd 下，只列必要本轮文件；只允许对子任务 prepared cwd 内只读目录列表，不写入或重定向，不探索父工程或外部目录。不要搜索 /tmp 或其他运行目录。将 result.txt 写为 ${marker} 加换行，将 result.bin 写为附件原文重复 1024 次（UTF-8，不加换行）。只修改这两个文件，不提交、不委派。记住 ${memory}，不要将它写入文件。报告 WORKTREE_DONE、工程指令与 skill 标记。${memoryBoundary}`
         : worktree
         ? `这是专用独立工作区验收。使用本项目 worktree-mcp skill；各调用一次 keep_probe 和 project_probe 的 probe_report。在当前工作目录将 result.txt 写成 ${marker} 加一个换行，不修改其他文件、不自行提交。记住 ${memory}，不要把记忆标记写入任何文件。不调用子代理。最终报告 WORKTREE_DONE、工程指令标记和 skill 标记。${memoryBoundary}`
-        : `这是专用非 Git 共享目录验收。在当前目录只调用一次 keep_probe 的 probe_report，然后把文件 ${file} 的完整内容写成 ${marker} 加一个换行。记住 ${memory}，不要将此记忆标记写入任何文件。不要调用其他子代理。最终简短报告 SHARED_DONE。`;
-    const nextMessage = remote ? '这是第二轮远端任务：只列必要本轮文件，只允许对子任务 prepared cwd 内只读目录列表，不写入或重定向，不探索父工程或外部目录。回忆上一轮要求记住且不写入文件的 MEMORY_ 标记。读取本轮新的 input.txt 附件，将 round2.txt 写成附件全文加换行，将 round2.bin 写为附件原文重复 1024 次（UTF-8，不加换行）。不修改其他文件、不提交、不委派。报告完整附件文本、原记忆标记和 RESUME_DONE；最终结构化 runweft-report 的 summary 必须原样包含 RESUME_DONE、上一轮原 MEMORY 标记及本轮 input.txt 附件全文。' + memoryBoundary
-        : '这是下一轮纯报告任务：回忆上一轮明确要求记住、但不写入文件的标记，原样输出该标记和 RESUME_DONE。不要调用任何工具或读写文件。' + memoryBoundary;
+        : `这是专用非 Git 共享目录验收。在当前目录只调用一次 keep_probe 的 probe_report，然后把文件 ${file} 的完整内容写成 ${marker} 加一个换行。记住 ${memory}，不要将此记忆标记写入任何文件。不要调用其他子代理。最终简短报告 SHARED_DONE。`) + (filesCase && !remote ? ' 读取本轮 input.txt 附件，在报告中原样包含附件文本。' : '');
+    const nextMessage = (remote ? '这是第二轮远端任务：只列必要本轮文件，只允许对子任务 prepared cwd 内只读目录列表，不写入或重定向，不探索父工程或外部目录。回忆上一轮要求记住且不写入文件的 MEMORY_ 标记。读取本轮新的 input.txt 附件，将 round2.txt 写成附件全文加换行，将 round2.bin 写为附件原文重复 1024 次（UTF-8，不加换行）。不修改其他文件、不提交、不委派。报告完整附件文本、原记忆标记和 RESUME_DONE；最终结构化 runweft-report 的 summary 必须原样包含 RESUME_DONE、上一轮原 MEMORY 标记及本轮 input.txt 附件全文。' + memoryBoundary
+        : '这是下一轮纯报告任务：回忆上一轮明确要求记住、但不写入文件的标记，原样输出该标记和 RESUME_DONE。不修改文件。' + memoryBoundary) + (filesCase && !remote ? ' 可读取本轮新的 input.txt 附件并在报告原样包含文本；不改动任何工程文件。' : '');
     const controlSteps = `${flavor === 'codex'
         ? '4. send_input(mode=next,message="先运行 sleep 30，再回复 SLOW_DONE，不修改文件、不委派。")。read_agent 直到该轮 inputs[0].observation.phase=accepted；然后恰好一次 send_input(mode=steer,round_id=该活跃轮次,message="本轮追加：最终报告必须包含 MCP_STEER_OK。")。wait 到 completed 后 read_agent 读取这轮报告。'
         : '4. 用第二轮 round_id 调用一次 send_input(mode=steer,message="验证不支持 steer")；预期返回 steer_unsupported。不要重试或改成其他任务。'}
 5. send_input(mode=next,message="运行 sleep 60，再回复 INTERRUPT_LATE，不修改文件、不委派。")。read_agent 直到这个新 round 的 inputs[0].observation.phase=accepted，然后立即 interrupt_agent(id,round_id=这个新轮次)。wait 到 interrupted，最后 read_agent 读取中断事实，再回复 CONTROLS_DONE。不要批准这轮 sleep，也不要自动再派生或重跑。`;
     const prompt = `你是专用 Runweft 协作验收主会话。只使用 runweft MCP 工具，不用 shell、内置 subagent 或其他 MCP。按顺序完成：
-1. list_agent_definitions，${remote ? 'upload_artifact 上传 input-first.txt，' : ''}调用一次 spawn_agent，agent_type=${agent.id}${worktree ? '，workspace_mode=worktree，base_ref=runweft-smoke-base' : ''}${remote ? '，inputs=[{artifactId:刚上传对象ID,name:"input.txt"}]，outputs=[{name:"result.txt",relativePath:"result.txt"}]' : ''}，message 必须原样照抄、不得补充上下文：${JSON.stringify(firstMessage)}。
-2. wait 等待该任务，每次 timeout_ms=30000；needs_attention 时 read_agent，respond_to_permission 只批准${remote ? '读取本轮输入、asset.bin、子模块、工程指令/skill；在子任务 cwd 内生成约定的 result.txt/result.bin/round2.txt/round2.bin（可用 Python 或 shell），并只读这些本轮约定输出文件验证结果；仅对子任务 prepared cwd 内做只读目录列表，不得父工程或外部目录、不得写入或重定向；只读 Git 查询及 keep_probe/project_probe 调用' : worktree ? '对子任务 cwd 内 result.txt 的读写、工程指令/skill 读取、当前目录的只读 Git 检查以及 keep_probe/project_probe 调用' : `对 ${file} 的读写、当前 cwd 查询或 keep_probe 调用`}，其余停止并报告。${retryFinish ? '本夹具首轮 Git hook 会失败一次：read_agent 确认 git.status=needs_attention 且 native_status 为 completed 后，调用恰好一次 retry_finish，id/round_id 使用该首轮，然后继续 wait，不能重发任务或再次 spawn。' : ''}直到 completed，必须 read_agent 读取第一轮结果。
-${remote ? '2.1 首轮完成后调用 fetch_result，read_agent 直到 code.fetch.status=available；不要仅凭 accepted 判断取回成功。' : ''}
-3. ${remote ? 'upload_artifact 上传 input-next.txt。' : ''}调用一次 send_input，mode=next${remote ? '，inputs=[{artifactId:新上传对象ID,name:"input.txt"}]，outputs=[{name:"round2.txt",relativePath:"round2.txt"}]' : ''}，message 必须完整照抄这段，不能附加记忆标记或其他上下文：${JSON.stringify(nextMessage)}。继续 wait 到 completed，再 read_agent，确认包含 RESUME_DONE。
-${remote ? '3.1 第二轮完成后 fetch_result，再 read_agent 直到 code.fetch.status=available。不要合码，不下载文件到主目录。' : ''}
+1. list_agent_definitions，${filesCase ? 'upload_artifact 上传 input-first.txt，' : ''}调用一次 spawn_agent，agent_type=${agent.id}${worktree ? '，workspace_mode=worktree，base_ref=runweft-smoke-base' : ''}${filesCase ? '，inputs=[{artifactId:刚上传对象ID,name:"input.txt"}]，outputs=[{name:"result.txt",relativePath:"result.txt"}]' : ''}，message 必须原样照抄、不得补充上下文：${JSON.stringify(firstMessage)}。
+2. wait 等待该任务，每次 timeout_ms=30000；needs_attention 时 read_agent，respond_to_permission 只批准执行上述 child-boundary helper，以及${remote ? '读取本轮输入、asset.bin、子模块、工程指令/skill；在子任务 cwd 内生成约定的 result.txt/result.bin/round2.txt/round2.bin（可用 Python 或 shell），并只读这些本轮约定输出文件验证结果；仅对子任务 prepared cwd 内做只读目录列表，不得父工程或外部目录、不得写入或重定向；只读 Git 查询及 keep_probe/project_probe 调用' : worktree ? '读取本轮 input.txt 附件、对子任务 cwd 内 result.txt 的读写、工程指令/skill 读取、当前目录的只读 Git 检查以及 keep_probe/project_probe 调用' : `对 ${file} 的读写、当前 cwd 查询或 keep_probe 调用`}，其余停止并报告。${retryFinish ? '本夹具首轮 Git hook 会失败一次：read_agent 确认 git.status=needs_attention 且 native_status 为 completed 后，调用恰好一次 retry_finish，id/round_id 使用该首轮，然后继续 wait，不能重发任务或再次 spawn。' : ''}直到 completed，必须 read_agent 读取第一轮结果。
+${remote ? '2.1 首轮调用一次 fetch_result，接受后继续；测试控制器检查最终取回结果。' : ''}
+3. ${filesCase ? 'upload_artifact 上传 input-next.txt。' : ''}调用一次 send_input，mode=next${filesCase ? `，inputs=[{artifactId:新上传对象ID,name:"input.txt"}]，outputs=[{name:"${remote ? 'round2.txt' : 'result.txt'}",relativePath:"${remote ? 'round2.txt' : 'result.txt'}"}]` : ''}，message 必须完整照抄这段，不能附加记忆标记或其他上下文：${JSON.stringify(nextMessage)}。继续 wait 到 completed，再 read_agent，确认包含 RESUME_DONE。
+${remote ? '3.1 第二轮调用一次 fetch_result；再用 download_artifact 将该轮 read_agent 的 artifacts.manifest 首项 artifactId 下载为 downloaded.txt，overwrite=true。不要合码。' : ''}
+${longWait ? '3.2 用第二轮 read_agent 的 revision 调用一次 wait，timeout_ms=65000，after_revision={该 agent_id:该 revision}。必须等到 timed_out=true。' : ''}
 ${controls ? controlSteps : disconnect ? '4. 再 send_input 一次，mode=next，message="DISCONNECT_PROBE：请只运行 sleep 20，结束后回复 DISCONNECT_DONE，不修改文件、不委派。"。收到接受结果后调用 wait。该工具连接会被测试程序主动断开；出现传输错误后不要重试、不要再次派生、不要取消任务，直接结束回复 DISCONNECTED。后续由独立测试操作者收尾。' : '4. 完成后回复 MATRIX_DONE。'}
 只允许一次 spawn_agent。next 只排上述轮次，不修改 agent 定义。`;
-    const item: any = { ...spec, cwd, file, marker, memory, contextMarker, skillMarker, inputMarkers, baseline, parentState, disconnect, controls, worktree, retryFinish, clientHome: home, targetHome: remote ? targetHome : home, sourceMachineId: sourceRunner.machineId, targetMachineId: targetRunner.machineId, repositoryId, agentId: agent.id, calls: [], inventories: {}, approvals: [] }; evidence.cases.push(item);
+    const item: any = { ...spec, cwd, file, marker, memory, contextMarker, skillMarker, inputMarkers, baseline, parentState, disconnect, controls, worktree, retryFinish, clientHome: home, targetHome: remote ? targetHome : home, sourceMachineId: sourceRunner.machineId, targetMachineId: targetRunner.machineId, repositoryId, agentId: agent.id, calls: [], inventories: {}, approvals: [], phases: [{ phase: 'host_start', at: Date.now() }] }; evidence.cases.push(item);
     const calls = new Map<string, any>(), roundFacts = new Map<string, any>();
     const args = host === 'codex' ? ['exec', '--json', '--skip-git-repo-check', prompt]
         : ['-p', '--output-format', 'stream-json', '--verbose', '--tools', '', '--allowedTools', 'mcp__runweft__*', '--max-turns', remote ? '60' : '40', prompt];
     const child = spawn(host === 'codex' ? 'codex' : nativeClaude!, args, { cwd, env, stdio: ['ignore', 'pipe', 'pipe'] });
     assert(child.pid); pids.add(child.pid);
     let buffer = '', done = false, code: number | null = null, failure: Error | undefined;
-    const watchdog = watchNativeHost(child, hostTimeoutMs); item.host = watchdog.state;
+    const watchdog = watchNativeHost(child, hostTimeoutMs); item.hostDiagnostics = watchdog.state;
     child.stdout.on('data', chunk => {
         buffer += chunk;
         let end;
@@ -205,6 +222,8 @@ ${controls ? controlSteps : disconnect ? '4. 再 send_input 一次，mode=next�
         if (!listed.length) return;
         const current = cli(home, ['task', 'show', listed[0].agent_id], cwd);
         roundFacts.set(current.round_id, current);
+        const phase = `${current.round}:${current.status}:${current.git?.status ?? 'shared'}`;
+        if (item.phases.at(-1)?.phase !== phase) { item.phases.push({ phase, at: Date.now() }); save(); }
         item.runtimeCwdLength = current.cwd?.length;
         if (current.host_pid) pids.add(current.host_pid);
         if (current.status === 'unknown' || current.status === 'failed') throw new Error(`Execution not confirmed: ${JSON.stringify(current.attention)}`);
@@ -243,9 +262,22 @@ ${controls ? controlSteps : disconnect ? '4. 再 send_input 一次，mode=next�
         const sends = item.calls.filter((call: any) => call.name === 'send_input'); assert.equal(sends.length, controls ? flavor === 'codex' ? 4 : 3 : disconnect ? 2 : 1);
         assert.equal(sends[0].args.message, nextMessage, 'Parent rewrote the memory-only continuation');
         const current = await until(async () => { await observe(); return cli(home, ['task', 'show', accepted.agent_id], cwd); }, value => value.status === (controls ? 'interrupted' : 'completed'), `${id} finish`);
+        if (remote) for (const round of current.rounds) await until(() => cli(home, ['task', 'show', accepted.agent_id, '--round', round.id], cwd), value => { if (value.code.fetch?.status === 'failed') throw new Error('Fixed result fetch failed'); return value.code.fetch?.status === 'available'; }, 'fixed round fetch');
         const first = cli(home, ['task', 'show', accepted.agent_id, '--round', accepted.round_id], cwd);
         const next = sends[0].results.find((value: any) => value.accepted), second = cli(home, ['task', 'show', accepted.agent_id, '--round', next.round_id], cwd);
         item.rounds = current.rounds.map((record: any) => ({ roundId: record.id, view: cli(home, ['task', 'show', accepted.agent_id, '--round', record.id], cwd) })); item.taskId = accepted.agent_id; item.finalRoundId = current.round_id;
+        const childProof = JSON.parse(readFileSync(proof, 'utf8'));
+        assert.deepEqual(childProof.codes, ['subagent_delegation_denied', 'subagent_delegation_denied']); assert.equal(childProof.hapiSessionId, first.session_id); item.childCli = childProof;
+        if (longWait) {
+            const wait = item.calls.find((call: any) => call.name === 'wait' && call.args.timeout_ms === 65000);
+            assert(wait?.results?.some((value: any) => value.timed_out === true)); assert(wait.finishedAt - wait.startedAt >= 64000); item.longWaitMs = wait.finishedAt - wait.startedAt;
+        }
+        if (filesCase && !remote) for (const [index, detail] of [first, second].entries()) {
+            assert(detail.report.text.includes(inputMarkers[index]!)); assert.equal(detail.artifacts.status, 'delivered');
+            const output = cli(home, ['artifact', 'download', detail.artifacts.manifest.items[0].artifactId, '--output', join(root, `${id}-${index}.txt`)], cwd);
+            assert.equal(readFileSync(output.path, 'utf8'), marker + '\n');
+        }
+        if (remote) { assert.equal(item.calls.filter((call: any) => call.name === 'download_artifact').length, 1); assert.equal(readFileSync(join(cwd, 'downloaded.txt'), 'utf8'), inputMarkers[1] + '\n'); }
         assert.equal(first.parent.nativeSessionId, item.nativeId); assert.equal(first.parent.host, host);
         assert(first.report.text.includes(worktree ? 'WORKTREE_DONE' : 'SHARED_DONE')); assert(second.report.text.includes(memory)); assert(second.report.text.includes('RESUME_DONE'));
         assert.equal(second.native_session_id, first.native_session_id); assert.equal(second.resume.outcome, 'resumed');
@@ -368,7 +400,7 @@ try {
     models = modelHomes(root, env); fixture = await nativeUserSmoke(root, executable, env);
     nativeClaude = models.nativeClaude ?? undefined; assert(nativeClaude && Bun.which('codex'));
     Object.assign(evidence, { serverHome: fixture.server, url: fixture.url, ownerId: fixture.user.identity.id, spaceId: fixture.space, codexModel: models.codexModel,
-        nativeHomes: { codex: env.CODEX_HOME, claude: env.CLAUDE_CONFIG_DIR }, cleanupOwner: remote ? 'remote-package' : worktree && selected ? 'worktree-package' : 'producer' });
+        nativeHomes: { codex: env.CODEX_HOME, claude: env.CLAUDE_CONFIG_DIR }, cleanupOwner: remote ? 'remote-package' : worktree && selected ? 'worktree-package' : selected && !controls && !disconnectRequested ? 'shared-package' : 'producer' });
 writeFileSync(wrapper, `#!/bin/sh\nexec ${quote(process.execPath)} ${quote(resolve('scripts/fixtures/claude-observer.mjs'))} "$@"\n`, { mode: 0o700 });
 Object.assign(env, { GIT_CEILING_DIRECTORIES: root,
     HAPI_CLAUDE_PATH: wrapper, RUNWEFT_SMOKE_CLAUDE: nativeClaude, RUNWEFT_SMOKE_CLAUDE_LOG: claudeLog });
@@ -383,7 +415,7 @@ prefs.mcpServers = { keep_probe: { type: 'stdio', ...probe } }; writeFileSync(cl
     for (const mode of ['local', 'hub'] as const) {
         if (remote && mode === 'local') continue;
         if (selected && !selected.startsWith(mode + '-')) continue;
-        const home = mode === 'local' ? local : hub;
+        const home = mode === 'local' ? fixture.server : hub;
         touchedHomes.add(home); const runner = await fixture.runner(home); runners.set(home, runner); homes.push(home); hapi = runner.http;
         for (const spec of cases.filter(spec => spec.mode === mode && (!selected || selected === spec.id))) await runCase(spec, home);
     }
@@ -408,7 +440,7 @@ finally {
     if (models) { try { await models.waitHosts(pids); } catch (error) { safe = false; evidence.cleanupErrors.push(String(error)); } await attempt(() => models!.verify()); if (safe) await attempt(() => models!.remove()); }
     if (safe) for (const path of mcpBackups) await attempt(() => rmSync(path, { force: true }));
     evidence.mcpBackups = [...mcpBackups];
-    const handoff = evidence.success && !evidence.cleanupErrors.length && (remote || (worktree && !!selected));
+    const handoff = evidence.success && !evidence.cleanupErrors.length && (remote || (!!selected && !controls && !disconnectRequested));
     evidence.handoff = handoff;
     if (safe && !handoff) {
         for (const runner of evidence.runners) for (const file of [runner.paths.identityConnection, runner.paths.machineConnection, runner.paths.pendingConnection, join(runner.paths.hapiClient, 'settings.json')]) await attempt(() => rmSync(file, { force: true }));
@@ -418,6 +450,6 @@ finally {
     evidence.hostPids = [...pids]; evidence.finishedAt = new Date().toISOString();
     if (evidence.success && !handoff) await attempt(() => rmSync(ownedRoot, { recursive: true, force: true }));
     if (evidence.cleanupErrors.length) { evidence.success = false; process.exitCode = 1; }
-    writeFileSync(join(evidenceDir, 'evidence.json'), JSON.stringify(evidence, (key, value) => key === 'message' && typeof value === 'string' ? { omitted: true, length: value.length } : value, 2), { mode: 0o600 });
+    save();
     console.log(`Evidence: ${join(evidenceDir, 'evidence.json')}`); if (evidence.error) console.error(evidence.error);
 }

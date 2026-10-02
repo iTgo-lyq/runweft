@@ -9,3 +9,5 @@ export function collaborationPackage(file: string, binary: string, explicitHapi:
     quiesce(): Promise<string[]>;
     close(success: boolean, consumerEvidence: string): Promise<string[]>;
 };
+
+export function assertCollaborationRecords(source: any): void;

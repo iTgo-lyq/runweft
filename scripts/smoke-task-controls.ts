@@ -9,6 +9,8 @@ import pkg from '../package.json';
 
 // Explicit real-runtime test, authorized fixtures only. Never prints copied model credentials.
 const executable = resolve(process.argv[2] ?? 'dist/runweft');
+const selectedRuntime = process.env.RUNWEFT_SMOKE_RUNTIME;
+assert(!selectedRuntime || ['codex', 'claude'].includes(selectedRuntime));
 mkdirSync('.dev-smoke', { recursive: true });
 const root = mkdtempSync(resolve('.dev-smoke/task-controls-'));
 const nonGit = nonGitSmokeProject(), project = nonGit.project;
@@ -73,6 +75,7 @@ prefs.mcpServers = {}; writeFileSync(claudeSettings, JSON.stringify(prefs), { mo
         claude: { model: process.env.RUNWEFT_SMOKE_CLAUDE_MODEL || 'claude-opus-5-5', reasoningEffort: process.env.RUNWEFT_SMOKE_CLAUDE_EFFORT || 'high' } };
     evidence.models = models;
     for (const flavor of ['codex', 'claude'] as const) {
+        if (selectedRuntime && selectedRuntime !== flavor) continue;
         assert(models[flavor].model && models[flavor].reasoningEffort, 'Set explicit native model and effort for this acceptance');
         const definition: any = fixture.agent(flavor, { flavor, ...models[flavor] });
         const marker = `MEMORY_${crypto.randomUUID().slice(0, 8)}`;

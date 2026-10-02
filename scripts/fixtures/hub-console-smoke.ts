@@ -6,7 +6,7 @@ import { chromium, type Page } from 'playwright';
 import { freePort } from '../../src/services';
 import { consoleTasks } from './hub-console-tasks';
 import { installedBinaries } from './installed-binaries.mjs';
-import { consoleHistory, finishConsoleHistory } from './hub-console-history';
+import { consoleHistory } from './hub-console-history';
 import { closeSmoke } from './smoke-lifecycle';
 import { hubConnectionPaths } from '../../src/hub/resources/connection';
 
@@ -228,9 +228,7 @@ if (options.sourceFixtures?.length) {
     try {
         await consoleHistory({ binary, hapiBinary: selectedBinaries.hapi.path, sources: options.sourceFixtures, record: result => evidence.historyResults.push(result) });
         assert(evidence.consoleSuccess && evidence.historyResults.length === options.sourceFixtures.length && evidence.historyResults.every((result: { success: boolean }) => result.success));
-        evidence.sourceCleanup = await finishConsoleHistory({ binary, sources: options.sourceFixtures });
-        evidence.success = evidence.sourceCleanup.every((result: { success: boolean }) => result.success);
-        if (!evidence.success) throw new AggregateError(evidence.sourceCleanup.flatMap((result: { cleanupErrors: string[] }) => result.cleanupErrors), 'Final history source cleanup failed');
+        evidence.success = true; // The owning case consumer performs source cleanup.
     } catch (error) { evidence.success = false; evidence.error = String(error); throw error; }
     finally { writeFileSync(join(root, 'evidence.json'), JSON.stringify(evidence, null, 2)); }
 }

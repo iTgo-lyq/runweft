@@ -8,6 +8,7 @@ import { hubDelegationFixture } from './hub-delegation-fixture';
 import { appendFixtureRound } from '../scripts/fixtures/fixture-round';
 import { watchNativeHost } from '../scripts/fixtures/native-host';
 import { installedBinaries, assertCandidateBinaries } from '../scripts/fixtures/installed-binaries.mjs';
+import { assertCollaborationRecords } from '../scripts/fixtures/collaboration-package.mjs';
 import { preflightBrowser } from '../scripts/fixtures/smoke-preflight';
 
 const cleanup = fixtureCleanup([]);
@@ -28,6 +29,13 @@ test('current fixture writes two scoped rounds without native dispatch; missing 
     expect(current.inputs.filter(input => input.roundId === next.round.id)).toHaveLength(1);
     expect(() => store.save(next.task, next.round, current.inputs)).toThrow();
     expect(() => appendFixtureRound(store, next.task, undefined as any, { stop: 'not_started' })).toThrow();
+    // Explicit stored-round fixture, not evidence of a native execution. Read the public DTO through the real route.
+    for (const round of current.rounds) { round.stop = 'stopped'; round.sessionId = 'fixture-session'; round.nativeSessionId = 'fixture-native'; store.save(current.task, round, current.inputs.filter(input => input.roundId === round.id)); }
+    const rounds = await Promise.all(current.rounds.map(async round => ({ roundId: round.id, view: await h.post('read', { id: accepted.agent_id, roundId: round.id }) })));
+    const records = { serverPaths: { state: h.statePath }, ownerId: current.task.hub!.ownerId, spaceId: current.task.hub!.spaceId,
+        cases: [{ taskId: current.task.id, targetMachineId: current.task.target.machineId, rounds }] };
+    assertCollaborationRecords(JSON.parse(JSON.stringify(records)));
+    expect(() => assertCollaborationRecords({ ...records, ownerId: 'foreign-owner' })).toThrow();
     expect(h.calls.spawn).toBe(0); expect(h.calls.send).toBe(0);
 });
 

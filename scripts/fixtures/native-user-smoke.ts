@@ -45,7 +45,9 @@ export async function nativeUserSmoke(root: string, binary: string, env: NodeJS.
         const identityFile = join(root, 'identity.txt'); secrets.add(identityFile); writeFileSync(identityFile, user.token, { mode: 0o600 });
         async function runner(home: string, flavors: Array<'codex' | 'claude'> = ['codex', 'claude']) {
             const paths = hubConnectionPaths(home, url); homes.push(home);
-            cli(home, ['init', '--url', url]); cli(home, ['config', 'set', 'hapi.executable', binaries.hapi.path]);
+            cli(home, ['init', '--url', url]);
+            if (home === server) cli(home, ['config', 'set', 'hub.url', url]);
+            cli(home, ['config', 'set', 'hapi.executable', binaries.hapi.path]);
             secrets.add(paths.identityConnection);
             atomicWrite(paths.identityConnection, JSON.stringify({ schemaVersion: 1, hub: url, ownerId: user.identity.id, spaceId: space, token: user.token, requestId: randomUUID(), createdAt: Date.now() }));
             const enrollment = cli(home, ['machine', 'enroll']); secrets.add(enrollment.credentialFile); credentialValues.add(JSON.parse(readFileSync(enrollment.credentialFile, 'utf8')).active.token); secrets.add(join(paths.connection, 'hapi/settings.json'));

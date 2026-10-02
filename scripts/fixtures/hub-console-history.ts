@@ -1,8 +1,8 @@
 import { validateState } from '../../src/state';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync, statSync, writeFileSync } from 'node:fs';
-import { basename, dirname, join, resolve, sep } from 'node:path';
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { join, resolve, sep } from 'node:path';
 import { Database } from 'bun:sqlite';
 import { chromium } from 'playwright';
 import { freePort } from '../../src/services';
@@ -14,9 +14,11 @@ import { getSessionTitle } from '../../hapi/web/src/lib/sessionTitle';
 export async function consoleHistory(options: { binary: string; hapiBinary: string; sources: string[]; record?(result: { sourceFixture: string; evidencePath: string; success: boolean }): void }) {
     for (const source of options.sources) {
         const sourceFile = resolve(source), previous = JSON.parse(readFileSync(sourceFile, 'utf8'));
-        assert(previous.kind === 'hub-native-mcp' && previous.success && previous.handoff && previous.cleanupOwner === 'T7 final consumer');
+        assert(previous.kind === 'collaboration-current' && previous.success && previous.handoff && !previous.consumed);
+        assert.deepEqual(installedBinaries(options.binary), previous.candidate.binaries);
+        const cases = previous.cases.map((item: any) => ({ detail: item.rounds.at(-1).view }));
         assert.deepEqual(previous.cleanupErrors, []);
-        const paths = previous.paths.find((item: any) => item.home === previous.serverHome);
+        const paths = previous.serverPaths;
         assert(paths && paths.state === join(previous.serverHome, 'server/runweft/state.sqlite'));
         assert(sourceFile.startsWith(resolve('.dev-smoke') + sep));
         validateState(paths.state);
@@ -43,7 +45,7 @@ export async function consoleHistory(options: { binary: string; hapiBinary: stri
             const state = new Database(join(home, 'server/runweft/state.sqlite'), { readonly: true });
             const sessions: string[] = [];
             try {
-                for (const item of previous.cases) {
+                for (const item of cases) {
                     const detail = item.detail;
                     const row = state.query('SELECT data FROM delegation_tasks WHERE id=?').get(detail.agent_id) as { data: string };
                     assert(row); const task = JSON.parse(row.data);
@@ -74,7 +76,7 @@ export async function consoleHistory(options: { binary: string; hapiBinary: stri
             await page.evaluate(spaceId => { const key = 'runweft.hub.identity'; const saved = JSON.parse(sessionStorage.getItem(key)!); saved.spaceId = spaceId; sessionStorage.setItem(key, JSON.stringify(saved)); }, previous.spaceId);
             await page.reload(); await page.waitForFunction(() => !document.querySelector<HTMLButtonElement>('#logout')?.disabled);
             assert.equal(await page.locator('#space-id').innerText(), previous.spaceId);
-            for (const item of previous.cases) {
+            for (const item of cases) {
                 const detail = item.detail, session = (await api(`/api/sessions/${detail.session_id}`)).session;
                 const history = await api(`/api/sessions/${detail.session_id}/messages`); assert(history.messages.length > 0);
                 assert.equal(session.active, false); assert.equal(session.metadata.lifecycleState, 'archived');
@@ -108,50 +110,4 @@ export async function consoleHistory(options: { binary: string; hapiBinary: stri
             if (evidence.cleanupErrors.length) throw new AggregateError(evidence.cleanupErrors, 'Console history cleanup failed');
         }
     }
-}
-
-
-/** Final consumer: invoked only after every requested source browser check has succeeded. */
-export async function finishConsoleHistory(options: { binary: string; sources: string[] }) {
-    const results: { sourceFixture: string; root?: string; success: boolean; homes: string[]; hostPids: number[]; removed: string[]; cleanupErrors: string[] }[] = [];
-    const seen = new Set<string>(), env = { ...process.env };
-    for (const key of Object.keys(env)) if (key.startsWith('HAPI_') || key.startsWith('RUNWEFT_') || ['CLI_API_TOKEN', 'DB_PATH', 'TELEGRAM_BOT_TOKEN'].includes(key)) delete env[key];
-    for (const source of options.sources) {
-        const sourceFixture = resolve(source), result = { sourceFixture, root: undefined as string | undefined, success: false, homes: [] as string[], hostPids: [] as number[], removed: [] as string[], cleanupErrors: [] as string[] };
-        try {
-            const previous = JSON.parse(readFileSync(sourceFixture, 'utf8')), root = previous.root;
-            assert(previous.kind === 'hub-native-mcp' && previous.success && previous.handoff && previous.cleanupOwner === 'T7 final consumer');
-            assert.deepEqual(previous.cleanupErrors, []);
-            assert.equal(sourceFixture, join(root, 'evidence.json')); assert.equal(dirname(root), resolve('.dev-smoke'));
-            assert(basename(root).startsWith('hub-native-mcp-')); assert.equal(realpathSync(root), root);
-            if (seen.has(root)) continue; seen.add(root); result.root = root; results.push(result);
-            const homes = [...new Set<string>([previous.serverHome, ...previous.clientHomes])];
-            for (const home of homes) assert(home.startsWith(root + sep));
-            const pids = [...new Set<number>([...previous.hostPids, ...previous.cases.map((item: any) => item.detail.host_pid)])];
-            assert(pids.every(pid => Number.isInteger(pid) && pid > 0)); result.homes = homes; result.hostPids = pids;
-            const originalEvidence = readFileSync(sourceFixture);
-            async function cli(home: string, args: string[]) {
-                const child = Bun.spawn([options.binary, '--home', home, '--json', ...args], { env, stdout: 'pipe', stderr: 'pipe' });
-                const [code, stdout] = await Promise.all([child.exited, new Response(child.stdout).text(), new Response(child.stderr).text()]);
-                if (code !== 0) throw new Error(`Source ${home} ${args.join(' ')} failed (${code})`);
-                return JSON.parse(stdout);
-            }
-            await closeSmoke(homes.map(home => async () => {
-                await closeSmoke([async () => { const status = await cli(home, ['status']); assert(!status.service.running && !status.runner.running, 'Source process shutdown not confirmed'); },
-                    () => cli(home, ['stop']), () => cli(home, ['runner', 'stop'])]);
-            }));
-            for (const pid of pids) {
-                try { process.kill(pid, 0); throw new Error(`Source native host ${pid} still exists`); }
-                catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ESRCH') throw error; }
-            }
-            const data = readdirSync(root).filter(name => name !== 'evidence.json').map(name => join(root, name));
-            await closeSmoke(data.map(path => () => { rmSync(path, { recursive: true, force: true }); result.removed.push(path); }));
-            assert(readFileSync(sourceFixture).equals(originalEvidence), 'Original producer evidence must remain unchanged');
-            result.success = true;
-        } catch (error) {
-            if (!results.includes(result)) results.push(result);
-            result.cleanupErrors.push(...(error instanceof AggregateError ? error.errors.map(String) : [String(error)]));
-        }
-    }
-    return results;
 }

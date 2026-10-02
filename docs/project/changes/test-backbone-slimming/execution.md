@@ -20,3 +20,12 @@
 - 验证：access 4脚本与 storage 11脚本均退出0、各证据 success=true（详见 `.dev-smoke/test-backbone-plan/t3-{access,storage}.log`）。web 身份/连接两脚本通过；console 最终 wDqAAi 通过且临时 home 删除、cleanupErrors=[]。typecheck、diff与文档校验通过。service-package 依赖干净包候选，按计划在 T4冻结后执行，当前不声明通过。
 - 首次失败：console H2fzCm 因单次心跳过期而审批按钮禁用；补持续心跳后 GU1c65、收敛 CRUD 后 CKon6r 又暴露撤权重定向后人工 EventSource 竞态及回调异常未进入证据。均保留失败退出记录，修复夹具心跳/异常归集并移除竞态人工请求；仅重跑 console，没有重跑已通过脚本或调用模型。最终原生失效检查仍实际通过。
 - Commit：`test-backbone-slimming T3: group model-free checks and stabilize console fixtures`
+
+## T4 原生骨干实现与冻结
+
+- 结果：新增固定六链/按runtime控制和重建入口；expanded按明确触发扩到12组合。成功case连同消费者清理结果复用，源码helper/候选/原生配置指纹变化拒绝复用；逐阶段保存日志与证据，无整组自动重试。65秒等待只指定两个宿主代表。递归CLI拒绝进入所有主链，N4补双轮输入输出，远端保留真实MCP取回并把状态轮询交给控制器。shared原生历史消费者读取现行collaboration证据，不接受旧格式。
+- 收敛：删除16个重复/孤立脚本和2个专用helper，合并开发入口至7个test命令；精确替代见Research。保留低层execution专项的独立shared sibling边界。产品源码、HAPI pin与源码未改。
+- 验证：typecheck/diff/文档校验通过；fixture/lifecycle 5 pass、29断言；存储夹具实际通过公共读取及同一消费者DB校验，错owner拒绝且native调用0。最终native-backbone-IpDeyv为preflight-only成功，真实编译local/hub配置、专用原生MCP配置和零会话库存均检查；未调用模型。
+- 已拦截问题：首个本地模式preflight因缺hub.url在machine enroll前失败，修复为显式连接本机Hub后通过；没有把hub目录标签冒充local验证。另修复watchdog诊断覆盖case.host字段的问题。完整日志与前置结果位于 `.dev-smoke/test-backbone-plan/`。
+- 边界：真实模型及新历史消费者行为尚待T4V，不声明原生替代全部通过。拆分冻结与真实验收为两个任务，防止把未来验证写入当前提交。
+- Commit：`test-backbone-slimming T4: freeze native backbone and per-case evidence`

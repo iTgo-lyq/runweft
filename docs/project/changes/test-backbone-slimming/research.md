@@ -94,3 +94,16 @@
 
 - 第二次 console 已通过审批，但撤权后人工执行 new EventSource 的负例与真实重定向竞态：页面已回 Hub 后创建了不带 JWT 的原生 EventSource，引发 request 回调未捕获断言，脚本退出1却写 success=true。删除这条额外人工请求，保留真实撤权后的自动跳转/清凭据断言；请求回调错误进入最终 errors 断言，避免异常与证据结果分离。GUI本身无需修改。
 - T4 准备时发现 collaboration 的 local/hub 仅按目录命名，nativeUserSmoke.runner 新建目录均初始化为 hub。必须在 N1/N4 使用本地主服务 home，并断言实际 config.mode 和 MCP connection.mode；不能仅沿用 case 标签声称 local 覆盖。此为验收纠偏，不改变产品运行模式。
+
+## T4 原生骨干替代映射
+
+| 移除的重复生产者/消费者 | 接替骨干 |
+| --- | --- |
+| task-mcp、hub-native-mcp | N1/N2各一次65秒真实等待；N1–N6实际递归CLI拒绝、工具过滤、停止；T3浏览器连接、shared消费者的真实历史 |
+| artifact-mcp、artifact-package、task-inputs/outputs/retention | N4/N5/N6两轮输入输出；N5/N6实际MCP上传/下载/取回；artifact-mcp和task-outputs快测保留两宿主retry/collect接线；storage真实capture/delivery故障、固定候选重试与pin释放 |
+| tasks、workspaces、worktree-tasks/lifecycle及其专用helper | 六链续接/停止、N3真实hook失败后retry_finish、N4无变更不提交、worktree消费者清理/留存ref/doctor；task-workspaces快测与storage HAPI准备/删除故障保留 |
+| remote-native、hub-consumers | N5/N6两Runner、真实模块/LFS、离线取回；storage预检拒绝/准备与引用；按runtime隔离的原生重建/控制专项 |
+| mcp完整旧矩阵 | 六链真实宿主MCP；现有probeMcpProtocol（access调用）、根stdio/取消/身份快测 |
+| hub-upgrade旧候选入口 | state当前编译CLI对两种DB及start/serve/restart无写拒绝；不再要求建立旧版二进制现场 |
+
+未删除 execution 原生低层能力专项：它含 shared sibling 停止边界，适用于 HAPI/native接口变更，不能只看名称当重复。全部原生替代尚待 T4V 实测；提交前只声明无模型前置通过。T4/T4V拆分只为先冻结候选再记录真实结果，不放宽验收条件。

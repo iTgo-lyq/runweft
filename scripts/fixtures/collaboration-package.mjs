@@ -19,29 +19,7 @@ export function collaborationPackage(file, binary, explicitHapi, expectedOwner) 
     assert.equal(source.root, join(source.ownedRoot, '.dev-smoke')); assert(existsSync(source.root));
     const hash = bytes => createHash('sha256').update(bytes).digest('hex');
     const hapi = explicitHapi ? resolve(explicitHapi) : binaries.hapi.path;
-    // Inspect only a private copy before any start or configuration write.
-    const checkRoot = mkdtempSync(join(tmpdir(), 'runweft-handoff-check-')), copy = join(checkRoot, 'state.sqlite');
-    let db;
-    try {
-        copyFileSync(source.serverPaths.state, copy);
-        try { copyFileSync(source.serverPaths.state + '-wal', copy + '-wal'); } catch (error) { if (error.code !== 'ENOENT') throw error; }
-        db = new DatabaseSync(copy, { readOnly: true });
-        assert.equal(db.prepare('PRAGMA user_version').get().user_version, 19, 'Requires current state format; source remains untouched');
-        assert.equal(db.prepare('SELECT COUNT(*) AS count FROM delegation_tasks').get().count, source.cases.length);
-        for (const item of source.cases) {
-            const task = JSON.parse(db.prepare('SELECT data FROM delegation_tasks WHERE id=?').get(item.taskId).data);
-            assert.equal(task.hub.ownerId, source.ownerId); assert.equal(task.hub.spaceId, source.spaceId); assert.equal(task.target.machineId, item.targetMachineId);
-            const rounds = db.prepare('SELECT id,data FROM delegation_rounds WHERE taskId=? ORDER BY ordinal').all(item.taskId);
-            assert.deepEqual(rounds.map(round => round.id), item.rounds.map(round => round.roundId));
-            for (const [index, record] of rounds.entries()) {
-                const round = JSON.parse(record.data), saved = item.rounds[index].view;
-                assert.equal(round.phase, 'finished'); assert.equal(round.stop, 'stopped'); assert.equal(round.finish, 'complete');
-                assert.equal(round.sessionId, saved.session_id); assert.equal(round.nativeSessionId, saved.native_session_id);
-                const inputs = db.prepare('SELECT id FROM delegation_inputs WHERE roundId=? ORDER BY rowid').all(round.id);
-                assert.deepEqual(inputs.map(input => input.id), saved.inputs.map(input => input.id));
-            }
-        }
-    } finally { try { db?.close(); } finally { rmSync(checkRoot, { recursive: true, force: true }); } }
+    assertCollaborationRecords(source);
     const env = { ...process.env, CODEX_HOME: source.nativeHomes.codex, CLAUDE_CONFIG_DIR: source.nativeHomes.claude };
     for (const key of Object.keys(env)) if (key.startsWith('RUNWEFT_') || key.startsWith('HAPI_') || ['CLI_API_TOKEN', 'DB_PATH', 'TELEGRAM_BOT_TOKEN'].includes(key)) delete env[key];
     if (source.remote) Object.assign(env, { GIT_CONFIG_GLOBAL: '/dev/null', GIT_CONFIG_NOSYSTEM: '1' });
@@ -127,4 +105,31 @@ export function collaborationPackage(file, binary, explicitHapi, expectedOwner) 
         return errors;
     }
     return { source, binaries, hapi, env, cli, api, hash, start, startRunner, verifyNoReplay, quiesce, close };
+}
+
+/** Read the same current round contract during zero-model fixture preflight. */
+export function assertCollaborationRecords(source) {
+    // Inspect only a private copy before any start or configuration write.
+    const checkRoot = mkdtempSync(join(tmpdir(), 'runweft-handoff-check-')), copy = join(checkRoot, 'state.sqlite');
+    let db;
+    try {
+        copyFileSync(source.serverPaths.state, copy);
+        try { copyFileSync(source.serverPaths.state + '-wal', copy + '-wal'); } catch (error) { if (error.code !== 'ENOENT') throw error; }
+        db = new DatabaseSync(copy, { readOnly: true });
+        assert.equal(db.prepare('PRAGMA user_version').get().user_version, 19, 'Requires current state format; source remains untouched');
+        assert.equal(db.prepare('SELECT COUNT(*) AS count FROM delegation_tasks').get().count, source.cases.length);
+        for (const item of source.cases) {
+            const task = JSON.parse(db.prepare('SELECT data FROM delegation_tasks WHERE id=?').get(item.taskId).data);
+            assert.equal(task.hub.ownerId, source.ownerId); assert.equal(task.hub.spaceId, source.spaceId); assert.equal(task.target.machineId, item.targetMachineId);
+            const rounds = db.prepare('SELECT id,data FROM delegation_rounds WHERE taskId=? ORDER BY ordinal').all(item.taskId);
+            assert.deepEqual(rounds.map(round => round.id), item.rounds.map(round => round.roundId));
+            for (const [index, record] of rounds.entries()) {
+                const round = JSON.parse(record.data), saved = item.rounds[index].view;
+                assert.equal(round.phase, 'finished'); assert.equal(round.stop, 'stopped'); assert.equal(round.finish, 'complete');
+                assert.equal(round.sessionId, saved.session_id); assert.equal(round.nativeSessionId, saved.native_session_id);
+                const inputs = db.prepare('SELECT id FROM delegation_inputs WHERE roundId=? ORDER BY rowid').all(round.id);
+                assert.deepEqual(inputs.map(input => input.id), saved.inputs.map(input => input.id));
+            }
+        }
+    } finally { try { db?.close(); } finally { rmSync(checkRoot, { recursive: true, force: true }); } }
 }
