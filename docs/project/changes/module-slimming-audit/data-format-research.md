@@ -56,3 +56,10 @@ scripts/smoke-upgrade.ts的schema6种子、旧Agent跨版本/回退链随历史�
 补充实测（`sqlite-probe/reader-modes.ts` 与 JSON）：主文件版本19、结构/版本变化仅提交在 WAL 时，普通只读 URI、`mode=ro`、`vfs=unix-excl` 都读到 WAL 的18及新增列，但改变原SHM；`immutable=1`不写却错误地只看到主文件19及旧结构；`nolock=1`/unix-none/unix-dotfile在该WAL场景不能开库。复制主文件和WAL到专用临时目录，再读取副本，能识别18和新增列，原目录bytes/mode/文件集不变。不采用immutable单独验证完整现行结构，也不自行解析WAL。
 
 `sqlite-probe/copy-race.ts` 实测固定schema19在另进程持续写入及PASSIVE/TRUNCATE检查点期间，150次独立主文件/WAL副本均成功读取同一完整schema；writer完成497轮，exit=0。该实验只核验固定schema，不宣称副本业务行是事务级备份，也不保证恶意外部并发改schema。临时检查副本由检查者回收，原数据目录无清理；T14仍需对最终实现验证并发首次建库、旧/未知/损坏结构、完整当前结构及真实服务启动拒绝。
+
+
+### 主 agent 补充：当前 client.sqlite
+
+复核原生调用测试确认，client.sqlite仍由mcp/claude-hook保存短期调用身份，hub/resources/connection借同库的SQLite immediate事务协调身份/机器JSON文件写入。前述Agent bindings退役不能推导整库退役；先前guide删去用途的判断不准确，已恢复为当前两项职责。
+
+原hook CREATE TABLE IF NOT EXISTS会在已有无版本库中自动补表，file lock也会直接打开任意同路径旧库。最终统一走现有state的固定格式打开流程：Hub唯一schema19；client唯一schema1（仅claude_mcp_calls）；新建直接完成结构，已有0/额外旧表/不匹配格式无写拒绝。只复用同一SQLite安全打开过程，两种固定格式，没有可插拔schema/迁移器。当前24小时未消费hook过期回收、精确callId一次消费、并发连接写锁保留，属于现行生命周期。start/serve/restart也预检已有client库。

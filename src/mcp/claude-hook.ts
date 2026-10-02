@@ -1,7 +1,7 @@
-import { Database } from 'bun:sqlite';
-import { chmodSync, existsSync } from 'node:fs';
+import { openState } from '../state';
+import { existsSync } from 'node:fs';
 import { z } from 'zod';
-import { dataPaths, ensureDirectory, type ResolvedConfig } from '../config';
+import { dataPaths, type ResolvedConfig } from '../config';
 import { RunweftError } from '../errors';
 
 const id = z.string().min(1).max(512);
@@ -14,12 +14,7 @@ export const CLAUDE_CALL_TTL_MS = 24 * 60 * 60 * 1000;
 type ClaudeCall = { callId: string; sessionId: string; cwd: string; agentId: string | null; createdAt: number };
 
 function store(c: ResolvedConfig, now: number) {
-    ensureDirectory(c.home);
-    const path = dataPaths(c).clientState;
-    const db = new Database(path, { create: true });
-    chmodSync(path, 0o600);
-    db.exec('PRAGMA journal_mode=WAL; PRAGMA busy_timeout=5000;');
-    db.exec('CREATE TABLE IF NOT EXISTS claude_mcp_calls (callId TEXT PRIMARY KEY, sessionId TEXT NOT NULL, cwd TEXT NOT NULL, agentId TEXT, createdAt INTEGER NOT NULL)');
+    const db = openState(dataPaths(c).clientState, 'client');
     db.query('DELETE FROM claude_mcp_calls WHERE createdAt < ?').run(now - CLAUDE_CALL_TTL_MS);
     return db;
 }

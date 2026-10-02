@@ -37,7 +37,7 @@ export function addServiceCommands(program: Command, context: () => ResolvedConf
         const value = await stop(context()); output(value, '本机服务已停止。数据与原生会话保留；服务停止期间无法通过此入口查看或审批。');
     });
     program.command('restart').description('应用新配置或安装版本，重启本机服务').action(async () => {
-        const c = context(); validateState(dataPaths(c).state); await stop(c); const value = await start(c); output(value, summary(value));
+        const c = context(), paths = dataPaths(c); validateState(paths.state); validateState(paths.clientState, 'client'); await stop(c); const value = await start(c); output(value, summary(value));
     });
     program.command('serve').description('前台运行本机 Hub 与统一服务入口')
         .option('--public', '明确对外提供 Hub 服务；需配置 server.publicUrl')

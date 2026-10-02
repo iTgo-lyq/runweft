@@ -348,3 +348,10 @@ iclaude review session：`6870f51d-a7d7-4cfa-b49d-a2a96e69a693`。工具限制Re
 追加真实中心HTTP故障：native返回另一operationId时原授权bridge拒绝，模型spawn/send为0且不release输入；恢复正确回执后只inspect原操作，materialize累计1，才启动模型。此用例验证授权/执行边界，不冒称四种wrapper文案都经过该桥直达；文案等价由代码对照，现有四家故障/留存/部分发布/重启测试保留。
 
 files/outputs/remote/remote-tasks/results/native grants定向6文件 **55 pass/0 fail/1315 expect**（t11-focused.log）；typecheck、build exit0。U01排除：既有固定HAPI真实capture丢JSON与SIGKILL持久回执实证表明候选不可重捕获；共享unknown分支也承担deliver恢复，加capture判断只增复杂度。原capture-probe证据不重跑、不当成本阶段Hub/模型端到端。Commit：`module-slimming-audit T11: 收敛文件传输 RPC 样板`。
+
+
+### T14 补充：本机调用身份与连接写锁
+
+主agent复核发现client.sqlite并未随旧Agent bindings整体退役：仍保存Claude逐调用身份，且connectionFileLock借SQLite协调身份/机器JSON写入。纠正T14原guide删用途的判断，恢复准确文档。删除hook的CREATE TABLE IF NOT EXISTS和连接锁任意旧库直接打开路径；二者复用现有openState的固定client schema1，Hub仍19。已有无版本/其他表结构拒绝、不加表/改权限/TTL清理；新建库直接完整创建。当前TTL、一次性消费和写锁行为均保留。start/serve/restart在副作用前同时预检已有client库。
+
+定向6文件 **36 pass/0 fail/912 expect**（t14-hook-focused-v2.log），typecheck/build exit0；首版仅测试损坏错误文案匹配不准失败（期望“格式”，实际“结构无效”），改断言稳定503并核原文件不变。编译CLI并发身份/机器握手、双宿主MCP和实际任务API仍通过；此补充不是HAPI修改或旧库迁移。后续同候选原生矩阵使用全新client schema1，不能消费早先schema0现场。Specs仍留T13统一同步。

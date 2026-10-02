@@ -295,9 +295,9 @@ runweft serve --public
 
 代理需支持 WebSocket、SSE、Authorization header、流式上传/下载，体积限制至少匹配单文件设置；禁缓冲、不以短总超时截断长传输。不直接暴露私有 HAPI 端口。公开部署是外部操作，Agent 不擅自执行。中心不分发 root token；每个客户端通过浏览器交接独立身份。
 
-paths 显示准确目录：`server/` 是本机托管 Hub 数据；`connections/<Hub标识>/` 是该 Hub 的身份/机器接入和 HAPI 工作区/缓存；`logs/`、`backups/` 独立。原生 Codex/Claude home 不受 Runweft 接管。备份须先结束任务、停止相关服务，保存同一时点数据库/文件、连接候选、原生会话及 worktree 依赖源仓库/缓存；只回滚数据库不安全。
+paths 显示准确目录：`server/` 是本机托管 Hub 数据；`connections/<Hub标识>/` 是该 Hub 的身份/机器接入和 HAPI 工作区/缓存；`client.sqlite` 保存当前 Claude MCP 调用身份并协调连接文件写入；`logs/`、`backups/` 独立。原生 Codex/Claude home 不受 Runweft 接管。备份须先结束任务、停止相关服务，保存同一时点数据库/文件、连接候选、原生会话及 worktree 依赖源仓库/缓存；只回滚数据库不安全。
 
-中心业务库只支持当前 schema19：全新目录创建当前格式，完整同格式库可正常重开。已有旧版本、不匹配或损坏格式明确拒绝，不迁移、改写或清理原目录。需要另建环境时使用独立的新 `--home <目录>`，自行保管原目录；新环境不接续原目录中的任务。配置文件省略 schemaVersion 仍使用当前默认值1，显式非当前版本会拒绝。
+中心业务库只支持当前 schema19，本机 client.sqlite 只支持当前 schema1：全新目录创建当前格式，完整同格式库可正常重开。已有旧版本、不匹配或损坏格式明确拒绝，不迁移、改写或清理原目录。需要另建环境时使用独立的新 `--home <目录>`，自行保管原目录；新环境不接续原目录中的任务。配置文件省略 schemaVersion 仍使用当前默认值1，显式非当前版本会拒绝。
 
 ## 诊断、升级与卸载
 

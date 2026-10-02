@@ -247,17 +247,20 @@ function structure(db: Database) {
     return (db.query("SELECT type, name, tbl_name, sql FROM sqlite_schema WHERE name NOT GLOB 'sqlite_*' ORDER BY type, name").all() as SchemaRow[])
         .map(row => ({ ...row, sql: row.sql?.replace(/\s+/g, ' ').trim() ?? null }));
 }
-const reference = new Database(':memory:');
-reference.exec(schema);
-const expectedStructure = JSON.stringify(structure(reference));
-reference.close();
+const clientSchema = `CREATE TABLE claude_mcp_calls (callId TEXT PRIMARY KEY, sessionId TEXT NOT NULL, cwd TEXT NOT NULL, agentId TEXT, createdAt INTEGER NOT NULL); PRAGMA user_version=1;`;
+function schemaStructure(sql: string) {
+    const reference = new Database(':memory:');
+    try { reference.exec(sql); return JSON.stringify(structure(reference)); } finally { reference.close(); }
+}
+const expectedStructure = schemaStructure(schema), expectedClientStructure = schemaStructure(clientSchema);
+type StateKind = 'hub' | 'client';
 function formatError(code: 'state_format_unsupported' | 'state_format_invalid') {
     return new ResourceError(503, code, code === 'state_format_unsupported' ? '业务数据库不是当前支持的格式。' : '业务数据库损坏或结构无效。',
         '使用独立的新 Runweft home；原目录保持不变，请自行保管。');
 }
 /** Check fixed format metadata on a private DB/WAL copy; opening the original readonly can modify SHM.
  * This copy is not a transactional backup of concurrently changing business rows. */
-export function validateState(path: string) {
+export function validateState(path: string, kind: StateKind = 'hub') {
     if (!existsSync(path)) return;
     const root = mkdtempSync(join(tmpdir(), 'runweft-state-check-'));
     let db: Database | undefined;
@@ -268,16 +271,16 @@ export function validateState(path: string) {
         catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error; }
         db = new Database(copy, { readonly: true });
         const version = (db.query('PRAGMA user_version').get() as { user_version: number }).user_version;
-        if (version !== STATE_SCHEMA_VERSION) throw formatError('state_format_unsupported');
-        if (JSON.stringify(structure(db)) !== expectedStructure) throw formatError('state_format_invalid');
+        if (version !== (kind === 'hub' ? STATE_SCHEMA_VERSION : 1)) throw formatError('state_format_unsupported');
+        if (JSON.stringify(structure(db)) !== (kind === 'hub' ? expectedStructure : expectedClientStructure)) throw formatError('state_format_invalid');
     } catch (error) {
         if (error instanceof SQLiteError && [11, 26].includes(error.errno & 0xff)) throw formatError('state_format_invalid');
         throw error;
     } finally { try { db?.close(); } finally { rmSync(root, { recursive: true, force: true }); } }
 }
 
-export function openState(path: string) {
-    validateState(path);
+export function openState(path: string, kind: StateKind = 'hub') {
+    validateState(path, kind);
     if (!existsSync(path)) {
         ensureDirectory(dirname(path));
         const root = mkdtempSync(join(dirname(path), '.state-create-'));
@@ -285,12 +288,12 @@ export function openState(path: string) {
         try {
             const temporary = join(root, 'state.sqlite');
             fresh = new Database(temporary, { create: true });
-            fresh.exec(schema); fresh.close(); fresh = undefined;
+            fresh.exec(kind === 'hub' ? schema : clientSchema); fresh.close(); fresh = undefined;
             chmodSync(temporary, 0o600);
             try { linkSync(temporary, path); }
             catch (error) { if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error; }
         } finally { try { fresh?.close(); } finally { rmSync(root, { recursive: true, force: true }); } }
-        validateState(path); // A concurrent creator may have won; never overwrite its file.
+        validateState(path, kind); // A concurrent creator may have won; never overwrite its file.
     }
     const db = new Database(path, { readwrite: true, create: false });
     try {

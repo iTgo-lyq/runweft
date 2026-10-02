@@ -4,6 +4,7 @@ import { chmodSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync }
 import { join, resolve } from 'node:path';
 import { createHash } from 'node:crypto';
 import { openState, STATE_SCHEMA_VERSION, validateState } from '../src/state';
+import { recordClaudeCall, consumeClaudeCall } from '../src/mcp/claude-hook';
 import { fixture } from './helpers';
 import { dataPaths, loadConfig } from '../src/config';
 
@@ -64,7 +65,8 @@ test('concurrent fresh creators keep every committed row and leave no constructi
     expect(readdirSync(root).some(name => name.startsWith('.state-create-'))).toBe(false);
 });
 test('service start, serve and restart reject an unsupported database before changing the home', async () => {
-    const { root } = location(); const config = loadConfig(root, {}), path = dataPaths(config).state;
+    for (const kind of ['state', 'clientState'] as const) {
+    const { root } = location(); const config = loadConfig(root, {}), path = dataPaths(config)[kind];
     const { mkdirSync } = await import('node:fs'); const { dirname } = await import('node:path'); mkdirSync(dirname(path), { recursive: true });
     const db = new Database(path); db.exec('CREATE TABLE keep(value TEXT); PRAGMA user_version=18;'); db.close();
     const before = files(root);
@@ -72,6 +74,7 @@ test('service start, serve and restart reject an unsupported database before cha
         const child = Bun.spawn([process.execPath, 'src/cli.ts', '--home', root, '--json', action], { stdout: 'pipe', stderr: 'pipe' });
         const [code, out, err] = await Promise.all([child.exited, new Response(child.stdout).text(), new Response(child.stderr).text()]);
         expect(code).toBe(1); expect(out + err).toContain('state_format_unsupported'); expect(files(root)).toEqual(before);
+    }
     }
 });
 
@@ -82,5 +85,19 @@ test('config accepts the documented current shorthand but rejects explicit other
     for (const version of [0, 2]) {
         writeFileSync(path, `schemaVersion: ${version}\nmode: local\n`); const before = files(root);
         expect(() => loadConfig(root, {})).toThrow('schemaVersion'); expect(files(root)).toEqual(before);
+    }
+});
+
+test('Claude hook refuses existing unversioned or structurally different client databases before TTL cleanup or identity writes', () => {
+    for (const initial of [
+        'CREATE TABLE old_bindings (value TEXT); PRAGMA user_version=0;',
+        'CREATE TABLE claude_mcp_calls (callId TEXT PRIMARY KEY, sessionId TEXT NOT NULL, cwd TEXT NOT NULL, agentId TEXT, createdAt INTEGER NOT NULL); PRAGMA user_version=0;',
+        'CREATE TABLE claude_mcp_calls (callId TEXT PRIMARY KEY, sessionId TEXT NOT NULL, cwd TEXT NOT NULL, agentId TEXT, createdAt INTEGER NOT NULL); CREATE TABLE unexpected(value TEXT); PRAGMA user_version=1;',
+    ]) {
+        const { root } = location(), c = loadConfig(root, {}), path = dataPaths(c).clientState;
+        const db = new Database(path); db.exec(initial); db.close(); const before = files(root);
+        const event = { hook_event_name: 'PreToolUse', tool_name: 'mcp__runweft__wait', tool_use_id: 'call', session_id: 'session', cwd: root };
+        expect(() => recordClaudeCall(c, event)).toThrow(expect.objectContaining({ status: 503 })); expect(files(root)).toEqual(before);
+        expect(() => consumeClaudeCall(c, 'call')).toThrow(expect.objectContaining({ status: 503 })); expect(files(root)).toEqual(before);
     }
 });

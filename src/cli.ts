@@ -75,7 +75,7 @@ export function createProgram() {
             `当前连接的文件准备/候选：${paths.artifactTransfers}`,
             `日志：${paths.logs}`, `配置备份：${paths.backups}`, `可再生缓存：${paths.cache}`, `临时目录：${paths.temporary}`,
             `原生 Codex：${paths.nativeCodex}`, `原生 Claude Code：${paths.nativeClaude}`,
-            '备份：停止托管服务后备份配置、server 和 connections；原生目录按各工具规则备份。',
+            '备份：停止托管服务后备份配置、server 和 connections；client.sqlite 保存 Claude MCP 调用身份并协调连接文件写入；原生目录按各工具规则备份。',
             '本机仓库派生的 worktree 还依赖源 Git 目录；远端准备的 worktree 依赖上述仓库缓存。备份时保留对应对象和原路径。',
             '代码清理：task result release 释放选定轮次的中心引用；task workspace remove 清理执行端环境与基线消费者；artifact prune/remove 才清理无引用字节。',
         ].join('\n'));

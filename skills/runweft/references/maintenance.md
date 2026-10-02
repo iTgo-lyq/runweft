@@ -46,7 +46,7 @@ runweft mcp check --client <codex或claude>
 
 ## 当前附件与成果留存
 
-默认数据根 `$HOME/.runweft`；`--home` 优先于 RUNWEFT_HOME，字段环境变量优先于 config.yaml。用 `paths` 获取当前连接实际目录，不硬编码 URL 哈希。Hub 数据在 `server/`，每 Hub 身份/机器与 HAPI 数据在 `connections/`，备份在 `backups/`。原生 Codex/Claude home 不被 Runweft 接管。
+默认数据根 `$HOME/.runweft`；`--home` 优先于 RUNWEFT_HOME，字段环境变量优先于 config.yaml。用 `paths` 获取当前连接实际目录，不硬编码 URL 哈希。Hub 数据在 `server/`，每 Hub 身份/机器与 HAPI 数据在 `connections/`，`client.sqlite` 保存当前 Claude MCP 调用身份并协调连接文件写入，备份在 `backups/`。原生 Codex/Claude home 不被 Runweft 接管。
 
 备份当前运行环境前先结束任务、停止 Hub/相关 Runner，保留同一时点的配置、中心库/文件、连接数据、未交付候选、原生会话及 worktree 依赖的源 Git/缓存；不要只备份数据库。不要无授权打包上传身份或模型凭据。
 
@@ -59,4 +59,4 @@ runweft artifact prune
 
 以上 release/prune 默认预览，核对结果和用户意图后才加 `--apply`。丢弃未交付结果需要另外明确 `--discard-pending`。工作区删除 `task workspace remove <taskId>` 会实际执行，不能当预览；ignored 文件默认阻止删除，仅明确放弃才加 `--discard-ignored`。释放引用不删除字节，仍有引用的对象不能 remove。
 
-中心只在全新目录创建当前 schema19，完整同格式库可正常重开。旧版本、不匹配或损坏格式明确拒绝，不迁移、改写或清理原目录。按错误诊断使用独立新 `--home <目录>` 并自行保管原目录；不要把未知执行/回执作为删除历史的理由。当前附件/成果的 release/prune/remove 与已登记操作的回执恢复仍按各命令执行，不接管旧目录。配置省略 schemaVersion 使用当前默认值1，显式非当前版本拒绝。
+中心业务库只支持当前 schema19，本机 client.sqlite 只支持当前 schema1；新库直接创建，同格式库正常重开。旧版本、不匹配或损坏格式明确拒绝，不迁移、改写或清理原目录。按错误诊断使用独立新 `--home <目录>` 并自行保管原目录；不要把未知执行/回执作为删除历史的理由。当前附件/成果的 release/prune/remove 与已登记操作的回执恢复仍按各命令执行，不接管旧目录。配置省略 schemaVersion 使用当前默认值1，显式非当前版本拒绝。

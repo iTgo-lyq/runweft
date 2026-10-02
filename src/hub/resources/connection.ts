@@ -1,9 +1,9 @@
-import { Database } from 'bun:sqlite';
+import { openState } from '../../state';
 import { randomBytes, randomUUID } from 'node:crypto';
-import { chmodSync, existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { z } from 'zod';
-import { atomicWrite, connectionName, ensureDirectory, expandPath, hubOrigin } from '../../config';
+import { atomicWrite, connectionName, expandPath, hubOrigin } from '../../config';
 import { RunweftError } from '../../errors';
 import { NameSchema } from '../../resources/types';
 import type { HubResourceClient } from './client';
@@ -27,10 +27,8 @@ export function hubConnectionPaths(home: string, url: string) {
 }
 
 export function connectionFileLock<T>(paths: ReturnType<typeof hubConnectionPaths>, change: () => T): T {
-    ensureDirectory(paths.home);
-    const db = new Database(paths.clientState, { create: true });
+    const db = openState(paths.clientState, 'client');
     try {
-        chmodSync(paths.clientState, 0o600); db.exec('PRAGMA busy_timeout=5000; PRAGMA journal_mode=WAL;');
         return db.transaction(change).immediate();
     } finally { db.close(); }
 }
