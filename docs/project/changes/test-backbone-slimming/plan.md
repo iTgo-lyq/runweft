@@ -29,7 +29,7 @@
 
 ### T3 合并无模型集成与浏览器验收
 
-- 状态：待开始
+- 状态：已完成
 - 交付：access/storage/web/service-package 四组显式入口；console 主体与历史读取一次执行；文件/Git 集成仅保留独立故障，完整大文件/heartbeat 验证归单一明确位置。
 - 依赖：T1；与 T2 保持同工作区串行。
 - 验收：删除重复 smoke/转发入口前完成保障接替，Playwright 实际 token/401/迟到响应可失败，权限/Runner outgoing 重查仍真实执行。只复用不可变程序，不跨 case 共享可变环境。

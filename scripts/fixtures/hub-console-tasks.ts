@@ -21,6 +21,7 @@ export async function consoleTasks(options: { origin: string; home: string; root
         access.bind({ kind: 'task', id: task.id, ownerId: task.hub!.ownerId, spaceId: task.hub!.spaceId, machineId: task.target.machineId });
     } });
     const scopes = new DelegationScopes(access), sockets: Socket[] = [], nativePages: Page[] = [];
+    const heartbeats: ReturnType<typeof setInterval>[] = [];
     const urls: string[] = [], authBodies: string[] = [], errors: string[] = [];
     const nativeRequests: { path: string; claims: ReturnType<typeof decodeJwt> }[] = [];
     const observed = new Set<Page>(), credentials = new Set([options.identityToken, options.memberIdentity, options.ownerToken, options.memberToken]);
@@ -57,7 +58,8 @@ export async function consoleTasks(options: { origin: string; home: string; root
         const socket = io(origin + '/cli', { auth: { token: machine.active.token, sessionId }, transports: ['websocket'], reconnection: false }); sockets.push(socket);
         await new Promise<void>((resolve, reject) => { socket.once('connect', resolve); socket.once('connect_error', reject); });
         const ping = () => new Promise<void>(resolve => socket.emit('ping', resolve));
-        socket.emit('session-alive', { sid: sessionId, time: Date.now(), thinking: false }); await ping();
+        const heartbeat = () => socket.emit('session-alive', { sid: sessionId, time: Date.now(), thinking: false });
+        heartbeat(); heartbeats.push(setInterval(heartbeat, 5000)); await ping();
         socket.emit('message', { sid: sessionId, message: { role: 'agent', content: { type: 'codex', data: { type: 'message', message: marker + '_NATIVE_MESSAGE' } } } }); await ping();
         return { id: sessionId, taskId, roundId, namespace, socket, ping };
     }
@@ -65,6 +67,7 @@ export async function consoleTasks(options: { origin: string; home: string; root
         if (observed.has(tab)) return; observed.add(tab);
         nativePages.push(tab); tab.on('pageerror', error => errors.push(error.message));
         tab.on('request', request => {
+            try {
             urls.push(request.url()); const path = new URL(request.url()).pathname;
             if (path === '/api/auth') authBodies.push(request.postData() ?? '');
             if (path.startsWith('/api/sessions/') || path === '/api/events') {
@@ -75,6 +78,7 @@ export async function consoleTasks(options: { origin: string; home: string; root
                 assert.equal(claims.space, options.spaceId); assert.equal(claims.exp! - claims.iat!, 900);
                 nativeRequests.push({ path, claims });
             }
+            } catch { errors.push('Native request authorization boundary failed: ' + new URL(request.url()).pathname); }
         });
     }
     context.on('page', observe);
@@ -195,6 +199,7 @@ export async function consoleTasks(options: { origin: string; home: string; root
         });
         for (const method of ['permission', 'git-status', 'git-diff-numstat', 'git-diff-file', 'readFile']) owner.socket.emit('rpc-register', { method: `${owner.id}:${method}` });
         await owner.ping();
+        await until(async () => (await api(`/api/sessions/${owner.id}`, options.ownerToken)).session.active === true, 'approval fixture heartbeat');
         await native.getByRole('button', { name: /允许一次|Allow once|^允许$|^Allow$|^是$|^Yes$/ }).first().click({ timeout: 15000 });
         await until(async () => approved, 'native approval RPC');
         await options.screenshot(native, 'native-detail-desktop');
@@ -228,7 +233,7 @@ export async function consoleTasks(options: { origin: string; home: string; root
         await memberPage.locator('#apply-rotation').click(); await ready(memberPage); await memberPage.locator('#close-secret').click();
         assert.equal((await fetch(origin + '/api/auth', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ accessToken: options.memberIdentity, spaceId: options.spaceId }) })).status, 401);
         assert.equal((await fetch(origin + `/api/sessions/${other.id}`, { headers: { authorization: `Bearer ${previousMemberJwt}` } })).status, 401);
-        await memberNative.evaluate(() => { new EventSource('/api/events'); });
+        // Actual rotation redirects the native tab. Do not create an unauthenticated EventSource on the new Hub page.
         await memberNative.waitForURL(/\/hub#native-expired/);
         assert(await memberNative.evaluate(() => sessionStorage.getItem('runweft.native.access') === null), 'Revoked native credential must clear');
         assert.equal((await fetch(origin + `/api/sessions/${owner.id}`, { headers: { authorization: `Bearer ${options.ownerToken}` } })).status, 200);
@@ -305,6 +310,7 @@ export async function consoleTasks(options: { origin: string; home: string; root
         for (const credential of credentials) message = message.replaceAll(credential, '[redacted]');
         throw new Error(message);
     } finally {
+        for (const timer of heartbeats) clearInterval(timer);
         context.off('page', observe);
         await closeSmoke([() => access.close(), () => tasks.close(), ...sockets.map(socket => () => socket.disconnect()), ...nativePages.map(tab => () => tab.close())]);
     }

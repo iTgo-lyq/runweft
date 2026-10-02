@@ -14,12 +14,9 @@
     "typecheck": "tsc --noEmit",
     "test": "bun test ./test",
     "test:service": "node scripts/smoke-service.mjs",
-    "test:dashboard": "bun scripts/smoke-dashboard.ts",
     "test:hub": "bun scripts/smoke-hub.ts",
     "test:execution": "bun scripts/smoke-execution.ts",
     "test:mcp": "bun scripts/smoke-mcp.ts",
-    "test:resources": "bun scripts/smoke-resources.ts",
-    "test:agents": "bun scripts/smoke-agents.ts",
     "test:tasks": "bun scripts/smoke-tasks.ts",
     "test:task-controls": "bun scripts/smoke-task-controls.ts",
     "test:task-mcp": "bun scripts/smoke-task-mcp.ts",
@@ -62,7 +59,8 @@
     "test:hub-consumers": "bun scripts/smoke-hub-consumers.ts",
     "test:hub-service": "bun scripts/smoke-hub-service.ts",
     "test:hub-console": "bun scripts/smoke-hub-console.ts",
-    "test:hub-native-mcp": "bun scripts/smoke-hub-native-mcp.ts"
+    "test:hub-native-mcp": "bun scripts/smoke-hub-native-mcp.ts",
+    "test:integration": "bun scripts/smoke-integration.ts"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.25.1",

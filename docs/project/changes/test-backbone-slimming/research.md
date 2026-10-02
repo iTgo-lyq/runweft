@@ -84,3 +84,13 @@
 | artifacts/state/service-commands/mcp/cli 的源码 CLI 启动 | 共享现有 compiledCli；实际进程、argv、退出信号和 stdio 仍检查 | 减少每次解释源码，不新增编译缓存 |
 
 执行层审批测试保留：上层替身不验证其 HTTP path/body/409。resource CLI 的权限、CAS、丢回执与命令参数接线也保留；仅凭耗时没有证据删除。K1–K12 的其他领域骨干不变，不把少量文件合并包装成大幅用例删减。
+
+## T3 集成收敛与实际发现
+
+- 新的固定入口分 access/storage/web/service-package，组内串行、每脚本独立现场；失败停在该脚本，直接调用该脚本重跑。storage 的 result-export 只执行 fetch 超集和不同的 tasks 分支，不再额外执行基础分支。安装/包组使用冻结候选，在 T4 候选形成后执行。
+- 删除 agents/resources/dashboard 三个纯转发脚本。console 接受历史证据参数，主体与历史可一次调用；现有原生历史格式收敛在 T4 完成。
+- 浏览器只保留接入→资源登记→Agent 编辑冲突/私有与共享→个人选择→任务/原生视图骨干。删除普通机器改名、Runtime 停用恢复、仓库别名增删/取消恢复、Agent 三种分享范围往返、个人选择删除的重复浏览器 CRUD；对应权限/登记状态/变更行为继续由 hub-resources、hub-agents、hub-repositories、hub-resource-cli 和真实 access 集成保障。浏览器仍验证真实表单写入、CAS 保留编辑、分享后的只读边界与私有概要。
+- 首跑 web 的前两脚本通过，console 207.78 秒失败。证据 hub-console-H2fzCm 显示原生会话 offline、审批按钮禁用；fixture 只发过一次 session-alive，跨过 HAPI 有效期后正确离线。修复为存活期每5秒心跳、finally 清理，审批前检查实际 active；没有放宽产品授权或移除审批断言。保留失败日志，重跑范围仅 console。
+
+- 第二次 console 已通过审批，但撤权后人工执行 new EventSource 的负例与真实重定向竞态：页面已回 Hub 后创建了不带 JWT 的原生 EventSource，引发 request 回调未捕获断言，脚本退出1却写 success=true。删除这条额外人工请求，保留真实撤权后的自动跳转/清凭据断言；请求回调错误进入最终 errors 断言，避免异常与证据结果分离。GUI本身无需修改。
+- T4 准备时发现 collaboration 的 local/hub 仅按目录命名，nativeUserSmoke.runner 新建目录均初始化为 hub。必须在 N1/N4 使用本地主服务 home，并断言实际 config.mode 和 MCP connection.mode；不能仅沿用 case 标签声称 local 覆盖。此为验收纠偏，不改变产品运行模式。
