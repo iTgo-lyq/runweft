@@ -1,3 +1,4 @@
+import type { ArtifactTransfer, ArtifactTransferRequest } from '../../hapi/shared/src/artifactTransfers';
 import { createHash } from 'node:crypto';
 import { constants } from 'node:fs';
 import { link, lstat, mkdir, open, realpath, rename, rm, type FileHandle } from 'node:fs/promises';
@@ -5,6 +6,14 @@ import { basename, dirname, resolve } from 'node:path';
 import { ArtifactSchema, ArtifactReserveSchema, ArtifactLimitsSchema, ArtifactUsageSchema, ArtifactPruneSchema, ArtifactPruneResultSchema, type ArtifactPrune, type Artifact, type ArtifactLimits, type ArtifactReference } from '../../hapi/shared/src/artifacts';
 import { HapiHttp } from '../hapi';
 import { RunweftError } from '../errors';
+
+export async function artifactOperation(client: HapiHttp, machineId: string, request: ArtifactTransferRequest, invalidMessage: string): Promise<ArtifactTransfer> {
+    const result = await client.request(`/api/machines/${encodeURIComponent(machineId)}/artifacts`, {
+        method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(request),
+    });
+    if (result.operation?.request?.operationId !== request.operationId) throw new RunweftError('invalid_hapi_response', invalidMessage);
+    return result.operation;
+}
 
 function artifact(value: unknown): Artifact {
     const parsed = ArtifactSchema.safeParse(value);

@@ -1,6 +1,6 @@
 import type { ArtifactTransfer, ArtifactTransferRequest } from '../../hapi/shared/src/artifactTransfers';
 import type { ArtifactReference } from '../../hapi/shared/src/artifacts';
-import { ArtifactClient } from '../artifacts/client';
+import { ArtifactClient, artifactOperation } from '../artifacts/client';
 import { errorDetails, RunweftError } from '../errors';
 import { HapiHttp, HapiRequestError } from '../hapi';
 import type { Problem } from '../resources/types';
@@ -19,12 +19,8 @@ export type ArtifactRetention = {
 export class TaskRetention {
     private readonly artifacts: ArtifactClient;
     constructor(private readonly hapi: HapiHttp) { this.artifacts = new ArtifactClient(hapi); }
-    private async machine(task: Task, request: ArtifactTransferRequest): Promise<ArtifactTransfer> {
-        const value = await this.hapi.request(`/api/machines/${encodeURIComponent(task.target.machineId)}/artifacts`, {
-            method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(request),
-        });
-        if (value.operation?.request?.operationId !== request.operationId) throw new RunweftError('invalid_hapi_response', '机器未返回匹配的文件操作回执。');
-        return value.operation;
+    private machine(task: Task, request: ArtifactTransferRequest): Promise<ArtifactTransfer> {
+        return artifactOperation(this.hapi, task.target.machineId, request, '机器未返回匹配的文件操作回执。');
     }
     private stopped(operation: ArtifactTransfer) {
         if (operation.retention !== 'released' && !['succeeded', 'failed'].includes(operation.status)) {

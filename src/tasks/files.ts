@@ -2,7 +2,7 @@ import { isAbsolute } from 'node:path';
 import { ArtifactNameSchema } from '../../hapi/shared/src/artifacts';
 import type { ArtifactTransfer, ArtifactTransferRequest, PreparedFiles } from '../../hapi/shared/src/artifactTransfers';
 import { outputAttention } from './outputs';
-import { ArtifactClient } from '../artifacts/client';
+import { ArtifactClient, artifactOperation } from '../artifacts/client';
 import { errorDetails, RunweftError } from '../errors';
 import { HapiHttp, HapiRequestError } from '../hapi';
 import type { TaskStore } from './store';
@@ -54,12 +54,8 @@ export class TaskFiles {
         }
         store.deleteArtifactIntent(intent);
     }
-    private async machine(task: Task, request: ArtifactTransferRequest): Promise<ArtifactTransfer> {
-        const result = await this.hapi.request(`/api/machines/${encodeURIComponent(task.target.machineId)}/artifacts`, {
-            method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(request),
-        });
-        if (!result.operation || result.operation.request?.operationId !== request.operationId) throw new RunweftError('invalid_hapi_response', '机器没有返回匹配的文件准备回执。');
-        return result.operation;
+    private machine(task: Task, request: ArtifactTransferRequest): Promise<ArtifactTransfer> {
+        return artifactOperation(this.hapi, task.target.machineId, request, '机器没有返回匹配的文件准备回执。');
     }
     async prepare(task: Task, round: Round, save: () => void) {
         const inputs = round.inputFiles;

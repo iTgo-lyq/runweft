@@ -27,7 +27,7 @@ async function harness(worktree = false) {
         const store = new Store(join(root, 'hapi.db')); owned.resources.push(() => store.close());
         const service = new ArtifactService(store.artifacts, join(root, 'artifacts'), ARTIFACT_DEFAULT_LIMITS);
         const operations = new Map<string, ArtifactTransfer>(), requests: string[] = [], git = workspaces();
-        const faults = { pinResponse: false, hold: false, transferFailure: false, transferResponse: false, inspectUnknown: false, releaseLost: false };
+        const faults = { wrongReceipt: false, pinResponse: false, hold: false, transferFailure: false, transferResponse: false, inspectUnknown: false, releaseLost: false };
         const h = await hubWorkspaceFixture(owned.resources, 'codex', worktree ? git.handler : undefined, async (request, namespace) => {
             const path = new URL(request.url).pathname;
             if (path.startsWith('/api/artifacts')) {
@@ -61,7 +61,7 @@ async function harness(worktree = false) {
                     else if (operation!.request.action === 'materialize') operation!.files = operation!.request.files.map(input => ({ ...input, path: `/prepared-files/${body.operationId}/${input.name}` }));
                 }
             }
-            return Response.json({ operation });
+            return Response.json({ operation: faults.wrongReceipt ? { ...operation, request: { ...operation!.request, operationId: randomUUID() } } : operation });
         });
         const http = () => new HubClient({ url: h.url, space: h.space, env: { RUNWEFT_IDENTITY_TOKEN: h.owner.token } }, 'hubAccess', 'hub_access_unavailable').http;
         const artifacts = new ArtifactClient({ request: (path, options) => http().request(path, options), response: (path, options) => http().response(path, options) });
@@ -190,4 +190,17 @@ test('stopped shared rounds automatically release only the input copy, then expl
     expect((await h.artifacts.refs(file.id)).references.map(item => item.purpose)).toEqual(['recovery']);
     expect((await h.post('read', { id: first.agent_id, roundId: first.round_id })).completed_revision).toBe(done.completed_revision);
     expect(h.calls.spawn).toBe(1); expect(h.calls.resume).toBe(1); expect(h.calls.send).toBe(2);
+});
+
+
+test('an unrelated machine receipt cannot start the model or release input copies, and recovery uses the original operation', async () => {
+    const h = await harness(), file = await h.upload(); h.faultsFiles.wrongReceipt = true;
+    const accepted = await h.post('spawn', { ...h.payload(), intent: { ...h.payload().intent, inputs: [{ artifactId: file.id }] } });
+    await until(() => h.post('read', { id: accepted.agent_id }), view => view.attention?.code === 'delegation_native_mismatch');
+    expect(h.calls.spawn).toBe(0); expect(h.calls.send).toBe(0); expect(h.requests).not.toContain('release');
+    const operationIds = [...h.operations.keys()]; expect(operationIds).toHaveLength(1);
+    h.faultsFiles.wrongReceipt = false;
+    const running = await until(() => h.post('read', { id: accepted.agent_id }), view => view.inputs[0]?.observation?.phase === 'accepted');
+    expect(running.input_files.operation_id).toBe(operationIds[0]); expect([...h.operations.keys()]).toEqual(operationIds);
+    expect(h.requests.filter(action => action === 'materialize')).toHaveLength(1);
 });

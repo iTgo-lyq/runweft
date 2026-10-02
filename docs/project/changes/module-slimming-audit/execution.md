@@ -339,3 +339,12 @@ iclaude review session：`6870f51d-a7d7-4cfa-b49d-a2a96e69a693`。工具限制Re
 真实HTTP补非法send：未知字段/坏UUID/空message/next携round/steer缺round或携新附件，400且round/input/request/intent不增长、native计数不变；next在异步probe中改Agent定义，明确agent_configuration_changed，任务快照/请求/原生执行不变。console详情增加code/git/attachments与顶层值一致业务断言。原rounds/overview/workspaces/files/outputs/console有效恢复与权限断言继续执行。
 
 定向7文件 **72 pass/0 fail/1516 expect**（t10-focused.log）；typecheck、build均exit0。未声称本阶段跑全套或真实模型。U04排除Round工厂和留存状态机合并：首轮/续轮绑定与业务协议不同，未证实默认漂移；同状态词不构成同职责。Commit：`module-slimming-audit T10: 复用详情投影并消除内部重复解析`。
+
+
+## T11 文件 RPC 样板收敛，保留真实恢复
+
+主agent在既有artifacts/client增加一个直观artifactOperation函数；files/outputs/retention/remote transfers只复用POST与operationId一致性判断。四种原错误文案、RunweftError code和未提供hint/status的语义保留；HTTP错误直接透传，remote仍每次解析原namespace授权client。没有新增client缓存、授权框架、重试或统一状态机。冻结请求的JSON.stringify与isDeepStrictEqual、固定capture/materialize/deliver/release身份、unknown/丢回执/停止证明均保持。
+
+追加真实中心HTTP故障：native返回另一operationId时原授权bridge拒绝，模型spawn/send为0且不release输入；恢复正确回执后只inspect原操作，materialize累计1，才启动模型。此用例验证授权/执行边界，不冒称四种wrapper文案都经过该桥直达；文案等价由代码对照，现有四家故障/留存/部分发布/重启测试保留。
+
+files/outputs/remote/remote-tasks/results/native grants定向6文件 **55 pass/0 fail/1315 expect**（t11-focused.log）；typecheck、build exit0。U01排除：既有固定HAPI真实capture丢JSON与SIGKILL持久回执实证表明候选不可重捕获；共享unknown分支也承担deliver恢复，加capture判断只增复杂度。原capture-probe证据不重跑、不当成本阶段Hub/模型端到端。Commit：`module-slimming-audit T11: 收敛文件传输 RPC 样板`。

@@ -2,7 +2,7 @@ import { isDeepStrictEqual } from 'node:util';
 import type { RepositoryOperation, RepositoryRequest } from '../../hapi/shared/src/repositories';
 import type { ArtifactTransfer, ArtifactTransferRequest } from '../../hapi/shared/src/artifactTransfers';
 import type { Artifact } from '../../hapi/shared/src/artifacts';
-import { ArtifactClient } from '../artifacts/client';
+import { ArtifactClient, artifactOperation } from '../artifacts/client';
 import { RunweftError } from '../errors';
 import { HapiRequestError, type HapiHttp } from '../hapi';
 import { PreparationError, type SnapshotFile } from './types';
@@ -40,12 +40,8 @@ export class RepositoryTransfers {
         if (!isDeepStrictEqual(result.request, request)) return invalid('仓库回执与冻结请求不一致。');
         return result;
     }
-    async transfer(namespace: string, machine: string, request: ArtifactTransferRequest): Promise<ArtifactTransfer> {
-        const result = await this.client(namespace).request(`/api/machines/${encodeURIComponent(machine)}/artifacts`, {
-            method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(request),
-        });
-        if (!result.operation || result.operation.request?.operationId !== request.operationId) return invalid('机器未返回指定文件操作的回执。');
-        return result.operation;
+    transfer(namespace: string, machine: string, request: ArtifactTransferRequest): Promise<ArtifactTransfer> {
+        return artifactOperation(this.client(namespace), machine, request, '机器未返回指定文件操作的回执。');
     }
     async transferReceipt(namespace: string, machine: string, request: Extract<ArtifactTransferRequest, { action: 'capture' | 'deliver' | 'materialize' }>, attempted: boolean) {
         let result: ArtifactTransfer;
