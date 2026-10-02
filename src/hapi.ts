@@ -81,7 +81,7 @@ export function clientEnvironment(c: ResolvedConfig) {
     const paths = dataPaths(c), record = c.config.hub.url ? readMachineConnection(c.home, c.config.hub.url) : undefined;
     if (record?.machineId) {
         const settings = readSettings(paths.hapiClient);
-        if (settings.machineId && settings.machineId !== record.machineId) throw new RunweftError('machine_native_identity_mismatch', '原生 Runner 目录属于不同的机器记录。', '停止服务并清理旧试验数据后重新登记；不会自动合并机器历史。');
+        if (settings.machineId && settings.machineId !== record.machineId) throw new RunweftError('machine_native_identity_mismatch', '原生 Runner 目录属于不同的机器记录。', '使用独立的新 Runweft home 重新登记，原目录请自行保管；不会自动合并机器历史。');
         if (settings.machineId !== record.machineId || settings.cliApiToken !== record.active.token) {
             atomicWrite(join(paths.hapiClient, 'settings.json'), JSON.stringify({ ...settings, machineId: record.machineId, cliApiToken: record.active.token }, null, 2));
         }

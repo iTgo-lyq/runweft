@@ -7,7 +7,7 @@ import { AgentSelectionStore } from '../agents/selections';
 import { HubAgentResolver } from '../agents/resolver';
 import { handleAgentSelectionRequest } from '../agents/selection-api';
 
-/** Independent central configuration entry. Default delegation switches in its own migration. */
+/** Central Agent, repository and execution resource configuration. */
 export async function createConfigurationGateway(options: Parameters<typeof createResourceGateway>[0]) {
     let repositories: RepositoryStore;
     let agents: HubAgentStore;

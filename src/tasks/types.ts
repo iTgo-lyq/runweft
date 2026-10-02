@@ -65,7 +65,7 @@ export type TaskEnvironment = { mode: 'shared'; machineId: string; cwd: string }
         checkout?: string; branch?: string; status: 'retained' | 'deleting' | 'removed'; removal?: WorkspaceRemoval };
 export type TaskTarget = PublicExecutionTarget;
 export type Task = { version: 2; id: string; namespace: string; parent: Parent; agent: AgentSnapshot; target: TaskTarget;
-    hub?: { ownerId: string; spaceId: string; hubRepositoryId: string | null };
+    hub: { ownerId: string; spaceId: string; hubRepositoryId: string | null };
     environment: TaskEnvironment; createdAt: number; revision: number; updatedAt: number };
 export type Preparation = { mode: 'shared'; status: 'pending' | 'ready'; checkedAt?: number }
     | { mode: 'worktree'; preparationId: string; status: 'pending' | 'accepted' | 'ready' | 'failed' | 'unknown';
@@ -81,7 +81,7 @@ export type InputFiles = { reference: string; files: FrozenInput[]; operationId:
     status: 'pending' | 'accepted' | 'ready' | 'failed' | 'unknown'; downloaded: MaterializedInput[]; paths: MaterializedInput[];
     intermediateReleased: boolean; error?: Problem; cleanupError?: Problem };
 export type ArtifactIntent = { namespace: string; requestId: string; reference: string; requests: ArtifactInput[]; files?: FrozenInput[] };
-export type Round = { id: string; taskId: string; ordinal: number; requestId: string; message: string; agent?: AgentSnapshot;
+export type Round = { id: string; taskId: string; ordinal: number; requestId: string; message: string; agent: AgentSnapshot;
     phase: 'queued' | 'preparing' | 'starting' | 'resuming' | 'running' | 'stopping' | 'finishing' | 'finished' | 'failed';
     preparation: Preparation; git?: GitDelivery; inputFiles?: InputFiles; outputFiles?: OutputFiles; artifactRetention?: ArtifactRetention; artifactsRevision?: number; code?: CodeDelivery; codeRetention?: CodeRetention; codeRevision?: number; resultFetch?: Pick<CodeFetch, 'id' | 'requestId' | 'status' | 'error' | 'cleanupError'> & { ref?: string; head?: string };
     spawnRequestId: string; spawnAttempted: boolean; sessionId?: string; nativeSessionId?: string;

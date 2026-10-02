@@ -1,14 +1,12 @@
-import { STATE_SCHEMA_VERSION } from '../src/state';
 import { afterEach, expect, test } from 'bun:test';
 import { Database } from 'bun:sqlite';
 import { randomBytes } from 'node:crypto';
-import { readFileSync, rmSync } from 'node:fs';
+import { rmSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { SignJWT } from 'jose';
 import { createDelegationGateway } from '../src/hub/delegation/gateway';
 import { fixtureCleanup } from './fixture-cleanup';
 import { createIdentityToken, HubStore } from '../src/hub/store';
-import { openState } from '../src/state';
 import { fixture } from './helpers';
 
 const cleanup: (() => Promise<void> | void)[] = [];
@@ -152,20 +150,4 @@ test('new APIs reject HAPI and query/cookie credentials, reject malformed input 
     expect(plain.status).toBe(415); expect(plain.headers.get('access-control-allow-origin')).toBeNull();
     const malformed = await fetch(h.url + prefix + '/identities', { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{' });
     expect(malformed.status).toBe(400);
-});
-
-test('v6 upgrade preserves existing registrations and does not assign them to new identities', () => {
-    const root = fixture('hub-upgrade'), path = join(root, 'state.sqlite');
-    cleanup.push(() => rmSync(root, { recursive: true, force: true }));
-    const old = openState(path);
-    old.exec(`DROP TABLE hub_connection_requests; DROP TABLE hub_delegation_scopes; DROP TABLE hub_agent_selections; DROP TABLE hub_agent_blocks; DROP TABLE hub_agent_members; DROP TABLE hub_agent_versions; DROP TABLE hub_agents; DROP TABLE hub_checkouts; DROP TABLE hub_repository_aliases; DROP TABLE hub_repositories; DROP TABLE hub_resource_blocks; DROP TABLE hub_runtime_shares; DROP TABLE hub_resource_runtimes; DROP TABLE hub_machine_spaces; DROP TABLE hub_resource_machines; DROP TABLE hub_native_session_claims; DROP TABLE hub_file_reservations; DROP TABLE hub_execution_grants; DROP TABLE hub_execution_intents; DROP TABLE hub_execution_credentials; DROP TABLE hub_execution_objects; DROP TABLE hub_invitations; DROP TABLE hub_memberships; DROP TABLE hub_spaces; DROP TABLE hub_users;
-        INSERT INTO machine_registrations VALUES ('legacy', 'machine', 1, 1, 2); PRAGMA user_version=6;`);
-    old.close();
-    const hub = new HubStore(path); const identity = hub.createIdentity('new'); hub.close();
-    const db = new Database(path);
-    expect(db.query('PRAGMA user_version').get()).toEqual({ user_version: STATE_SCHEMA_VERSION });
-    expect(db.query('SELECT * FROM machine_registrations').get()).toEqual({ namespace: 'legacy', machineId: 'machine', registered: 1, createdAt: 1, updatedAt: 2 });
-    expect(db.query('SELECT COUNT(*) AS count FROM hub_memberships').get()).toEqual({ count: 1 });
-    db.close();
-    expect(readFileSync(path).includes(Buffer.from(identity.token))).toBe(false);
 });

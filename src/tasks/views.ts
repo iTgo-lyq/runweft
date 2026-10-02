@@ -41,7 +41,7 @@ export function detail(bundle: TaskBundle, options: { roundId?: string; offset?:
     const round = options.roundId ? bundle.rounds.find(round => round.id === options.roundId) : bundle.rounds.at(-1);
     if (!round) return null;
     const offset = options.offset ?? 0, limit = options.limit ?? 16_000;
-    return { ...overview(bundle, round), parent: bundle.task.parent, agent: round.agent ?? bundle.task.agent, environment: bundle.task.environment,
+    return { ...overview(bundle, round), parent: bundle.task.parent, agent: round.agent, environment: bundle.task.environment,
         preparation: round.preparation, phase: round.phase, session_id: round.sessionId, native_session_id: round.nativeSessionId,
         resume: round.resume, reconstruction: round.reconstruction ? { reason: round.reconstruction.reason, source_round_ids: round.reconstruction.sourceRoundIds } : undefined,
         cancellation: round.cancellation,

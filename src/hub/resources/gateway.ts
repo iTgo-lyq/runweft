@@ -3,7 +3,7 @@ import { handleResourceRequest } from './api';
 import { HubResourceService } from './service';
 import { HubResourceStore } from './store';
 
-/** Composable Hub domain entry; the default service moves here in the delegation migration. */
+/** Central execution resource entry. */
 export async function createResourceGateway(options: AccessGatewayOptions & { capabilities?: Record<string, number> }) {
     let resources: HubResourceService;
     const gateway = await createAccessGateway({ ...options,

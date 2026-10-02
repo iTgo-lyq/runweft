@@ -1,6 +1,5 @@
 import { fixtureCleanup } from './fixture-cleanup';
 import { afterEach, expect, test } from 'bun:test';
-import { Database } from 'bun:sqlite';
 import { workspaces } from './workspaces-fixture';
 import { hubWorkspaceFixture } from './hub-workspace-fixture';
 import { until } from './helpers';
@@ -8,21 +7,6 @@ import { until } from './helpers';
 const cleanupOwner = fixtureCleanup([]), cleanups = cleanupOwner.resources;
 afterEach(() => cleanupOwner.close());
 
-
-test('unversioned shared task data remains readable and can continue without Git preparation', async () => {
-    const h = await hubWorkspaceFixture(cleanups);
-    const request = h.payload(), accepted = await h.post('spawn', request), id = accepted.agent_id;
-    const running = await until(() => h.post('read', { id }), value => value.inputs[0]?.observation?.phase === 'accepted');
-    h.complete(running.session_id);
-    await until(() => h.post('read', { id }), value => value.status === 'completed');
-    const db = new Database(h.statePath);
-    db.query("UPDATE delegation_tasks SET data=json_remove(data, '$.version') WHERE id=?").run(id); db.close();
-    expect(h.gateway.delegation.coordinator.store.require(h.namespace, id).task.version).toBe(2);
-    expect(await h.post('spawn', request)).toEqual(accepted);
-    const next = await h.post('send', { requestId: crypto.randomUUID(), intent: { id, message: 'Continue legacy task', mode: 'next' } });
-    const resumed = await until(() => h.post('read', { id }), value => value.round_id === next.round_id && value.inputs[0]?.observation?.phase === 'accepted');
-    expect(resumed.cwd).toBe(h.cwd); expect(resumed.git).toBe('not_applicable'); expect(h.calls.resume).toBe(1);
-});
 
 test('invalid Git baseline preserves HAPI diagnosis and accepts no task or native execution', async () => {
     const git = workspaces(); git.control.rejectResolve = true;

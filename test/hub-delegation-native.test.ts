@@ -3,7 +3,6 @@ import { randomBytes, randomUUID } from 'node:crypto';
 import { decodeJwt, SignJWT } from 'jose';
 import { DelegationNativeClient } from '../src/hub/delegation/native';
 import { NativeTransport, fileNamespace } from '../src/hub/access/transport';
-import { AccessStore } from '../src/hub/access/store';
 import { createIdentityToken } from '../src/hub/store';
 import { setupHubResources } from './hub-resources-fixture';
 import { resourceInspection } from './native-fixture';
@@ -154,17 +153,4 @@ test('Runner publication maps to caller namespace, can be recovered by request a
     expect(h.access.can(replacement, 'artifact', output.id, 'write')).toBe(false);
     h.client.files.reserve(h.b, input);
     await expect(h.client.request(`/api/artifacts/requests/${requestId}`)).rejects.toMatchObject({ code: 'file_reservation_conflict' });
-});
-
-test('transfer grant schema upgrade preserves existing explicit grants without inventing recipients', async () => {
-    const h = await fixture(), file = h.file();
-    h.access.grant(h.machine.id, file.id, 'read');
-    h.access.db.exec(`ALTER TABLE hub_execution_grants RENAME TO grants_current;
-        CREATE TABLE hub_execution_grants (credentialId TEXT, kind TEXT, objectId TEXT, operation TEXT, PRIMARY KEY(credentialId, kind, objectId, operation));
-        INSERT INTO hub_execution_grants SELECT credentialId, kind, objectId, operation FROM grants_current;
-        DROP TABLE grants_current; DROP TABLE hub_connection_requests; DROP TABLE hub_delegation_scopes; PRAGMA user_version=15;`);
-    const reopened = new AccessStore(h.path); cleanups.push(() => reopened.close());
-    expect(reopened.can(h.machine, 'artifact', file.id)).toBe(true);
-    expect(reopened.db.query('SELECT leaseKey FROM hub_execution_grants').all()).toEqual([{ leaseKey: 'manual' }]);
-    expect(reopened.can(h.machine, 'artifact', file.id, 'write')).toBe(false);
 });

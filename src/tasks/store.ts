@@ -1,3 +1,4 @@
+import { currentTask, currentRound, currentInput, currentFetch, recordJSON, invalidRecord, snapshotMatches } from './records';
 import { isDeepStrictEqual } from 'node:util';
 import type { CodeFetch, CodeManifest, ResultAction } from './result-types';
 import type { ArtifactRetention } from './retention';
@@ -11,7 +12,7 @@ import type { TaskTarget } from './types';
 import { pendingOutputs, type OutputItem, type OutputJob, type OutputManifest } from './output-types';
 import { parentKey, pendingPreparation, validateWorkspaceTarget, TaskError, type ArtifactAction, type ArtifactIntent, type InputFiles, type Acceptance, type AgentSnapshot, type Input, type Parent, type Round, type SendIntent, type SpawnIntent, type Task, type TaskBundle } from './types';
 
-type TaskRow = { data: string; revision: number; updatedAt: number };
+type TaskRow = { id: string; namespace: string; parentKey: string; machineId: string; cwd: string; data: string; revision: number; updatedAt: number };
 const read = <T>(row: { data: string }): T => JSON.parse(row.data);
 const semantic = (parent: Parent, intent: SpawnIntent | SendIntent) => {
     let normalized = { ...intent };
@@ -29,13 +30,31 @@ export class TaskStore {
     close() { if (!this.options) this.db.close(); }
     ownsScope(namespace: string) { return this.options?.ownsScope(namespace) ?? true; }
     require(namespace: string, id: string, parent?: Parent): TaskBundle {
-        const row = this.db.query('SELECT data, revision, updatedAt FROM delegation_tasks WHERE namespace=? AND id=?').get(namespace, id) as TaskRow | null;
+        const row = this.db.query('SELECT * FROM delegation_tasks WHERE namespace=? AND id=?').get(namespace, id) as TaskRow | null;
         if (!row) throw new TaskError(404, 'task_unknown', '当前连接中找不到此任务。', '运行 runweft task list --all 检查任务 ID。');
-        const task: Task = { version: 2, ...read<Omit<Task, 'version'>>(row), revision: row.revision, updatedAt: row.updatedAt };
+        const stored = currentTask(recordJSON(row.data));
+        if (stored.id !== id || stored.namespace !== namespace || parentKey(stored.parent) !== row.parentKey
+            || stored.parent.machineId !== row.machineId || stored.parent.cwd !== row.cwd) invalidRecord();
+        const task = { ...stored, revision: row.revision, updatedAt: row.updatedAt };
+        const scope = this.db.query('SELECT ownerId, spaceId FROM hub_delegation_scopes WHERE namespace=?').get(namespace) as { ownerId: string; spaceId: string } | null;
+        if (!scope || task.hub.ownerId !== scope.ownerId || task.hub.spaceId !== scope.spaceId) invalidRecord();
+        snapshotMatches(task, task.agent);
         if (parent?.kind === 'mcp' && parentKey(parent) !== parentKey(task.parent)) throw new TaskError(403, 'task_parent_mismatch', '此任务不属于当前主会话。');
-        const rounds = (this.db.query('SELECT data, completedRevision FROM delegation_rounds WHERE taskId=? ORDER BY ordinal').all(id) as { data: string; completedRevision: number | null }[])
-            .map(row => ({ ...read<Round>(row), completedRevision: row.completedRevision ?? undefined }));
-        const inputs = (this.db.query('SELECT i.data FROM delegation_inputs i JOIN delegation_rounds r ON i.roundId=r.id WHERE r.taskId=? ORDER BY r.ordinal, i.rowid').all(id) as { data: string }[]).map(row => read<Input>(row));
+        const rounds = (this.db.query('SELECT * FROM delegation_rounds WHERE taskId=? ORDER BY ordinal').all(id) as { id: string; taskId: string; ordinal: number; phase: string; data: string; completedRevision: number | null }[])
+            .map(row => {
+                const round = currentRound(recordJSON(row.data));
+                if (round.id !== row.id || round.taskId !== id || round.ordinal !== row.ordinal || round.phase !== row.phase
+                    || round.preparation.mode !== task.environment.mode) invalidRecord();
+                snapshotMatches(task, round.agent);
+                return { ...round, completedRevision: row.completedRevision ?? undefined };
+            });
+        if (!rounds.length) invalidRecord();
+        const inputs = (this.db.query('SELECT i.* FROM delegation_inputs i JOIN delegation_rounds r ON i.roundId=r.id WHERE r.taskId=? ORDER BY r.ordinal, i.rowid').all(id) as { id: string; roundId: string; data: string }[]).map(row => {
+            const input = currentInput(recordJSON(row.data));
+            if (input.id !== row.id || input.roundId !== row.roundId) invalidRecord();
+            return input;
+        });
+        for (const fetch of this.codeFetches(id)) if (!rounds.some(round => round.id === fetch.roundId)) invalidRecord();
         return { task, rounds, inputs };
     }
     list(namespace: string, parent: Parent, all = false) {
@@ -52,18 +71,28 @@ export class TaskStore {
         return ids.map(row => this.require(namespace, row.id));
     }
     pending(): { namespace: string; id: string }[] {
-        return (this.db.query(`SELECT DISTINCT t.namespace, t.id FROM delegation_tasks t JOIN delegation_rounds r ON t.id=r.taskId
-            WHERE r.phase NOT IN ('finished', 'failed') OR json_extract(t.data, '$.environment.status')='deleting'
-            OR json_extract(r.data, '$.artifactRetention.state')='releasing'
-            OR json_extract(r.data, '$.codeRetention.state')='releasing'
-            OR json_extract(t.data, '$.environment.remote.release.state')='pending'
-            OR json_extract(r.data, '$.code.retryRequested')=1
-            OR json_extract(r.data, '$.code.status') IN ('capturing', 'publishing', 'unknown')
-            OR (json_extract(r.data, '$.code.status')='available' AND json_extract(r.data, '$.code.sourceReleased')=0)
-            OR EXISTS (SELECT 1 FROM delegation_code_fetches f WHERE f.taskId=t.id AND (f.status NOT IN ('failed', 'available') OR (f.status='available' AND json_extract(f.data, '$.released')=0)))
-            OR (json_extract(r.data, '$.inputFiles.attempted')=1 AND json_extract(r.data, '$.inputFiles.intermediateReleased')=0)
-            OR EXISTS (SELECT 1 FROM json_each(r.data, '$.outputFiles.jobs') WHERE json_extract(value, '$.phase') <> 'complete')`).all() as { namespace: string; id: string }[]).filter(task => this.ownsScope(task.namespace));
+        const pending: { namespace: string; id: string }[] = [];
+        const tasks = this.db.query('SELECT namespace, id FROM delegation_tasks').all() as { namespace: string; id: string }[];
+        for (const task of tasks) {
+            if (!this.ownsScope(task.namespace)) continue;
+            try {
+                const { task: value, rounds } = this.require(task.namespace, task.id);
+                if ((value.environment.mode === 'worktree' && (value.environment.status === 'deleting' || value.environment.remote?.release?.state === 'pending'))
+                    || rounds.some(round => !['finished', 'failed'].includes(round.phase)
+                        || round.artifactRetention?.state === 'releasing' || round.codeRetention?.state === 'releasing'
+                        || round.code?.retryRequested || ['capturing', 'publishing', 'unknown'].includes(round.code?.status ?? '')
+                        || (round.code?.status === 'available' && round.code.sourceReleased === false)
+                        || (round.inputFiles?.attempted && !round.inputFiles.intermediateReleased)
+                        || round.outputFiles?.jobs.some(job => job.phase !== 'complete'))
+                    || this.codeFetches(task.id).some(fetch => !['failed', 'available'].includes(fetch.status) || (fetch.status === 'available' && !fetch.released))) pending.push(task);
+            } catch (error) {
+                if (!(error instanceof TaskError) || error.code !== 'state_record_invalid') throw error;
+                console.error(JSON.stringify({ taskId: task.id, code: error.code }));
+            }
+        }
+        return pending;
     }
+
     lookup(namespace: string, parent: Parent, requestId: string, intent: SpawnIntent | SendIntent): Acceptance | null {
         const row = this.db.query('SELECT fingerprint, accepted FROM delegation_requests WHERE namespace=? AND requestId=?').get(namespace, requestId) as { fingerprint: string; accepted: string } | null;
         if (!row) {
@@ -97,7 +126,7 @@ export class TaskStore {
         this.db.query('UPDATE delegation_artifact_intents SET data=? WHERE namespace=? AND requestId=?').run(JSON.stringify(value), value.namespace, value.requestId);
     }
     pendingArtifactIntents(): ArtifactIntent[] {
-        return (this.db.query('SELECT data FROM delegation_artifact_intents WHERE taskId IS NULL').all() as { data: string }[]).map(read<ArtifactIntent>).filter(intent => this.ownsScope(intent.namespace));
+        return (this.db.query('SELECT namespace, data FROM delegation_artifact_intents WHERE taskId IS NULL').all() as { namespace: string; data: string }[]).filter(row => this.ownsScope(row.namespace)).map(read<ArtifactIntent>);
     }
     artifactIntentAccepted(value: ArtifactIntent) {
         const result = this.db.query('UPDATE delegation_artifact_intents SET taskId=(SELECT taskId FROM delegation_requests WHERE namespace=? AND requestId=?) WHERE namespace=? AND requestId=? AND EXISTS(SELECT 1 FROM delegation_requests WHERE namespace=? AND requestId=?)')
@@ -133,7 +162,7 @@ export class TaskStore {
             const now = Date.now(), id = randomUUID(), roundId = randomUUID();
             if (intent.workspaceMode === 'worktree' && !source) throw new TaskError(409, 'workspace_source_missing', '独立任务缺少已解析的 Git 基线。');
             const task: Task = { version: 2, id, namespace, parent, agent, target,
-                ...(agent.hub ? { hub: { ownerId: agent.hub.actorId, spaceId: agent.hub.spaceId, hubRepositoryId: agent.hub.hubRepositoryId } } : {}),
+                hub: { ownerId: agent.hub.actorId, spaceId: agent.hub.spaceId, hubRepositoryId: agent.hub.hubRepositoryId },
                 environment: intent.workspaceMode === 'shared' ? { mode: 'shared', machineId: parent.machineId, cwd: parent.cwd }
                     : { mode: 'worktree', machineId: target.machineId, environmentId: id, source: source!, cwd: source!.sourcePath, status: 'retained',
                         ...(target.machineId === parent.machineId ? {} : { remote: { origin: source! } }) },
@@ -164,8 +193,10 @@ export class TaskStore {
             let round: Round;
             if (bundle.task.environment.mode === 'worktree' && bundle.task.environment.status !== 'retained') throw new TaskError(409, 'workspace_not_retained', '工作区正在删除或已删除，无法继续委派。');
             if (intent.mode === 'next') {
+                if (!agent) throw new TaskError(500, 'task_agent_unresolved', '下一轮缺少已解析的 Agent。');
+                snapshotMatches(bundle.task, agent);
                 round = { id: randomUUID(), taskId: intent.id, ordinal: bundle.rounds.at(-1)!.ordinal + 1, requestId, message: intent.message,
-                    agent: agent ?? bundle.rounds.at(-1)!.agent ?? bundle.task.agent,
+                    agent,
                     phase: 'queued', preparation: pendingPreparation(bundle.task.environment), inputFiles: this.inputFiles(namespace, requestId, intent), outputFiles: pendingOutputs(intent.outputs, requestId),
                     ...(bundle.task.environment.mode === 'worktree' ? { git: { status: 'pending' as const, attempted: false } } : {}),
                     spawnRequestId: randomUUID(), spawnAttempted: false,
@@ -244,13 +275,14 @@ export class TaskStore {
     }
     publishArtifacts(task: Task, round: Round, job: OutputJob, items: OutputItem[]) {
         this.db.transaction(() => {
+            const revision = this.require(task.namespace, task.id).task.revision;
             const previous = this.db.query('SELECT data FROM delegation_artifact_manifests WHERE jobId=?').get(job.id) as { data: string } | null;
             if (previous) throw new TaskError(409, 'artifact_manifest_exists', '此交付操作已经发布清单，请重新读取任务。');
             const manifest: OutputManifest = { version: (round.outputFiles!.latest?.version ?? 0) + 1, jobId: job.id, kind: job.kind, createdAt: Date.now(),
                 status: items.every(item => item.status === 'available') ? 'delivered' : 'incomplete', items: structuredClone(items) };
             this.db.query('INSERT INTO delegation_artifact_manifests VALUES (?, ?, ?, ?, ?)').run(task.id, round.id, manifest.version, job.id, JSON.stringify(manifest));
             round.outputFiles!.latest = manifest; job.publishedVersion = manifest.version; job.phase = 'cleanup'; delete job.error;
-            round.artifactsRevision = this.require(task.namespace, task.id).task.revision + 1;
+            round.artifactsRevision = revision + 1;
             this.save(task, round, []);
         }).immediate();
     }
@@ -273,20 +305,27 @@ export class TaskStore {
     }
     publishCode(task: Task, round: Round, manifest: CodeManifest) {
         this.db.transaction(() => {
+            const revision = this.require(task.namespace, task.id).task.revision;
             this.db.query('INSERT INTO delegation_code_manifests VALUES (?, ?, ?, ?, ?)')
                 .run(task.id, round.id, manifest.version, manifest.jobId, JSON.stringify(manifest));
             round.code!.latest = manifest; round.code!.status = 'available'; delete round.code!.error;
             if (round.attention?.scope === 'code') round.attention = null;
-            round.codeRevision = this.require(task.namespace, task.id).task.revision + 1;
+            round.codeRevision = revision + 1;
             this.save(task, round, []);
         }).immediate();
     }
     codeFetches(taskId: string, roundId?: string): CodeFetch[] {
-        return (this.db.query('SELECT data FROM delegation_code_fetches WHERE taskId=? AND (? IS NULL OR roundId=?) ORDER BY rowid')
-            .all(taskId, roundId ?? null, roundId ?? null) as { data: string }[]).map(read<CodeFetch>);
+        return (this.db.query('SELECT id, taskId, roundId, status, data FROM delegation_code_fetches WHERE taskId=? AND (? IS NULL OR roundId=?) ORDER BY rowid')
+            .all(taskId, roundId ?? null, roundId ?? null) as { id: string; taskId: string; roundId: string; status: string; data: string }[]).map(row => {
+                const fetch = currentFetch(recordJSON(row.data));
+                if (fetch.id !== row.id || fetch.taskId !== taskId || fetch.roundId !== row.roundId || fetch.status !== row.status) invalidRecord();
+                return fetch;
+            });
     }
+
     saveCodeFetch(task: Task, round: Round, fetch: CodeFetch) {
         this.db.transaction(() => {
+            const revision = this.require(task.namespace, task.id).task.revision;
             const previous = this.codeFetches(task.id).find(item => item.id === fetch.id);
             if (JSON.stringify(previous) === JSON.stringify(fetch)) return;
             fetch.updatedAt = Date.now();
@@ -297,7 +336,7 @@ export class TaskStore {
                 cleanupError: latest.cleanupError, ref: latest.fetched?.ref ?? latest.localRef, head: latest.fetched?.head };
             if (['available', 'failed', 'unknown'].includes(fetch.status)
                 && (previous?.status !== fetch.status || !isDeepStrictEqual(previous?.error, fetch.error))) {
-                round.codeRevision = this.require(task.namespace, task.id).task.revision + 1;
+                round.codeRevision = revision + 1;
             }
             this.save(task, round, []);
         }).immediate();
@@ -372,6 +411,7 @@ export class TaskStore {
     saveEnvironment(task: Task) {
         this.db.transaction(() => {
             const old = this.require(task.namespace, task.id).task;
+            currentTask(task);
             if (JSON.stringify(old.environment) === JSON.stringify(task.environment)) return;
             const revision = old.revision + 1, updatedAt = Date.now();
             this.db.query('UPDATE delegation_tasks SET data=?, revision=?, updatedAt=? WHERE id=?')
@@ -383,7 +423,10 @@ export class TaskStore {
     save(task: Task, round: Round, inputs: Input[]) {
         this.db.transaction(() => {
             const old = this.require(task.namespace, task.id);
-            const previous = old.rounds.find(item => item.id === round.id)!;
+            currentTask(task); currentRound(round); snapshotMatches(task, round.agent);
+            for (const input of inputs) { currentInput(input); if (input.roundId !== round.id) invalidRecord(); }
+            const previous = old.rounds.find(item => item.id === round.id);
+            if (!previous || round.taskId !== task.id || round.ordinal !== previous.ordinal) invalidRecord();
             const compare = (value: Round | Input) => JSON.stringify({ ...value, observedAt: undefined, completedRevision: undefined });
             const changed = JSON.stringify(old.task.environment) !== JSON.stringify(task.environment) || compare(previous) !== compare(round) || inputs.some(input => {
                 const before = old.inputs.find(item => item.id === input.id);
@@ -396,7 +439,7 @@ export class TaskStore {
             for (const input of inputs) this.db.query(`INSERT INTO delegation_inputs VALUES (?, ?, ?) ON CONFLICT(id) DO UPDATE SET data=excluded.data`)
                 .run(input.id, round.id, JSON.stringify(input));
             const updatedAt = changed ? Date.now() : old.task.updatedAt;
-            const data = { ...old.task, version: 2, environment: task.environment, revision, updatedAt };
+            const data = { ...old.task, environment: task.environment, revision, updatedAt };
             if (changed) {
                 const updated = this.db.query('UPDATE delegation_tasks SET data=?, revision=?, updatedAt=? WHERE id=? AND revision=?')
                     .run(JSON.stringify(data), revision, updatedAt, task.id, old.task.revision);

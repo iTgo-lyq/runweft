@@ -37,7 +37,7 @@ export async function renderTasks(target: HTMLElement, context: ConsoleContext) 
         if (roundId) query.set('roundId', roundId);
         const view: TaskDetail = await context.request(`/tasks/details/${chosen}?${query}`);
         const content = element('div');
-        content.append(element('h3', `${view.agent.definition.name ?? view.agent_id} · 第 ${view.round} 轮`), element('code', view.agent_id));
+        content.append(element('h3', `${view.agent.definition.name} · 第 ${view.round} 轮`), element('code', view.agent_id));
         const navigation = element('div', '', 'actions');
         navigation.append(control('返回任务列表', async () => { chosen = undefined; details.replaceChildren(); list.hidden = false; list.scrollIntoView({ block: 'start' }); }, context),
             control('刷新任务详情', show, context));
@@ -48,7 +48,7 @@ export async function renderTasks(target: HTMLElement, context: ConsoleContext) 
         const facts = element('dl', '', 'facts');
         facts.append(fact('状态', statusLabels[view.status]), fact('阶段 / 进程停止', `${view.phase} / ${stopText(view)}`),
             fact('工作区', `${view.workspace_mode} · ${view.cwd}`), fact('机器 / Runtime', `${view.machine_id} / ${view.runtime_id}`),
-            fact('配置版本', view.agent.hub ? `v${view.agent.hub.version} · ${view.agent.hub.contentHash}` : view.agent.definitionVersion),
+            fact('配置版本', `v${view.agent.hub.version} · ${view.agent.hub.contentHash}`),
             fact('最后观察', view.observed_at ? new Date(view.observed_at).toLocaleString('zh-CN') : '未观察'));
         content.append(facts);
         if (view.attention) content.append(element('p', `${view.attention.code} · ${view.attention.message} ${view.attention.hint ?? ''}`, 'attention'));

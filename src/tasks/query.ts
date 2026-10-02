@@ -38,7 +38,7 @@ export function taskOverview(bundles: TaskBundle[], runtimes: { id: string; name
             parent: { kind: parent.kind, machine_id: parent.machineId, cwd: text(parent.cwd, 4096),
                 host: parent.kind === 'mcp' ? parent.host : null, native_session_id: parent.kind === 'mcp' ? parent.nativeSessionId : null,
                 session_id: parent.hapiSessionId ?? null },
-            agent: { id: task.agent.id, name: text(task.agent.definition.name ?? task.agent.id, 256), scope: task.agent.source.scope },
+            agent: { id: task.agent.id, name: text(task.agent.definition.name, 256), scope: task.agent.source.scope },
             runtime: { id: task.target.runtimeId, name: text(names.get(task.target.runtimeId) ?? task.target.flavor, 256), flavor: task.target.flavor },
             machine: { id: task.target.machineId, name: text(machine?.name ?? task.target.machineId, 256), online },
             cwd: text(view.cwd, 4096), workspace_mode: view.workspace_mode, session_id: round.sessionId ?? null,

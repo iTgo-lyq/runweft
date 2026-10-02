@@ -61,7 +61,8 @@ export class TaskCoordinator {
         if (this.closing || this.working.has(id)) return;
         void this.serial(id, () => this.advance(namespace, id)).catch(error => {
             // Domain failures are stored below; this is an outer storage/runtime failure.
-            console.error(JSON.stringify({ code: 'task_coordinator_failed', taskId: id, error: errorDetails(error) }));
+            console.error(JSON.stringify(error instanceof TaskError && error.code === 'state_record_invalid'
+                ? { taskId: id, code: error.code } : { code: 'task_coordinator_failed', taskId: id, error: errorDetails(error) }));
         });
     }
     private serial<T>(id: string, action: () => Promise<T> | T): Promise<T> {
@@ -436,7 +437,7 @@ export class TaskCoordinator {
                 if (!round.sessionId) {
                     const attempted = round.spawnAttempted;
                     round.spawnAttempted = true; save();
-                    const definition = (round.agent ?? task.agent).definition;
+                    const definition = round.agent.definition;
                     const receipt = attempted ? await execution.lookupStart(task.target.machineId, round.spawnRequestId)
                         : await execution.start(task.target.machineId, {
                             requestId: round.spawnRequestId, directory: task.environment.cwd, agent: task.target.flavor,
@@ -591,7 +592,7 @@ export class TaskCoordinator {
         }
     }
     private launch(task: Task, round: Round) {
-        const agent = round.agent ?? task.agent;
+        const agent = round.agent;
         return { flavor: agent.flavor, model: agent.definition.model, effort: agent.definition.reasoningEffort };
     }
     /** Revocation permits observation and stop of the exact bound execution, never new machine work. */
@@ -649,8 +650,8 @@ export class TaskCoordinator {
         if (observed.output.length) input.output = [...new Map([...input.output, ...observed.output].map(output => [output.messageId, output])).values()];
     }
     private prompt(task: Task, round: Round, input: Input) {
-        const agent = round.agent ?? task.agent;
-        return [`你是 Runweft 委派的 ${agent.definition.name ?? agent.id}。`, agent.definition.description, agent.definition.instructions,
+        const agent = round.agent;
+        return [`你是 Runweft 委派的 ${agent.definition.name}。`, agent.definition.description, agent.definition.instructions,
             `工作目录：${task.environment.cwd}\n任务 ${task.id}，轮次 ${round.id}。`,
             task.environment.mode === 'shared' ? '模式：本机共享目录；共享写入由主 agent 调度。'
                 : `模式：独立 Git worktree；来源 ${(task.environment.remote?.origin ?? task.environment.source).sourcePath}，固定基线 ${task.environment.source.baseCommit}，本轮起点 ${round.preparation.mode === 'worktree' ? round.preparation.startHead : ''}。\n`

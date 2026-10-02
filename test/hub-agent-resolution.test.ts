@@ -8,7 +8,6 @@ import type { Principal } from '../src/hub/access/types';
 import type { AgentView } from '../src/hub/agents/types';
 import { hubResourceFixture } from './hub-resources-fixture';
 import { resourceInspection } from './native-fixture';
-import { openState, STATE_SCHEMA_VERSION } from '../src/state';
 
 const cleanups: (() => void | Promise<void>)[] = [];
 afterEach(async () => { for (const fn of cleanups.splice(0).reverse()) await fn(); });
@@ -136,13 +135,10 @@ test('asynchronous probe rechecks content, preferences, sharing, runtime authori
     }
 }, 20_000);
 
-test('space defaults are unique under parallel PUT and schema 14 upgrade preserves existing Agent versions', async () => {
+test('space defaults are unique under parallel PUT', async () => {
     const h = await setup(), c = h.client(), r = h.runtime(), a = h.agent({ runtimeId: r.id }), b = h.agent({ runtimeId: r.id });
     await Promise.all(Array.from({ length: 8 }, (_, i) => c.select(i % 2 ? a.id : b.id)));
     expect((await c.selections()).selections).toHaveLength(1);
     expect(h.access.db.query('SELECT COUNT(*) AS n FROM hub_agent_selections WHERE repositoryId IS NULL').get()).toEqual({ n: 1 });
-    h.access.db.exec('DROP TABLE hub_connection_requests; DROP TABLE hub_delegation_scopes; DROP TABLE hub_agent_selections; PRAGMA user_version=14;');
-    const db = openState(h.path);
-    try { expect(db.query('PRAGMA user_version').get()).toEqual({ user_version: STATE_SCHEMA_VERSION }); expect(db.query('SELECT COUNT(*) AS n FROM hub_agent_versions').get()).toEqual({ n: 2 }); expect(db.query('SELECT COUNT(*) AS n FROM hub_agent_selections').get()).toEqual({ n: 0 }); }
-    finally { db.close(); }
+
 });

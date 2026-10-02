@@ -118,21 +118,6 @@ test('separate processes serialize enrollment and credential CAS without duplica
     expect(() => h.other.authenticate(input.token)).toThrow();
 });
 
-test('v10 migration preserves existing native bindings without automatically enrolling any legacy machine', () => {
-    const h = setup(); h.access.bind({ kind: 'machine', id: 'legacy', ownerId: h.a.identity.id });
-    const db = new Database(h.path);
-    try {
-        db.exec('DROP TABLE hub_connection_requests; DROP TABLE hub_delegation_scopes; DROP TABLE hub_agent_selections; DROP TABLE hub_agent_blocks; DROP TABLE hub_agent_members; DROP TABLE hub_agent_versions; DROP TABLE hub_agents; DROP TABLE hub_checkouts; DROP TABLE hub_repository_aliases; DROP TABLE hub_repositories; DROP TABLE hub_resource_blocks; DROP TABLE hub_runtime_shares; DROP TABLE hub_resource_runtimes; DROP TABLE hub_machine_spaces; DROP TABLE hub_resource_machines; PRAGMA user_version=10;');
-        const access = new AccessStore(h.path);
-        try {
-            expect(db.query('PRAGMA user_version').get()).toEqual({ user_version: STATE_SCHEMA_VERSION });
-            expect(new HubResourceStore(access).machines(h.actor)).toEqual([]);
-            expect(access.object('machine', 'legacy')?.ownerId).toBe(h.a.identity.id);
-        } finally { access.close(); }
-    } finally { db.close(); }
-});
-
-
 const prefix = '/api/runweft/resources';
 
 test('resource HTTP handles owner lifecycle, pending machines and native rename; strict bodies and credential kinds stay separate', async () => {
@@ -355,23 +340,6 @@ test('one probe per machine preserves independent failures and does not treat ow
     expect((await h.request(`${prefix}/runtimes/${healthy.id}/resolve`, global)).body.error.code).toBe('resource_space_required');
 });
 
-test('v11 upgrade retains machine enrollment, credential and space association without inventing runtimes', () => {
-    const h = setup(), input = enrollmentInput(), enrolled = h.store.enroll(h.actor, input);
-    h.store.associate(h.actor, enrolled.machineId, h.a.personalSpace.id, true);
-    const db = new Database(h.path);
-    try {
-        db.exec('DROP TABLE hub_connection_requests; DROP TABLE hub_delegation_scopes; DROP TABLE hub_agent_selections; DROP TABLE hub_agent_blocks; DROP TABLE hub_agent_members; DROP TABLE hub_agent_versions; DROP TABLE hub_agents; DROP TABLE hub_checkouts; DROP TABLE hub_repository_aliases; DROP TABLE hub_repositories; DROP TABLE hub_resource_blocks; DROP TABLE hub_runtime_shares; DROP TABLE hub_resource_runtimes; PRAGMA user_version=11;');
-        const access = new AccessStore(h.path), store = new HubResourceStore(access);
-        try {
-            expect(store.enroll(h.actor, input)).toEqual(enrolled);
-            expect(store.spaces(h.actor, enrolled.machineId)).toEqual([h.a.personalSpace.id]);
-            expect(store.runtimes(h.actor)).toEqual([]);
-            expect(access.authenticate(input.token).machineId).toBe(enrolled.machineId);
-        } finally { access.close(); }
-    } finally { db.close(); }
-});
-
-
 test('out-of-order inspections retain newer facts while later and equal timestamps remain writable', () => {
     const h = setup(), { machineId } = h.store.enroll(h.actor, enrollmentInput());
     const inspection = (checkedAt: number, version: string) => ({ ...resourceInspection('codex'), details: { ...resourceInspection('codex').details, checkedAt, version } });
@@ -391,7 +359,7 @@ test('openState retains the current schema and refuses a higher version without 
         expect(db.query('PRAGMA user_version').get()).toEqual({ user_version: STATE_SCHEMA_VERSION });
         expect(db.query('PRAGMA journal_mode').get()).toEqual({ journal_mode: 'wal' });
         db.exec(`PRAGMA user_version=${STATE_SCHEMA_VERSION + 1}`);
-        expect(() => openState(h.path)).toThrow('数据版本');
+        expect(() => openState(h.path)).toThrow('当前支持的格式');
         expect(db.query('PRAGMA user_version').get()).toEqual({ user_version: STATE_SCHEMA_VERSION + 1 });
     } finally { db.close(); }
 });

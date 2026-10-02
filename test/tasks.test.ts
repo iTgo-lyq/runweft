@@ -1,13 +1,10 @@
 import { afterEach, expect, test } from 'bun:test';
-import { Database } from 'bun:sqlite';
-import { existsSync, readdirSync, rmSync } from 'node:fs';
+import { existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
-import { fixture } from './helpers';
 import { resourceInspection } from './native-fixture';
 import { HubTaskClient } from '../src/hub/delegation/client';
 import { HubClient } from '../src/hub/client';
 import { hubConnectionPaths } from '../src/hub/resources/connection';
-import { TaskStore } from '../src/tasks/store';
 import { atomicWrite } from '../src/config';
 import { hubDelegationFixture } from './hub-delegation-fixture';
 import { until } from './helpers';
@@ -15,23 +12,6 @@ import type { Acceptance, Parent } from '../src/tasks/types';
 
 const cleanups: (() => Promise<void> | void)[] = [];
 afterEach(async () => { for (const cleanup of cleanups.splice(0).reverse()) await cleanup(); });
-
-test('v1 resources migrate additively, preserving IDs and flags for both stores', () => {
-    const home = fixture('state-upgrade'); cleanups.push(() => rmSync(home, { recursive: true, force: true }));
-    const path = join(home, 'state.sqlite'), db = new Database(path);
-    db.exec(`CREATE TABLE machine_registrations(namespace TEXT, machineId TEXT, registered INTEGER, createdAt INTEGER, updatedAt INTEGER, PRIMARY KEY(namespace,machineId));
-        CREATE TABLE runtime_registrations(id TEXT PRIMARY KEY, namespace TEXT, machineId TEXT, flavor TEXT, name TEXT, registered INTEGER, createdAt INTEGER, updatedAt INTEGER, inspection TEXT, inspectedAt INTEGER, UNIQUE(namespace,machineId,flavor));
-        PRAGMA user_version=1;`);
-    db.query('INSERT INTO machine_registrations VALUES (?, ?, 1, 1, 1)').run('alpha', 'machine');
-    const id = crypto.randomUUID();
-    db.query('INSERT INTO runtime_registrations VALUES (?, ?, ?, ?, ?, 0, 1, 1, ?, 1)').run(id, 'alpha', 'machine', 'codex', 'Existing', JSON.stringify(resourceInspection('codex'))); db.close();
-    const tasks = new TaskStore(path); tasks.close();
-    const migrated = new Database(path);
-    try {
-        expect(migrated.query('SELECT id, registered, name FROM runtime_registrations WHERE id=?').get(id)).toEqual({ id, registered: 0, name: 'Existing' });
-        expect(migrated.query('SELECT registered FROM machine_registrations WHERE namespace=? AND machineId=?').get('alpha', 'machine')).toEqual({ registered: 1 });
-    } finally { migrated.close(); }
-});
 
 test('concurrent accepted requests run once, persist child role before input and finish only after stop', async () => {
     const h = await hubDelegationFixture(cleanups), request = h.payload();

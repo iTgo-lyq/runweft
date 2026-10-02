@@ -9,7 +9,6 @@ import { createIdentityToken, HubStore } from '../src/hub/store';
 import { AccessStore } from '../src/hub/access/store';
 import { AccessAuthority } from '../src/hub/access/auth';
 import { FileAccessStore } from '../src/hub/access/file-store';
-import { STATE_SCHEMA_VERSION } from '../src/state';
 
 const cleanup: (() => void)[] = [];
 afterEach(() => { for (const fn of cleanup.splice(0).reverse()) fn(); });
@@ -152,19 +151,6 @@ test('two processes cannot claim the same native object for different owners; to
         const bytes = readFileSync(h.path + suffix);
         for (const secret of [h.a.token, h.b.token, h.machine.token, h.task.token]) expect(bytes.includes(Buffer.from(secret))).toBe(false);
     }
-});
-
-test('v7 migration preserves identities and existing resource rows without inferring execution ownership', () => {
-    const h = setup(), db = new Database(h.path);
-    db.exec(`DROP TABLE hub_connection_requests; DROP TABLE hub_delegation_scopes; DROP TABLE hub_agent_selections; DROP TABLE hub_agent_blocks; DROP TABLE hub_agent_members; DROP TABLE hub_agent_versions; DROP TABLE hub_agents; DROP TABLE hub_checkouts; DROP TABLE hub_repository_aliases; DROP TABLE hub_repositories; DROP TABLE hub_resource_blocks; DROP TABLE hub_runtime_shares; DROP TABLE hub_resource_runtimes; DROP TABLE hub_machine_spaces; DROP TABLE hub_resource_machines; DROP TABLE hub_native_session_claims; DROP TABLE hub_file_reservations; DROP TABLE hub_execution_grants; DROP TABLE hub_execution_intents; DROP TABLE hub_execution_credentials;
-        DROP TABLE hub_execution_objects; INSERT INTO machine_registrations VALUES ('default', 'legacy', 1, 1, 1); PRAGMA user_version=7;`);
-    const migrated = new AccessStore(h.path);
-    try {
-        expect(db.query('PRAGMA user_version').get()).toEqual({ user_version: STATE_SCHEMA_VERSION });
-        expect(migrated.authenticate(h.b.token).ownerId).toBe(h.b.identity.id);
-        expect(migrated.object('machine', 'legacy')).toBeNull();
-        expect(db.query('SELECT machineId FROM machine_registrations').get()).toEqual({ machineId: 'legacy' });
-    } finally { migrated.close(); db.close(); }
 });
 
 test('file request IDs are scoped to the publisher and pin both content and selected space', () => {

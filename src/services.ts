@@ -1,3 +1,4 @@
+import { validateState } from './state';
 import { randomUUID } from 'node:crypto';
 import { closeSync, existsSync, openSync, readFileSync, readdirSync, statSync, unlinkSync } from 'node:fs';
 import { join, resolve } from 'node:path';
@@ -95,6 +96,7 @@ export async function status(c: ResolvedConfig) {
 
 export async function serve(c: ResolvedConfig, publicly = false): Promise<void> {
     const paths = dataPaths(c);
+    validateState(paths.state);
     if (!publicly && !['127.0.0.1', 'localhost'].includes(c.config.server.host)) {
         throw new RunweftError('public_server_required', '本地服务只允许 loopback 地址。', '对外部署请显式运行 runweft serve --public，并配置 server.publicUrl。');
     }
@@ -188,6 +190,7 @@ export function selfCommand(args: string[]): string[] {
 }
 
 export async function start(c: ResolvedConfig) {
+    validateState(dataPaths(c).state);
     if (c.config.mode === 'hub') { await startRunner(c); return status(c); }
     const existing = serviceState(c);
     if (existing && processAlive(existing.pid)) {

@@ -12,7 +12,7 @@ description: 安装、升级和卸载 Runweft，连接 Hub 身份与空间，登
 - 安装、首次连接、增加执行机：读 [onboarding.md](references/onboarding.md)。
 - 配置机器/runtime、Agent、仓库、个人选择：读 [configuration.md](references/configuration.md)。
 - 委派、等待、续接、停止、审批、附件与代码：读 [delegation.md](references/delegation.md)。
-- 排错、升级、卸载、数据备份/清理：读 [maintenance.md](references/maintenance.md)。
+- 排错、升级、卸载、当前附件与成果留存：读 [maintenance.md](references/maintenance.md)。
 
 先执行 `runweft --version`、`runweft --json config show`、`runweft hub connect status`，了解实际版本、数据根、Hub 和保存的空间；没有程序时先安装。通过 `--help` 核对版本差异，不编造命令。CLI 全局 `--home <目录>`、`--space <UUID>`、`--identity-file <文件>`、`--json` 放在子命令前；示例中的尖括号均替换为真实返回值。
 

@@ -24,7 +24,7 @@ bun run build
 | --- | --- |
 | `bun run test:hub-connect` | 编译 CLI、RSA/WebCrypto、主动创建身份/选择空间、加密交接、重试、取消、秘密扫描 |
 | `bun run test:hub-console` | 完整后台、机器/runtime/Agent/仓库/个人选择、权限、任务分页、多身份 HAPI 标签/审批/文件/SSE、390px；任务历史/RPC 是明确夹具，不运行模型/OS PTY |
-| `bun run test:hub-service` | 默认服务角色、独立机器接入、轮换/撤销、监督 Runner、显式 reset 与保留 worktree；不运行模型 |
+| `bun run test:hub-service` | 默认服务角色、独立机器接入、轮换/撤销、监督 Runner与 worktree 留存；不运行模型 |
 | `bun run test:hub-resources` | 真实 Runner 接入、两个原生工具探测、分享/治理与凭据轮换；不运行模型 |
 | `bun run test:hub-configuration` | 中心仓库、Agent、个人选择与配置解析；工具发现不等于模型调用 |
 | `bun run test:hub-access` | 真实 HAPI HTTP/文件及多主体隔离 |
@@ -67,11 +67,13 @@ bun run package --all
 ```sh
 bun run test:packages
 RUNWEFT_SMOKE_NATIVE_INSTALL=1 RUNWEFT_SMOKE_KEEP_INSTALL=1 bun run test:install
-bun run test:hub-upgrade <已保存的Hub基线bin/runweft> <已安装候选bin/runweft>
+bun run test:hub-upgrade <已保存的schema18基线bin/runweft> <已安装schema19候选bin/runweft>
 RUNWEFT_SMOKE_QEMU=<qemu-aarch64-static> RUNWEFT_SMOKE_SYSROOT=<aarch64-linux-gnu目录> bun run test:arm64
 ```
 
-registry 安装只服务本批包、使用专用 npm prefix/cache；evidence.json 的 installedBinary 是后续模型/网页参数，不用 npm launcher 或另编译的 dist/runweft 替代。`test:service` 为无需Bun/模型PATH的Node默认Hub测试。connect/console同样接受已安装程序参数并记录相邻hash。QEMU入口解包当前arm64包，只验证版本、配置、路径、缺Hub诊断及显式reset，不修改全局binfmt，也不声称原生服务/模型验证。
+registry 安装只服务本批包、使用专用 npm prefix/cache；evidence.json 的 installedBinary 是后续模型/网页参数，不用 npm launcher 或另编译的 dist/runweft 替代。`test:service` 为无需Bun/模型PATH的Node默认Hub测试。connect/console同样接受已安装程序参数并记录相邻hash。QEMU入口解包当前arm64包，只在专用新 home 验证版本、配置、路径、缺Hub诊断与配套HAPI，不修改全局binfmt，也不声称原生服务/模型验证。
+
+中心只创建唯一当前 schema19，并允许完整同格式库正常重开；旧版、不匹配或损坏格式明确拒绝，不迁移或清理原数据。使用独立新 `--home` 验收，自行保管原目录。`test:hub-upgrade` 的两个场景是 schema18 基线交候选后无写入拒绝，以及候选创建 schema19 数据后由同一候选停服重启，核对身份、机器、Agent、仓库、附件与 worktree 留存；不表示跨版本数据迁移成功。
 
 全量成功后准备经人工筛选的本地验收说明和无秘密证据索引，索引必须含 version、sourceRevision、success=true。不复制原生日志、凭据或完整prompt：
 

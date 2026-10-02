@@ -5,7 +5,7 @@ import { HapiRequestError } from '../hapi';
 import { ResourceError, InspectionSchema, flavors, type Inspection, type HapiRequester } from './types';
 
 const InventorySchema = z.object({ machines: z.array(MachineSchema) });
-/** Native inventory is shared by the legacy namespace registry and the new Hub ownership layer. */
+/** HAPI inventory used by the Hub ownership layer. */
 export async function nativeMachines(hapi: HapiRequester, namespace: string, signal?: AbortSignal) {
     const health = await hapi('/health', { signal });
     if (health?.capabilities?.machineInventory !== 1) throw new ResourceError(409, 'resource_capability_missing', 'HAPI 不支持完整机器库存。', '更新配套 Runweft Hub。');

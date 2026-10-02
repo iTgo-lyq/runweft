@@ -295,17 +295,9 @@ runweft serve --public
 
 代理需支持 WebSocket、SSE、Authorization header、流式上传/下载，体积限制至少匹配单文件设置；禁缓冲、不以短总超时截断长传输。不直接暴露私有 HAPI 端口。公开部署是外部操作，Agent 不擅自执行。中心不分发 root token；每个客户端通过浏览器交接独立身份。
 
-paths 显示准确目录：`server/` 是本机托管 Hub 数据；`connections/<Hub标识>/` 是该 Hub 的身份/机器接入和 HAPI 工作区/缓存；`client.sqlite` 为本机 MCP/调用协调；`logs/`、`backups/` 独立。原生 Codex/Claude home 不受 Runweft 接管。备份须先结束任务、停止相关服务，保存同一时点数据库/文件、连接候选、原生会话及 worktree 依赖源仓库/缓存；只回滚数据库不安全。
+paths 显示准确目录：`server/` 是本机托管 Hub 数据；`connections/<Hub标识>/` 是该 Hub 的身份/机器接入和 HAPI 工作区/缓存；`logs/`、`backups/` 独立。原生 Codex/Claude home 不受 Runweft 接管。备份须先结束任务、停止相关服务，保存同一时点数据库/文件、连接候选、原生会话及 worktree 依赖源仓库/缓存；只回滚数据库不安全。
 
-未上线历史不提供 YAML 导入/所有者认领。需要明确重置时：
-
-```sh
-runweft data reset
-runweft stop
-runweft data reset --apply
-```
-
-先结束/中断活跃模型并确认停止，停服后核对预览再 apply。只清列出的当前数据根配置、业务历史、身份接入和中心附件；保留 worktree/原生模型配置不代表还可续接原任务。不能用重置解决 unknown 执行或未授权清理其他实例。
+中心业务库只支持当前 schema19：全新目录创建当前格式，完整同格式库可正常重开。已有旧版本、不匹配或损坏格式明确拒绝，不迁移、改写或清理原目录。需要另建环境时使用独立的新 `--home <目录>`，自行保管原目录；新环境不接续原目录中的任务。配置文件省略 schemaVersion 仍使用当前默认值1，显式非当前版本会拒绝。
 
 ## 诊断、升级与卸载
 
@@ -319,10 +311,11 @@ runweft data reset --apply
 | 等待超时/unknown | 先查原任务/请求，再等；不重复派生 |
 | 收尾/交付失败 | 修复具体错误，再 retry-finish/artifacts retry/result retry |
 | HAPI 标签过期 | 从 Hub 任务详情重开，不传 URL token |
+| 数据格式不匹配/损坏 | 按 state_format_unsupported/state_format_invalid 诊断，使用独立新 --home，自行保管原目录 |
 
-升级没有自升级命令：用 `npm install -g runweft@<目标版本> --registry=https://registry.npmjs.org/ --include=optional` 安装目标版本，确认成功后检查 `--version` 并显式 mcp install 更新入口。Skill 从更新后的 npm 包中读取，比对后备份旧目录再替换。先安全结束任务，按原角色重启 Hub 或 Runner，再核对版本/status/doctor/握手和低风险真实调用，不把程序回退当成数据迁移回滚。
+升级没有自升级命令：用 `npm install -g runweft@<目标版本> --registry=https://registry.npmjs.org/ --include=optional` 安装目标版本，确认成功后检查 `--version` 并显式 mcp install 更新入口。Skill 从更新后的 npm 包中读取，比对后备份旧目录再替换。先安全结束任务，按原角色重启 Hub 或 Runner，再核对版本/status/doctor/握手和低风险真实调用，只有完整当前 schema19 库可重开；遇到不匹配格式按上面的独立目录方式处理，不执行数据迁移。
 
-卸载先 mcp uninstall，停止本机受管服务，再执行 `npm uninstall -g runweft`，移除未改写的产品 Skill。数据、模型凭据、原生会话、其他 MCP/Skill 保留，数据清理另行授权。
+卸载先 mcp uninstall，停止本机受管服务，再执行 `npm uninstall -g runweft`，移除未改写的产品 Skill。数据、模型凭据、原生会话、其他 MCP/Skill 保留。当前附件和成果的留存操作使用显式 release/prune/remove 命令。
 
 完整本地验收由 Agent 自动执行。Mac 双架构构建不代替实机；Linux arm64 QEMU CLI 检查不代替完整原生协作；同机多 Runner 不等于物理跨机。实际版本的证据以发行记录为准。
 

@@ -38,7 +38,7 @@ export type AccessGatewayOptions = {
     business?: (request: IncomingMessage, response: ServerResponse, actor: Principal, lease: RequestLease) => Promise<boolean>;
 };
 
-/** Independent secure entry. The legacy serve switches to it only with the later identity migration. */
+/** Hub authentication and authorized native transport entry. */
 export async function createAccessGateway(options: AccessGatewayOptions) {
     const store = new AccessStore(options.statePath), identities = new HubStore(options.statePath);
     const connections = new ConnectionRequestStore(store);

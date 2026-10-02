@@ -28,7 +28,7 @@ export class NativeSessions {
             const value = metadata[field]; if (!value) continue;
             if (typeof value !== 'string' || value.length > 1024 || metadata.flavor !== field.replace('SessionId', '')) throw inputError();
             if (!this.store.nativeClaim(field, value)) {
-                // Do not claim an existing unmigrated HAPI identity. First claims alone require this inventory read.
+                // Never claim an existing unowned HAPI identity. First claims alone require this inventory read.
                 const result = await this.native.json('/api/sessions', { signal });
                 for (const existing of result.sessions) {
                     if (existing.id === id || existing.metadata?.agentSessionId !== value || existing.metadata?.flavor !== metadata.flavor) continue;

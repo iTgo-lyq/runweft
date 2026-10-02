@@ -22,13 +22,13 @@ state.ts当前完整表结构分组：旧登记machine_registrations/runtime_reg
 
 src/reset.ts resetData删除固定配置/身份/业务与HAPI库/字节；src/cli.ts import及data reset注册删除。test/reset.test.ts整组仅保障这一用户明确移除的能力，随接口删除，不迁成其他清理接口。state_version_newer提示的reset建议删除。
 
-实际调用：scripts/smoke-hub-service.ts:34/78/90、smoke-service.mjs:69/70/132/142、smoke-arm64.mjs:42、smoke-hub-native-mcp.ts:172，smoke-install.mjs:84文档断言。移除reset场景，以专用新home准备正常验收；保留服务关闭、工作区/待交付留存、身份撤销和新身份创建等独立现行保障。普通fixture清理、task workspace remove、artifact prune、artifacts/result release继续保留，不清扫旧版本数据。
+T5/T6已移除smoke-hub-service、smoke-service、smoke-hub-native-mcp中的reset场景，当前残留为scripts/smoke-arm64.mjs:42调用与smoke-install.mjs:84指南断言。移除剩余reset场景，以专用新home准备正常验收；保留服务关闭、工作区/待交付留存、身份撤销和新身份创建等独立现行保障。普通fixture清理、task workspace remove、artifact prune、artifacts/result release继续保留，不清扫旧版本数据。src/hapi.ts的machine_native_identity_mismatch仍提示清理旧试验数据，改为独立新home并自行保管原目录；当前machineId/token向HAPI settings传播属于现行凭据同步，保留。
 
 ## 测试与smoke变更
 
-迁移专属测试定位：tasks.test.ts v1；task-workspaces.test.ts v2；task-results.test.ts v5；hub.test.ts v6；hub-access.test.ts v7；hub-resources.test.ts v10/v11；hub-repositories.test.ts v12；hub-agents.test.ts v13；hub-agent-resolution.test.ts v14。resources.test.ts更高schema拒绝保留为所有不匹配格式拒绝测试。hub-delegation.test.ts旧无owner行不认领改为当前格式非法记录明确拒绝，不继续旧记录读取/恢复。相应有效并发/权限/恢复用例仍保留。
+迁移专属测试定位：tasks.test.ts v1；task-workspaces.test.ts v2；task-results.test.ts v5；hub.test.ts v6；hub-access.test.ts v7；hub-resources.test.ts v10/v11；hub-repositories.test.ts v12；hub-agents.test.ts v13；hub-agent-resolution.test.ts v14；hub-delegation-native.test.ts 的 v15→v16 grant schema upgrade。resources.test.ts更高schema拒绝保留为所有不匹配格式拒绝测试。hub-delegation.test.ts旧无owner行不认领改为当前格式非法记录明确拒绝，不继续旧记录读取/恢复。相应有效并发/权限/恢复用例仍保留。
 
-scripts/smoke-upgrade.ts oldBinary/newBinary及schema6种子、旧Agent跨版本/回退链不再作为能力；脚本（当前无test:upgrade脚本名）入口随用户撤销的历史迁移/回滚能力删除，不静默忽略oldBinary参数；其中当前安装/服务版本差异诊断与重启保障迁入现行服务/安装测试。smoke-hub-upgrade.mjs现有程序替换/身份机器Agent仓库附件worktree保留仅在两输入均写同一当前schema19时继续，前置必须当前格式；明确不是数据迁移/回滚。test:*全清点，除明确撤销历史smoke-upgrade外保留真实场景，不用删入口空通过。
+scripts/smoke-upgrade.ts的schema6种子、旧Agent跨版本/回退链随历史迁移能力撤销，脚本已于T5删除（当前无test:upgrade脚本名）；当前安装/服务版本差异诊断与重启保障由现行服务/安装测试继续覆盖。smoke-hub-upgrade.mjs按Plan拆成两个实际场景：现有schema18专用基线交候选无写拒绝；候选新建schema19数据后由同候选停服重启，核身份、机器、Agent、仓库、附件与worktree保留。不声称不存在的schema19旧版升级，不静默忽略旧binary参数。test:*全清点，除明确撤销历史smoke-upgrade外保留真实场景，不用删入口空通过。
 
 ## 文档与接口例外
 
@@ -37,3 +37,22 @@ scripts/smoke-upgrade.ts oldBinary/newBinary及schema6种子、旧Agent跨版本
 ## 无写入拒绝验证
 
 为已存在旧/未知/伪造当前版本但缺表字段/损坏SQLite及旧Task/Round字段建立专用文件，拒绝前后比对bytes/hash/mode、表/行、目录文件集（包括WAL/SHM），不在拒绝路径重试创建或自动reset。全新文件一次创建、已有完整当前文件正常打开/重启/恢复分别验证。并发首次建库必须区分真实不存在与已存在空库，不把version0文件当新文件迁移。全部测试只操作专用目录。
+
+验收消费者也不能绕过拒绝边界：collaboration-package当前先用DatabaseSync读取现场，再核候选hash；retention/console等脚本同样有直接readonly查询。SQLite readonly可能改sidecar，因此消费入口须先确认本次当前候选和格式，再查询当前业务事实；不为旧现场添加兼容读取器。hub/delegation/service的可选round合成对象是当前调用契约，核实际调用后处理，不能机械认作旧记录兼容；持久Round.agent缺失必须拒绝。
+
+## 主 agent 的 SQLite 拒绝路径实验
+
+2026-10-02 在本 Change 专用目录、当前 Bun 中实际执行，尚非产品实现或验收通过：
+
+- 普通 `Database(path, { readonly: true })` 对关闭后的 WAL 库会生成 sidecar；对已有活跃 WAL 的连接也改变 SHM 摘要。不能用它保证拒绝时无写入。
+- URI `immutable=1` 配合 READONLY/URI 标志，在两种情况下均未改变 DB/WAL/SHM 字节、mode 或文件集；但忽略 WAL，不能读取当前业务事实。
+- 先以默认 journal 建好完整 schema19 并关闭，再开 WAL 写业务行时，immutable 可以看到固定表/UNIQUE 结构与版本19，且读取不改文件；它仍看不到仅在 WAL 中的新增业务行。
+- 后一实验初稿混入了 writer 查询，造成 SHM 变化；最终将摘要区间限制为 immutable 读取后结果为不变。这不证明任意并发检查点下均安全，T14仍须对拟采用的最小方案做真实结构与并发验证，不实现 WAL 解析器。
+
+脚本与原始结果位于 `.dev-smoke/slimming-acceptance/sqlite-probe/` 的 `probe.ts`、`result.json`、`current-schema.ts`、`current-schema.json`，仅保存合成数据。该实验只验证 SQLite 行为，不代表迁移链已删除。
+
+启动入口静态补充：`services.serve` 在 `openState` 前会创建 root token、目录并启动 HAPI；`start` 还会先处理进程记录、打开日志，再派生 `serve`，且子进程退出会包装为 `service_start_failed`。T14须在实际服务启动前拒绝旧state；`start`对外也需保留明确格式诊断。验收既覆盖直接serve，也覆盖编译start，比较Runweft业务库和HAPI数据；不能仅证明openState无写入。`hub/tasks-page.ts`的Hub配置版本/definitionVersion双分支也须核对并移除旧记录显示回退。明确外来原生对象的归属拒绝仍是当前安全边界，不因旧注释的措辞删除。
+
+补充实测（`sqlite-probe/reader-modes.ts` 与 JSON）：主文件版本19、结构/版本变化仅提交在 WAL 时，普通只读 URI、`mode=ro`、`vfs=unix-excl` 都读到 WAL 的18及新增列，但改变原SHM；`immutable=1`不写却错误地只看到主文件19及旧结构；`nolock=1`/unix-none/unix-dotfile在该WAL场景不能开库。复制主文件和WAL到专用临时目录，再读取副本，能识别18和新增列，原目录bytes/mode/文件集不变。不采用immutable单独验证完整现行结构，也不自行解析WAL。
+
+`sqlite-probe/copy-race.ts` 实测固定schema19在另进程持续写入及PASSIVE/TRUNCATE检查点期间，150次独立主文件/WAL副本均成功读取同一完整schema；writer完成497轮，exit=0。该实验只核验固定schema，不宣称副本业务行是事务级备份，也不保证恶意外部并发改schema。临时检查副本由检查者回收，原数据目录无清理；T14仍需对最终实现验证并发首次建库、旧/未知/损坏结构、完整当前结构及真实服务启动拒绝。

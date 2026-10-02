@@ -137,7 +137,7 @@ test('overview selects the earliest unfinished round instead of a queued continu
     const h = await overviewFixture({ fetch: () => undefined });
     const runtime = await h.register(), owner = parent('/p', 'parent', runtime.machineId);
     const accepted = seed(h, runtime, owner, { edit: b => { b.rounds[0].phase = 'running'; } });
-    h.gateway.delegation.coordinator.store.append(h.namespace, owner, crypto.randomUUID(), { id: accepted.agent_id, message: 'PRIVATE QUEUED', mode: 'next' });
+    h.gateway.delegation.coordinator.store.append(h.namespace, owner, crypto.randomUUID(), { id: accepted.agent_id, message: 'PRIVATE QUEUED', mode: 'next' }, h.gateway.delegation.coordinator.store.require(h.namespace, accepted.agent_id).task.agent);
     expect((await get(h)).items[0]).toMatchObject({ round: 1, phase: 'running', round_id: accepted.round_id });
     const bundle = h.gateway.delegation.coordinator.store.require(h.namespace, accepted.agent_id); completed(bundle);
     h.gateway.delegation.coordinator.store.save(bundle.task, bundle.rounds[0], bundle.inputs.filter(input => input.roundId === bundle.rounds[0].id));

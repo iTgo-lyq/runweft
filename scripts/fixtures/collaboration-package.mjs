@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { existsSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { basename, dirname, join, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
 import { DatabaseSync } from 'node:sqlite';
@@ -17,8 +17,18 @@ export function collaborationPackage(file, binary, explicitHapi, expectedOwner) 
     assert.equal(dirname(source.evidenceDir), resolve('.dev-smoke'));
     assert.equal(dirname(source.ownedRoot), tmpdir()); assert(basename(source.ownedRoot).startsWith('rw-collab-'));
     assert.equal(source.root, join(source.ownedRoot, '.dev-smoke')); assert(existsSync(source.root));
-    const db = new DatabaseSync(source.serverPaths.state, { readOnly: true });
+    const hash = bytes => createHash('sha256').update(bytes).digest('hex');
+    const hapi = explicitHapi ? resolve(explicitHapi) : binaries.hapi.path;
+    assert.equal(hash(readFileSync(hapi)), source.candidate.binaries.hapi.sha256);
+    assert.equal(binaries.runweft.sha256, source.candidate.binaries.runweft.sha256);
+    // Inspect only a private copy before any start or configuration write.
+    const checkRoot = mkdtempSync(join(tmpdir(), 'runweft-handoff-check-')), copy = join(checkRoot, 'state.sqlite');
+    let db;
     try {
+        copyFileSync(source.serverPaths.state, copy);
+        try { copyFileSync(source.serverPaths.state + '-wal', copy + '-wal'); } catch (error) { if (error.code !== 'ENOENT') throw error; }
+        db = new DatabaseSync(copy, { readOnly: true });
+        assert.equal(db.prepare('PRAGMA user_version').get().user_version, 19, 'Requires current state format; source remains untouched');
         assert.equal(db.prepare('SELECT COUNT(*) AS count FROM delegation_tasks').get().count, source.cases.length);
         for (const item of source.cases) {
             const task = JSON.parse(db.prepare('SELECT data FROM delegation_tasks WHERE id=?').get(item.taskId).data);
@@ -33,11 +43,7 @@ export function collaborationPackage(file, binary, explicitHapi, expectedOwner) 
                 assert.deepEqual(inputs.map(input => input.id), saved.inputs.map(input => input.id));
             }
         }
-    } finally { db.close(); }
-    const hash = bytes => createHash('sha256').update(bytes).digest('hex');
-    const hapi = explicitHapi ? resolve(explicitHapi) : binaries.hapi.path;
-    assert.equal(hash(readFileSync(hapi)), source.candidate.binaries.hapi.sha256);
-    assert.equal(binaries.runweft.sha256, source.candidate.binaries.runweft.sha256);
+    } finally { try { db?.close(); } finally { rmSync(checkRoot, { recursive: true, force: true }); } }
     const env = { ...process.env, CODEX_HOME: source.nativeHomes.codex, CLAUDE_CONFIG_DIR: source.nativeHomes.claude };
     for (const key of Object.keys(env)) if (key.startsWith('RUNWEFT_') || key.startsWith('HAPI_') || ['CLI_API_TOKEN', 'DB_PATH', 'TELEGRAM_BOT_TOKEN'].includes(key)) delete env[key];
     if (source.remote) Object.assign(env, { GIT_CONFIG_GLOBAL: '/dev/null', GIT_CONFIG_NOSYSTEM: '1' });

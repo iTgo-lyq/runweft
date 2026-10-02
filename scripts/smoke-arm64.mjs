@@ -39,8 +39,6 @@ try {
     assert.equal(paths.home, home);
     const missing = cli(['agent', 'list'], 1);
     assert.equal(JSON.parse(missing.stderr).error.code, 'hub_connection_required');
-    cli(['data', 'reset']); cli(['data', 'reset', '--apply']);
-    assert.equal(JSON.parse(cli(['init']).stdout).created, true);
     evidence.success = true;
 } finally {
     writeFileSync(join(root, 'evidence.json'), JSON.stringify(evidence, null, 2) + '\n');

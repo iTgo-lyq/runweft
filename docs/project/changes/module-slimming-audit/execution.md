@@ -314,3 +314,19 @@ iclaude review session：`6870f51d-a7d7-4cfa-b49d-a2a96e69a693`。工具限制Re
 - 最终测试helper修改后根执行hub/hub-resources/hub-resource-dispatch/hub-console：28 pass/0 fail/508 expect/4文件；typecheck通过。根再次确认完整CLI/17 MCP契约等于基线，无旧handler/ResourceStore/ResourceService/ResourceClient消费者；当前Hub前缀同名模块保留。root第一次realtime误传Runweft代替脚本要求的HAPI，WrTSxb在启动前失败、零检查；纠正参数后独立ElNYuI通过，保留两次结果，不把调用错误记成产品回归。
 - 根核kJM1xn实际为五组、vkhPfr两组，均success且cleanupErrors=[]。三份本次成功service/upgrade/realtime现场确认无所属进程后回收临时运行数据，原evidence bytes不变；浏览器home自动回收并保留截图。没有扫描或清理旧用户数据；回收清单`t9-root-self-fixture-cleanup.json`。根汇总`t9-root-summary.json`保存候选、最终source hash和证据。schema18本阶段保持，T14后不沿用本阶段upgrade结论；真实模型矩阵仍归T13。
 - Commit：`module-slimming-audit T9: 退役旧服务资源接线与看板`
+
+
+## T14 当前格式唯一支持（主 agent 接手）
+
+用户要求不再启动 subagent 后，主 agent 停止在途 agents，独立完成此阶段余下实现和验证。当前库一次创建 schema19，不再定义两张旧登记表；删除1–18迁移链、Task读时版本注入、Round Agent/看板旧快照回退及 data/reset 整树。config省略schemaVersion是当前正式简写，保留；显式0/2拒绝。HAPI依赖内部格式行为未改，原生/当前任务恢复与成果留存仍保留。
+
+- 新库在同目录私有临时文件创建后原子link，不覆盖并发赢家；已有库先复制主文件与WAL至私有临时目录检查唯一版本及精确表/索引/UNIQUE/FK/CHECK结构。SQLite readonly直接读原文件会写SHM，故拒绝路径不用它。文件系统错误保留；NOTADB/CORRUPT映射格式损坏。核验限定固定格式元数据，不对并发变化的业务行副本做quick_check或宣称事务备份，不引入WAL解析器/重试框架。只删除检查者自己创建的临时副本。
+- Task/Round/Input/CodeFetch读取校验当前必需形状与关系，不补字段；namespace所有权来自现行scope，动态授权仍在原lease/policy复查。记录无效时read/wait给503 state_record_invalid；恢复按任务隔离，仅记录taskId/code，不改坏行，其余任务恢复。SQL revision/updatedAt/completedRevision仍是当前写入协议的权威投影。输入意图/基线扫描先按SQL namespace过滤，避免解析无权scope；这不是旧记录读取兼容。不是所有领域JSON叶字段的完整损坏校验，不能扩大保证。
+- 删除11个纯迁移/旧记录兼容测试及reset专属文件；Agent选择并发PUT的有效前半段保留，旧隔离测试改非法无主scope不执行/不认领当前意图与基线。两处直接append测试改显式提供已解析当前Agent。state/task-records新增格式无写、关系损坏、坏任务隔离和当前简写配置保障；现有current task/workspace/outputs/results/native authorization/restart继续覆盖产品行为。
+- 最终typecheck与build exit0；最终 `bun run test` **250 pass/0 fail/4733 expect/42文件**（t14-full-final.log）；最后行为定向 **34 pass/0 fail/897 expect/5文件**，另传入的result-retention.test.ts实际不存在，未计为覆盖，相关成果留存仍由全套remote-tasks保障。第1轮打开参数遗漏readwrite导致SQLITE_MISUSE，已修复；第1轮损坏结构造数使用SQLite禁止的writable_schema，改真实重建约束负例；两个坏记录测试初稿在关闭协调器后经HTTP接受被正常拒绝，改在接受期间暂停kick后关闭；失败日志保留。没有放宽拒绝或授权让测试通过。
+- 原目录主库/WAL/SHM的hash、mode与文件集不变：旧0/18/更高版本、版本仅在WAL、坏文件头、少表/索引/UNIQUE/FK/CHECK及额外sqlitex对象；真实source CLI start/serve/restart在创建token/log/进程/HAPI前拒绝。6个独立进程并发首次创建全部业务行保留；最终validateState在另进程383轮写入+PASSIVE/TRUNCATE检查点期间150次核验无误（t14-copy-race.json），不声称任意外部并发改schema安全。
+- 编译候选0231c596…/HAPI bdf706d7…：hub-upgrade **z8zEMn** 三组成功、cleanupErrors=[]。真实baseline6685ecdf… schema18 start/serve/restart整home bytes/mode/files不变；独立当前19同候选重启保身份/机器/Agent/仓库/附件bytes/worktree。初稿WFu80G误从stdout读错误JSON而失败，改按实际stderr协议后成功；原失败保留，两个专用home均由脚本停服后清理。不是跨版本数据升级。
+- 同0231c596…真实Codex **tasks-kiXkjC** 四组通过：CLI固定request幂等、原生完成/archived/host退出、空nonGit目录不改、重启报告/原接受请求不重放；清理无错误。本阶段未跑Claude全矩阵。fixture自己的模型源文件前后hash校验通过；更早T6长期基线中的Codex auth hash已有差异，mtime早于本次smoke，不推断原因或覆盖凭据，其他三份源配置与长期基线一致。
+- 最后仅修CLI guide中已失效client.sqlite用途说明后，final binary **b8a06620…**；compiled hub-service **vma62A** 五组成功/cleanupErrors=[]，测试明确确认各home服务/Runner停止后主agent回收host/client/fresh-host，原evidence不改。全CLI契约仅删除data树，其他命令及17 MCP schema/description/annotations与原基线精确相等。
+- usage/development/产品Skill及install/arm64脚本删除reset调用/推荐，保当前release/prune/remove。消费现场入口先验证本次候选/当前格式，再读业务；Node collaboration消费者只读其私有副本，不以原库readonly引入sidecar。安装包、QEMU、十二原生MCP/十消费者以及最终同候选全组合由T13统一验收，此处不冒认通过。Specs和归档未执行。
+- 原始证据与范围：`.dev-smoke/slimming-acceptance/t14-root-summary.json`。Commit：`module-slimming-audit T14: 仅支持当前数据格式并移除历史清理入口`。

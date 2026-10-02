@@ -1,3 +1,4 @@
+import { validateState } from '../src/state';
 import assert from 'node:assert/strict';
 import { randomUUID, createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
@@ -26,6 +27,7 @@ assert(original.ownedTempRoot.startsWith(join(tmpdir(), 'runweft-remote-')), 'Ex
 for (const path of [center, sourceHome, targetHome, project, original.identityFile, original.source.nativeHome, original.target.nativeHome]) assert(path.startsWith(ownedRoot + sep), 'Consumer paths must belong to this producer');
 assert.equal(createHash('sha256').update(readFileSync(binary)).digest('hex'), original.candidate.hashes.cli);
 assert.equal(createHash('sha256').update(readFileSync(hapiBinary)).digest('hex'), original.candidate.hashes.hapi);
+validateState(join(center, 'server/runweft/state.sqlite'));
 const env: NodeJS.ProcessEnv = { ...process.env, CODEX_HOME: join(ownedRoot, 'codex-home'), CLAUDE_CONFIG_DIR: join(ownedRoot, 'claude-home'), GIT_CONFIG_GLOBAL: '/dev/null', GIT_CONFIG_NOSYSTEM: '1' };
 for (const key of Object.keys(env)) if (key.startsWith('RUNWEFT_') || key.startsWith('HAPI_') || ['CLI_API_TOKEN', 'DB_PATH', 'TELEGRAM_BOT_TOKEN'].includes(key)) delete env[key];
 delete env.HAPI_SESSION_ID;

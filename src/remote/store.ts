@@ -29,14 +29,14 @@ export class BaselineStore {
     saveSnapshot(record: BaselineSnapshot) {
         record.updatedAt = Date.now(); this.db.query('UPDATE repository_snapshots SET phase=?, data=? WHERE id=?').run(record.phase, JSON.stringify(record), record.id);
     }
-    snapshots() { return (this.db.query('SELECT data FROM repository_snapshots').all() as { data: string }[]).map(read<BaselineSnapshot>).filter(row => this.owns(row.namespace)); }
+    snapshots() { return (this.db.query('SELECT namespace, data FROM repository_snapshots').all() as { namespace: string; data: string }[]).filter(row => this.owns(row.namespace)).map(read<BaselineSnapshot>); }
     imported(id: string): BaselineImport { return read(this.db.query('SELECT data FROM repository_imports WHERE id=?').get(id) as { data: string }); }
     latestImport(snapshotId: string, machineId: string): BaselineImport | null {
         const row = this.db.query('SELECT data FROM repository_imports WHERE snapshotId=? AND machineId=? ORDER BY generation DESC LIMIT 1').get(snapshotId, machineId) as { data: string } | null;
         return row ? read(row) : null;
     }
     consumers(snapshotId: string) { return (this.db.query('SELECT data FROM repository_consumers WHERE snapshotId=? AND active=1').all(snapshotId) as { data: string }[]).map(read<BaselineConsumer>); }
-    imports() { return (this.db.query('SELECT data FROM repository_imports').all() as { data: string }[]).map(read<BaselineImport>).filter(row => this.owns(row.namespace)); }
+    imports() { return (this.db.query('SELECT s.namespace, i.data FROM repository_imports i JOIN repository_snapshots s ON s.id=i.snapshotId').all() as { namespace: string; data: string }[]).filter(row => this.owns(row.namespace)).map(read<BaselineImport>); }
     saveImport(record: BaselineImport) {
         record.updatedAt = Date.now(); this.db.query('UPDATE repository_imports SET phase=?, data=? WHERE id=?').run(record.phase, JSON.stringify(record), record.id);
     }

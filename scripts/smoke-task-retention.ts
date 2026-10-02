@@ -1,3 +1,4 @@
+import { validateState } from '../src/state';
 import assert from 'node:assert/strict';
 import { Database } from 'bun:sqlite';
 import { existsSync, readFileSync, rmSync } from 'node:fs';
@@ -22,6 +23,7 @@ assert(previous.evidenceFormat === 'current-task-outputs-1' && previous.success 
 const fixture = dirname(source), handoff = previous.handoff, home: string = handoff.clientHome, serverHome: string = handoff.serverHome, binary = resolve(process.argv[3] ?? previous.candidate.cliBinary);
 assert(home.startsWith(fixture + '/') && serverHome.startsWith(fixture + '/') && handoff.runnerNativeHome.startsWith(fixture + '/'));
 const binaries = installedBinaries(binary); assert.equal(binaries.runweft.sha256, previous.candidate.hashes.cli); assert.equal(binaries.hapi.sha256, previous.candidate.hashes.hapi);
+validateState(handoff.serverPaths.state);
 assert.equal(new Set(previous.cases.map((c: any) => `${c.agent}/${c.mode}/${c.round}`)).size, 8);
 assert.equal(new Set(previous.cases.map((c: any) => c.taskId)).size, 4);
 await mkdir('.dev-smoke', { recursive: true }); const root = await mkdtemp(resolve('.dev-smoke/task-retention-'));

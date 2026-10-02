@@ -1,3 +1,4 @@
+import { validateState } from '../../src/state';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync, statSync, writeFileSync } from 'node:fs';
@@ -18,6 +19,7 @@ export async function consoleHistory(options: { binary: string; hapiBinary: stri
         const paths = previous.paths.find((item: any) => item.home === previous.serverHome);
         assert(paths && paths.state === join(previous.serverHome, 'server/runweft/state.sqlite'));
         assert(sourceFile.startsWith(resolve('.dev-smoke') + sep));
+        validateState(paths.state);
         const sourceFiles = [paths.state, join(paths.hapiServer, 'hapi.db')].flatMap(path => [path, path + '-wal', path + '-shm']);
         const snapshot = () => sourceFiles.map(path => { if (!existsSync(path)) return { path, exists: false }; const stat = statSync(path); return { path, exists: true, mode: stat.mode, size: stat.size, sha256: createHash('sha256').update(readFileSync(path)).digest('hex') }; });
         const before = snapshot();

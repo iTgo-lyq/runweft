@@ -1,15 +1,11 @@
-import { STATE_SCHEMA_VERSION } from '../src/state';
 import { afterEach, expect, test } from 'bun:test';
 import { randomUUID } from 'node:crypto';
-import { Database } from 'bun:sqlite';
 import { remoteFixture } from './remote-fixture';
 import { until } from './helpers';
 import { fixtureCleanup } from './fixture-cleanup';
 import { HubAgentClient } from '../src/hub/agents/client';
 import { agentSnapshot } from '../src/hub/delegation/context';
 import { TaskResults, pendingCode } from '../src/tasks/results';
-import { TaskStore } from '../src/tasks/store';
-import { openState } from '../src/state';
 
 const cleanupOwner = fixtureCleanup([]), cleanups = cleanupOwner.resources;
 afterEach(() => cleanupOwner.close());
@@ -77,7 +73,7 @@ test('fetch freezes the accepted round, keeps pending as state and reconciles an
     const run = async () => { const b = h.store.require(h.namespace, h.id), f = h.store.codeFetches(h.id).find(item => item.id === accepted.result_operation_id)!;
         await h.engine().advanceFetch(b.task, b.rounds.find(item => item.id === f.roundId)!, f); return h.store.codeFetches(h.id)[0]!; };
     expect((await run()).status).toBe('waiting');
-    const next = h.store.append(h.namespace, h.parent, randomUUID(), { id: h.id, message: 'next', mode: 'next' });
+    const next = h.store.append(h.namespace, h.parent, randomUUID(), { id: h.id, message: 'next', mode: 'next' }, h.store.require(h.namespace, h.id).task.agent);
     expect(h.store.resultAction(h.namespace, { parent: h.parent, id: h.id, requestId: accepted.request_id, action: 'fetch' }).round_id).toBe(h.round.id);
     await h.advance(); h.faults.sourceOffline = true; expect((await run()).status).toBe('unknown');
     h.faults.sourceOffline = false; h.faults.fetchLost = true; expect((await run()).status).toBe('unknown');
@@ -90,42 +86,6 @@ test('fetch freezes the accepted round, keeps pending as state and reconciles an
     expect(() => h.store.resultAction(h.namespace, { parent: { ...h.parent, machineId: 'wrong' }, id: h.id, requestId: randomUUID(), action: 'fetch' })).toThrow('发起仓库');
     const pending = await h.post('result/show', { id: h.id });
     expect(pending.round_id).toBe(next.round_id); expect(pending.code.status).toBe('pending');
-});
-
-test('v5 migration preserves all fourteen legacy tables including task, session, file and baseline data', async () => {
-    const h = await fixture(), old = h.store.require(h.namespace, h.id), round = old.rounds[0]!;
-    // A legacy local task and its delivered file remain usable after the additive migration.
-    delete round.code; delete round.codeRevision; delete round.git;
-    old.task.environment = { mode: 'shared', machineId: h.parent.machineId, cwd: h.parent.cwd };
-    round.preparation = { mode: 'shared', status: 'ready' }; round.sessionId = 'legacy-session'; round.nativeSessionId = 'legacy-native';
-    round.report = 'legacy report'; round.outputFiles = { declarations: [], jobs: [{ id: randomUUID(), requestId: randomUUID(), kind: 'initial', createdAt: 1, phase: 'publishing', declarations: [], base: [] }] };
-    h.store.save(old.task, round, []);
-    const file = h.input.files![0]!;
-    h.store.publishArtifacts(old.task, round, round.outputFiles.jobs[0]!, [{ name: 'legacy.bundle', relativePath: 'legacy.bundle', status: 'available', artifactId: file.artifactId, sha256: file.sha256, size: file.size }]);
-    round.outputFiles.jobs[0]!.phase = 'complete'; h.store.save(old.task, round, []);
-    h.store.beginArtifactIntent(h.namespace, h.parent, randomUUID(), { workspaceMode: 'shared', agentType: 'review', message: 'pending legacy input', inputs: [{ artifactId: file.artifactId! }] });
-    // Both current scan loops stop before synthesizing the historical schema; the fixture owns final gateway cleanup.
-    await h.gateway.delegation.preparations.close();
-    const db = new Database(h.statePath);
-    let tables: string[], before: Record<string, unknown[]>;
-    const snapshot = (database: Database) => Object.fromEntries(tables.map(name => [name, database.query(`SELECT * FROM ${name} ORDER BY rowid`).all()]));
-    try {
-        db.query('INSERT INTO machine_registrations VALUES (?, ?, 1, 1, 1)').run(h.namespace, h.sourceMachineId);
-        db.query('INSERT INTO runtime_registrations VALUES (?, ?, ?, ?, ?, 1, 1, 1, ?, 1)').run(randomUUID(), h.namespace, h.sourceMachineId, 'codex', 'legacy runtime', '{}');
-        db.exec('DROP TABLE hub_connection_requests; DROP TABLE hub_delegation_scopes; DROP TABLE hub_agent_selections; DROP TABLE hub_agent_blocks; DROP TABLE hub_agent_members; DROP TABLE hub_agent_versions; DROP TABLE hub_agents; DROP TABLE hub_checkouts; DROP TABLE hub_repository_aliases; DROP TABLE hub_repositories; DROP TABLE hub_resource_blocks; DROP TABLE hub_runtime_shares; DROP TABLE hub_resource_runtimes; DROP TABLE hub_machine_spaces; DROP TABLE hub_resource_machines; DROP TABLE hub_native_session_claims; DROP TABLE hub_file_reservations; DROP TABLE hub_execution_grants; DROP TABLE hub_execution_intents; DROP TABLE hub_execution_credentials; DROP TABLE hub_execution_objects; DROP TABLE hub_invitations; DROP TABLE hub_memberships; DROP TABLE hub_spaces; DROP TABLE hub_users; DROP TABLE delegation_code_fetches; DROP TABLE delegation_code_manifests; PRAGMA user_version=5;');
-        tables = (db.query("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name").all() as { name: string }[]).map(row => row.name);
-        expect(tables).toHaveLength(14);
-        before = snapshot(db); for (const rows of Object.values(before)) expect(rows.length).toBeGreaterThan(0);
-    } finally { db.close(); }
-    const migrated = openState(h.statePath);
-    try {
-        expect(migrated.query('PRAGMA user_version').get()).toEqual({ user_version: STATE_SCHEMA_VERSION }); expect(snapshot(migrated)).toEqual(before);
-        const consumerColumn = (migrated.query('PRAGMA table_info(repository_consumers)').all() as { name: string; notnull: number }[]).find(column => column.name === 'importId');
-        expect(consumerColumn!.notnull).toBe(1);
-    } finally { migrated.close(); }
-    const reopened = new TaskStore(h.statePath);
-    try { expect(reopened.require(h.namespace, h.id).rounds[0]!.report).toBe('legacy report'); expect(reopened.manifests(h.id, round.id)[0]!.items[0]!.artifactId).toBe(file.artifactId); expect(reopened.codeManifests(h.id)).toHaveLength(0); }
-    finally { reopened.close(); }
 });
 
 test('an unchanged initial HEAD publishes independent pins from the baseline while target is offline', async () => {

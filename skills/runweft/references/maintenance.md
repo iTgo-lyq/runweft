@@ -36,7 +36,7 @@ runweft mcp check --client <codex或claude>
 
 先记录安装版本、路径、Hub 角色、数据根、活跃任务。结束/中断任务并确认停止后再停对应服务；停止 Runner/Hub 不能代替中断模型进程。
 
-升级：确认当前入口属于 npm 安装，使用 `npm install -g runweft@<目标版本> --registry=https://registry.npmjs.org/ --include=optional`；成功后核对版本和入口，再运行 `mcp install --client <宿主>` 更新入口/timeout/hook。从更新后的 npm 包读取产品 Skill，比对、备份扫描目录外的旧目录再替换。没有 `runweft upgrade` 命令。不要把数据降级回滚当成简单切换程序。
+升级：确认当前入口属于 npm 安装，使用 `npm install -g runweft@<目标版本> --registry=https://registry.npmjs.org/ --include=optional`；成功后核对版本和入口，再运行 `mcp install --client <宿主>` 更新入口/timeout/hook。从更新后的 npm 包读取产品 Skill，比对、备份扫描目录外的旧目录再替换。没有 `runweft upgrade` 命令。当前业务库只支持 schema19，不通过切换程序迁移数据。
 
 按原角色启动：本机 Hub `start`，独立执行机 `runner start`，前台公开服务由原进程管理器执行 `serve --public`。核对 `--version/status/doctor/mcp check`，再做一次低风险真实调用。只执行用户指定范围，不更新在线其他实例。
 
@@ -44,20 +44,19 @@ runweft mcp check --client <codex或claude>
 
 `mcp backups` 列非秘密摘要；`mcp restore <备份ID>` 恢复操作前完整快照，会拒绝覆盖后续修改，不强行绕过。MCP 修改位置：Codex `${CODEX_HOME:-$HOME/.codex}/config.toml`；Claude 默认 `$HOME/.claude.json` 和 `$HOME/.claude/settings.json`，设置 CLAUDE_CONFIG_DIR 后两者均在该目录。不要手工复制完整配置给模型。
 
-## 数据与清理
+## 当前附件与成果留存
 
-默认数据根 `$HOME/.runweft`；`--home` 优先于 RUNWEFT_HOME，字段环境变量优先于 config.yaml。用 `paths` 获取当前连接实际目录，不硬编码 URL 哈希。Hub 数据在 `server/`，每 Hub 身份/机器与 HAPI 数据在 `connections/`，主宿主协调在 `client.sqlite`，备份在 `backups/`。原生 Codex/Claude home 不被 Runweft 接管。
+默认数据根 `$HOME/.runweft`；`--home` 优先于 RUNWEFT_HOME，字段环境变量优先于 config.yaml。用 `paths` 获取当前连接实际目录，不硬编码 URL 哈希。Hub 数据在 `server/`，每 Hub 身份/机器与 HAPI 数据在 `connections/`，备份在 `backups/`。原生 Codex/Claude home 不被 Runweft 接管。
 
-备份前先结束任务、停止 Hub/相关 Runner，保留同一时点的配置、中心库/文件、连接数据、未交付候选、原生会话及 worktree 依赖的源 Git/缓存；不要只备份数据库。不要无授权打包上传身份或模型凭据。
+备份当前运行环境前先结束任务、停止 Hub/相关 Runner，保留同一时点的配置、中心库/文件、连接数据、未交付候选、原生会话及 worktree 依赖的源 Git/缓存；不要只备份数据库。不要无授权打包上传身份或模型凭据。
 
 ```sh
 runweft task result release <taskId>
 runweft task artifacts release <taskId>
 runweft artifact refs <artifactId>
 runweft artifact prune
-runweft data reset
 ```
 
-以上 release/prune/reset 默认预览，核对结果和用户意图后才加 `--apply`。丢弃未交付结果需要另外明确 `--discard-pending`。工作区删除 `task workspace remove <taskId>` 会实际执行，不能当预览；ignored 文件默认阻止删除，仅明确放弃才加 `--discard-ignored`。释放引用不删除字节，仍有引用的对象不能 remove。
+以上 release/prune 默认预览，核对结果和用户意图后才加 `--apply`。丢弃未交付结果需要另外明确 `--discard-pending`。工作区删除 `task workspace remove <taskId>` 会实际执行，不能当预览；ignored 文件默认阻止删除，仅明确放弃才加 `--discard-ignored`。释放引用不删除字节，仍有引用的对象不能 remove。
 
-`data reset --apply` 是未上线版本的显式清理，须停服且会清除列出的身份/业务历史/中心附件；保留 worktree 和原生模型配置不等于保留任务恢复能力。只有用户明确要求重置该数据根时执行，不用于修复未知执行或绕过 schema 错误，不实现旧 YAML 导入/所有者认领。
+中心只在全新目录创建当前 schema19，完整同格式库可正常重开。旧版本、不匹配或损坏格式明确拒绝，不迁移、改写或清理原目录。按错误诊断使用独立新 `--home <目录>` 并自行保管原目录；不要把未知执行/回执作为删除历史的理由。当前附件/成果的 release/prune/remove 与已登记操作的回执恢复仍按各命令执行，不接管旧目录。配置省略 schemaVersion 使用当前默认值1，显式非当前版本拒绝。

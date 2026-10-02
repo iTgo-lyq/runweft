@@ -56,16 +56,16 @@ export class HubDelegationService {
     }
     check(task: Task, round: Round) {
         if (!task.hub) throw hubNotFound();
-        const scope = this.snapshot(task.namespace, task.parent, round.agent ?? task.agent);
+        const scope = this.snapshot(task.namespace, task.parent, round.agent);
         if (task.hub.ownerId !== scope.ownerId || task.hub.spaceId !== scope.spaceId
-            || task.hub.hubRepositoryId !== (round.agent ?? task.agent).hub?.hubRepositoryId) throw hubNotFound();
+            || task.hub.hubRepositoryId !== round.agent.hub.hubRepositoryId) throw hubNotFound();
     }
     execution(binding?: ExecutionObject) {
         if (!binding?.taskId) return;
         const ns = this.config.store.db.query('SELECT namespace FROM delegation_tasks WHERE id=?').get(binding.taskId) as { namespace: string } | null;
         if (!ns) throw hubNotFound();
         const { task, rounds } = this.coordinator.store.require(ns.namespace, binding.taskId);
-        if (task.hub?.ownerId !== binding.ownerId || task.hub.spaceId !== binding.spaceId || task.target.machineId !== binding.machineId) throw hubNotFound();
+        if (task.hub.ownerId !== binding.ownerId || task.hub.spaceId !== binding.spaceId || task.target.machineId !== binding.machineId) throw hubNotFound();
         this.check(task, rounds.find(round => !['finished', 'failed'].includes(round.phase)) ?? rounds.at(-1)!);
     }
     sessionPolicy(binding: ExecutionObject, method: string, suffix: string) {
@@ -107,7 +107,10 @@ export class HubDelegationService {
             if (!snapshot) throw hubNotFound();
             for (const consumer of this.preparations.store.consumers(snapshot.id).filter(row => !imported || row.importId === imported.id)) {
                 if (consumer.kind === 'task') {
-                    const { task, rounds } = this.coordinator.store.require(namespace, consumer.owner);
+                    let bundle;
+                    try { bundle = this.coordinator.store.require(namespace, consumer.owner); }
+                    catch (error) { if (error instanceof TaskError && error.code === 'state_record_invalid') continue; throw error; }
+                    const { task, rounds } = bundle;
                     const round = rounds.find(r => !['finished', 'failed'].includes(r.phase)) ?? rounds.at(-1)!;
                     try { this.check(task, round); } catch { continue; }
                     return new DelegationNativeClient(this.config.resources.store, this.config.native, { ...scope, sourceMachineId: task.parent.machineId,
@@ -158,7 +161,7 @@ export class HubDelegationService {
     async send(lease: AuthorizationLease, value: unknown) {
         const input = parseTask(SendSchema, value), namespace = this.scope(lease); this.parent(lease, input.parent);
         return this.coordinator.send(namespace, input, async (task, previous) => {
-            const saved = (previous.agent ?? task.agent).hub; if (!saved) throw hubNotFound();
+            const saved = previous.agent.hub; if (!saved) throw hubNotFound();
             const resolved = await this.config.resolver.resolve(lease, { hubRepositoryId: task.hub!.hubRepositoryId, agentId: saved.agentId,
                 ...(saved.selection.runtime === 'explicit' ? { runtimeId: saved.target.runtimeId } : {}) });
             if (resolved.target.runtimeId !== task.target.runtimeId || resolved.target.machineId !== task.target.machineId || resolved.target.flavor !== task.target.flavor) {

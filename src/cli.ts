@@ -3,7 +3,6 @@ import { Command, CommanderError } from 'commander';
 import { stringify } from 'yaml';
 import pkg from '../package.json';
 import { configPath, dataPaths, initializeConfig, loadConfig, setConfig, type ResolvedConfig } from './config';
-import { resetData } from './reset';
 import { errorDetails } from './errors';
 import { addServiceCommands } from './service-commands';
 import { addMcpCommands } from './mcp/commands';
@@ -45,14 +44,6 @@ export function createProgram() {
                 `${result.created ? '已创建' : '保留已有'}配置：${result.file}\n模式：${result.config.mode}\n${result.config.mode === 'hub' ? '下一步：runweft hub connect begin，在 Web 确认后 complete。' : '下一步：runweft start，然后 runweft open。'}\n查看生效配置：runweft config show`);
         });
 
-    program.command('data').description('未上线版本的数据维护').command('reset')
-        .description('预览当前数据根的历史清理；保留 worktree 和原生模型配置')
-        .option('--apply', '确认清理列出的配置、业务历史和中心附件；必须先停服')
-        .action(options => {
-            const result = resetData(program.opts().home, !!options.apply);
-            output(result, `${result.applied ? '已清理' : '仅预览'}：${result.dataRoot}\n${result.remove.join('\n')}\n${result.consequences}\n${result.retained}`);
-        });
-
     const config = program.command('config').description('查看、检查或编辑全局配置');
     config.command('path').description('显示配置文件位置').action(() => {
         const file = configPath(program.opts().home); output({ path: file }, file);
@@ -84,7 +75,7 @@ export function createProgram() {
             `当前连接的文件准备/候选：${paths.artifactTransfers}`,
             `日志：${paths.logs}`, `配置备份：${paths.backups}`, `可再生缓存：${paths.cache}`, `临时目录：${paths.temporary}`,
             `原生 Codex：${paths.nativeCodex}`, `原生 Claude Code：${paths.nativeClaude}`,
-            '备份：停止托管服务后备份配置、server 和 connections；本机 client.sqlite 保存 MCP 身份/握手协调；原生目录按各工具规则备份。',
+            '备份：停止托管服务后备份配置、server 和 connections；原生目录按各工具规则备份。',
             '本机仓库派生的 worktree 还依赖源 Git 目录；远端准备的 worktree 依赖上述仓库缓存。备份时保留对应对象和原路径。',
             '代码清理：task result release 释放选定轮次的中心引用；task workspace remove 清理执行端环境与基线消费者；artifact prune/remove 才清理无引用字节。',
         ].join('\n'));

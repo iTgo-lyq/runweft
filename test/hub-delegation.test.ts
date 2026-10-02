@@ -123,34 +123,23 @@ test('removed space membership blocks history immediately while the trusted coor
     expect(stored.rounds[0].stop).toBe('stopped'); expect(h.calls.spawn).toBe(1);
 });
 
-test('all startup scans quarantine unowned legacy tasks, input intents and baseline records', async () => {
-    const h = await hubDelegationFixture(cleanups), legacy = new TaskStore(h.statePath), baselines = new BaselineStore(h.statePath);
+test('startup scans leave unowned tasks, input intents and baseline records untouched', async () => {
+    const h = await hubDelegationFixture(cleanups), unowned = new TaskStore(h.statePath), baselines = new BaselineStore(h.statePath);
     try {
-        const agent = { id: 'old', namespace: 'alpha', runtimeId: h.runtime.id, machineId: h.machineId, flavor: 'codex' as const,
-            definitionVersion: 'old', resolvedVersion: 'old', source: { scope: 'global' as const, path: '/old.yaml', key: 'old', linkTarget: null },
-            definition: { schemaVersion: 1 as const, description: '', instructions: '', runtime: null, flavor: null, model: null, reasoningEffort: null } };
-        const target = { runtimeId: h.runtime.id, machineId: h.machineId, flavor: 'codex' as const, namespace: 'alpha', inspection: resourceInspection('codex') };
-        // Deliberately seed historical records directly; no current acceptance path consumes the old shape.
-        const accepted = { agent_id: randomUUID(), round_id: randomUUID() }, now = Date.now();
-        const task = { version: 2, id: accepted.agent_id, namespace: 'alpha', parent: h.parent, agent, target,
-            environment: { mode: 'shared', machineId: h.machineId, cwd: h.cwd }, createdAt: now, updatedAt: now, revision: 1 };
-        const round = { id: accepted.round_id, taskId: task.id, ordinal: 1, requestId: randomUUID(), message: 'Do not execute', agent,
-            phase: 'queued', preparation: { mode: 'shared', status: 'pending' }, spawnRequestId: randomUUID(), spawnAttempted: false,
-            report: '', structuredMissing: true, stop: 'not_started', finish: 'pending', attention: null, createdAt: now, permissions: {} };
+        const id = randomUUID(), roundId = randomUUID();
         const db = new Database(h.statePath);
         try {
-            db.query('INSERT INTO delegation_tasks VALUES (?, ?, ?, ?, ?, ?, ?, ?)').run(task.id, 'alpha', parentKey(h.parent), h.machineId, h.cwd, JSON.stringify(task), 1, now);
-            db.query('INSERT INTO delegation_rounds VALUES (?, ?, ?, ?, ?, NULL)').run(round.id, task.id, 1, 'queued', JSON.stringify(round));
+            db.query('INSERT INTO delegation_tasks VALUES (?, ?, ?, ?, ?, ?, ?, ?)').run(id, 'unowned', parentKey(h.parent), h.machineId, h.cwd, '{invalid', 1, 1);
+            db.query('INSERT INTO delegation_rounds VALUES (?, ?, ?, ?, ?, NULL)').run(roundId, id, 1, 'queued', 'null');
         } finally { db.close(); }
-
-        legacy.beginArtifactIntent('alpha', h.parent, randomUUID(), { agentType: 'old', message: 'Do not unpin', workspaceMode: 'shared', inputs: [{ artifactId: randomUUID() }] });
-        baselines.createSnapshot('alpha', { machineId: h.machineId, repositoryId: 'old', sourcePath: h.cwd, repositoryRoot: h.cwd, commonDir: `${h.cwd}/.git`, relativePath: '', baseRef: 'HEAD', baseCommit: 'a'.repeat(40), objectFormat: 'sha1', dirty: false });
+        unowned.beginArtifactIntent('unowned', h.parent, randomUUID(), { agentType: 'unowned', message: 'Do not unpin', workspaceMode: 'shared', inputs: [{ artifactId: randomUUID() }] });
+        baselines.createSnapshot('unowned', { machineId: h.machineId, repositoryId: 'unowned', sourcePath: h.cwd, repositoryRoot: h.cwd, commonDir: `${h.cwd}/.git`, relativePath: '', baseRef: 'HEAD', baseCommit: 'a'.repeat(40), objectFormat: 'sha1', dirty: false });
         await h.gateway.delegation.coordinator.reconcileFileIntents(); await Bun.sleep(40);
-        expect(h.calls.spawn).toBe(0); expect(legacy.require('alpha', accepted.agent_id).rounds[0].phase).toBe('queued');
-        expect(legacy.pendingArtifactIntents()).toHaveLength(1);
+        expect(h.calls.spawn).toBe(0); expect(h.gateway.store.db.query('SELECT data FROM delegation_tasks WHERE id=?').get(id)).toEqual({ data: '{invalid' });
+        expect(unowned.pendingArtifactIntents()).toHaveLength(1);
         expect(h.gateway.delegation.coordinator.store.pendingArtifactIntents()).toEqual([]);
         expect(h.gateway.delegation.preparations.store.snapshots()).toEqual([]);
-    } finally { legacy.close(); baselines.close(); }
+    } finally { unowned.close(); baselines.close(); }
 });
 
 test('complete central gateway restart preserves native receipts and sessions without replaying accepted or uncertain input', async () => {

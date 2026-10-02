@@ -1,6 +1,7 @@
 import { Command } from 'commander';
 import { spawn } from 'node:child_process';
-import { localUrl, type ResolvedConfig } from './config';
+import { validateState } from './state';
+import { dataPaths, localUrl, type ResolvedConfig } from './config';
 import { runHapi } from './hapi';
 import { HubClient } from './hub/client';
 import { hubOptions } from './hub/delegation/client';
@@ -36,7 +37,7 @@ export function addServiceCommands(program: Command, context: () => ResolvedConf
         const value = await stop(context()); output(value, '本机服务已停止。数据与原生会话保留；服务停止期间无法通过此入口查看或审批。');
     });
     program.command('restart').description('应用新配置或安装版本，重启本机服务').action(async () => {
-        const c = context(); await stop(c); const value = await start(c); output(value, summary(value));
+        const c = context(); validateState(dataPaths(c).state); await stop(c); const value = await start(c); output(value, summary(value));
     });
     program.command('serve').description('前台运行本机 Hub 与统一服务入口')
         .option('--public', '明确对外提供 Hub 服务；需配置 server.publicUrl')
