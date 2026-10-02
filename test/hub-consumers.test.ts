@@ -1,27 +1,23 @@
-import { afterAll, afterEach, beforeAll, expect, test } from 'bun:test';
+import { compiledCli } from './compiled-cli';
+import { fixtureCleanup } from './fixture-cleanup';
+import { afterEach, beforeAll, expect, test } from 'bun:test';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 import { randomUUID } from 'node:crypto';
-import { rmSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { join } from 'node:path';
 import { atomicWrite, loadConfig } from '../src/config';
 import { HubClient } from '../src/hub/client';
 import { HubTaskClient, hubOptions } from '../src/hub/delegation/client';
 import { hubConnectionPaths } from '../src/hub/resources/connection';
 import { recordClaudeCall } from '../src/mcp/claude-hook';
-import { fixture } from './helpers';
 import { hubDelegationFixture } from './hub-delegation-fixture';
 import { until } from './helpers';
 import { resourceInspection } from './native-fixture';
 
-const cleanups: (() => void | Promise<void>)[] = [];
-afterEach(async () => { for (const fn of cleanups.splice(0).reverse()) await fn(); });
-const buildHome = fixture('hub-consumer-build'), executable = join(buildHome, 'runweft');
-beforeAll(async () => {
-    const child = Bun.spawn([process.execPath, 'build', resolve('src/cli.ts'), '--compile', '--outfile', executable], { stdout: 'pipe', stderr: 'pipe' });
-    const [exit, stderr] = await Promise.all([child.exited, new Response(child.stderr).text()]); if (exit) throw new Error(stderr);
-}, 30_000);
-afterAll(() => rmSync(buildHome, { recursive: true, force: true }));
+const cleanupOwner = fixtureCleanup([]), cleanups = cleanupOwner.resources;
+afterEach(() => cleanupOwner.close());
+let executable: string;
+beforeAll(async () => { executable = await compiledCli(); }, 30_000);
 const environment = () => {
     const env = { ...process.env };
     for (const key of Object.keys(env)) if (key.startsWith('RUNWEFT_') || key.startsWith('HAPI_')) delete env[key]; return env;

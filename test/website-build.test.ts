@@ -1,13 +1,17 @@
-import { expect, test } from 'bun:test';
+import { fixtureCleanup } from './fixture-cleanup';
+import { afterEach, expect, test } from 'bun:test';
 import { createHash } from 'node:crypto';
 import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { fixture } from './helpers';
 
+const cleanupOwner = fixtureCleanup([]);
+afterEach(() => cleanupOwner.close());
+
 test('npm website builds without release packages and preserves the existing site on invalid inputs', async () => {
     const { buildSite } = await import(pathToFileURL(resolve('website/build.mjs')).href);
-    const projectDirectory = fixture('website-npm-build');
+    const projectDirectory = fixture('website-npm-build', cleanupOwner.resources);
     cpSync(resolve('website'), join(projectDirectory, 'website'), { recursive: true });
     mkdirSync(join(projectDirectory, 'docs'));
     writeFileSync(join(projectDirectory, 'docs/usage.md'), 'npm usage <script>unsafe</script>\n## 离线完整交付（工程参考）\nprivate offline appendix');

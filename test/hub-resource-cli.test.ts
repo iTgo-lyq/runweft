@@ -1,7 +1,9 @@
-import { afterAll, afterEach, beforeAll, expect, test } from 'bun:test';
+import { compiledCli } from './compiled-cli';
+import { fixtureCleanup } from './fixture-cleanup';
+import { afterEach, beforeAll, expect, test } from 'bun:test';
 import { randomBytes, randomUUID } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
-import { existsSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { HubResourceClient } from '../src/hub/resources/client';
 import { hubConnectionPaths, MachineConnection } from '../src/hub/resources/connection';
@@ -9,15 +11,10 @@ import { RunweftError } from '../src/errors';
 import { fixture } from './helpers';
 import { hubResourceFixture } from './hub-resources-fixture';
 
-const cleanups: (() => void | Promise<void>)[] = [];
-afterEach(async () => { for (const fn of cleanups.splice(0).reverse()) await fn(); });
-const buildHome = fixture('hub-cli-build'), executable = join(buildHome, 'runweft');
-beforeAll(async () => {
-    const child = Bun.spawn([process.execPath, 'build', resolve('src/cli.ts'), '--compile', '--outfile', executable], { stdout: 'pipe', stderr: 'pipe' });
-    const [exit, stderr] = await Promise.all([child.exited, new Response(child.stderr).text()]);
-    if (exit !== 0) throw new Error(stderr);
-}, 30_000);
-afterAll(() => rmSync(buildHome, { recursive: true, force: true }));
+const cleanupOwner = fixtureCleanup([]), cleanups = cleanupOwner.resources;
+afterEach(() => cleanupOwner.close());
+let executable: string;
+beforeAll(async () => { executable = await compiledCli(); }, 30_000);
 
 function backup(home: string, url: string, identity: { identity: { id: string }; token: string }, file = 'identity.txt') {
     const path = join(home, file);

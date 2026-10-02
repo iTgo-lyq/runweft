@@ -355,3 +355,18 @@ files/outputs/remote/remote-tasks/results/native grants定向6文件 **55 pass/0
 主agent复核发现client.sqlite并未随旧Agent bindings整体退役：仍保存Claude逐调用身份，且connectionFileLock借SQLite协调身份/机器JSON写入。纠正T14原guide删用途的判断，恢复准确文档。删除hook的CREATE TABLE IF NOT EXISTS和连接锁任意旧库直接打开路径；二者复用现有openState的固定client schema1，Hub仍19。已有无版本/其他表结构拒绝、不加表/改权限/TTL清理；新建库直接完整创建。当前TTL、一次性消费和写锁行为均保留。start/serve/restart在副作用前同时预检已有client库。
 
 定向6文件 **36 pass/0 fail/912 expect**（t14-hook-focused-v2.log），typecheck/build exit0；首版仅测试损坏错误文案匹配不准失败（期望“格式”，实际“结构无效”），改断言稳定503并核原文件不变。编译CLI并发身份/机器握手、双宿主MCP和实际任务API仍通过；此补充不是HAPI修改或旧库迁移。后续同候选原生矩阵使用全新client schema1，不能消费早先schema0现场。Specs仍留T13统一同步。
+
+
+## T12 测试产物与临时环境
+
+主agent直接实现：compiled-cli仅缓存本进程一次构建Promise，成功产物chmod500；三家hub-connect/consumers/resource-cli仍各自独立home/Hub/身份与行为断言。Bun配置preload只登记全局afterAll，避免文件级hook过早删除共享产物；失败Promise不自动重编译。没有跨进程缓存、锁或生产环境开关。cli/resource-commands仍走源码CLI。
+
+普通fixture支持显式传入清理队列；config/cli/resource-commands/website-build/release-inputs/release-assembly/mcp-install/mcp/service-commands及unselected-hub登记本次目录唯一所有者，既有资源fixture不重复登记。三家编译测试与service-commands外层用现有fixtureCleanup，失败继续关闭剩余资源再抛聚合错误。补两份真实DB/server fixture外层关闭故障验证，保原构造失败测试；passthrough的finally等待被终止子进程退出再移除目录。
+
+- typecheck/build exit0；完整根测试 **255 pass/0 fail/4811 expect/42文件**（t12-full.log），包括配置、发行输入/assembly、网站和新增清理故障。
+- 临时preload只观察真实Bun.spawn并记录输出路径：全套编译1次；三家独跑分别6/4/7 pass、0 fail，各编译1次。四次运行各自退出后唯一build root不存在。
+- 将本次编译命令的入口替换为不存在文件的专用故障probe：3个beforeAll均明确失败（0 pass/3 fail），真实编译计数1，退出后root仍回收。该故障开关只在.dev-smoke临时观察脚本，不进产品或测试源码。
+- 全套与独跑完成后，对本次开始目录集合做差：新遗留目录0；不清扫任何既有目录。t12-lifecycle-summary.json保存结果。
+- npm-publish与website Node测试实际执行，exit0；未执行发布/远端CI。U02调用DAG和保留不同验证边界的理由见build-review.md；workflow不改。
+
+Commit：`module-slimming-audit T12: 共享测试编译产物并明确清理所有者`。

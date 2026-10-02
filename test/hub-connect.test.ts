@@ -1,8 +1,10 @@
+import { compiledCli } from './compiled-cli';
+import { fixtureCleanup } from './fixture-cleanup';
 import { loadConfig } from '../src/config';
-import { afterAll, afterEach, beforeAll, expect, test } from 'bun:test';
+import { afterEach, beforeAll, expect, test } from 'bun:test';
 import { constants, createPublicKey, publicEncrypt, randomBytes, randomUUID } from 'node:crypto';
-import { existsSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { existsSync, readFileSync, statSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { atomicWrite } from '../src/config';
 import { HubClient } from '../src/hub/client';
 import { IdentityConnection } from '../src/hub/connect/client';
@@ -12,15 +14,10 @@ import { HubResourceClient } from '../src/hub/resources/client';
 import { fixture } from './helpers';
 import { hubResourceFixture } from './hub-resources-fixture';
 
-const cleanups: (() => void | Promise<void>)[] = [];
-afterEach(async () => { for (const fn of cleanups.splice(0).reverse()) await fn(); });
-const buildHome = fixture('connect-build'), executable = join(buildHome, 'runweft');
-beforeAll(async () => {
-    const child = Bun.spawn([process.execPath, 'build', resolve('src/cli.ts'), '--compile', '--outfile', executable], { stdout: 'pipe', stderr: 'pipe' });
-    const [exit, stderr] = await Promise.all([child.exited, new Response(child.stderr).text()]);
-    if (exit !== 0) throw new Error(stderr);
-}, 30_000);
-afterAll(() => rmSync(buildHome, { recursive: true, force: true }));
+const cleanupOwner = fixtureCleanup([]), cleanups = cleanupOwner.resources;
+afterEach(() => cleanupOwner.close());
+let executable: string;
+beforeAll(async () => { executable = await compiledCli(); }, 30_000);
 type Hub = Awaited<ReturnType<typeof hubResourceFixture>>;
 const pending = (c: IdentityConnection) => JSON.parse(readFileSync(c.paths.pendingConnection, 'utf8'));
 const identity = (c: IdentityConnection) => JSON.parse(readFileSync(c.paths.identityConnection, 'utf8'));
@@ -41,7 +38,7 @@ async function cli(home: string, url: string, args: string[]) {
 }
 
 test('fresh connection diagnostics distinguish an unselected Hub from an insecure origin', () => {
-    const home = fixture('unselected-hub');
+    const home = fixture('unselected-hub', cleanups);
     try { new IdentityConnection(home, undefined as unknown as string); throw new Error('expected missing Hub rejection'); }
     catch (error: any) { expect(error.code).toBe('hub_connection_required'); expect(error.hint).toContain('hub --url'); }
     try { new IdentityConnection(home, 'http://remote.example'); throw new Error('expected insecure Hub rejection'); }

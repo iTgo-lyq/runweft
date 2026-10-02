@@ -1,4 +1,5 @@
-import { expect, test } from 'bun:test';
+import { fixtureCleanup } from './fixture-cleanup';
+import { afterEach, expect, test } from 'bun:test';
 import { existsSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { atomicWrite, loadConfig } from '../src/config';
@@ -6,8 +7,11 @@ import { applyConfigChanges, checkMcp, clientFiles, configureMcp, listMcpBackups
 import { fixture } from './helpers';
 import { replaceCodexMcp } from '../src/mcp/toml';
 
+const cleanupOwner = fixtureCleanup([]);
+afterEach(() => cleanupOwner.close());
+
 function setup() {
-    const root = fixture('mcp-install');
+    const root = fixture('mcp-install', cleanupOwner.resources);
     const c = loadConfig(join(root, 'runweft'), { ...process.env, HOME: join(root, 'user'), CODEX_HOME: join(root, 'codex'),
         CLAUDE_CONFIG_DIR: undefined, RUNWEFT_MODE: 'local' });
     return { root, c };

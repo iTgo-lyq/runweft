@@ -1,9 +1,13 @@
-import { expect, test } from 'bun:test';
+import { fixtureCleanup } from './fixture-cleanup';
+import { afterEach, expect, test } from 'bun:test';
 import { resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fixture } from './helpers';
+
+const cleanupOwner = fixtureCleanup([]);
+afterEach(() => cleanupOwner.close());
 
 function cli(home: string, ...args: string[]) {
     return spawnSync(process.execPath, [resolve('src/cli.ts'), '--home', home, '--json', ...args], {
@@ -12,7 +16,7 @@ function cli(home: string, ...args: string[]) {
 }
 
 test('CLI produces machine-readable success and actionable failure without secret values', () => {
-    const home = fixture('cli');
+    const home = fixture('cli', cleanupOwner.resources);
     const init = cli(home, 'init');
     expect(init.status).toBe(0);
     expect(JSON.parse(init.stdout).created).toBe(true);

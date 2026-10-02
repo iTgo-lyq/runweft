@@ -1,12 +1,16 @@
-import { describe, expect, test } from 'bun:test';
+import { fixtureCleanup } from './fixture-cleanup';
+import { afterEach, describe, expect, test } from 'bun:test';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { initializeConfig, loadConfig, setConfig, dataPaths } from '../src/config';
 import { fixture } from './helpers';
 
+const cleanupOwner = fixtureCleanup([]);
+afterEach(() => cleanupOwner.close());
+
 describe('configuration', () => {
     test('defaults do not write data; initialization preserves an existing annotated file', () => {
-        const home = fixture('config defaults');
+        const home = fixture('config defaults', cleanupOwner.resources);
         const defaults = loadConfig(home, {});
         expect(defaults.exists).toBe(false);
         expect(defaults.config.mode).toBe('local');
@@ -21,7 +25,7 @@ describe('configuration', () => {
     });
 
     test('sources match explicit home, config values and environment overrides', () => {
-        const home = fixture('sources');
+        const home = fixture('sources', cleanupOwner.resources);
         initializeConfig(home, {}, {});
         const c = loadConfig(home, { RUNWEFT_HOME: '/unused', RUNWEFT_PORT: '4210', RUNWEFT_MODE: 'hub', RUNWEFT_HUB_URL: 'https://hub.example/' });
         expect(c.home).toBe(home);
@@ -35,7 +39,7 @@ describe('configuration', () => {
     });
 
     test('invalid edits never replace working configuration', () => {
-        const c = initializeConfig(fixture('invalid'), {}, {});
+        const c = initializeConfig(fixture('invalid', cleanupOwner.resources), {}, {});
         const before = readFileSync(c.file, 'utf8');
         expect(() => setConfig(c, 'server.port', '-1')).toThrow('server.port');
         expect(() => setConfig(c, 'mode', 'hub')).toThrow('hub.url');
@@ -44,7 +48,7 @@ describe('configuration', () => {
     });
 
     test('rejects broken persisted config even when an override could hide it', () => {
-        const home = fixture('malformed');
+        const home = fixture('malformed', cleanupOwner.resources);
         writeFileSync(join(home, 'config.yaml'), 'server:\n  port: wrong\n');
         expect(() => loadConfig(home, { RUNWEFT_PORT: '4000' })).toThrow('server.port');
         writeFileSync(join(home, 'config.yaml'), 'mode: local\nmode: hub\n');
@@ -52,7 +56,7 @@ describe('configuration', () => {
     });
 
     test('hub URLs cannot carry credentials, paths or query tokens', () => {
-        const home = fixture('url');
+        const home = fixture('url', cleanupOwner.resources);
         for (const url of ['https://user:secret@hub.example', 'https://hub.example/path', 'https://hub.example?token=secret']) {
             expect(() => initializeConfig(home, { url }, {})).toThrow('hub.url');
         }
@@ -60,7 +64,7 @@ describe('configuration', () => {
     });
 
     test('Hub URL may be supplied by environment while mode is persisted', () => {
-        const home = fixture('env hub');
+        const home = fixture('env hub', cleanupOwner.resources);
         writeFileSync(join(home, 'config.yaml'), 'mode: hub\n');
         expect(loadConfig(home, { RUNWEFT_HUB_URL: 'http://localhost:4321' }).config.hub.url).toBe('http://localhost:4321');
     });

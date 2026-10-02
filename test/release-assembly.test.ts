@@ -1,12 +1,16 @@
-import { expect, test } from 'bun:test';
+import { fixtureCleanup } from './fixture-cleanup';
+import { afterEach, expect, test } from 'bun:test';
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { fixture } from './helpers';
 
+const cleanupOwner = fixtureCleanup([]);
+afterEach(() => cleanupOwner.close());
+
 test('delivery assembly preserves exact source Git identities and validates copied artifacts', () => {
-    const root = fixture('release-assembly'), assembler = resolve('scripts/assemble-release.mjs');
+    const root = fixture('release-assembly', cleanupOwner.resources), assembler = resolve('scripts/assemble-release.mjs');
     function command(args: string[], cwd = root) {
         const result = spawnSync(args[0], args.slice(1), { cwd, encoding: 'utf8' });
         expect(result.status).toBe(0);

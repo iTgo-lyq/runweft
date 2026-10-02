@@ -110,7 +110,7 @@
 
 ### T12 编译测试产物生命周期与构建审查
 
-- 状态：待开始
+- 状态：已完成
 - 交付：S06/S08/U02；config/cli/resource-commands/website-build/release-inputs/release-assembly/hub-connect 等普通测试目录登记单一清理所有者，注入清理失败仍尝试后续关闭；小实验确认 Bun hooks 后共享本进程只读 CLI产物，单文件仍独跑；画同 run 构建 DAG并记录排除结论，本轮不改workflow，独立 workflow/package 校验保留。
 - 依赖：T8。
 - 验收：普通fixture本次新建目录按所有者回收，注入一次清理失败仍关闭其余DB/server并报告失败；根套实际CLI编译次数为1，三文件均可独跑，失败明确传播且退出回收产物；U02同run DAG与采纳/排除理由记录，独立候选校验保留。

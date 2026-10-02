@@ -1,12 +1,16 @@
-import { expect, test } from 'bun:test';
+import { fixtureCleanup } from './fixture-cleanup';
+import { afterEach, expect, test } from 'bun:test';
 import { spawnSync } from 'node:child_process';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fixture } from './helpers';
 import { assertFrozenCandidate } from '../scripts/fixtures/release-inputs.mjs';
 
+const cleanupOwner = fixtureCleanup([]);
+afterEach(() => cleanupOwner.close());
+
 test('release freeze rejects dirty, tracked and untracked package changes but allows acceptance records', () => {
-    const root = fixture('release-inputs');
+    const root = fixture('release-inputs', cleanupOwner.resources);
     function git(...args: string[]) {
         const result = spawnSync('git', ['-C', root, ...args], { encoding: 'utf8' });
         expect(result.status).toBe(0);

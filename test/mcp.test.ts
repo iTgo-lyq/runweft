@@ -1,4 +1,5 @@
-import { expect, test } from 'bun:test';
+import { fixtureCleanup } from './fixture-cleanup';
+import { afterEach, expect, test } from 'bun:test';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
@@ -15,8 +16,11 @@ import { createMcpServer, type McpTool } from '../src/mcp/server';
 import { z } from 'zod';
 import { fixture } from './helpers';
 
+const cleanupOwner = fixtureCleanup([]);
+afterEach(() => cleanupOwner.close());
+
 function setup() {
-    const root = fixture('mcp');
+    const root = fixture('mcp', cleanupOwner.resources);
     const cwd = join(root, 'workspace'); mkdirSync(cwd);
     return { root, cwd, c: loadConfig(join(root, 'home'), {}) };
 }

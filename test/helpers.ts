@@ -1,10 +1,13 @@
-import { mkdtempSync, mkdirSync } from 'node:fs';
+import type { Cleanup } from './fixture-cleanup';
+import { mkdtempSync, mkdirSync, rmSync } from 'node:fs';
 import { resolve, join } from 'node:path';
 
-export function fixture(name: string): string {
+export function fixture(name: string, cleanups?: Cleanup[]): string {
     const root = resolve('.dev-smoke/tests');
     mkdirSync(root, { recursive: true });
-    return mkdtempSync(join(root, `${name}-`));
+    const directory = mkdtempSync(join(root, `${name}-`));
+    cleanups?.push(() => rmSync(directory, { recursive: true, force: true }));
+    return directory;
 }
 
 export async function until<T>(read: () => Promise<T> | T, check: (value: T) => boolean, timeoutMs = 5000): Promise<T> {

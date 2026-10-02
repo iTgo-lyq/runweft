@@ -32,3 +32,21 @@ test('native fixture JWT construction failure removes its new root immediately',
     expect(readdirSync(root).filter(name => !before.has(name) && name.startsWith('native-'))).toEqual([]);
     for (const close of cleanups.reverse()) await close();
 });
+
+
+test('an outer owner closes both resource fixtures even when the first close reports failure', async () => {
+    const outer = fixtureCleanup([]), roots: string[] = [], databases: Database[] = [], servers: ReturnType<typeof Bun.serve>[] = [];
+    for (let i = 0; i < 2; i++) {
+        const owner = fixtureCleanup(outer.resources), root = fixture('outer-cleanup', owner.resources);
+        roots.push(root);
+        const db = new Database(join(root, 'state.sqlite')); databases.push(db); owner.resources.push(() => db.close());
+        const server = Bun.serve({ hostname: '127.0.0.1', port: 0, fetch: () => new Response('alive') }); servers.push(server); owner.resources.push(() => server.stop(true));
+        if (i === 1) owner.resources.push(() => { throw new Error('first fixture close failed'); });
+    }
+    await expect(outer.close()).rejects.toThrow(AggregateError);
+    for (let i = 0; i < 2; i++) {
+        expect(existsSync(roots[i])).toBe(false);
+        expect(() => databases[i].query('SELECT 1').get()).toThrow();
+        await expect(fetch(servers[i].url)).rejects.toThrow();
+    }
+});

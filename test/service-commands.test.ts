@@ -1,3 +1,4 @@
+import { fixtureCleanup } from './fixture-cleanup';
 import { afterEach, expect, test } from 'bun:test';
 import { spawn } from 'node:child_process';
 import { chmodSync, existsSync, readFileSync, writeFileSync } from 'node:fs';
@@ -6,11 +7,11 @@ import { fixture } from './helpers';
 import { requireRunweft } from '../src/services';
 import { browserAddress } from '../src/service-commands';
 
-const cleanups: (() => void | Promise<void>)[] = [];
-afterEach(async () => { for (const cleanup of cleanups.splice(0).reverse()) await cleanup(); });
+const cleanupOwner = fixtureCleanup([]), cleanups = cleanupOwner.resources;
+afterEach(() => cleanupOwner.close());
 
 test('HAPI passthrough preserves argv, exit status and signals without a shell', async () => {
-    const root = fixture('hapi-passthrough');
+    const root = fixture('hapi-passthrough', cleanups);
     const executable = join(root, 'hapi');
     const ready = join(root, 'ready');
     writeFileSync(executable, `#!/usr/bin/env node
@@ -45,7 +46,7 @@ if (process.argv[2] === 'wait') {
         expect((await ended).signal).toBe('SIGTERM');
         const nativePid = Number(readFileSync(ready, 'utf8'));
         expect(() => process.kill(nativePid, 0)).toThrow();
-    } finally { child.kill('SIGKILL'); }
+    } finally { child.kill('SIGKILL'); await ended; }
 }, 10_000);
 
 test('a plain HAPI or unrelated Hub produces an actionable deployment diagnosis', async () => {
@@ -61,7 +62,7 @@ test('open uses public Hub entry and never puts a credential in browser argument
     const address = await browserAddress(server.url.origin);
     expect(address).toEqual({ url: server.url.origin + '/hub', publicUrl: server.url.origin + '/hub' });
     expect((await browserAddress(server.url.origin, true)).url).toBe(server.url.origin + '/');
-    const root = fixture('dashboard-open'), captured = join(root, 'browser-url');
+    const root = fixture('dashboard-open', cleanups), captured = join(root, 'browser-url');
     const command = join(root, process.platform === 'darwin' ? 'open' : 'xdg-open');
     writeFileSync(command, '#!/usr/bin/env node\nimport { writeFileSync } from "node:fs"; writeFileSync(process.env.DASHBOARD_OPEN_CAPTURE, process.argv[2]);\n'); chmodSync(command, 0o755);
     const run = Bun.spawn([process.execPath, resolve('src/cli.ts'), '--home', root, '--json', 'open'], {
