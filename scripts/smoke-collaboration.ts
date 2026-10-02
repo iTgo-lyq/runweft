@@ -15,6 +15,8 @@ type Flavor = 'codex' | 'claude';
 const executable = resolve(process.argv[2] ?? 'dist/runweft'), binaries = installedBinaries(executable);
 const selected = process.env.RUNWEFT_SMOKE_CASE;
 const remote = process.env.RUNWEFT_SMOKE_REMOTE === '1';
+// Two remote rounds include model-driven approvals and fetches; this bounds the whole host, not an MCP request.
+const hostTimeoutMs = remote ? 900_000 : 420_000;
 const controls = process.env.RUNWEFT_SMOKE_CONTROLS === '1';
 const worktree = remote || process.env.RUNWEFT_SMOKE_WORKSPACE === 'worktree';
 const retryFinish = process.env.RUNWEFT_SMOKE_RETRY_FINISH === '1';
@@ -194,7 +196,9 @@ ${controls ? controlSteps : disconnect ? '4. 再 send_input 一次，mode=next�
         child.once('error', error => { failure = error; done = true; resolve(); });
         child.once('exit', status => { code = status; done = true; resolve(); });
     });
-    const soft = setTimeout(() => child.kill('SIGTERM'), 420_000), hard = setTimeout(() => child.kill('SIGKILL'), 430_000);
+    item.hostTimeoutMs = hostTimeoutMs; item.hostTimedOut = false;
+    const soft = setTimeout(() => { item.hostTimedOut = true; child.kill('SIGTERM'); }, hostTimeoutMs);
+    const hard = setTimeout(() => child.kill('SIGKILL'), hostTimeoutMs + 10_000);
     const paths = cli(remote ? targetHome : home, ['paths']);
     async function observe() {
         const listed = cli(home, ['task', 'list'], cwd).agents;
@@ -224,6 +228,7 @@ ${controls ? controlSteps : disconnect ? '4. 再 send_input 一次，mode=next�
     try {
         while (!done) { await Promise.race([exited, Bun.sleep(750)]); await observe(); }
         if (failure) throw failure;
+        assert(!item.hostTimedOut, `${id}: native host exceeded the ${hostTimeoutMs}ms whole-case budget`);
         assert.equal(code, 0, `${id}: native host failed`);
         item.calls = [...calls.values()];
         const discoveries = item.calls.filter((call: any) => call.name === 'list_agent_definitions').flatMap((call: any) => call.results ?? []);

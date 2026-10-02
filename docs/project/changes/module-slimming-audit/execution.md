@@ -406,3 +406,23 @@ T13安装证据修正后，新task-outputs-9GlRl1完整八轮→task-retention-c
 Task controls 3z6Foc首次Codex首轮实际failed/stopped/complete，native observation给出serverOverloaded/Selected model is at capacity，无控制业务检查通过；不是产品吞错或未知执行。模型/Runner/服务清理成功，原失败现场保留。原生models_cache已有gpt-6.1-sol，主agent明确在新专用fixture以该model及xhigh继续显式参数/权限验证；不改用户配置或产品fallback，Claude仍原claude-opus-5-5/high。
 
 - T13阶段Commit：`module-slimming-audit T13: 记录真实安装二进制的验收身份`。
+
+
+远端默认矩阵C6hU6A前三组合完成，第四hub-claude-claude触发脚本原420秒SIGTERM，exit143；没有改deadline或断言。调用时间线显示第一轮wait于相对87秒返回，随后read在288秒才发出；第一轮于369秒确认completed，第二轮于396秒接受，终止时为待审批。约201秒宿主无工具调用不能直接归因产品或provider；本次完整矩阵未通过，不能交remote-package消费。脚本清理成功、handoff=false、模型副本和连接秘密已移除，失败ownedRoot仅保诊断。主agent在新环境以同候选、默认四组合重跑；不重发原任务、不改写失败证据。
+
+默认artifact Ny2oOU八组合十六轮→artifact-package aVEqUa八项完整链通过，cleanupErrors=[]，producer只留evidence；原bytes/manifest/native history、全部释放与checkout删除、Git refs和报告保留均以实际安装候选检验。当前范围文件重新列账：278文件，所有存续基线文件加新增/移动文件逐项归组，missing=0/duplicate=0（t13-file-coverage.json）；49模块组历史审计仍保留原基线274文件口径。
+
+
+Task剩余全链依次exit0：C2Jap7控制七项、39ptAn任务CLI四项、zMf5fo双宿主MCP四项（实际长wait）、bFZDeN原生历史重建七项/双runtime四轮，原历史SHA不变；rJND0n双runtime四轮worktree五项→fsmDNx双runtime全部生命周期检查通过。生命周期实际验证重启续接保留ignored依赖/无改动无新提交、两任务隔离、准备期间取消不启动模型且parent推进不改accepted base、ignored文件阻止默认删除、显式discard跨重启删除checkout保全部报告/ref、后续send拒绝。各cleanupErrors=[]；driver为t13-suite-tasks-remaining-v2.json。远端四组合重跑仍进行中，其他必要矩阵已结束，不以单项通过提前关闭T13。
+
+
+远端第二次Cdedes首组通过，第二组Codex宿主→Claude只完成首轮，在420秒看门狗边界后宿主exit0、后置断言因缺send_input报0!==1。非wait MCP最长0.67秒、宿主工具间隔中位19.4秒（首失败第四组最大201.12秒），未观察到重复spawn或产品请求错误；不能仅凭宿主exit0当矩阵完成。t13-remote-timing.json保留逐调用耗时。两次Codex配置均为gpt-6-astra/xhigh；主agent使用现有RUNWEFT_SMOKE_CODEX_MODEL/ EFFORT在新专用副本明确选择gpt-6.1-sol/medium，保留默认四组合、420/430秒看门狗、全部审批和业务断言再执行。没有增加产品fallback/重试、没有修改用户模型配置或旧失败证据；最终结果待补。
+
+已完成的五家无模型成功fixture（6SSmtk、5j9sUv、MhNoAl、xuAsoz、OgaF1y）由主agent按本轮精确目录回收运行数据。原脚本已await关闭，另检查/proc命令/环境/cwd/打开文件均无本目录引用，保留evidence/logs且证据SHA不变。未扫描删除其他旧目录或失败现场；清单为t13-owned-success-cleanup.json。原生/成果后继消费者自己的回收结论继续独立保留。
+
+
+远端第三次fzpnCz仍未通过：前三组合成功；第四两轮均completed、两次fetch已调用，47次工具调用均无isError，最后一次wait约311秒完成，此后约109秒无宿主工具直至原420秒SIGTERM（exit143）。清理成功、handoff=false，不消费失败证据。前述“最终结果待补”不代表成功；gpt-6.1-sol/medium改善Codex宿主间隔，但没有保证Claude宿主延迟。
+
+据实际时间线修正验收层预算：仅remote whole-host从420秒改900秒，保留+10秒SIGKILL和所有业务/权限断言；新增hostTimeoutMs/hostTimedOut证据及触发即明确失败检查，避免Codex SIGTERM返回0之后仅报缺send的误导。没有改变产品、单次MCP wait或65秒等待断言，没有循环重试。typecheck实际通过（t13-remote-budget-typecheck.log）；受影响默认远端四组合及consumer用新专用环境重跑，其余已通过矩阵无需重复。失败三次均完整保留。
+
+- T13阶段Commit：`module-slimming-audit T13: 明确远端模型整场验收预算`。

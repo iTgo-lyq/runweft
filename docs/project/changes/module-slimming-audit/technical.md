@@ -95,3 +95,6 @@ outputs→retention仅消费当前专属格式和同候选hash，producer关闭�
 - console 中 27 owner/1 member、两轮、16K报告与 approval/file RPC 仍是明确的当前领域/原生协议浏览器 fixture，无模型或 OS shell。状态/转义额外场景修改的是已授权 HTTP 查询的 DOM 投影，不播种可执行未知任务。迟到结果场景执行实际 served console 模块、真实已授权 HTTP 和 clear lifecycle，不把强制同时点击禁用按钮当作用户并发。
 
 T7终结所有权补齐：只有全部请求source浏览器检查成功后，按当前成功hub-native-mcp handoff的root去重回收。source文件必须是root/evidence.json，root必须是当前工作区.dev-smoke直属hub-native-mcp-*自有目录；每个记录home独立stop/status，全部记录native host PID确认退出后，删除该root中除原evidence外的可再生数据。原evidence不改，source不变验证仅截至终结清理前；sourceCleanup由顶层独立记录，任何停机不确定不删除并使总success=false。重复argv先各自完成浏览器检查，再清一次；不扫描旧目录，不处理旧格式。
+
+
+T13远端整场预算修正：三次实际运行中固定420秒中止了仍在推进的宿主，第三次两轮和两次fetch已执行，末次工具后仍有约109秒宿主间隔。远端包含两轮文件/Git及模型逐次审批，现用900秒约束整个宿主、额外10秒强停；其他模式仍420秒。证据明确记录hostTimeoutMs/hostTimedOut，触发即失败，即使原生进程因SIGTERM返回0也不继续当作正常结束。MCP单请求/长等待、固定spawn/next次数、审批/权限、成果和清理断言不变；不新增自动重试。该预算只用于外部模型验收，不是产品完成时限或延长生产请求timeout。
