@@ -2,9 +2,12 @@ import { z } from 'zod';
 import type { RepositoryFile, RepositoryOperation, RepositorySnapshot } from '../../hapi/shared/src/repositories';
 import type { WorkspaceSource } from '../../hapi/shared/src/workspaces';
 import type { MaterializedInput } from '../../hapi/shared/src/artifactTransfers';
-import { AgentIdSchema } from '../agents/definitions';
+import { AgentIdSchema } from '../agents/types';
 import { ParentSchema, type Parent } from '../tasks/types';
 import { RunweftError } from '../errors';
+import type { WorkspacePreparations } from './service';
+
+export type PreparationView = ReturnType<WorkspacePreparations['inspect']>;
 import type { ResolvedHubAgent } from '../hub/agents/resolver';
 import type { Problem } from '../resources/types';
 

@@ -5,7 +5,7 @@ import { until } from './helpers';
 import { fixtureCleanup } from './fixture-cleanup';
 import { mkdirSync } from 'node:fs';
 import { observeRepository } from '../src/hub/repositories/observation';
-import type { PreparationView } from '../src/remote/client';
+import type { PreparationView } from '../src/remote/types';
 
 const cleanupOwner = fixtureCleanup([]), cleanups = cleanupOwner.resources;
 afterEach(() => cleanupOwner.close());

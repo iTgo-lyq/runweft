@@ -1,14 +1,11 @@
 import { z } from 'zod';
-import { AgentClient } from '../agents/client';
-import { TaskClient, type TaskOperations } from '../tasks/client';
 import { HubTaskClient } from '../hub/delegation/client';
 import { ArtifactOutputsSchema } from '../../hapi/shared/src/artifactTransfers';
 import { ArtifactInputSchema } from '../tasks/types';
 import { taskRequestId, tool } from './tool';
 import type { McpCallContext, McpTool } from './server';
 
-const client = (context: McpCallContext): TaskOperations => context.hub ? new HubTaskClient(context.hub, context.identity.cwd, context.identity)
-    : new TaskClient(context.config, context.identity.cwd, context.identity);
+const client = (context: McpCallContext) => new HubTaskClient(context.hub, context.identity.cwd, context.identity);
 const message = z.string().trim().min(1).max(200_000);
 const id = z.uuid();
 const files = { inputs: z.array(ArtifactInputSchema).max(100).optional(), outputs: ArtifactOutputsSchema.optional() };
@@ -22,18 +19,17 @@ const resultAction = async (context: McpCallContext, id: string, roundId: string
 };
 const recovery = '接受只表示已持久排队，不代表执行完成。接受响应不明确时先 list_agents 查询 request_id；用相同 request_id 和原参数重试，避免重复派生。';
 
-export function taskTools(hub = false): McpTool[] {
+export function taskTools(): McpTool[] {
     return [
         tool('list_agent_definitions', '查看当前工作区有效的 Agent 定义及各自 runtime 可选状态。不会启动任务；派生用返回的定义 id 作为 agent_type。', z.strictObject({}), true,
             async (_, c) => {
-                if (!c.hub) return new AgentClient(c.config, c.identity.cwd).list(c.signal);
                 const selected = new HubTaskClient(c.hub, c.identity.cwd, c.identity); await selected.context(c.signal); return selected.definitions(c.signal);
             }),
-        tool('spawn_agent', `${hub ? 'agent_type 是 Hub Agent UUID，省略时使用当前仓库/空间的本人默认选择；runtime_id 可明确本轮目标，remote 可明确 fetch remote。' : ''}在当前工作目录派生 Agent，立即返回 agent_id、round_id、request_id 和 revision。支持本机 shared 和本机/远端 worktree；shared 写入由主 agent 协调。worktree 要求主工作区受 Git 管理；本机 base_ref 默认 HEAD，远端必须明确指定，接受时冻结为 commit；不包含主目录未提交内容，准备完成后才启动，每轮停止后封存成果。base_ref 仅用于 worktree。${fileHelp}${recovery}`,
-            z.strictObject({ agent_type: hub ? id.optional() : z.string().min(1), message, request_id: id.optional(), workspace_mode: z.string().default('shared'), base_ref: z.string().trim().min(1).optional(),
-                ...(hub ? { runtime_id: id.optional(), remote: z.string().min(1).optional() } : {}), ...files }), false,
+        tool('spawn_agent', `agent_type 是 Hub Agent UUID，省略时使用当前仓库/空间的本人默认选择；runtime_id 可明确本轮目标，remote 可明确 fetch remote。在当前工作目录派生 Agent，立即返回 agent_id、round_id、request_id 和 revision。支持本机 shared 和本机/远端 worktree；shared 写入由主 agent 协调。worktree 要求主工作区受 Git 管理；本机 base_ref 默认 HEAD，远端必须明确指定，接受时冻结为 commit；不包含主目录未提交内容，准备完成后才启动，每轮停止后封存成果。base_ref 仅用于 worktree。${fileHelp}${recovery}`,
+            z.strictObject({ agent_type: id.optional(), message, request_id: id.optional(), workspace_mode: z.string().default('shared'), base_ref: z.string().trim().min(1).optional(),
+                runtime_id: id.optional(), remote: z.string().min(1).optional(), ...files }), false,
             async (args, c) => client(c).spawn(args.agent_type, args.message, args.request_id ?? taskRequestId(c.identity, 'spawn'), args.workspace_mode, c.signal, args.base_ref, args.inputs, args.outputs,
-                c.hub ? { runtimeId: args.runtime_id as string | undefined, remote: args.remote as string | undefined } : undefined)),
+                { runtimeId: args.runtime_id as string | undefined, remote: args.remote as string | undefined })),
         tool('list_agents', '列出当前原生父会话的子任务、状态、报告和最近接受的 request_id/round_id。用于恢复不明确的接受响应；不列出其他父会话的任务。', z.strictObject({}), true,
             async (_, c) => client(c).list(false, c.signal)),
         tool('read_agent', '读取子任务的轮次状态、报告、原生引用和待处理审批。独立工作区返回准备状态、base/start/result SHA、成果 ref 和目录留存状态；Git 收尾失败时保留原生报告。input_files 给出实际输入与副本留存，artifacts 给出文件交付状态、清单和待处理操作，成功项的 artifactId 可用 download_artifact 下载；文件交付失败不改写原生结论。默认最新接受轮次；长报告按 offset/limit 分页。同仓库成果可从 ref 审查合入，合码和冲突由主 agent 处理。',

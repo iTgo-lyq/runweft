@@ -78,7 +78,7 @@
 
 ### T8 共享依赖迁移并退役旧消费入口
 
-- 状态：待开始
+- 状态：已完成
 - 交付：S03/U05；搬 contentVersion、共享 Agent/Preparation 类型；Hub MCP context 必需；去旧 Task/Preparation/Agent client、bindings/YAML discovery，单继承 TaskOperations 核对后直接收敛。
 - 依赖：T2、T3、T4、T6。
 - 验收：CLI命令树除已授权移除data/reset外与基线相等，17项MCP工具/schema相等；活跃产品/测试/smoke没有旧构造器消费者，共享hash/schema/types仍被正确使用。

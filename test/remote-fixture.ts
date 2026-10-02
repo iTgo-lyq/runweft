@@ -3,7 +3,7 @@ import { remoteNativeFixture } from './remote-native-fixture';
 import { hubWorkspaceFixture } from './hub-workspace-fixture';
 import { resourceInspection } from './native-fixture';
 import type { Flavor } from '../src/resources/types';
-import type { PreparationView } from '../src/remote/client';
+import type { PreparationView } from '../src/remote/types';
 
 export async function remoteFixture(cleanups: (() => Promise<void> | void)[], assetCount = 2, flavor: Flavor = 'codex', changed = false) {
     const cleanup = fixtureCleanup(cleanups);

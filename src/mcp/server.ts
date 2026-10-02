@@ -3,16 +3,15 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { CallToolRequestSchema, ListToolsRequestSchema, type Tool, type CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { z } from 'zod';
 import pkg from '../../package.json';
-import { targetUrl, type ResolvedConfig } from '../config';
+import type { ResolvedConfig } from '../config';
 import { RunweftError, errorDetails } from '../errors';
-import { fetchJson, hapiClient } from '../hapi';
 import { resolveHostIdentity, type HostClient, type HostIdentity } from './identity';
 import { taskTools } from './tasks';
 import { artifactTools } from './artifacts';
 import { HubClient, type HubConnectionOptions } from '../hub/client';
 import { HubTaskClient } from '../hub/delegation/client';
 
-export type McpCallContext = { identity: HostIdentity; workspace: { path: string }; config: ResolvedConfig; signal: AbortSignal; hub?: HubConnectionOptions };
+export type McpCallContext = { identity: HostIdentity; workspace: { path: string }; config: ResolvedConfig; signal: AbortSignal; hub: HubConnectionOptions };
 export type McpTool = {
     name: string;
     description: string;
@@ -29,19 +28,10 @@ const diagnostic: McpTool = {
     annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
     timeoutMs: 10_000,
     async run(_args, { identity, workspace, config, signal, hub }) {
-        const url = hub?.url ?? targetUrl(config.config);
+        const url = hub.url;
         let connection: Record<string, unknown>;
         try {
-            if (hub) {
-                connection = { connected: true, ...await new HubClient(hub, 'hubDelegation', 'hub_delegation_unavailable').connection(signal) };
-                return { identity, workspace, connection, dataRoot: config.home, resultChannel: 'tool-response', backgroundWake: false };
-            }
-            const health = await fetchJson(`${url}/api/runweft/health`, { signal });
-            if (health?.service !== 'runweft' || health.protocolVersion !== 1) {
-                throw new RunweftError('runweft_unavailable', '目标未提供兼容的 Runweft 服务。', '检查 hub.url；Hub 端需运行 runweft serve。');
-            }
-            const auth = await hapiClient(config).authenticate(signal);
-            connection = { connected: health.ready === true, url, mode: config.config.mode, namespace: auth.namespace };
+            connection = { connected: true, ...await new HubClient(hub, 'hubDelegation', 'hub_delegation_unavailable').connection(signal) };
         } catch (error) {
             signal.throwIfAborted();
             connection = { connected: false, url, mode: config.config.mode, error: errorDetails(error) };
@@ -50,34 +40,32 @@ const diagnostic: McpTool = {
     },
 };
 
-export function productTools(hub = false): McpTool[] { return [diagnostic, ...taskTools(hub), ...artifactTools()]; }
+export function productTools(): McpTool[] { return [diagnostic, ...taskTools(), ...artifactTools()]; }
 
 function result(value: Record<string, unknown>, isError = false): CallToolResult {
     return { content: [{ type: 'text', text: JSON.stringify(value) }], structuredContent: value, ...(isError ? { isError: true } : {}) };
 }
 
 export function createMcpServer(options: {
-    client: HostClient; cwd: string; config: () => ResolvedConfig; tools?: McpTool[]; hub?: () => HubConnectionOptions;
+    client: HostClient; cwd: string; config: () => ResolvedConfig; tools?: McpTool[]; hub: () => HubConnectionOptions;
 }) {
     const connection = new AbortController();
     const hubConnection = (config: ResolvedConfig) => {
-        const hub = options.hub?.(); return hub ? { ...hub, env: { ...config.env, ...hub.env } } : undefined;
+        const hub = options.hub(); return { ...hub, env: { ...config.env, ...hub.env } };
     };
-    const tools = options.tools ?? productTools(!!options.hub);
+    const tools = options.tools ?? productTools();
     const server = new Server({ name: 'runweft', version: pkg.version }, { capabilities: { tools: {} } });
     server.onclose = () => connection.abort(new RunweftError('host_disconnected', '宿主 MCP 连接已关闭。'));
     server.onerror = () => { if (!connection.signal.aborted) console.error('Runweft MCP 协议错误；检查原生客户端与 Runweft 版本。'); };
     server.setRequestHandler(ListToolsRequestSchema, async () => {
-        if (options.hub) {
-            const config = options.config();
-            if (config.env.HAPI_SESSION_ID) {
-                try { await new HubTaskClient(hubConnection(config)!, options.cwd).context(AbortSignal.timeout(10_000)); }
-                catch (error) {
-                    if (errorDetails(error).code === 'subagent_delegation_denied') return { tools: [] };
-                    // A managed execution without a verifiable connection cannot publish delegation tools.
-                    return { tools: tools.filter(tool => tool.name === diagnostic.name).map(tool => ({ name: tool.name, description: tool.description,
-                        inputSchema: z.toJSONSchema(tool.input) as Tool['inputSchema'] })) };
-                }
+        const config = options.config();
+        if (config.env.HAPI_SESSION_ID) {
+            try { await new HubTaskClient(hubConnection(config), options.cwd).context(AbortSignal.timeout(10_000)); }
+            catch (error) {
+                if (errorDetails(error).code === 'subagent_delegation_denied') return { tools: [] };
+                // A managed execution without a verifiable connection cannot publish delegation tools.
+                return { tools: tools.filter(tool => tool.name === diagnostic.name).map(tool => ({ name: tool.name, description: tool.description,
+                    inputSchema: z.toJSONSchema(tool.input) as Tool['inputSchema'] })) };
             }
         }
         return { tools: tools.map(tool => ({
@@ -110,7 +98,7 @@ export function createMcpServer(options: {
     return server;
 }
 
-export async function serveMcp(client: HostClient, config: () => ResolvedConfig, hub?: () => HubConnectionOptions) {
+export async function serveMcp(client: HostClient, config: () => ResolvedConfig, hub: () => HubConnectionOptions) {
     const server = createMcpServer({ client, cwd: process.cwd(), config, hub });
     const transport = new StdioServerTransport();
     const signals: NodeJS.Signals[] = ['SIGINT', 'SIGTERM', 'SIGHUP'];

@@ -1,7 +1,7 @@
 import type { Database } from 'bun:sqlite';
 import { randomUUID } from 'node:crypto';
 import type { WorkspaceSource } from '../../hapi/shared/src/workspaces';
-import { contentVersion } from '../agents/definitions';
+import { contentVersion } from '../content-version';
 import { openState } from '../state';
 import { parentKey, type Parent } from '../tasks/types';
 import { PreparationError, type BaselineConsumer, type BaselineImport, type BaselineSnapshot,

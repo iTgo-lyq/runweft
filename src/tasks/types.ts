@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { isAbsolute } from 'node:path';
-import { AgentIdSchema, DefinitionSchema, ScopeSchema } from '../agents/definitions';
+import { AgentIdSchema, DefinitionSchema, ScopeSchema } from '../agents/types';
 import type { ExecutionObservation } from '../../hapi/shared/src/execution';
 import type { SessionResponse } from '../../hapi/shared/src/apiTypes';
 import type { WorkspaceSource, WorkspaceResult } from '../../hapi/shared/src/workspaces';

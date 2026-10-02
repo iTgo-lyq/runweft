@@ -4,7 +4,6 @@ import { z } from 'zod';
 import { ArtifactNameSchema } from '../../hapi/shared/src/artifacts';
 import { ArtifactClient } from '../artifacts/client';
 import { RunweftError, errorDetails } from '../errors';
-import { hapiClient } from '../hapi';
 import { HubClient } from '../hub/client';
 import type { McpCallContext, McpTool } from './server';
 import { taskRequestId, tool } from './tool';
@@ -29,7 +28,7 @@ export async function workspaceFile(cwd: string, input: string, writing = false)
     }
 }
 
-const client = (c: McpCallContext) => new ArtifactClient(c.hub ? new HubClient(c.hub, 'hubAccess', 'hub_access_unavailable').http : hapiClient(c.config));
+const client = (c: McpCallContext) => new ArtifactClient(new HubClient(c.hub, 'hubAccess', 'hub_access_unavailable').http);
 export function artifactTools(): McpTool[] {
     return [
         tool('upload_artifact', '将当前宿主工作目录内的单个普通文件上传到中心，返回对象 ID、名称、大小和 SHA-256，不返回文件内容。目录请先自行打包。request_id 可显式指定；响应不明先用 read_artifact 按原 request_id 查询，重试使用相同 ID 和原文件。传输按 60 秒无进展中止，可取消，没有固定总传输时限。',

@@ -280,3 +280,13 @@ iclaude review session：`6870f51d-a7d7-4cfa-b49d-a2a96e69a693`。工具限制Re
 - 汇总 `.dev-smoke/slimming-acceptance/t7-root-summary.json`，根日志 `t7-root-{dashboard,hub,focused,typecheck,source-terminal}.log`；终结详情 `t7-root-source-terminal.json`。实现者另已用相同candidate实跑single-binary `test:hub-console`与两个重复history argv各12case，不冒充根重复执行。T7达到本阶段验收条件，等待与T6按依赖顺序独立提交；未关闭整个Change。
 
 - T7 Commit：`module-slimming-audit T7: 用当前后台保障接替旧看板验收`
+
+## T8 共享依赖迁移并退役旧消费入口
+
+- 实施者：gpt-6.1-sol subagent `native_smoke_review`；主 agent 复核并验收。contentVersion原样搬到独立文件，Agent共享schema/type与PreparationView保留现行消费者；删除五个旧Task/Preparation/Agent client、bindings和YAML discovery文件。TaskOperations仅余Hub继承，原POST映射、parent、namespace剥除、AbortSignal、wait期限与不重放规则直接搬入HubTaskClient。
+- MCP context/入口必需Hub；去旧Task/Agent/Preparation与artifact/diagnostic fallback。普通工具发现仍不创建home或写库；合法调用缺Hub明确hub_connection_required。受管session工具禁用、身份解析、取消/EOF仍保留。CLI与全部17项MCP description/annotations/schema同冻结基线逐字段相等，本项尚不改data/reset树。
+- 删除旧Agent两测试文件的YAML覆盖/向上发现/bindings专属场景；原生model/effort/disabledMcpServers、解析优先级和异步撤权由hub-agent-resolution继续保障。新增hub-consumers实际中心catalog用例，核有效定义仍列出、缺runtime/错flavor/离线目标各自失败、再次读取更新在线事实且没有任务写入。旧agent-availability恰一次batch不是当前接口，不声称保留该实现计数。
+- 实施者执行typecheck、根`bun run test`269 pass/0 fail/5021 expect/43文件、build全部成功；候选CLI SHA223fe581bc6a236022ee2849234a2f6f81bcd36f0e2912f7393561e0f721e197，固定HAPI bdf706d7966ae4818b09029991a2bb03e70b10b0555763fc41430afd977b4fec。日志`t8-{typecheck-final,root-tests,build}.log`，候选和接口记录`t8-candidate.json`、`t8-contract.json`。
+- 根独立核对候选hash、完整接口基线和退出imports；执行mcp/hub-consumers/hub-agent-resolution定向17 pass/0 fail/430 expect，包含编译CLI/stdio对当前gateway的两宿主×两runtime fixture、身份隔离和无Hub拒绝。冻结候选protocol-only的mcp-protocol-Zd895x exit0，真实stdio取消及EOF均中止等待HTTP认证、stdout只含协议、不创建home。该测试不运行真实模型，T13最终同候选矩阵仍待执行；没有用fixture结果冒充原生或跨机实测。
+- 根证据`.dev-smoke/slimming-acceptance/t8-root-summary.json`；原共享哈希算法未改、policy/旧服务退役归T9，schema18迁移和旧记录fallback尚待T14移除。T8未改HAPI、依赖、用户配置或旧数据。
+- Commit：`module-slimming-audit T8: 退役旧消费入口并收敛 Hub 客户端`

@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
-import { contentVersion } from '../../agents/definitions';
+import { contentVersion } from '../../content-version';
 import type { Principal } from '../access/types';
 import { RepositoryStore } from '../repositories/store';
 import { HubError, hubForbidden, hubNotFound } from '../types';

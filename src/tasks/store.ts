@@ -4,7 +4,7 @@ import type { ArtifactRetention } from './retention';
 import { assertResultReleaseIdle, type CodeRetention } from './result-retention';
 import { randomUUID } from 'node:crypto';
 import { openState } from '../state';
-import { contentVersion } from '../agents/definitions';
+import { contentVersion } from '../content-version';
 import type { WorkspaceSource } from '../../hapi/shared/src/workspaces';
 import type { Database } from 'bun:sqlite';
 import type { TaskTarget } from './types';

@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import type { ResolvedConfig } from '../config';
 import { RunweftError } from '../errors';
-import { type PreparationView } from './client';
+import { type PreparationView } from './types';
 import type { HubPreparationClient } from '../hub/delegation/client';
 
 const phases: Record<string, string> = { exporting: '固定基线导出中', uploading: '中心发布中', importing: '目标导入中', preparing: '工作树准备中', ready: '已就绪', failed: '失败', unknown: '等待原操作确认', releasing: '释放中', released: '已释放' };

@@ -12,6 +12,7 @@ import { recordClaudeCall } from '../src/mcp/claude-hook';
 import { fixture } from './helpers';
 import { hubDelegationFixture } from './hub-delegation-fixture';
 import { until } from './helpers';
+import { resourceInspection } from './native-fixture';
 
 const cleanups: (() => void | Promise<void>)[] = [];
 afterEach(async () => { for (const fn of cleanups.splice(0).reverse()) await fn(); });
@@ -61,6 +62,30 @@ async function setup(flavor: 'codex' | 'claude' = 'codex') {
     }
     return { ...h, home, cwd, options, paths, client, cli, mcp };
 }
+
+test('central definitions isolate unusable targets, retain valid entries and recheck live routing without execution', async () => {
+    const h = await setup(), agents = h.gateway.agents;
+    const valid = agents.create(h.actor, { requestId: randomUUID(), definition: { ...h.definition, name: 'Second valid' } });
+    const unbound = agents.create(h.actor, { requestId: randomUUID(), definition: { name: 'No runtime' } });
+    const mismatch = agents.create(h.actor, { requestId: randomUUID(), definition: { ...h.definition, name: 'Changed flavor' } });
+    agents.update(h.actor, mismatch.id, { expectedVersion: 1, definition: { ...h.definition, name: 'Changed flavor', flavor: 'claude' } });
+    const offlineMachine = h.machine(), offlineRuntime = h.gateway.resources.store.registerRuntime(h.actor,
+        { machineId: offlineMachine, flavor: 'codex' }, resourceInspection('codex'));
+    const offline = agents.create(h.actor, { requestId: randomUUID(), definition: { name: 'Offline target', runtimeId: offlineRuntime.id } });
+    h.machines.find(machine => machine.id === offlineMachine)!.active = false;
+    const catalog = await h.client.definitions();
+    expect(catalog.agents.filter(agent => !agent.error).map(agent => agent.id).sort()).toEqual([h.agent.id, valid.id].sort());
+    for (const [agentId, code] of [[unbound.id, 'agent_runtime_required'], [mismatch.id, 'agent_flavor_mismatch'], [offline.id, 'machine_offline']]) {
+        expect(catalog.agents.find(agent => agent.id === agentId)).toMatchObject({ target: null, selection: null, error: { code } });
+    }
+    expect(catalog.modelAuthentication).toBe('not_checked'); expect(catalog.execution).toBe('not_checked');
+    expect(h.gateway.store.db.query('SELECT COUNT(*) AS count FROM delegation_tasks').get()).toEqual({ count: 0 });
+    h.machines.find(machine => machine.id === h.machineId)!.active = false;
+    const refreshed = await h.client.definitions();
+    expect(refreshed.agents.find(agent => agent.id === h.agent.id)?.error?.code).toBe('machine_offline');
+    await expect(h.client.spawn(h.agent.id, 'Must not route to an offline target', randomUUID())).rejects.toMatchObject({ code: 'machine_offline' });
+    expect(h.gateway.store.db.query('SELECT COUNT(*) AS count FROM delegation_tasks').get()).toEqual({ count: 0 });
+});
 
 test('compiled Hub CLI uses the saved central selection, deduplicates and reads/continues with fresh Agent versions', async () => {
     const h = await setup();

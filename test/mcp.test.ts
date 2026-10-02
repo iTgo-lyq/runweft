@@ -7,6 +7,8 @@ import { existsSync, mkdirSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { loadConfig } from '../src/config';
 import { HapiClient } from '../src/hapi';
+import { hubOptions } from '../src/hub/delegation/client';
+import { createIdentityToken } from '../src/hub/store';
 import { recordClaudeCall, consumeClaudeCall, CLAUDE_CALL_TTL_MS } from '../src/mcp/claude-hook';
 import { resolveHostIdentity } from '../src/mcp/identity';
 import { createMcpServer, type McpTool } from '../src/mcp/server';
@@ -70,27 +72,32 @@ test('Claude persists only identity and tolerates approval delay but expires aba
 
 async function linked(tools?: McpTool[]) {
     const { c, cwd } = setup();
-    let configReads = 0;
-    const server = createMcpServer({ client: 'codex', cwd, config: () => { configReads++; return c; }, tools });
+    if (tools) c.config.hub.url = 'http://127.0.0.1:1';
+    const server = createMcpServer({ client: 'codex', cwd, config: () => c, tools, hub: () => hubOptions(c) });
     const client = new Client({ name: 'test', version: '1' });
     const [left, right] = InMemoryTransport.createLinkedPair();
     await server.connect(left); await client.connect(right);
-    return { c, cwd, server, client, configReads: () => configReads };
+    return { c, cwd, server, client };
 }
 
 test('discovery is static and side-effect-free; tool responses carry identity and connection failure', async () => {
     const x = await linked();
     try {
         expect((await x.client.listTools()).tools.map(t => t.name)).toEqual(toolNames);
-        expect(x.configReads()).toBe(0); expect(existsSync(x.c.home)).toBe(false);
+        expect(existsSync(x.c.home)).toBe(false);
         const missing = await x.client.callTool({ name: 'runweft_status', arguments: {} });
         expect(missing).toMatchObject({ isError: true, structuredContent: { error: { code: 'host_identity_missing' } } });
         expect(existsSync(x.c.home)).toBe(false);
         const invalid = await x.client.callTool({ name: 'runweft_status', arguments: { sessionId: 'spoof' }, _meta: meta('a') });
         expect(invalid.isError).toBe(true);
-        // A closed port provides a real connection failure without starting a service.
+        for (const [name, args] of [['runweft_status', {}], ['spawn_agent', { message: 'Hub required' }], ['upload_artifact', { path: 'input.txt' }]] as const) {
+            const absent = await x.client.callTool({ name, arguments: args, _meta: meta('a') });
+            expect(absent).toMatchObject({ isError: true, structuredContent: { error: { code: 'hub_connection_required' } } });
+            expect(existsSync(x.c.home)).toBe(false);
+        }
+        // A closed port provides a real current Hub connection failure without starting a service.
         const port = Bun.serve({ port: 0, fetch: () => new Response() });
-        x.c.config.server.port = port.port!; await port.stop(true);
+        x.c.config.hub.url = port.url.origin; x.c.env.RUNWEFT_IDENTITY_TOKEN = createIdentityToken(); await port.stop(true);
         const response = await x.client.callTool({ name: 'runweft_status', arguments: {}, _meta: meta('a') });
         expect(response).toMatchObject({ structuredContent: { identity: { nativeSessionId: 'a', cwd: x.cwd }, connection: { connected: false }, backgroundWake: false } });
         expect(existsSync(join(x.c.home, 'client.sqlite'))).toBe(false);

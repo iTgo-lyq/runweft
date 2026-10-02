@@ -1,4 +1,4 @@
-import { contentVersion } from '../../agents/definitions';
+import { contentVersion } from '../../content-version';
 import { agentLaunchOptions, type AgentLaunchOptions } from '../../agents/launch';
 import type { AuthorizationLease as RequestLease } from '../access/transport';
 import type { HubResourceService } from '../resources/service';

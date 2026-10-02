@@ -124,7 +124,7 @@ export async function taskResultsProbe(p: { root: string; center: string; source
         assert.equal(pending.round_id, rounds[0]);
         assert.equal((await cli(p.sourceHome, ['task', 'result', 'fetch', bundle.task.id, '--round', rounds[0]!, '--request-id', requestId], repo)).result_operation_id, pending.result_operation_id);
         await until(() => client.result(bundle.task.id, rounds[0]), value => { const fetch = value.fetches.at(-1); if (fetch?.status === 'failed') throw new Error(JSON.stringify(fetch.error)); return fetch?.status === 'available' && fetch.released; });
-        const mcp = taskTools(true).find(tool => tool.name === 'fetch_result')!;
+        const mcp = taskTools().find(tool => tool.name === 'fetch_result')!;
         const mcpResult = await mcp.run({ id: bundle.task.id, round_id: rounds[1], request_id: randomUUID() }, { config, identity, hub: options, workspace: { path: repo }, signal: new AbortController().signal });
         assert.equal(mcpResult.round_id, rounds[1]); assert(!('manifests' in mcpResult)); assert(!('fetches' in mcpResult));
         const final = await until(() => client.result(bundle.task.id, rounds[1]), value => { const fetch = value.fetches.at(-1); if (fetch?.status === 'failed') throw new Error(JSON.stringify(fetch.error)); return fetch?.status === 'available' && fetch.released; });
