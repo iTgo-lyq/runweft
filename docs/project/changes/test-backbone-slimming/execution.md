@@ -75,7 +75,9 @@ R-codex首试reconstruction-R1udSK在首轮成功、切换空原生home后失败
 
 ### T6完成
 
-最终完整根测试248 pass/0 fail、4799断言、41文件，独立墙钟57.652秒；新增消费者出口回归此前在多个新现场preflight通过。最终typecheck/actionlint通过，当前候选arm64 QEMU基础检查通过。验收与verification记录七成首次完整gate通过、四次意外原生失败、分阶段修正与全部可计时尝试，未声称模型请求/token总量或显著根测试提速。packageInputs与冻结候选一致，src/HAPI无差异。成功preflight额外删除自有空目录，零模型实跑通过；此前15个空目录清理完成，不因此重跑原生模型。根测试和CI专用工具无新增现场残留，失败N2清理有独立证明。
+最终完整根测试248 pass/0 fail、4799断言、41文件，独立墙钟57.652秒；新增消费者出口回归此前在多个新现场preflight通过。最终typecheck/actionlint通过，当前候选arm64 QEMU基础检查通过。验收与verification记录七成首次完整gate通过、四次意外原生失败、分阶段修正与全部可计时尝试，未声称模型请求/token总量或显著根测试提速。packageInputs与冻结候选一致，src/HAPI无差异。成功preflight额外删除自有空目录，零模型实跑通过；此前15个空目录及首个失败preflight的专用现场已核对停机后清理完成，不因此重跑原生模型。根测试和CI专用工具无新增现场残留，失败N2清理有独立证明。
 
 本地验收由主agent按既有授权完成；无需新的人工确认。无远端CI、expanded、Mac/arm64原生模型、物理跨机、发布或部署结果。随后同步当前验收/CI选择及命令引用Specs，归档完整Change。
 - Commit：`test-backbone-slimming T6: verify reliability costs and owned fixture cleanup`。
+
+T5最终依赖复核：非页面Hub后端（包括委派、资源和仓库）也影响storage/service，普通CI改为保守全选四组，避免只选access/web漏掉直接消费者；代表路径加入既有选择用例。最终33项Node检查通过，未改包输入或原生fixture。

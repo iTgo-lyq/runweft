@@ -8,7 +8,7 @@ export function integrationGroups(files) {
         if (/^(docs\/(?!usage\.md)|test\/|scripts\/tests\/|website\/|\.agents\/)/.test(file) || /(^|\/)(README|AGENTS)\.md$/.test(file)) continue;
         if (/^scripts\/(npm-publish|check-npm-trust)\.mjs$/.test(file) || file.startsWith('.github/')) continue;
         if (/^src\/hub\/(app|console|tasks-page|native-page|style|onboarding-page)/.test(file) || /scripts\/(fixtures\/)?(hub-console|smoke-hub-console|smoke-hub-connect|smoke-hub\.ts)/.test(file)) groups.add('web');
-        else if (/^src\/hub\//.test(file)) { groups.add('access'); groups.add('web'); }
+        else if (/^src\/hub\//.test(file)) return ['access', 'storage', 'web', 'service'];
         else if (/^src\/(tasks|artifacts|repositories)\//.test(file)) { groups.add('storage'); groups.add('web'); }
         else if (/^src\/mcp\//.test(file)) { groups.add('access'); groups.add('storage'); }
         else return ['access', 'storage', 'web', 'service'];

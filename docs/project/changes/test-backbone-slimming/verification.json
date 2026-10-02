@@ -646,7 +646,7 @@
   "nodeTests": {
     "passed": 33,
     "failed": 0,
-    "log": ".dev-smoke/test-backbone-plan/t5-all-node.log"
+    "log": ".dev-smoke/test-backbone-plan/t6-final-node.log"
   },
   "sourceUnchanged": {
     "product": true,
@@ -679,5 +679,10 @@
     "arm64 native service/models",
     "physical cross-machine/WAN",
     "publication/deployment"
+  ],
+  "cleanupRecords": [
+    ".dev-smoke/test-backbone-plan/t4v-failed-fixture-cleanup.json",
+    ".dev-smoke/test-backbone-plan/t5-tools-cleanup.json",
+    ".dev-smoke/test-backbone-plan/t6-preflight-failure-cleanup.json"
   ]
 }
