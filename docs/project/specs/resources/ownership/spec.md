@@ -54,4 +54,4 @@
 
 CLI 先在 `connections/<connectionName>/machine.json`（0600）保存 Hub/owner/request/token，再提交；轮换保留 active/pending，普通重跑确认原请求，显式 `--replace-pending` 才放弃旧 pending。跨 Hub 分区，换身份拒绝复用。文件读改写借用既有 client.sqlite 短写事务互斥，不复制凭据入库，网络不持锁，进程结束不遗留锁文件。`hub paths` 显示显式 Hub 的记录位置，root paths 显示配置当前连接。
 
-验收：编译 CLI/网关 + 未改造真实 HAPI Runner 完成接入、两种原生版本探测、分享、空间禁用、轮换重连、重启留存及 45 秒原生活跃超时。`bun run test:hub-resources` 可重复执行；不调用模型，也不等同于物理远端实测。完整证据见[验收](../../../archive/2026-09-30-hub-resource-ownership/acceptance.md)。
+验收：编译 CLI/网关 + 未改造真实 HAPI Runner 完成接入、两种原生版本探测、分享、空间禁用、轮换重连、重启留存及 45 秒原生活跃超时。`bun run test:integration access`（包含smoke-hub-resources） 可重复执行；不调用模型，也不等同于物理远端实测。完整证据见[验收](../../../archive/2026-09-30-hub-resource-ownership/acceptance.md)。

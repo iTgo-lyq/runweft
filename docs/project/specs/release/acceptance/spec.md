@@ -1,43 +1,40 @@
-# 发行验收范围
+# 验收选择与当前证据
 
-当前源码瘦身候选的完整验证见[模块瘦身验收](../../../archive/2026-10-02-module-slimming-audit/acceptance.md)。四平台包来自干净提交 `e3553755c321c4e7981185ba5aa9bf3308544605`，包版本1.1.1；本Change没有发布该候选。后续仅修正验收fixture，未改变包输入。原公共1.1.0证据保存在[Hub完整验收](../../../archive/2026-10-01-hub-spaces-and-agent-configuration/acceptance.md)，不代替当前候选验证。
+第二轮测试瘦身已完成[本地自动验收](../../../archive/2026-10-03-test-backbone-slimming/acceptance.md)，具体删留保障与首次失败见归档。产品源码、权限和HAPI未改；旧的完整矩阵结果保留在[第一轮验收](../../../archive/2026-10-02-module-slimming-audit/acceptance.md)，不冒充本轮已执行组合。
 
-## 当前候选已验证组合
+## 验证入口
 
-Linux x64使用从本次npm包实际安装的同一Runweft/HAPI，专用原生配置和认证副本。core SHA256为 `09bf189c4a0115b9f1badbf5991cb86d6665b6f42b7b22ca93468dc309e29ba3`；HAPI为 `bdf706d7966ae4818b09029991a2bb03e70b10b0555763fc41430afd977b4fec`，固定revision `3ac8b08b2aead13e9eaae459de62d9a5d5df7395`。
-
-| 范围 | 已执行保障 |
+| 层级 | 当前入口与范围 |
 | --- | --- |
-| 安装与格式 | 四平台包核验；Linux x64专用npm安装/重装/卸载、MCP原配置保留、服务/信号；旧schema18无写拒绝，当前19同候选重启保持身份、配置与任务现场；不再提供data/reset |
-| 十二组原生MCP及十组消费者 | 两宿主×两runtime×三模式；父身份、spawn/wait/read、报告、原生历史missing重建、子执行过滤/CLI递归拒绝、精确审批/停止；shared长wait实际等待约65秒 |
-| 核心协作 | shared与本机worktree各默认八组合18轮；远端默认四组合八轮及安装消费通过；真实工程指令/Skill/项目MCP、输入输出/Git/LFS、memory resume、固定base/成果、离线fetch恢复与显式合入；另验证明确hook失败后的retry-finish |
-| 附件与成果 | 附件MCP八组合16轮及安装消费；Task inputs八轮、outputs八轮→retention；remote Task两runtime四轮→result-retention；72MiB实际文件、bundle/子模块/LFS、固定回执/丢响应/重启、release/discard/外部pin与不重放 |
-| Task与工作区生命周期 | 真实双runtime控制、CLI/MCP两轮、原生历史重建；worktree两runtime四轮→重启续接/ignored依赖/无变更不提交/两任务隔离/准备取消/显式移除保留报告与refs/后续send拒绝 |
-| Web/身份/资源/实时 | Playwright console17项、身份后台8项、加密接入5项，十二真实完成历史的只读消费；短JWT/到期与401清理、分页/转义/迟到响应/失败保留已有内容；资源10项、配置9项、实时10项及撤权/隔离/重启 |
-| 清理与契约 | producer→consumer确认停机/原生PID退出后只回收本次现场，保留原证据；完整CLI契约仅删除授权data树，17MCP工具参数、描述与annotations不变 |
+| 核心 | `bun run test`显式运行`./test`；类型检查独立；不运行模型或HAPI全套测试 |
+| Node | `node --test ./scripts/tests/*.test.mjs ./website/publish.test.mjs`；发布/CI选择/官网保护，避免Bun和Node重复执行同一文件 |
+| 无模型集成 | `test:integration access\|storage\|web\|service-package [CLI]`；真实HAPI/Runner、Playwright、文件/Git及候选安装，每脚本独立现场 |
+| 原生 | `test:native <已安装CLI> preflight\|all\|N1..N6\|C-codex\|C-claude\|R-codex\|R-claude [前次证据]`；六主链与两runtime各自的控制/缺失重建 |
+| 扩展 | `test:native <CLI> expanded`；身份/native映射、HAPI/原生版本或workspace行为改变时扩到相关四配对，最多十二组合；HAPI执行层另保留`test:execution`专项 |
 
-产品源码typecheck、build及255项根测试通过（4811断言、42文件），四平台构建和Node发布测试通过。fixture修正后typecheck及受影响真实场景再次通过；产品包身份不变。部分文件/Git/授权smoke通过当前源码gateway与真实HAPI/Runner执行领域或协议fixture，不冒称全部为编译Task端到端；完整高层Task、MCP、模型和浏览器链使用实际安装候选。Codex追加输入与Claude的 `steer_unsupported` 均保留。
+模型前实际检查安装launcher/core与HAPI身份、浏览器、两轮当前fixture的读写/消费者契约、三个消费者的失败证据出口、local/hub空原生配置接线。一个主链case只有生产、消费、清理全部成功才可复用；未知结果不重发。入口按候选、脚本/helper、原生配置及模型选择指纹拒绝不同输入的自动复用，不提供旧evidence格式兼容或自动整组重试。已完成阶段的人工工程判断与定向续验必须单列证据，不能改写失败ledger。
 
-失败试跑、明确模型选择和修正依据见验收记录。远端最终矩阵显式使用gpt-6.1-sol/medium；参数控制另验证gpt-6.1-sol/xhigh与Claude显式model/effort。不将账户可用模型设为产品默认，不改用户模型配置；源配置由每次fixture独立校验开始/结束摘要。
+## 本轮实际验证
 
-## 公共 npm 与可信发布
+干净四平台候选为1.1.1、源码 `6a7e559fc878989c91280213e6cdd54c27fcc110`，HAPI `3ac8b08b2aead13e9eaae459de62d9a5d5df7395`。Linux x64通过专用npm registry安装；Runweft core SHA256 `c72c11210578c8db6341d60f8d0f0996c0c42fb3b1a1f66fb129229abfb38be0`，HAPI SHA256 `bdf706d7966ae4818b09029991a2bb03e70b10b0555763fc41430afd977b4fec`。后续验收/CI/项目记录调整没有改变packageInputs，未重复构建。
 
-公共五包 1.1.0 已完成真实上传、公开元数据/下载完整性和匿名 Linux x64 安装验证；公开候选来源为 bfa2df88531a2f997038817c901d89ca9cab491e，四平台程序/Skill 与原离线候选相同，见[npm 发布验收](../../../archive/2026-10-01-npm-publication/acceptance.md)。
+核心最终248项通过、33项Node检查通过；typecheck、actionlint、四平台包核验、Linux安装/服务、access/storage/web及arm64 QEMU基础检查通过。核心247项曾在三个新现场连续通过，新增出口回归另在多个新现场通过，最终完整248项只跑一次；不声称三次完整248项或显著根测试提速。
 
-[可信发布 CI](https://github.com/iTgo-lyq/runweft/actions/runs/36864700225)验证新的干净候选 fe6017e531f06c0c01980d362b8b5b32bc6fde71：类型检查、264 项根测试、四平台构建/包校验，以及 Linux x64/arm64、macOS x64/arm64 托管 runner 的真实安装、默认服务与信号检查通过。绑定前的授权失败后只重跑失败 job，attempt 2 复用原候选；五包 OIDC 交换均 HTTP 201，预演 success=true、published=false。脱敏绑定和回执见[可信发布验收](../../../archive/2026-10-01-npm-trusted-publishing/acceptance.md)。
+| 原生链 | 已实测组合及独立保障 |
+| --- | --- |
+| N1 | local/shared，Codex→Codex，两轮、65秒wait、真实历史页面及重启无重放 |
+| N2 | hub/shared，Claude→Claude，两轮、65秒wait、另一runtime真实历史页面；生产与修正后的消费分阶段通过 |
+| N3 | hub/worktree，Codex→Claude，工程指令/Skill/MCP、固定base、实际hook失败后retry_finish |
+| N4 | local/worktree，Claude→Codex，两轮输入输出、原生继承、无变更不创建提交 |
+| N5/N6 | hub/remote，两个交叉配对，两Runner、二进制输入输出、Git/模块/LFS、实际MCP下载/取回、离线恢复与显式合入；N5外层证据路径错误保留失败记录，生产/消费事实均通过 |
+| 两runtime专项 | 实际审批允许/拒绝、精确interrupt、Codex steer/Claude不支持、真实missing重建；原生JSONL证明一次新输入带原记忆，原始历史hash不变 |
 
-main 合码提交 `0c3e3a1bd7a70a24be9e13ad4b022dc7f4504d60` 通过[独立 CLI CI](https://github.com/iTgo-lyq/runweft/actions/runs/36912561656)：类型检查、四平台构建/包校验及各平台真实安装、默认服务、信号退出与清理通过。根测试共 265 项、43 文件、5280 断言，263 项通过、2 项跳过、0 失败；托管 runner 未提供原生 Codex CLI，两项 MCP 配置测试按既有条件跳过。
+六主链最终104次MCP工具调用，连同失效N1和失败N2共119次；这不是模型请求/token计数。首次完整gate为7/10通过，四次意外失败出口均有定位和定向修正，没有掩盖首次失败；细节与可计时时间见验收。成功现场确认停机后删除，源原生配置摘要保持不变。同机多Runner不等于物理远端。
 
-同一提交的 [npm 工作流](https://github.com/iTgo-lyq/runweft/actions/runs/36912562431)另行构建干净候选并通过四平台检查；五包 OIDC 交换均 HTTP 201，预演 success=true、published=false，版本保持 1.1.0。普通 main 推送没有上传新包；官网生产验收见[产品官网](../../website/product/spec.md)。
+## CI与公开交付边界
 
-这批 CI 没有运行模型、网页组合或公开新版本；新候选不继承旧候选的模型/实机验收。稳定标签门禁、冲突与部分发布恢复通过聚焦模拟验证，真实新版本上传尚未执行。
+普通push/PR配置为一次核心准备加相关Linux集成，先安装固定Codex以运行真实配置编辑检查；路径未知保守全组。只有tag/手动入口构建完整四平台候选，候选完整gate不按diff跳过，npm在同一run等待平台安装结果。Beta通道、发布回执和官网版本资格保护保留。该配置已通过本地actionlint、真实工具安装及Node选择测试，未触发本轮远端CI。
 
-## 当前候选尚未取得的证据
+历史公开交付与不同候选的托管平台结果见[npm首次发布](../../../archive/2026-10-01-npm-publication/acceptance.md)、[可信发布CI](../../../archive/2026-10-01-npm-trusted-publishing/acceptance.md)和[1.1.1发布记录](../../../changes/npm-patch-release/execution.md)。这些结果不迁移成本轮候选的Mac/arm64原生证据；本轮没有发布候选或部署官网。
 
-- macOS两架构完成构建和包核验，未执行本候选Mac实机安装、服务或模型；历史CI候选的托管Mac安装结果不能移用于本候选。
-- Linux arm64使用QEMU验证两程序版本、初始化、配置、路径和无Hub错误；未验证本候选arm64完整服务或模型组合。
-- 同机独立Hub/多个Runner的远端组合不替代物理跨机器、WAN或生产Nginx/TLS实测。
-- 固定HAPI的过长Claude cwd原生历史定位缺口已经复现；本轮使用专用短路径，不修改HAPI或复制伪造历史。机器撤权后Runner停机可触发HAPI既有一秒兜底exit1，已核确切日志/进程退出与重新连接，未冒称优雅关闭。未执行HAPI全套测试。
-- 本Change没有执行远端CI、新包上传或官网部署。
-
-这些证据边界不减少产品能力或省略对应平台产物。
+本轮未执行expanded十二组合、HAPI全套、Mac实机安装/模型、arm64原生服务/模型、物理跨机/WAN或生产TLS。QEMU仅验证当前arm64基本命令。Claude过长cwd历史定位的既有HAPI缺口仍使用专用短路径避开，不修改HAPI或伪造历史。

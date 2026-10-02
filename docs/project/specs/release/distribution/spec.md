@@ -1,10 +1,10 @@
 # 发行产物
 
-Runweft 1.1.0 提供明确 Hub、独立身份/空间、中心配置、完整资源后台、Agent 接入 Skill 和协作能力；执行基础随包附带固定 HAPI，运行时不依赖开发 checkout。支持 macOS arm64/x64 和 glibc Linux arm64/x64，平台范围不等于各平台均已通过原生协作验收，实际范围见[发行验收](../acceptance/spec.md)。
+Runweft 提供明确 Hub、独立身份/空间、中心配置、完整资源后台、Agent 接入 Skill 和协作能力；执行基础随包附带固定 HAPI，运行时不依赖开发 checkout。支持 macOS arm64/x64 和 glibc Linux arm64/x64，平台范围不等于各平台均已通过原生协作验收，实际范围见[发行验收](../acceptance/spec.md)。
 
 ## 包与安装
 
-五个同版本 npm 包为 `runweft`、`runweft-darwin-arm64`、`runweft-darwin-x64`、`runweft-linux-arm64` 和 `runweft-linux-x64`。主包固定四个平台可选依赖，生成 manifest 不含 `private: true`；源码工程保持 private。五包 1.1.0 已公开发布到 npm，全部 latest=1.1.0，公开元数据/下载完整性及 Linux x64 专用安装通过；见[npm 发布验收](../../../archive/2026-10-01-npm-publication/acceptance.md)。本地打包命令仍不执行公开发布、push 或创建 PR。
+五个同版本 npm 包为 `runweft`、`runweft-darwin-arm64`、`runweft-darwin-x64`、`runweft-linux-arm64` 和 `runweft-linux-x64`。主包固定四个平台可选依赖，生成 manifest 不含 `private: true`；源码工程保持 private。五包 1.1.0 首次公开发布时全部 latest=1.1.0，公开元数据/下载完整性及 Linux x64 专用安装通过；见[npm 发布验收](../../../archive/2026-10-01-npm-publication/acceptance.md)。本地打包命令仍不执行公开发布、push 或创建 PR。
 
 平台包包含相邻的 Runweft/HAPI 可执行程序、使用说明、产品 Skill、HAPI 许可证、NOTICE、配套工具许可、匹配源码归档及来源说明；匹配源码保留固定 Git revision 的全部源码、许可与当前平台的两份构建工具压缩包，省略其他平台的八份工具压缩包。SOURCES.txt 说明归档范围、当前平台重建步骤和完整 Git 来源；生成 manifest 的 repository 指向 Runweft 仓库。直接解包并保留其目录布局即可运行，无需全局 Bun、Node 或另装 HAPI；npm 主入口需要 Node.js 20+ 和可解析所有平台依赖的 registry，见 [CLI 安装](../../installation/cli/spec.md)。Mac 程序未签名、未公证。
 
@@ -18,6 +18,8 @@ HAPI 固定版本和协议见[执行兼容](../../execution/compatibility/spec.m
 
 包验证检查集合、版本、平台/架构、程序执行位、许可、匹配源码文件集和每个 Git blob、README、Skill 和 hash。`test:packages` 直接运行本机平台的默认 Hub/相邻 HAPI 服务；`test:install` 通过专用 registry 验证安装/重装/卸载、数据和原生 MCP 配置保留，不公开发布。模型与网页验收记录实际安装平台程序及相邻 HAPI 的 realpath/hash，不用源码 gateway 替代默认服务。
 
+普通CI共用一次checkout/依赖/工具，核心保留实际Codex配置检查；按真实Git差异选择access/storage/web/本机service，未知路径、新分支或缺少base保守全选；已有base的Git差异读取失败则报错。tag/手动候选完整执行根/Node/四组无模型验证和四平台安装，不按diff跳过；本轮只完成本地工作流检查，远端结果见[验收范围](../acceptance/spec.md)。
+
 正式候选必须 `source.dirty=false`。冻结后按 `scripts/fixtures/release-inputs.mjs` 的固定包输入检查已跟踪与未跟踪变化；源码、Skill、包内使用说明、package/lock/HAPI及指定构建脚本变化即重建。仅验收脚本和未打入包的项目记录变化可保留同候选，程序源码归档仍取索引revision，后续验收提交独立记录。
 
 当前独立官网仅包含页面、资源与 npm 元数据，无包或 Skill 下载副本；历史离线整包内的网站不覆盖，见[官网安装](../../website/product/spec.md)。
@@ -28,11 +30,13 @@ HAPI 固定版本和协议见[执行兼容](../../execution/compatibility/spec.m
 
 五包绑定 GitHub 仓库 `iTgo-lyq/runweft` 的 `npm-publish.yml`，包含直接发布权限 createPackage，不设置 environment。授权范围是仓库工作流，不限制分支；仓库写权限可修改发布行为。托管 runner 使用 Node 24/npm 11.19.0、id-token:write 和 npm audience `npm:registry.npmjs.org`，不保存 npm token secret。逐包 OIDC 交换返回成功且含 token 才继续；token 不打印或持久化。私有仓库支持发布，当前无自动 provenance。
 
-正式上传仅接受 push 事件的严格稳定版本标签，标签、源码版本与冻结索引必须一致。普通 main/codex 分支的发布流程变更及手动入口只预演；手动入口须默认分支含工作流。发布依赖复用 CLI 工作流的根检查、四平台构建/包内容与真实安装检查，使用同一构建候选；正式步骤要求索引源码干净且等于 github.sha，并检查五包 manifest、主包精确依赖及 tarball 完整性。
+正式上传仅接受push的严格vX.Y.Z或vX.Y.Z-beta.N标签（无前导零，N从0起），标签、源码版本与冻结索引一致；stable使用latest、Beta使用beta，其他预发行格式拒绝。普通main/codex分支只跑核心/相关本机集成，不触发四平台候选；手动npm入口只预演，默认分支须包含工作流。发布依赖复用 CLI 工作流的根检查、四平台构建/包内容与真实安装检查，使用同一构建候选；正式步骤要求索引源码干净且等于 github.sha，并检查五包 manifest、主包精确依赖及 tarball 完整性。
+
+Beta须高于每包现有beta和latest，stable与latest比较；同版本恢复须符合原候选完整性和回执。发布后读取实际dist-tags，Beta的latest必须与上传前相同，不自动修改异常标签。
 
 正式上传前检查全部五包公开版本；同版本不同完整性在首个上传前停止，已公开且完整性相同的包跳过。新版本逐个平台上传并等待公开确认，主包须等四平台全部确认。上传前持久化未知状态回执；成功接受后有界等待后台处理，未知失败不盲目重发。预演可检查已存在版本的候选，明确 published=false，正式发版仍须升版本。
 
-发布工作流串行且不中途取消，候选按 build run_attempt 唯一命名，候选与回执保留三十天；失败恢复只重跑同一 run 的失败 job，读取原 build 输出指向的候选及最新回执。重跑整个 run 不视作相同候选。[可信发布验收](../../../archive/2026-10-01-npm-trusted-publishing/acceptance.md)证明五包真实授权和预演；本次没有新版本上传。
+发布工作流串行且不中途取消，候选按 build run_attempt 唯一命名，候选与回执保留三十天；失败恢复只重跑同一run的失败job，读取原候选及回执；只有上传前失败、accepted等待超时或公开完整性确认后才可恢复，uploading且结果未知时停止核实。重跑整个 run 不视作相同候选。[可信发布验收](../../../archive/2026-10-01-npm-trusted-publishing/acceptance.md)证明五包真实授权和预演；本次没有新版本上传。
 
 ## 升级与保留
 
