@@ -322,7 +322,7 @@ iclaude review session：`6870f51d-a7d7-4cfa-b49d-a2a96e69a693`。工具限制Re
 
 - 新库在同目录私有临时文件创建后原子link，不覆盖并发赢家；已有库先复制主文件与WAL至私有临时目录检查唯一版本及精确表/索引/UNIQUE/FK/CHECK结构。SQLite readonly直接读原文件会写SHM，故拒绝路径不用它。文件系统错误保留；NOTADB/CORRUPT映射格式损坏。核验限定固定格式元数据，不对并发变化的业务行副本做quick_check或宣称事务备份，不引入WAL解析器/重试框架。只删除检查者自己创建的临时副本。
 - Task/Round/Input/CodeFetch读取校验当前必需形状与关系，不补字段；namespace所有权来自现行scope，动态授权仍在原lease/policy复查。记录无效时read/wait给503 state_record_invalid；恢复按任务隔离，仅记录taskId/code，不改坏行，其余任务恢复。SQL revision/updatedAt/completedRevision仍是当前写入协议的权威投影。输入意图/基线扫描先按SQL namespace过滤，避免解析无权scope；这不是旧记录读取兼容。不是所有领域JSON叶字段的完整损坏校验，不能扩大保证。
-- 删除11个纯迁移/旧记录兼容测试及reset专属文件；Agent选择并发PUT的有效前半段保留，旧隔离测试改非法无主scope不执行/不认领当前意图与基线。两处直接append测试改显式提供已解析当前Agent。state/task-records新增格式无写、关系损坏、坏任务隔离和当前简写配置保障；现有current task/workspace/outputs/results/native authorization/restart继续覆盖产品行为。
+- 删除各格式迁移/旧记录兼容专属测试及reset专属文件；Agent选择并发PUT的有效前半段保留，旧隔离测试改非法无主scope不执行/不认领当前意图与基线。两处直接append测试改显式提供已解析当前Agent。state/task-records新增格式无写、关系损坏、坏任务隔离和当前简写配置保障；现有current task/workspace/outputs/results/native authorization/restart继续覆盖产品行为。
 - 最终typecheck与build exit0；最终 `bun run test` **250 pass/0 fail/4733 expect/42文件**（t14-full-final.log）；最后行为定向 **34 pass/0 fail/897 expect/5文件**，另传入的result-retention.test.ts实际不存在，未计为覆盖，相关成果留存仍由全套remote-tasks保障。第1轮打开参数遗漏readwrite导致SQLITE_MISUSE，已修复；第1轮损坏结构造数使用SQLite禁止的writable_schema，改真实重建约束负例；两个坏记录测试初稿在关闭协调器后经HTTP接受被正常拒绝，改在接受期间暂停kick后关闭；失败日志保留。没有放宽拒绝或授权让测试通过。
 - 原目录主库/WAL/SHM的hash、mode与文件集不变：旧0/18/更高版本、版本仅在WAL、坏文件头、少表/索引/UNIQUE/FK/CHECK及额外sqlitex对象；真实source CLI start/serve/restart在创建token/log/进程/HAPI前拒绝。6个独立进程并发首次创建全部业务行保留；最终validateState在另进程383轮写入+PASSIVE/TRUNCATE检查点期间150次核验无误（t14-copy-race.json），不声称任意外部并发改schema安全。
 - 编译候选0231c596…/HAPI bdf706d7…：hub-upgrade **z8zEMn** 三组成功、cleanupErrors=[]。真实baseline6685ecdf… schema18 start/serve/restart整home bytes/mode/files不变；独立当前19同候选重启保身份/机器/Agent/仓库/附件bytes/worktree。初稿WFu80G误从stdout读错误JSON而失败，改按实际stderr协议后成功；原失败保留，两个专用home均由脚本停服后清理。不是跨版本数据升级。
@@ -330,3 +330,12 @@ iclaude review session：`6870f51d-a7d7-4cfa-b49d-a2a96e69a693`。工具限制Re
 - 最后仅修CLI guide中已失效client.sqlite用途说明后，final binary **b8a06620…**；compiled hub-service **vma62A** 五组成功/cleanupErrors=[]，测试明确确认各home服务/Runner停止后主agent回收host/client/fresh-host，原evidence不改。全CLI契约仅删除data树，其他命令及17 MCP schema/description/annotations与原基线精确相等。
 - usage/development/产品Skill及install/arm64脚本删除reset调用/推荐，保当前release/prune/remove。消费现场入口先验证本次候选/当前格式，再读业务；Node collaboration消费者只读其私有副本，不以原库readonly引入sidecar。安装包、QEMU、十二原生MCP/十消费者以及最终同候选全组合由T13统一验收，此处不冒认通过。Specs和归档未执行。
 - 原始证据与范围：`.dev-smoke/slimming-acceptance/t14-root-summary.json`。Commit：`module-slimming-audit T14: 仅支持当前数据格式并移除历史清理入口`。
+
+
+## T10 详情投影与内部 send 解析
+
+主agent直接完成。detail在同次纯投影内复用一个overview，report分页仍以16000默认和显式offset/limit裁剪，保持结构化报告1000限额、所有顶层字段与delivery别名、输入正文/nativeResult剔除。coordinator.send改接SendRequest，移除同一已解析对象的二次SendSchema.parse；唯一调用方Hub service仍校验原始HTTP请求。MCP/CLI各自入口、Parent边界、幂等先查、异步lease/policy重查及SQLite即刻事务互斥保持。
+
+真实HTTP补非法send：未知字段/坏UUID/空message/next携round/steer缺round或携新附件，400且round/input/request/intent不增长、native计数不变；next在异步probe中改Agent定义，明确agent_configuration_changed，任务快照/请求/原生执行不变。console详情增加code/git/attachments与顶层值一致业务断言。原rounds/overview/workspaces/files/outputs/console有效恢复与权限断言继续执行。
+
+定向7文件 **72 pass/0 fail/1516 expect**（t10-focused.log）；typecheck、build均exit0。未声称本阶段跑全套或真实模型。U04排除Round工厂和留存状态机合并：首轮/续轮绑定与业务协议不同，未证实默认漂移；同状态词不构成同职责。Commit：`module-slimming-audit T10: 复用详情投影并消除内部重复解析`。

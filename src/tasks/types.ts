@@ -43,6 +43,7 @@ export type AgentSnapshot = { id: string; definition: AgentDefinition;
     source: { scope: 'global' | 'project'; hubId: string; repositoryId: string | null }; hub: ResolvedHubAgent;
     definitionVersion: string; resolvedVersion: string; runtimeId: string; machineId: string; flavor: 'codex' | 'claude'; namespace: string };
 export const SendSchema = z.strictObject({ parent: ParentSchema, requestId: z.uuid(), intent: SendIntentSchema });
+export type SendRequest = z.infer<typeof SendSchema>;
 export const InterruptSchema = z.strictObject({ parent: ParentSchema, id: z.uuid(), roundId: z.uuid() });
 export const RemoveWorkspaceSchema = z.strictObject({ parent: ParentSchema, id: z.uuid(), discardIgnored: z.boolean().default(false) });
 export const PermissionSchema = InterruptSchema.extend({ requestId: z.string().min(1), decision: z.enum(['approved', 'denied', 'abort']),

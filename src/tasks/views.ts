@@ -40,8 +40,8 @@ export function overview(bundle: TaskBundle, round: Round = bundle.rounds.at(-1)
 export function detail(bundle: TaskBundle, options: { roundId?: string; offset?: number; limit?: number } = {}) {
     const round = options.roundId ? bundle.rounds.find(round => round.id === options.roundId) : bundle.rounds.at(-1);
     if (!round) return null;
-    const offset = options.offset ?? 0, limit = options.limit ?? 16_000;
-    return { ...overview(bundle, round), parent: bundle.task.parent, agent: round.agent, environment: bundle.task.environment,
+    const offset = options.offset ?? 0, limit = options.limit ?? 16_000, summary = overview(bundle, round);
+    return { ...summary, parent: bundle.task.parent, agent: round.agent, environment: bundle.task.environment,
         preparation: round.preparation, phase: round.phase, session_id: round.sessionId, native_session_id: round.nativeSessionId,
         resume: round.resume, reconstruction: round.reconstruction ? { reason: round.reconstruction.reason, source_round_ids: round.reconstruction.sourceRoundIds } : undefined,
         cancellation: round.cancellation,
@@ -52,8 +52,8 @@ export function detail(bundle: TaskBundle, options: { roundId?: string; offset?:
         inputs: bundle.inputs.filter(input => input.roundId === round.id).map(({ output, text, ...input }) => ({ ...input,
             // Claude's native result contains the same full report; expose it only through report pagination.
             observation: input.observation ? (({ nativeResult, ...fact }) => fact)(input.observation) : undefined })),
-        report: { ...overview(bundle, round).report, text: round.report.slice(offset, offset + limit), offset, total: round.report.length,
+        report: { ...summary.report, text: round.report.slice(offset, offset + limit), offset, total: round.report.length,
             next_offset: offset + limit < round.report.length ? offset + limit : null, structuredMissing: round.structuredMissing },
-        delivery: { code: codeView(bundle.task, round), report: round.report ? 'available' : round.phase === 'finished' ? 'no_final_text' : 'pending', git: gitDelivery(bundle, round), attachments: overview(bundle, round).artifacts, acceptance: 'external' },
+        delivery: { code: summary.code, report: round.report ? 'available' : round.phase === 'finished' ? 'no_final_text' : 'pending', git: summary.git, attachments: summary.artifacts, acceptance: 'external' },
         rounds: bundle.rounds.map(item => ({ id: item.id, ordinal: item.ordinal, phase: item.phase, request_id: item.requestId, completed_revision: item.completedRevision, artifacts_revision: item.artifactsRevision, code_revision: item.codeRevision })) };
 }

@@ -186,3 +186,40 @@ test('current resource preflight checks launcher facts, permits unknown versions
     expect((await resolve()).body.error.code).toBe('runtime_probe_failed');
     expect(h.calls.spawn).toBe(0); expect(h.calls.resume).toBe(0); expect(h.calls.send).toBe(0);
 });
+
+
+test('malformed HTTP send requests fail before accepting inputs, pinning files or dispatching native work', async () => {
+    const h = await hubDelegationFixture(cleanups), id = randomUUID(), roundId = randomUUID();
+    const base = { parent: h.parent, requestId: randomUUID(), intent: { id, message: 'Continue', mode: 'next' } };
+    const counts = () => ['delegation_rounds', 'delegation_inputs', 'delegation_requests', 'delegation_artifact_intents'].map(table => h.gateway.store.db.query(`SELECT COUNT(*) AS n FROM ${table}`).get());
+    const before = counts(), calls = structuredClone(h.calls);
+    const bodies = [
+        { ...base, unexpected: true }, { ...base, requestId: 'invalid' },
+        ...[{ ...base.intent, unexpected: true }, { ...base.intent, id: 'invalid' }, { ...base.intent, message: '  ' },
+            { ...base.intent, roundId }, { ...base.intent, mode: 'steer' },
+            { ...base.intent, mode: 'steer', roundId, inputs: [{ artifactId: randomUUID() }] },
+            { ...base.intent, mode: 'steer', roundId, outputs: [{ name: 'result', relativePath: 'result.txt' }] }].map(intent => ({ ...base, intent })),
+    ];
+    for (const body of bodies) {
+        const response = await h.request('send', body);
+        expect(response.status).toBe(400); expect(response.body.error.code).toBe('invalid_task_request');
+    }
+    expect(counts()).toEqual(before); expect(h.calls).toEqual(calls);
+});
+
+test('next rechecks Agent configuration after an asynchronous probe without accepting another round', async () => {
+    const h = await hubDelegationFixture(cleanups), accepted = await h.post('spawn', h.payload());
+    const running = await until(() => h.post('read', { id: accepted.agent_id }), view => view.inputs[0]?.observation?.phase === 'accepted');
+    h.complete(running.session_id);
+    await until(() => h.post('read', { id: accepted.agent_id }), view => view.status === 'completed');
+    const before = h.gateway.delegation.coordinator.store.require(h.namespace, accepted.agent_id), calls = structuredClone(h.calls);
+    const request = next(accepted.agent_id);
+    h.hooks.set(h.machineId, async () => {
+        h.hooks.delete(h.machineId);
+        h.gateway.agents.update(h.actor, h.agent.id, { expectedVersion: 1, definition: { ...h.definition, instructions: 'Changed during next probe' } });
+    });
+    await expect(h.post('send', request)).rejects.toMatchObject({ code: 'agent_configuration_changed' });
+    expect(h.gateway.delegation.coordinator.store.require(h.namespace, accepted.agent_id)).toEqual(before);
+    expect(h.gateway.store.db.query('SELECT 1 FROM delegation_requests WHERE requestId=?').get(request.requestId)).toBeNull();
+    expect(h.calls).toEqual(calls);
+});

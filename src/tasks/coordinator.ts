@@ -7,7 +7,7 @@ import { ExecutionClient } from '../execution';
 import { errorDetails } from '../errors';
 import type { HapiHttp } from '../hapi';
 import { TaskStore } from './store';
-import { ArtifactActionSchema, ArtifactReleaseSchema, SendSchema, InterruptSchema, PermissionSchema, RemoveWorkspaceSchema, validateWorkspaceTarget, nativeTerminal, parseTask, TaskError, type Input, type Parent, type Round, type Task } from './types';
+import { ArtifactActionSchema, ArtifactReleaseSchema, type SendRequest, InterruptSchema, PermissionSchema, RemoveWorkspaceSchema, validateWorkspaceTarget, nativeTerminal, parseTask, TaskError, type Input, type Parent, type Round, type Task } from './types';
 import { detail, overview } from './views';
 import { historyContext, parseReport } from './reports';
 import { TaskWorkspaces, preparedReference } from './workspaces';
@@ -195,8 +195,8 @@ export class TaskCoordinator {
         this.kick(namespace, id);
         return { agent_id: id, environment: task.environment };
     }
-    async send(namespace: string, value: unknown, resolve?: (task: Task, round: Round) => Promise<{ agent: AgentSnapshot; check: () => void }>) {
-        const { parent, requestId, intent } = parseTask(SendSchema, value);
+    async send(namespace: string, value: SendRequest, resolve?: (task: Task, round: Round) => Promise<{ agent: AgentSnapshot; check: () => void }>) {
+        const { parent, requestId, intent } = value;
         if (this.closing) throw new TaskError(503, 'service_stopping', '服务正在停止；请查询已接受记录。');
         const accepted = await this.serial(`accept:${namespace}:${requestId}`, async () => {
             this.store.assertCanDelegate(namespace, parent);

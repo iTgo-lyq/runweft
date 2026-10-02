@@ -78,6 +78,7 @@ test('console task detail and pagination are owner scoped without requiring a li
     expect(response.body.ownerId).toBe(fixture.owner.identity.id);
     expect(response.body.agent.hub.version).toBe(1);
     expect(response.body.report.text).toHaveLength(20); expect(response.body.report.next_offset).toBe(25);
+    for (const [alias, field] of [['code', 'code'], ['git', 'git'], ['attachments', 'artifacts']]) expect(response.body.delivery[alias]).toEqual(response.body[field]);
     expect(response.body.actions).toEqual({ read: true, native: true, manageViaAgent: true });
     expect((await fixture.request(`details/${accepted.agent_id}?ownerId=other`)).status).toBe(400);
     expect((await fixture.request(`details/${accepted.agent_id}?limit=1&limit=2`)).status).toBe(400);
