@@ -2,8 +2,7 @@ import { z } from 'zod';
 import type { RepositoryFile, RepositoryOperation, RepositorySnapshot } from '../../hapi/shared/src/repositories';
 import type { WorkspaceSource } from '../../hapi/shared/src/workspaces';
 import type { MaterializedInput } from '../../hapi/shared/src/artifactTransfers';
-import { AgentIdSchema } from '../agents/types';
-import { ParentSchema, type Parent } from '../tasks/types';
+import { type Parent } from '../tasks/types';
 import { RunweftError } from '../errors';
 import type { WorkspacePreparations } from './service';
 
@@ -11,13 +10,9 @@ export type PreparationView = ReturnType<WorkspacePreparations['inspect']>;
 import type { ResolvedHubAgent } from '../hub/agents/resolver';
 import type { Problem } from '../resources/types';
 
-export const PreparationIntentSchema = z.strictObject({ agent: AgentIdSchema, baseRef: z.string().trim().min(1) });
-export const SelectionSchema = z.strictObject({ id: AgentIdSchema, definitionVersion: z.string().min(1), runtimeId: z.uuid(),
-    machineId: z.string().min(1), flavor: z.enum(['codex', 'claude']), namespace: z.string().min(1) });
-export const LookupPreparationSchema = z.strictObject({ parent: ParentSchema, requestId: z.uuid(), intent: PreparationIntentSchema });
-export const AcceptPreparationSchema = LookupPreparationSchema.extend({ agent: SelectionSchema });
-export type PreparationIntent = z.infer<typeof PreparationIntentSchema> & { hubRequest?: unknown };
-export type Selection = z.infer<typeof SelectionSchema> & { hub?: ResolvedHubAgent };
+export type PreparationIntent = { agent: string; baseRef: string; hubRequest?: unknown };
+export type Selection = { id: string; definitionVersion: string; runtimeId: string; machineId: string;
+    flavor: 'codex' | 'claude'; namespace: string; hub?: ResolvedHubAgent };
 export type TransferBatch = { captureId: string; deliveryId: string; deliveryNames?: string[]; names: string[]; captured: boolean; delivered: boolean;
     captureAttempted: boolean; deliveryAttempted: boolean; deliveryStopped: boolean; released: boolean; releasedNames: string[] };
 export type SnapshotFile = RepositoryFile & { requestId: string; artifactId?: string; reused: boolean; pinned: boolean };

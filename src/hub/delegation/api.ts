@@ -1,7 +1,7 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { z } from 'zod';
 import { jsonResponse } from '../../proxy';
-import { ListSchema, ReadSchema, WaitSchema } from '../../tasks/api';
+import { ListSchema, ReadSchema, WaitSchema } from '../../tasks/types';
 import { ParentSchema, InterruptSchema, parseTask, TaskError } from '../../tasks/types';
 import { OverviewQuerySchema, taskOverview } from '../../tasks/query';
 import { detail } from '../../tasks/views';

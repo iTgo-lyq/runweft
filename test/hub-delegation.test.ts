@@ -1,3 +1,5 @@
+import { Database } from 'bun:sqlite';
+import { parentKey } from '../src/tasks/types';
 import { afterEach, expect, test } from 'bun:test';
 import { randomUUID } from 'node:crypto';
 import { hubDelegationFixture } from './hub-delegation-fixture';
@@ -128,7 +130,19 @@ test('all startup scans quarantine unowned legacy tasks, input intents and basel
             definitionVersion: 'old', resolvedVersion: 'old', source: { scope: 'global' as const, path: '/old.yaml', key: 'old', linkTarget: null },
             definition: { schemaVersion: 1 as const, description: '', instructions: '', runtime: null, flavor: null, model: null, reasoningEffort: null } };
         const target = { runtimeId: h.runtime.id, machineId: h.machineId, flavor: 'codex' as const, namespace: 'alpha', inspection: resourceInspection('codex') };
-        const accepted = legacy.accept('alpha', h.parent, randomUUID(), { agentType: 'old', message: 'Do not execute', workspaceMode: 'shared' }, agent, target);
+        // Deliberately seed historical records directly; no current acceptance path consumes the old shape.
+        const accepted = { agent_id: randomUUID(), round_id: randomUUID() }, now = Date.now();
+        const task = { version: 2, id: accepted.agent_id, namespace: 'alpha', parent: h.parent, agent, target,
+            environment: { mode: 'shared', machineId: h.machineId, cwd: h.cwd }, createdAt: now, updatedAt: now, revision: 1 };
+        const round = { id: accepted.round_id, taskId: task.id, ordinal: 1, requestId: randomUUID(), message: 'Do not execute', agent,
+            phase: 'queued', preparation: { mode: 'shared', status: 'pending' }, spawnRequestId: randomUUID(), spawnAttempted: false,
+            report: '', structuredMissing: true, stop: 'not_started', finish: 'pending', attention: null, createdAt: now, permissions: {} };
+        const db = new Database(h.statePath);
+        try {
+            db.query('INSERT INTO delegation_tasks VALUES (?, ?, ?, ?, ?, ?, ?, ?)').run(task.id, 'alpha', parentKey(h.parent), h.machineId, h.cwd, JSON.stringify(task), 1, now);
+            db.query('INSERT INTO delegation_rounds VALUES (?, ?, ?, ?, ?, NULL)').run(round.id, task.id, 1, 'queued', JSON.stringify(round));
+        } finally { db.close(); }
+
         legacy.beginArtifactIntent('alpha', h.parent, randomUUID(), { agentType: 'old', message: 'Do not unpin', workspaceMode: 'shared', inputs: [{ artifactId: randomUUID() }] });
         baselines.createSnapshot('alpha', { machineId: h.machineId, repositoryId: 'old', sourcePath: h.cwd, repositoryRoot: h.cwd, commonDir: `${h.cwd}/.git`, relativePath: '', baseRef: 'HEAD', baseCommit: 'a'.repeat(40), objectFormat: 'sha1', dirty: false });
         await h.gateway.delegation.coordinator.reconcileFileIntents(); await Bun.sleep(40);

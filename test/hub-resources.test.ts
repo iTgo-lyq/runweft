@@ -7,7 +7,7 @@ import { resolve } from 'node:path';
 import { AccessStore } from '../src/hub/access/store';
 import { HubResourceStore } from '../src/hub/resources/store';
 import { createIdentityToken } from '../src/hub/store';
-import { STATE_SCHEMA_VERSION } from '../src/state';
+import { STATE_SCHEMA_VERSION, openState } from '../src/state';
 import { resourceInspection } from './native-fixture';
 
 const cleanups: (() => void | Promise<void>)[] = [];
@@ -368,5 +368,30 @@ test('v11 upgrade retains machine enrollment, credential and space association w
             expect(store.runtimes(h.actor)).toEqual([]);
             expect(access.authenticate(input.token).machineId).toBe(enrolled.machineId);
         } finally { access.close(); }
+    } finally { db.close(); }
+});
+
+
+test('out-of-order inspections retain newer facts while later and equal timestamps remain writable', () => {
+    const h = setup(), { machineId } = h.store.enroll(h.actor, enrollmentInput());
+    const inspection = (checkedAt: number, version: string) => ({ ...resourceInspection('codex'), details: { ...resourceInspection('codex').details, checkedAt, version } });
+    const runtime = h.store.registerRuntime(h.actor, { machineId, flavor: 'codex' }, inspection(100, 'initial'));
+    const newer = inspection(200, 'newer'); h.second.saveInspections(h.actor, machineId, [newer]);
+    h.store.saveInspections(h.actor, machineId, [inspection(0, 'late old')]);
+    expect(h.second.runtime(h.actor, runtime.id).inspection).toEqual(newer);
+    const later = inspection(300, 'later'); h.store.saveInspections(h.actor, machineId, [later]);
+    expect(h.second.runtime(h.actor, runtime.id).inspection).toEqual(later);
+    const equal = inspection(300, 'same millisecond'); h.second.saveInspections(h.actor, machineId, [equal]);
+    expect(h.store.runtime(h.actor, runtime.id)).toMatchObject({ id: runtime.id, name: runtime.name, registered: true, inspection: equal });
+});
+
+test('openState retains the current schema and refuses a higher version without overwriting it', () => {
+    const h = setup(), db = new Database(h.path);
+    try {
+        expect(db.query('PRAGMA user_version').get()).toEqual({ user_version: STATE_SCHEMA_VERSION });
+        expect(db.query('PRAGMA journal_mode').get()).toEqual({ journal_mode: 'wal' });
+        db.exec(`PRAGMA user_version=${STATE_SCHEMA_VERSION + 1}`);
+        expect(() => openState(h.path)).toThrow('数据版本');
+        expect(db.query('PRAGMA user_version').get()).toEqual({ user_version: STATE_SCHEMA_VERSION + 1 });
     } finally { db.close(); }
 });

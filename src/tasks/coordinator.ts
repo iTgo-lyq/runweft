@@ -1,4 +1,3 @@
-import { BaselineStore } from '../remote/store';
 import { RemoteBaselines, uncertainPreparation } from '../remote/baselines';
 import { TaskResults, codeView } from './results';
 import { ResultShowSchema, ResultFetchSchema, ResultRetrySchema, ResultReleaseSchema } from './result-types';
@@ -7,12 +6,9 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { ExecutionClient } from '../execution';
 import { errorDetails } from '../errors';
 import type { HapiHttp } from '../hapi';
-import { ResourceStore } from '../resources/store';
-import { ResourceService } from '../resources/service';
 import { TaskStore } from './store';
-import { AcceptSchema, ArtifactActionSchema, ArtifactReleaseSchema, LookupSchema, SendSchema, InterruptSchema, PermissionSchema, RemoveWorkspaceSchema, validateWorkspaceTarget, nativeTerminal, parseTask, TaskError, type Input, type Parent, type Round, type Task } from './types';
+import { ArtifactActionSchema, ArtifactReleaseSchema, SendSchema, InterruptSchema, PermissionSchema, RemoveWorkspaceSchema, validateWorkspaceTarget, nativeTerminal, parseTask, TaskError, type Input, type Parent, type Round, type Task } from './types';
 import { detail, overview } from './views';
-import { taskOverview, type OverviewQuery, type TaskInventory } from './query';
 import { historyContext, parseReport } from './reports';
 import { TaskWorkspaces, preparedReference } from './workspaces';
 import { TaskFiles, preparedFiles } from './files';
@@ -22,7 +18,7 @@ import type { AgentSnapshot, SpawnIntent, TaskTarget } from './types';
 import type { WorkspaceSource } from '../../hapi/shared/src/workspaces';
 import { isDeepStrictEqual } from 'node:util';
 
-export type ResolvedAcceptance = { agent: AgentSnapshot; target: TaskTarget; source?: WorkspaceSource; resolveSource?: () => Promise<WorkspaceSource | undefined>; client: HapiHttp; check: () => void };
+export type ResolvedAcceptance = { agent: AgentSnapshot; target: TaskTarget; source?: WorkspaceSource; client: HapiHttp; check: () => void };
 export type CoordinatorPolicy = {
     store: NonNullable<ConstructorParameters<typeof TaskStore>[1]>;
     check: (task: Task, round: Round) => void;
@@ -31,24 +27,16 @@ export type CoordinatorPolicy = {
 
 export class TaskCoordinator {
     readonly store: TaskStore;
-    private readonly resources: ResourceStore;
     private readonly baselines: RemoteBaselines;
-    private readonly ownsBaselines: boolean;
-    private readonly clients = new Map<string, HapiHttp>();
     private readonly working = new Map<string, Promise<void>>();
     private timer?: ReturnType<typeof setInterval>;
     private closing = false;
-    constructor(path: string, private readonly clientFor: (namespace: string, task?: Task, round?: Round) => HapiHttp, private readonly pollMs = 1000, baselines?: RemoteBaselines, private readonly policy?: CoordinatorPolicy) {
-        this.store = new TaskStore(path, policy?.store); this.resources = new ResourceStore(path); this.ownsBaselines = !baselines;
-        this.baselines = baselines ?? new RemoteBaselines(new BaselineStore(path), namespace => this.client(namespace));
+    constructor(path: string, private readonly clientFor: (namespace: string, task?: Task, round?: Round) => HapiHttp, private readonly pollMs = 1000, baselines: RemoteBaselines, private readonly policy: CoordinatorPolicy) {
+        this.store = new TaskStore(path, policy.store);
+        this.baselines = baselines;
     }
     private client(namespace: string, task?: Task, round?: Round) {
-        if (this.policy) return this.clientFor(namespace, task, round);
-        if (!this.clients.has(namespace)) this.clients.set(namespace, this.clientFor(namespace));
-        return this.clients.get(namespace)!;
-    }
-    private resourceService(namespace: string) {
-        return new ResourceService(this.resources, namespace, (path, options) => this.client(namespace).request(path, options));
+        return this.clientFor(namespace, task, round);
     }
     async reconcileFileIntents() {
         const pending: { requestId: string; code: string }[] = [];
@@ -90,27 +78,7 @@ export class TaskCoordinator {
         this.closing = true;
         clearInterval(this.timer); this.timer = undefined;
         await Promise.all(this.working.values());
-        this.store.close(); this.resources.close(); if (this.ownsBaselines) this.baselines.store.close();
-    }
-    lookup(namespace: string, value: unknown) {
-        const { parent, requestId, intent } = parseTask(LookupSchema, value);
-        this.store.assertCanDelegate(namespace, parent);
-        return this.store.lookup(namespace, parent, requestId, intent);
-    }
-    async accept(namespace: string, value: unknown) {
-        const { parent, requestId, intent, agent } = parseTask(AcceptSchema, value);
-        if (this.policy) throw new TaskError(400, 'central_agent_required', '中心任务只能通过服务端解析接受。');
-        return this.acceptResolved(namespace, { parent, requestId, intent }, async () => {
-            if (agent.namespace !== namespace || agent.id !== intent.agentType) throw new TaskError(409, 'agent_snapshot_mismatch', 'Agent 快照不属于当前请求或连接。');
-            const target = await this.resourceService(namespace).resolveExecutionTarget(agent.runtimeId);
-            if (agent.machineId !== target.machineId || agent.flavor !== target.flavor || (agent.definition.flavor && agent.definition.flavor !== target.flavor)) {
-                throw new TaskError(409, 'agent_target_changed', 'Agent 快照与当前 runtime 不一致。', '重新运行 agent check 后创建新任务。');
-            }
-            validateWorkspaceTarget(target.machineId, parent, intent);
-            const client = this.client(namespace);
-            const resolveSource = async () => intent.workspaceMode === 'worktree' ? new TaskWorkspaces(client, parent.machineId).resolve(parent.cwd, intent.baseRef ?? 'HEAD') : undefined;
-            return { agent, target, resolveSource, client, check: () => {} };
-        });
+        this.store.close();
     }
     /** Trusted server resolution runs inside the existing acceptance lock, after replay lookup. */
     async acceptResolved(namespace: string, input: { parent: Parent; requestId: string; intent: SpawnIntent }, resolve: () => Promise<ResolvedAcceptance>) {
@@ -120,12 +88,11 @@ export class TaskCoordinator {
             this.store.assertCanDelegate(namespace, parent);
             const previous = this.store.lookup(namespace, parent, requestId, intent);
             if (previous) return previous;
-            const { agent, target, source: resolvedSource, resolveSource, client, check } = await resolve();
+            const { agent, target, source, client, check } = await resolve();
             if (this.closing) throw new TaskError(503, 'service_stopping', '服务正在停止；请用同一 request ID 查询接受结果。');
             validateWorkspaceTarget(target.machineId, parent, intent);
             if (target.machineId !== parent.machineId) await this.requireRemoteCapabilities(client, parent.machineId, target.machineId);
             if (intent.outputs?.length) await new TaskOutputs(client, this.store).requireSupported(target.machineId);
-            const source = resolvedSource ?? await resolveSource?.();
             if (this.closing) throw new TaskError(503, 'service_stopping', '服务正在停止；请用同一 request ID 查询接受结果。');
             const accepted = await new TaskFiles(client).accept(this.store, namespace, parent, requestId, intent,
                 () => { check(); return this.store.accept(namespace, parent, requestId, intent, agent, target, source); });
@@ -236,13 +203,13 @@ export class TaskCoordinator {
             if (previous) return previous;
             const current = this.store.require(namespace, intent.id, parent);
             const last = current.rounds.at(-1)!;
-            if (this.policy && intent.mode === 'next' && !resolve) throw new TaskError(400, 'central_agent_required', '续接需要重新解析中心 Agent。');
+            if (intent.mode === 'next' && !resolve) throw new TaskError(400, 'central_agent_required', '续接需要重新解析中心 Agent。');
             const selected = intent.mode === 'next' ? await resolve?.(current.task, last) : undefined;
             const round = intent.mode === 'steer' ? current.rounds.find(item => item.id === intent.roundId) ?? last : last;
-            this.policy?.check(current.task, round);
+            this.policy.check(current.task, round);
             const client = this.client(namespace, current.task, round);
             if (intent.outputs?.length) await new TaskOutputs(client, this.store).requireSupported(current.task.target.machineId);
-            const accept = () => { selected?.check(); this.policy?.check(current.task, round); return this.store.append(namespace, parent, requestId, intent, selected?.agent); };
+            const accept = () => { selected?.check(); this.policy.check(current.task, round); return this.store.append(namespace, parent, requestId, intent, selected?.agent); };
             // Only steer changes the active execution; new rounds have their own acceptance lock.
             return intent.mode === 'steer' ? this.serial(intent.id, accept)
                 : new TaskFiles(client).accept(this.store, namespace, parent, requestId, intent, accept);
@@ -322,15 +289,7 @@ export class TaskCoordinator {
         return { agents: this.store.list(namespace, parent, all).map(bundle => ({ ...overview(bundle, bundle.rounds.find(round => !['finished', 'failed'].includes(round.phase)) ?? bundle.rounds.at(-1)!),
             accepted_requests: this.store.requests(namespace, bundle.task.id) })) };
     }
-    async overview(namespace: string, query: OverviewQuery) {
-        // A single bounded read covers authentication, health and inventory; no runtime discovery/probes.
-        const signal = AbortSignal.timeout(3000);
-        const resources = new ResourceService(this.resources, namespace, (path, options) => this.client(namespace).request(path, { ...options, signal }));
-        let inventory: TaskInventory;
-        try { inventory = { machines: await resources.machines(), error: null }; }
-        catch { inventory = { machines: [], error: { code: 'inventory_unavailable', message: '无法读取 HAPI 机器状态；以下保留已记录的任务事实。', hint: '检查 Hub 连接与版本，稍后刷新。' } }; }
-        return taskOverview(this.store.listNamespace(namespace), this.resources.runtimes(namespace, true), inventory, query);
-    }
+
     read(namespace: string, parent: Parent, id: string, options?: { roundId?: string; offset?: number; limit?: number }) {
         const result = detail(this.store.require(namespace, id, parent), options);
         if (!result) throw new TaskError(404, 'round_unknown', '此任务中没有指定轮次。');
@@ -362,7 +321,7 @@ export class TaskCoordinator {
         const { task, rounds, inputs: allInputs } = this.store.require(namespace, id);
         const active = rounds.find(item => !['finished', 'failed'].includes(item.phase));
         const client = this.client(namespace, task, active ?? rounds.at(-1));
-        if (this.policy) {
+        {
             const selected = active ?? rounds.at(-1)!;
             try { if (active?.authorizationFailure) throw new TaskError(403, active.authorizationFailure.code, active.authorizationFailure.message); this.policy.check(task, selected); }
             catch (error) {
@@ -418,7 +377,7 @@ export class TaskCoordinator {
         try {
             if (round.phase === 'queued') {
                 if (round.outputFiles?.declarations.length) await outputs.requireSupported(task.target.machineId);
-                const target = this.policy ? await this.policy.target(task, round) : await this.resourceService(namespace).resolveExecutionTarget(task.target.runtimeId);
+                const target = await this.policy.target(task, round);
                 if (task.environment.mode === 'shared' && target.machineId !== task.parent.machineId) throw new TaskError(409, 'shared_target_required', '共享目录任务只能使用发起机上的 runtime。');
                 if (target.machineId !== task.target.machineId || target.flavor !== task.target.flavor) throw new TaskError(409, 'task_target_changed', '已接受任务的固定 runtime 目标不一致。');
                 if (!await this.prepareRemote(task, round, save)) return;

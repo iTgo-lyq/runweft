@@ -5,23 +5,25 @@ import { randomBytes } from 'node:crypto';
 import { readFileSync, rmSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { SignJWT } from 'jose';
-import { createRunweftHandler } from '../src/api';
-import { createGateway } from '../src/proxy';
+import { createDelegationGateway } from '../src/hub/delegation/gateway';
+import { fixtureCleanup } from './fixture-cleanup';
 import { createIdentityToken, HubStore } from '../src/hub/store';
 import { openState } from '../src/state';
 import { fixture } from './helpers';
 
 const cleanup: (() => Promise<void> | void)[] = [];
-afterEach(async () => { for (const fn of cleanup.splice(0).reverse()) await fn(); });
+afterEach(async () => { const errors: unknown[] = []; for (const fn of cleanup.splice(0).reverse()) { try { await fn(); } catch (error) { errors.push(error); } } if (errors.length) throw new AggregateError(errors, 'Hub test cleanup failed'); });
 const prefix = '/api/runweft/hub';
 async function setup() {
-    const home = fixture('hub'), path = join(home, 'state.sqlite'), hub = new HubStore(path), key = randomBytes(32);
-    cleanup.push(() => rmSync(home, { recursive: true, force: true }));
-    cleanup.push(() => hub.close());
-    const server = await createGateway({ host: '127.0.0.1', port: 0, target: 'http://127.0.0.1:1',
-        handle: createRunweftHandler({ key, hapiUrl: 'http://127.0.0.1:1', statePath: path, health: () => ({}), hub }) });
-    cleanup.push(() => server.close());
-    const url = `http://127.0.0.1:${(server.server.address() as { port: number }).port}`;
+    const owner = fixtureCleanup(cleanup);
+    let home!: string, path!: string, key!: Buffer, url!: string;
+    try {
+        home = fixture('hub'); path = join(home, 'state.sqlite'); key = randomBytes(32);
+        owner.resources.push(() => rmSync(home, { recursive: true, force: true }));
+        const server = await createDelegationGateway({ host: '127.0.0.1', port: 0, target: 'http://127.0.0.1:1', rootToken: 'test-root', key, statePath: path });
+        owner.resources.push(() => server.close());
+        url = `http://127.0.0.1:${(server.server.address() as { port: number }).port}`;
+    } catch (error) { await owner.failed(error); throw error; }
     const api = async (route: string, token = '', value?: unknown, method = value === undefined ? 'GET' : 'POST') => {
         const response = await fetch(url + prefix + route, { method, headers: { ...(token ? { authorization: `Bearer ${token}` } : {}),
             ...(value !== undefined ? { 'content-type': 'application/json' } : {}) }, body: value !== undefined ? JSON.stringify(value) : undefined });
@@ -33,7 +35,7 @@ async function setup() {
         const joined = await api('/invitations/accept', user.token, { token: invite.data.token }); expect(joined.status).toBe(200);
         return invite.data;
     };
-    return { home, path, hub, key, url, api, create, joinSpace };
+    return { home, path, key, url, api, create, joinSpace };
 }
 
 test('identities persist, secrets are hashed, rotation retains ownership and old credentials fail', async () => {
@@ -138,7 +140,9 @@ test('new APIs reject HAPI and query/cookie credentials, reject malformed input 
     const jwt = await new SignJWT({ uid: 1, ns: 'default' }).setProtectedHeader({ alg: 'HS256' }).sign(h.key);
     for (const token of ['', jwt, 'root-token', a.token + ':other']) expect((await h.api('/identity', token)).status).toBe(401);
     const query = await fetch(`${h.url}${prefix}/identity?token=${a.token}`, { headers: { cookie: `token=${a.token}` } });
-    expect(query.status).toBe(401);
+    expect(query.status).toBe(400);
+    const cookieOnly = await fetch(`${h.url}${prefix}/identity`, { headers: { cookie: `token=${a.token}` } });
+    expect(cookieOnly.status).toBe(401);
     const old = await fetch(`${h.url}/api/runweft/identity`, { headers: { authorization: `Bearer ${a.token}` } });
     expect(old.status).toBe(401);
     expect((await h.api('/identity', a.token, { token: a.token, name: 'a' }, 'PATCH')).status).toBe(400);

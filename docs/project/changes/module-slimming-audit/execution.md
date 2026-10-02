@@ -290,3 +290,27 @@ iclaude review session：`6870f51d-a7d7-4cfa-b49d-a2a96e69a693`。工具限制Re
 - 根独立核对候选hash、完整接口基线和退出imports；执行mcp/hub-consumers/hub-agent-resolution定向17 pass/0 fail/430 expect，包含编译CLI/stdio对当前gateway的两宿主×两runtime fixture、身份隔离和无Hub拒绝。冻结候选protocol-only的mcp-protocol-Zd895x exit0，真实stdio取消及EOF均中止等待HTTP认证、stdout只含协议、不创建home。该测试不运行真实模型，T13最终同候选矩阵仍待执行；没有用fixture结果冒充原生或跨机实测。
 - 根证据`.dev-smoke/slimming-acceptance/t8-root-summary.json`；原共享哈希算法未改、policy/旧服务退役归T9，schema18迁移和旧记录fallback尚待T14移除。T8未改HAPI、依赖、用户配置或旧数据。
 - Commit：`module-slimming-audit T8: 退役旧消费入口并收敛 Hub 客户端`
+
+## T9 旧 handler、资源登记与旧 UI 退役
+
+- 先原样搬 List/Read/Wait 到 tasks/types，当前 Hub API 改直接 import；strict/default/UUID/分页/wait timeout 与 afterRevision 未改。CSS declaration 已在 src/assets.d.ts，不重复迁移。
+- 删除无产品消费者的 src/api、tasks/api、remote/api、resources 的 API/client/service/store，以及旧 dashboard 四文件、orphan dashboard-browser 和旧 resources/tasks fixture。当前 resources/native、共用 Flavor/Inspection/Problem/Discovery、全部 HubResource*、execution 与 current access/socket/SSE 留下。tasks/query 只持有实际使用的 inventory/name structural 类型；当前 Agent snapshot 的全部定义字段保留为类型，去旧 Agent ID/scope/definition 运行解析器、旧 snapshot source arm/Accept/Lookup/Preparation schema。
+- Coordinator 与 WorkspacePreparations 必需当期 policy/store，移除额外 ResourceStore、无身份 namespace cache、旧 accept/lookup/overview；Coordinator 仅接当前共享 baselines，去不存在调用方的默认 BaselineStore 所有权和 resolveSource fallback。现行 acceptResolved、scopeClient 的无 Task/Round 调用、next resolver/check、target 重查、lease/动态授权、所有 fixed receipt/unknown/stop/files/Git/retention/recovery 保留。没有新授权 mock、旧 API 翻译或另一协调器。
+- Hub 身份六个测试全部保留，HTTP harness 换完整 createDelegationGateway，构造立即登记 cleanup，失败/afterEach 尝试全部关闭。身份并行 rotation、邀请两 HTTP Promise.all（200/410）、重放/issuer降权/撤销/expiry、两 Bun独立进程同 DB last-owner 竞态与秘密 hash 断言仍执行。当前 AccessGateway 已明确拒绝 URL token 为400，原401断言按真实当期边界调整，并补 cookie-only401；HAPI/root/拼接凭据仍401，不改变产品授权。
+- 旧 resources 十条有效保障：owner×space与 credential kinds/strict bodies→hub-resources resource HTTP；发现不隐式注册、改名、注销/恢复保ID/name、机器注销不连带runtime登记→T5已验真实 resources/configuration；offline/no alternate target→shared/governance historical与hub-agent-resolution failed-layer no fallback；launcher missing/config/unknown-version→hub-delegation current preflight零dispatch；单machine失败与批探测→hub-resources one-probe；machine/runtime在途撤回→revocation during probing及resolution异步重查；当前client无权威库→T5 configuration与hub-resource-cli；错误脱敏与零dispatch→resource HTTP/current dispatch。旧local/root/namespace路由、--all/affectedRuntimeIds、原生私密错误透传无当期能力，不复刻。
+- 补唯一原未覆盖的 inspection 时间 CAS：新用例当前 HubResourceStore双连接保存200事实后晚到0不能覆盖；300更新可成功；同300也可更新，保护既有<=同毫秒语义。完整inspection/ID/name/registered核对。高schema拒绝移为 direct openState，检查当前schema/WAL与更高version拒绝后不覆盖。
+- 旧 dashboard 六条退役均有T7已验当期替代：hub-console HTTP公共assets/headers/MIME/CSP/GET/HEAD/405、labels；实际Playwright token-free URL/auth header/storage/401旋转/expiry独立identity；served module真实授权HTTP迟到成功/失败不复活、503保成功内容/首次503失败/busy；组合筛选/分页/空态/转义/375/1200/focus。旧root登录换JWT并自动retry模型退出，不伪称算法等价。S12排除，原根CI native安全拼写断言保留。
+- **schema仍18**：Task v1迁移原ID/name/flags断言改直接SQL查询，不再调用旧ResourceStore；Hub v6/v10/v11/Agent v14与TaskResults v5等专属迁移仍留T14。unowned legacy quarantine专场改原始SQL旧JSON种入Task/Round，不通过当前accept绕类型，原无dispatch/未认领intent/baseline隔离断言保留。Round.agent/Task.version历史回退未在T9删除，不宣称无历史兼容已完成。
+- 自检：`bun run typecheck` exit0（t9-typecheck.log）；`bun run test`（脚本bun test ./test）255 pass/0 fail/4729 expect/41 files/55.87s（t9-test.log）；`bun run build` exit0（t9-build.log）。focused Hub/resources 21 pass/0 fail/381 expect（t9-focused.log）。第一次迁harness focused 20/1因URLtoken实际400已定位并补上述准确拒绝；第一次typecheck暴露旧schema/ownership尾部依赖，收敛后通过，未改授权求绿。
+- CLI全命令树+17 MCP完整schema/description/annotations通过 contract.ts 捕获，与 baseline-contract.json 精确相等（t9-contract.json）。rg无旧handler/resource类/旧fixture消费者，当前 HubResource*继续。git diff --check通过。
+- 真实compiled无模型：`bun run test:hub-service dist/runweft` exit0，kJM1xn五组、success=true/cleanupErrors=[]；`bun run test:hub-upgrade .dev-smoke/slimming-acceptance/baseline-bin/runweft dist/runweft` exit0，vkhPfr evidence。最初少传baseline argv明确assert失败且未建fixture，随后按原双argv实际运行；不是空转发。该upgrade仅专用schema18阶段重启/持久事实，不能移用作T14的18拒绝/19重启验收。
+- 源码冻结候选：dist/runweft SHA256 `e104a3fecb406b6d0bdf838df02573b3e3fa5e5c62567f92b532c6090b3bd491`，dist/hapi `bdf706d7966ae4818b09029991a2bb03e70b10b0555763fc41430afd977b4fec`。未跑真实模型/物理远端；HTTP/Socket/SSE与浏览器最终独立检查由主agent执行。不改HAPI/deps/lock/package版本/workflow/Specs/其他workspace，不触主agent data-format-research，不提交、不标任务完成、不推进T14。
+
+- 冻结后主agent review发现Hub测试setup额外HubStore无人使用，已仅删该连接/返回字段；首例自身独立连接持久性验证保留。上述255全集发生在此测试helper窄修前，产品候选hash不变；最终hub定向重跑由主agent执行，不冒称旧全集覆盖后改。vkhPfr实际success=true/cleanupErrors=[]，两组含运行版本不一致诊断与停止后当前18数据/成果/工作区保持。
+
+### T9 主 agent 独立验收
+
+- 根冻结e104a3fe CLI/bdf706d7 HAPI副本；当前compiled console的rLpzgW全部17项真实Playwright通过，含短JWT、实际401撤权/SSE清凭据、跨身份/空间、空态/分页/转义/刷新失败和迟到请求。current源access gateway配固定真实HAPI/Runner的ElNYuI十项通过，含HTTP/Socket/SSE隔离、实际Runner目录RPC、身份/机器/成员撤权及等待45秒心跳过期后的同host错误目标拒绝。后者不是编译Runweft或模型执行，不扩大范围。
+- 最终测试helper修改后根执行hub/hub-resources/hub-resource-dispatch/hub-console：28 pass/0 fail/508 expect/4文件；typecheck通过。根再次确认完整CLI/17 MCP契约等于基线，无旧handler/ResourceStore/ResourceService/ResourceClient消费者；当前Hub前缀同名模块保留。root第一次realtime误传Runweft代替脚本要求的HAPI，WrTSxb在启动前失败、零检查；纠正参数后独立ElNYuI通过，保留两次结果，不把调用错误记成产品回归。
+- 根核kJM1xn实际为五组、vkhPfr两组，均success且cleanupErrors=[]。三份本次成功service/upgrade/realtime现场确认无所属进程后回收临时运行数据，原evidence bytes不变；浏览器home自动回收并保留截图。没有扫描或清理旧用户数据；回收清单`t9-root-self-fixture-cleanup.json`。根汇总`t9-root-summary.json`保存候选、最终source hash和证据。schema18本阶段保持，T14后不沿用本阶段upgrade结论；真实模型矩阵仍归T13。
+- Commit：`module-slimming-audit T9: 退役旧服务资源接线与看板`

@@ -1,11 +1,11 @@
 import { z } from 'zod';
 import { isAbsolute } from 'node:path';
-import { AgentIdSchema, DefinitionSchema, ScopeSchema } from '../agents/types';
+import type { AgentDefinition } from '../agents/types';
 import type { ExecutionObservation } from '../../hapi/shared/src/execution';
 import type { SessionResponse } from '../../hapi/shared/src/apiTypes';
 import type { WorkspaceSource, WorkspaceResult } from '../../hapi/shared/src/workspaces';
 import type { HistoryCursor } from '../execution';
-import type { ExecutionTarget, Problem } from '../resources/types';
+import type { Problem } from '../resources/types';
 import { ArtifactNameSchema } from '../../hapi/shared/src/artifacts';
 import { ArtifactOutputsSchema, type MaterializedInput, type MaterializeRequest } from '../../hapi/shared/src/artifactTransfers';
 import type { ArtifactRetention } from './retention';
@@ -24,28 +24,24 @@ export const ParentSchema = z.discriminatedUnion('kind', [
         hapiSessionId: identifier.optional() }),
 ]);
 export type Parent = z.infer<typeof ParentSchema>;
+export const ListSchema = z.strictObject({ parent: ParentSchema, all: z.boolean().default(false) });
+export const ReadSchema = z.strictObject({ parent: ParentSchema, id: z.uuid(), roundId: z.uuid().optional(),
+    offset: z.number().int().min(0).optional(), limit: z.number().int().min(1).max(64_000).optional() });
+export const WaitSchema = z.strictObject({ parent: ParentSchema, ids: z.array(z.uuid()).min(1).max(8), timeoutMs: z.number().int().min(0).max(540_000).default(30_000),
+    afterRevision: z.record(z.uuid(), z.number().int().min(0)).optional() });
+
 export const ArtifactInputSchema = z.strictObject({ artifactId: z.uuid(), name: ArtifactNameSchema.optional() });
 export type ArtifactInput = z.infer<typeof ArtifactInputSchema>;
 const fileInputs = z.array(ArtifactInputSchema).max(100).optional();
-const spawnFields = { agentType: AgentIdSchema, message: z.string().trim().min(1).max(200_000), inputs: fileInputs, outputs: ArtifactOutputsSchema.optional() };
-export const SpawnIntentSchema = z.discriminatedUnion('workspaceMode', [
-    z.strictObject({ ...spawnFields, workspaceMode: z.literal('shared') }),
-    z.strictObject({ ...spawnFields, workspaceMode: z.literal('worktree'), baseRef: z.string().trim().min(1).optional() }),
-]);
-export type SpawnIntent = Omit<z.infer<typeof SpawnIntentSchema>, 'agentType'> & { agentType: string; baseRef?: string; hubRequest?: unknown };
+export type SpawnIntent = { agentType: string; message: string; inputs?: ArtifactInput[];
+    outputs?: z.infer<typeof ArtifactOutputsSchema>; workspaceMode: 'shared' | 'worktree'; baseRef?: string; hubRequest?: unknown };
 export const SendIntentSchema = z.strictObject({ id: z.uuid(), message: z.string().trim().min(1).max(200_000), mode: z.enum(['next', 'steer']), roundId: z.uuid().optional(), inputs: fileInputs, outputs: ArtifactOutputsSchema.optional() })
     .refine(value => value.mode === 'steer' ? !!value.roundId : value.roundId === undefined, 'steer 必须指定 roundId；next 不接受 roundId')
     .refine(value => value.mode !== 'steer' || (!value.inputs?.length && !value.outputs?.length), '运行中追加不支持新附件；请使用 next 排队下一轮');
 export type SendIntent = z.infer<typeof SendIntentSchema>;
-export const SnapshotSchema = z.strictObject({ id: AgentIdSchema, definition: DefinitionSchema,
-    source: z.strictObject({ scope: ScopeSchema, path: z.string(), key: z.string(), linkTarget: z.string().nullable() }),
-    definitionVersion: z.string().min(1), resolvedVersion: z.string().min(1), runtimeId: z.uuid(),
-    machineId: identifier, flavor: z.enum(['codex', 'claude']), namespace: identifier });
-export type AgentSnapshot = (z.infer<typeof SnapshotSchema> & { hub?: undefined }) | (Omit<z.infer<typeof SnapshotSchema>, 'source'> & {
+export type AgentSnapshot = { id: string; definition: AgentDefinition;
     source: { scope: 'global' | 'project'; hubId: string; repositoryId: string | null }; hub: ResolvedHubAgent;
-});
-export const AcceptSchema = z.strictObject({ parent: ParentSchema, requestId: z.uuid(), intent: SpawnIntentSchema, agent: SnapshotSchema });
-export const LookupSchema = z.strictObject({ parent: ParentSchema, requestId: z.uuid(), intent: SpawnIntentSchema });
+    definitionVersion: string; resolvedVersion: string; runtimeId: string; machineId: string; flavor: 'codex' | 'claude'; namespace: string };
 export const SendSchema = z.strictObject({ parent: ParentSchema, requestId: z.uuid(), intent: SendIntentSchema });
 export const InterruptSchema = z.strictObject({ parent: ParentSchema, id: z.uuid(), roundId: z.uuid() });
 export const RemoveWorkspaceSchema = z.strictObject({ parent: ParentSchema, id: z.uuid(), discardIgnored: z.boolean().default(false) });
@@ -67,7 +63,7 @@ export type TaskEnvironment = { mode: 'shared'; machineId: string; cwd: string }
     | { mode: 'worktree'; machineId: string; environmentId: string; source: WorkspaceSource; cwd: string;
         remote?: { origin: WorkspaceSource; snapshotId?: string; consumerId?: string; release?: { state: 'pending' | 'released'; error?: Problem } };
         checkout?: string; branch?: string; status: 'retained' | 'deleting' | 'removed'; removal?: WorkspaceRemoval };
-export type TaskTarget = ExecutionTarget | PublicExecutionTarget;
+export type TaskTarget = PublicExecutionTarget;
 export type Task = { version: 2; id: string; namespace: string; parent: Parent; agent: AgentSnapshot; target: TaskTarget;
     hub?: { ownerId: string; spaceId: string; hubRepositoryId: string | null };
     environment: TaskEnvironment; createdAt: number; revision: number; updatedAt: number };

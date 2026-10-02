@@ -86,7 +86,7 @@
 
 ### T9 退役旧公开路由资源接线及旧看板
 
-- 状态：待开始
+- 状态：已完成
 - 交付：S04/S05；先移 List/Read/Wait schema 与 CSS declaration，再删旧 handler/resource API/store 接线和旧 UI；协调器/准备服务保留中心 policy；ResourceStore删除前更高schema拒绝用例迁直接openState。
 - 依赖：T7、T8。
 - 验收：旧handler、namespace资源服务和旧看板无现行调用并退役；CSS/schema共享保留；中心不额外开旧store，现行授权HTTP/实时行为通过；schema切换/旧格式拒绝由后置T14完成，迁移/回退断言在此前继续保留。

@@ -1,33 +1,28 @@
 import { errorDetails, RunweftError } from '../errors';
 import { randomUUID } from 'node:crypto';
 import { HapiRequestError, type HapiHttp } from '../hapi';
-import { ResourceService } from '../resources/service';
-import { ResourceStore } from '../resources/store';
+import { TaskWorkspaces } from '../tasks/workspaces';
 import { TaskStore } from '../tasks/store';
 import type { ResolvedAcceptance } from '../tasks/coordinator';
 import type { PreparationIntent } from './types';
 import type { Parent } from '../tasks/types';
-import { TaskWorkspaces } from '../tasks/workspaces';
 import { RemoteBaselines, uncertainPreparation } from './baselines';
 import { BaselineStore } from './store';
-import { AcceptPreparationSchema, LookupPreparationSchema, PreparationError, parsePreparation, type Preparation } from './types';
+import { PreparationError, parsePreparation, type Preparation } from './types';
 
 export class WorkspacePreparations {
     readonly store: BaselineStore;
     readonly baselines: RemoteBaselines;
     private readonly tasks: TaskStore;
-    private readonly resources: ResourceStore;
-    private readonly clients = new Map<string, HapiHttp>();
     private readonly working = new Map<string, Promise<void>>();
     private timer?: ReturnType<typeof setInterval>;
     private closing = false;
-    constructor(path: string, private readonly clientFor: (namespace: string, preparation?: Preparation) => HapiHttp, private readonly pollMs = 1000, private readonly policy?: { store: NonNullable<ConstructorParameters<typeof TaskStore>[1]> }) {
-        this.store = new BaselineStore(path, policy?.store); this.tasks = new TaskStore(path, policy?.store); this.resources = new ResourceStore(path);
+    constructor(path: string, private readonly clientFor: (namespace: string, preparation?: Preparation) => HapiHttp, private readonly pollMs = 1000, private readonly policy: { store: NonNullable<ConstructorParameters<typeof TaskStore>[1]> }) {
+        this.store = new BaselineStore(path, policy.store); this.tasks = new TaskStore(path, policy.store);
         this.baselines = new RemoteBaselines(this.store, namespace => this.client(namespace));
     }
     private client(namespace: string, preparation?: Preparation) {
-        if (this.policy) return this.clientFor(namespace, preparation);
-        if (!this.clients.has(namespace)) this.clients.set(namespace, this.clientFor(namespace)); return this.clients.get(namespace)!;
+        return this.clientFor(namespace, preparation);
     }
     private async serial<T>(key: string, action: () => Promise<T>) {
         const work = (this.working.get(key) ?? Promise.resolve()).then(() => {
@@ -58,24 +53,7 @@ export class WorkspacePreparations {
     }
     async close() {
         this.closing = true; clearInterval(this.timer); this.timer = undefined;
-        await Promise.all(this.working.values()); this.store.close(); this.resources.close(); this.tasks.close();
-    }
-    lookup(namespace: string, raw: unknown) {
-        const input = parsePreparation(LookupPreparationSchema, raw); this.tasks.assertCanDelegate(namespace, input.parent);
-        const record = this.store.lookup(namespace, input.parent, input.requestId, input.intent);
-        return record ? this.view(record) : null;
-    }
-    async accept(namespace: string, raw: unknown) {
-        const { parent, requestId, intent, agent } = parsePreparation(AcceptPreparationSchema, raw);
-        if (this.policy) throw new PreparationError(400, 'central_agent_required', '中心准备必须由服务端解析 Agent。');
-        return this.acceptResolved(namespace, { parent, requestId, intent }, async () => {
-            if (agent.namespace !== namespace || agent.id !== intent.agent) throw new PreparationError(409, 'agent_snapshot_mismatch', 'Agent 选择不属于当前准备请求。');
-            const resources = new ResourceService(this.resources, namespace, (path, init) => this.client(namespace).request(path, init));
-            const target = await resources.resolveExecutionTarget(agent.runtimeId);
-            if (target.machineId !== agent.machineId || target.flavor !== agent.flavor) throw new PreparationError(409, 'agent_target_changed', 'Agent 的 runtime 绑定已变化，请重新解析。');
-            const client = this.client(namespace), source = await new TaskWorkspaces(client, parent.machineId).resolve(parent.cwd, intent.baseRef);
-            return { agent, target, source, client, check: () => {} };
-        });
+        await Promise.all(this.working.values()); this.store.close(); this.tasks.close();
     }
     async acceptResolved(namespace: string, input: { parent: Parent; requestId: string; intent: PreparationIntent },
         resolve: () => Promise<Omit<ResolvedAcceptance, 'agent'> & { agent: Preparation['agent'] }>) {

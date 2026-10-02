@@ -3,7 +3,6 @@ import { Database } from 'bun:sqlite';
 import { existsSync, readdirSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { fixture } from './helpers';
-import { ResourceStore } from '../src/resources/store';
 import { resourceInspection } from './native-fixture';
 import { HubTaskClient } from '../src/hub/delegation/client';
 import { HubClient } from '../src/hub/client';
@@ -27,9 +26,11 @@ test('v1 resources migrate additively, preserving IDs and flags for both stores'
     const id = crypto.randomUUID();
     db.query('INSERT INTO runtime_registrations VALUES (?, ?, ?, ?, ?, 0, 1, 1, ?, 1)').run(id, 'alpha', 'machine', 'codex', 'Existing', JSON.stringify(resourceInspection('codex'))); db.close();
     const tasks = new TaskStore(path); tasks.close();
-    const resources = new ResourceStore(path);
-    try { expect(resources.runtime('alpha', id)).toMatchObject({ id, registered: false, name: 'Existing' }); expect(resources.machine('alpha', 'machine')?.registered).toBe(true); }
-    finally { resources.close(); }
+    const migrated = new Database(path);
+    try {
+        expect(migrated.query('SELECT id, registered, name FROM runtime_registrations WHERE id=?').get(id)).toEqual({ id, registered: 0, name: 'Existing' });
+        expect(migrated.query('SELECT registered FROM machine_registrations WHERE namespace=? AND machineId=?').get('alpha', 'machine')).toEqual({ registered: 1 });
+    } finally { migrated.close(); }
 });
 
 test('concurrent accepted requests run once, persist child role before input and finish only after stop', async () => {
