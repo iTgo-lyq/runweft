@@ -1,25 +1,24 @@
 # 发行验收范围
 
-当前1.1.0的完整源码、可安装产物、程序hash、需求逐项结果和原始证据见[Hub完整验收](../../../archive/2026-10-01-hub-spaces-and-agent-configuration/acceptance.md)。程序候选来自干净源码 `657550f20d44d1a65a48b232ef13f3ca5160e8cd`；各领域行为以对应Specs为准，本页只限定本批组合证据。
+当前源码瘦身候选的完整验证见[模块瘦身验收](../../../archive/2026-10-02-module-slimming-audit/acceptance.md)。四平台包来自干净提交 `e3553755c321c4e7981185ba5aa9bf3308544605`，包版本1.1.1；本Change没有发布该候选。后续仅修正验收fixture，未改变包输入。原公共1.1.0证据保存在[Hub完整验收](../../../archive/2026-10-01-hub-spaces-and-agent-configuration/acceptance.md)，不代替当前候选验证。
 
-## 已验证组合
+## 当前候选已验证组合
 
-Linux x64 从实际 npm 安装后的同一 Runweft/HAPI 候选，使用专用原生配置与认证副本完成：
+Linux x64使用从本次npm包实际安装的同一Runweft/HAPI，专用原生配置和认证副本。core SHA256为 `09bf189c4a0115b9f1badbf5991cb86d6665b6f42b7b22ca93468dc309e29ba3`；HAPI为 `bdf706d7966ae4818b09029991a2bb03e70b10b0555763fc41430afd977b4fec`，固定revision `3ac8b08b2aead13e9eaae459de62d9a5d5df7395`。
 
-| 范围 | 证据覆盖 |
+| 范围 | 已执行保障 |
 | --- | --- |
-| 安装与维护 | npm安装/重装/卸载留存、平台包独立服务与相邻HAPI、两宿主重复MCP安装/卸载/备份恢复、默认Hub/独立Runner、凭据撤销轮换、信号关闭及有界reset |
-| 十二组原生MCP | Codex/Claude真实宿主 × Codex/Claude runtime × shared/本机worktree/同机远端；spawn/wait/read、父身份、报告、目标/模式、子CLI递归拒绝与进程退出 |
-| 长等待 | 四组shared实际MCP wait 65000ms，测得65010/65039/65195/65176ms后timed_out，不缩短或模拟 |
-| 十组消费者 | 两个CLI-managed Runner，共享两轮、确切原生missing重建、本机worktree、跨所有者远端Claude启动前输入/私有附件/bundle取回与显式清理 |
-| 停止与恢复 | 两runtime精确轮次中断、拒绝旧轮次控制、原session记忆续接；已安装Hub重启后报告/轮次/原生ID不变，不重跑模型 |
-| Web接入/后台 | Playwright五组加密交接、十二组资源/成员/Agent/仓库/个人选择/任务，直接API与计数隔离、390px布局、HAPI短JWT多标签/消息/审批/文件/header-SSE/终端拒绝 |
-| 升级 | 专用新建Hub/schema18数据由阶段六1.0.0升级至1.1.0；运行版本差异可诊断，停服升级后身份/机器/Agent/仓库/附件/worktree保留，不承诺旧root迁移或回退 |
-| 官网与交付 | 十一组真实Skill/平台下载、hash、子路径、320–1440px/键盘/无JS、DOM命令安装及坏hash阻止；完整归档37项校验、解包程序再次服务验证、离线Git源码还原与frozen依赖/typecheck |
+| 安装与格式 | 四平台包核验；Linux x64专用npm安装/重装/卸载、MCP原配置保留、服务/信号；旧schema18无写拒绝，当前19同候选重启保持身份、配置与任务现场；不再提供data/reset |
+| 十二组原生MCP及十组消费者 | 两宿主×两runtime×三模式；父身份、spawn/wait/read、报告、原生历史missing重建、子执行过滤/CLI递归拒绝、精确审批/停止；shared长wait实际等待约65秒 |
+| 核心协作 | shared与本机worktree各默认八组合18轮；远端默认四组合八轮及安装消费通过；真实工程指令/Skill/项目MCP、输入输出/Git/LFS、memory resume、固定base/成果、离线fetch恢复与显式合入；另验证明确hook失败后的retry-finish |
+| 附件与成果 | 附件MCP八组合16轮及安装消费；Task inputs八轮、outputs八轮→retention；remote Task两runtime四轮→result-retention；72MiB实际文件、bundle/子模块/LFS、固定回执/丢响应/重启、release/discard/外部pin与不重放 |
+| Task与工作区生命周期 | 真实双runtime控制、CLI/MCP两轮、原生历史重建；worktree两runtime四轮→重启续接/ignored依赖/无变更不提交/两任务隔离/准备取消/显式移除保留报告与refs/后续send拒绝 |
+| Web/身份/资源/实时 | Playwright console17项、身份后台8项、加密接入5项，十二真实完成历史的只读消费；短JWT/到期与401清理、分页/转义/迟到响应/失败保留已有内容；资源10项、配置9项、实时10项及撤权/隔离/重启 |
+| 清理与契约 | producer→consumer确认停机/原生PID退出后只回收本次现场，保留原证据；完整CLI契约仅删除授权data树，17MCP工具参数、描述与annotations不变 |
 
-类型检查、build、256项根测试（5244断言、41文件）及四平台构建通过。未知执行不重发、准备失败不启动、权限竞态、只重试交付和更高schema拒绝采用故障fixture；后台部分历史/session RPC及terminal/fork协议也是明确夹具，不冒充真实OS PTY或模型。Codex支持当前追加输入，Claude返回 `steer_unsupported`，不将runtime描述为能力完全相同。
+产品源码typecheck、build及255项根测试通过（4811断言、42文件），四平台构建和Node发布测试通过。fixture修正后typecheck及受影响真实场景再次通过；产品包身份不变。部分文件/Git/授权smoke通过当前源码gateway与真实HAPI/Runner执行领域或协议fixture，不冒称全部为编译Task端到端；完整高层Task、MCP、模型和浏览器链使用实际安装候选。Codex追加输入与Claude的 `steer_unsupported` 均保留。
 
-Skill与阶段六已验收版本逐文件相同，复用独立Agent判断场景；新候选安装、加密接入与真实首任务重新执行。代码/程序hash不同不可沿用旧1.0.0认证组合的证据。
+失败试跑、明确模型选择和修正依据见验收记录。远端最终矩阵显式使用gpt-6.1-sol/medium；参数控制另验证gpt-6.1-sol/xhigh与Claude显式model/effort。不将账户可用模型设为产品默认，不改用户模型配置；源配置由每次fixture独立校验开始/结束摘要。
 
 ## 公共 npm 与可信发布
 
@@ -33,11 +32,12 @@ main 合码提交 `0c3e3a1bd7a70a24be9e13ad4b022dc7f4504d60` 通过[独立 CLI C
 
 这批 CI 没有运行模型、网页组合或公开新版本；新候选不继承旧候选的模型/实机验收。稳定标签门禁、冲突与部分发布恢复通过聚焦模拟验证，真实新版本上传尚未执行。
 
-## 尚未取得的证据
+## 当前候选尚未取得的证据
 
-- 原公共 1.1.0 候选的 macOS 两架构完成构建、格式/架构及包内容校验；最终模型/用户实机验证尚未执行。新 CI 候选另有托管 macOS 安装/服务证据。
-- 原公共 1.1.0 候选的 Linux arm64 经 QEMU7.2.22 验证两程序版本、初始化、配置、路径、缺Hub错误、reset预览/应用与重新初始化；新 CI 候选另有原生 arm64 安装/服务证据，两者均未验证 arm64 模型组合。
-- 物理跨机器及实际网络组合按用户授权延期；同机多 Runner 不替代物理远端验收。
-- 生产 Nginx/TLS 部署未运行，HAPI 全套测试未执行，不能宣称上游全部通过。
+- macOS两架构完成构建和包核验，未执行本候选Mac实机安装、服务或模型；历史CI候选的托管Mac安装结果不能移用于本候选。
+- Linux arm64使用QEMU验证两程序版本、初始化、配置、路径和无Hub错误；未验证本候选arm64完整服务或模型组合。
+- 同机独立Hub/多个Runner的远端组合不替代物理跨机器、WAN或生产Nginx/TLS实测。
+- 固定HAPI的过长Claude cwd原生历史定位缺口已经复现；本轮使用专用短路径，不修改HAPI或复制伪造历史。机器撤权后Runner停机可触发HAPI既有一秒兜底exit1，已核确切日志/进程退出与重新连接，未冒称优雅关闭。未执行HAPI全套测试。
+- 本Change没有执行远端CI、新包上传或官网部署。
 
-用户全局配置保持不变；本机原生模型可用性与测试副本的实际选择记在验收记录中，不把某账户可用的模型设为产品默认。上述证据边界不减少已经实现的功能或省略对应平台产物。
+这些证据边界不减少产品能力或省略对应平台产物。

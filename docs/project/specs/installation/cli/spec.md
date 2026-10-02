@@ -23,4 +23,4 @@ Runweft 提供一个 `runweft` 命令，包含本机部署配置、Hub 连接、
 
 根级 machine/runtime 与 `hub --url … machine/runtime` 共用中心资源命令，包含持久接入、凭据轮换、空间关联与 runtime 分享/禁用；默认使用选中 Hub，要求相应能力，不回退旧认证。契约见 [Hub 资源归属](../../resources/ownership/spec.md)。
 
-repository/agent 同时提供根级与 hub 域入口，使用明确 Hub 身份/空间；见[仓库关联](../../repositories/association/spec.md)与[中心 Agent](../../agents/central/spec.md)。不满足能力时明确报错，不回退旧文件。旧 workspace bind/list、agent init/bind 和 HAPI token 认证入口不再提供；data reset 是显式未上线历史清理，默认只预览。
+repository/agent 同时提供根级与 hub 域入口，使用明确 Hub 身份/空间；见[仓库关联](../../repositories/association/spec.md)与[中心 Agent](../../agents/central/spec.md)。不满足能力时明确报错，不回退旧文件。不提供旧workspace bind/list、agent init/bind、HAPI token认证或data/reset入口。已有数据格式不匹配时按[部署](../../deployment/spec.md)明确拒绝，不迁移或清理原目录。

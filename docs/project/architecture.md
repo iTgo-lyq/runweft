@@ -77,7 +77,7 @@ flowchart TD
 - 只允许一层 Runweft 委派。HAPI 调度的 Runweft subagent 移除全部 Runweft MCP 工具，结果由 HAPI 原生输出收回；CLI 委派入口也拒绝受控子执行再次派生。原生内置 subagent 的使用和递归不由 Runweft 管控。
 - 每轮任务结束关闭子执行进程，保留可续接的 session 和工作区；后续优先由 HAPI resume，确认 session 缺失才构造历史上下文。
 - 冲突、合入与发布交给主 Agent；模型执行权限沿 HAPI/原生默认，不新增 OS 隔离。Hub 独立身份和对象授权保护配置及任务；资源后台在第六阶段实现。
-- 尚未上线的历史可通过显式 data reset 清理，保留 Git/worktree 和未交付现场；不建设 YAML 导入或跨库迁移/回退框架。
+- Runweft只支持当前数据格式，旧版/未知/损坏格式无写入拒绝，不迁移、兼容读取或清理旧数据，不提供data/reset。需要独立环境时使用新home；当前任务恢复及显式成果留存继续保留。
 
 ## 远端组合流程
 

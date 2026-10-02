@@ -50,7 +50,7 @@
 
 ## 持久化与验证
 
-schema v12 在同一中心 state.sqlite 新增机器登记/关联、runtime/分享与空间禁用表；凭据和归属沿既有执行授权表。旧 namespace 配置不自动认领。原生历史、文件和执行状态继续归 HAPI。
+机器登记/关联、runtime/分享、空间禁用、凭据与执行授权归属保存在同一中心state.sqlite。只支持[部署](../../deployment/spec.md)规定的当前格式，不转换旧namespace配置。原生历史、文件和执行状态继续归HAPI。
 
 CLI 先在 `connections/<connectionName>/machine.json`（0600）保存 Hub/owner/request/token，再提交；轮换保留 active/pending，普通重跑确认原请求，显式 `--replace-pending` 才放弃旧 pending。跨 Hub 分区，换身份拒绝复用。文件读改写借用既有 client.sqlite 短写事务互斥，不复制凭据入库，网络不持锁，进程结束不遗留锁文件。`hub paths` 显示显式 Hub 的记录位置，root paths 显示配置当前连接。
 

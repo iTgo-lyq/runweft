@@ -33,6 +33,6 @@ Hub 空间是成员授权边界，不是 Git 仓库、磁盘工作区或 HAPI na
 | `/spaces/:id/invitations/:id` | DELETE 撤销 |
 | `/invitations/accept` | POST `{token}` 接受邀请 |
 
-Web `/hub` 提供上述管理动作，按钮使用服务端 permissions，空间切换仅改变当前选中项；服务端始终复核权限。状态在同一业务库的 hub_spaces/hub_memberships/hub_invitations 表中持久保存。升级不会自动将旧 namespace、机器或历史任务归给新身份。
+Web `/hub` 提供上述管理动作，按钮使用服务端 permissions，空间切换仅改变当前选中项；服务端始终复核权限。状态在同一业务库的 hub_spaces/hub_memberships/hub_invitations 表中持久保存。数据库只支持[当前格式](../../deployment/spec.md)，不通过升级或身份创建自动认领历史对象。
 
 成员移除还在同一事务撤销该空间的任务凭据、取消派生与文件输出许可，并撤回该成员拥有的机器关联及 runtime 分享；同时删除其 checkout、个人 Agent 选择和对其显式授权，并将其 owned Agent 的分享撤为 private；内容版本、登记与治理事实保留。重新加入不恢复旧许可、个人配置关联或 owned Agent 分享。集中资源治理见 [Hub 资源归属](../../resources/ownership/spec.md)。独立网关的请求与长连接如何失权见[执行通道授权](../../execution/access/spec.md)。

@@ -14,10 +14,12 @@ MCP 省略 request_id 时由 host、nativeSessionId、callId 和操作生成稳�
 
 ## 数据与服务
 
-业务数据在中心 `server/runweft/state.sqlite`，schema 18 保存任务、轮次、输入、请求去重、child 关联与中心归属。使用 WAL；拒绝更高版本数据，不删除数据库回退。任务输入和报告作为业务数据保存，不复制完整原生 transcript 或隐藏推理，不保存模型凭据。Hub 客户端没有第二份权威任务库。
+业务数据在中心 `server/runweft/state.sqlite`，固定schema19保存任务、轮次、输入、请求去重、child关联与中心归属。使用WAL；只支持完整当前结构，格式不匹配无写入拒绝，详见[部署](../../deployment/spec.md)。任务输入和报告作为业务数据保存，不复制完整原生 transcript 或隐藏推理，不保存模型凭据。Hub 客户端没有第二份权威任务库。
 
 自有任务 API 为认证后的 `/api/runweft/tasks/{spawn,lookup,send,interrupt,permission,list,read,wait}` POST，使用 Hub 用户/空间 JWT；宿主元数据与业务身份分别校验。中心后台以受控对象绑定调用私有 HAPI，不依赖宿主短期 JWT，详见[中心委派](../central/spec.md)。客户端按 exp 提前续期认证，不自动重放业务 POST。
 
-独立工作区增加 `retry-finish` 与 `workspace/remove` POST，沿同一父权限/操作者规则；MCP 不暴露删除工具。Task JSON v2 保存固定 source/环境状态，轮次保存准备与 Git 成果/回执，写入使用 revision 比较；旧无中心归属记录不认领或执行，未上线历史可显式重置，不转换原生历史库。删除操作身份和选项持久保存，中心重启也查询未完成删除。
+独立工作区增加 `retry-finish` 与 `workspace/remove` POST，沿同一父权限/操作者规则；MCP 不暴露删除工具。Task JSON v2 保存固定 source/环境状态，轮次保存准备与 Git 成果/回执，写入使用 revision 比较；当前记录必须带明确版本及完整中心归属/配置快照，不从Task补Round的Agent，也不补写旧字段。不属于本中心scope的记录不认领或执行。删除操作身份和选项持久保存，中心重启也查询未完成删除。
+
+当前格式库内的非法Task/Round/Input/CodeFetch读取或等待返回503/state_record_invalid，保留原记录；恢复扫描仅隔离该任务，stderr记录task ID与错误码，其余有效任务继续恢复。其他存储故障仍抛出。
 
 服务关闭停止扫描并等待当前协调步骤结束；服务重启读取持久未完成轮次继续查询/收尾。宿主退出不等于任务取消；停止中心/Runner 也不代替显式轮次中断。

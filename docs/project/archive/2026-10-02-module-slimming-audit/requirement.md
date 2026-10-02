@@ -1,11 +1,11 @@
 # Runweft 逐模块瘦身审计
 
-> 状态：待验收
+> 状态：已完成
 > 规模：大型
 
 跨 fixture、测试、产品旧路径与整体验收，逐任务检查点持续记录。
 - 需求依据：2026-10-02 用户先授权审计，随后授权按审计实施瘦身，保留全部现行能力、接口和权限边界；此前实施 subagent 完成T1–T9；用户最新要求不再派生后，余下实现、复核、验收和提交由主 agent 直接完成。
-- 当前阶段：主agent自动验收通过，待同步Specs与归档；历史审计交付见 [调查报告](research.md) 和 [模块覆盖表](coverage.md)，实施方案见 [Technical](technical.md)，任务见 [Plan](plan.md)。审计记录不作为已经实现的事实。
+- 当前阶段：主agent自动验收通过，Specs已同步并归档；历史审计交付见 [调查报告](research.md) 和 [模块覆盖表](coverage.md)，实施方案见 [Technical](technical.md)，任务见 [Plan](plan.md)。审计记录不作为已经实现的事实。
 
 ## 目标与范围
 

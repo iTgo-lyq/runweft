@@ -2,7 +2,7 @@
 
 默认数据根 `~/.runweft`，全局 `--home` 优先于 `RUNWEFT_HOME`。`init` 生成有注释的 config.yaml，已有文件不覆盖。config path/show/check/set 定位、展示来源、校验和编辑；字段环境变量优先于 YAML，再取默认值。未知字段、重复键、错误值和含凭据/路径/查询参数的 Hub 地址被拒绝，无效编辑不替换配置。
 
-配置包含 schemaVersion、mode、server、hub.url 和可选 hapi.executable。mode 表示部署角色，hub.url 独立选择业务连接；模式切换不迁移身份或历史，不替用户停止另一个连接。YAML 不保存 Agent、runtime 选择或身份 token。
+配置包含 schemaVersion、mode、server、hub.url 和可选 hapi.executable。schemaVersion省略时取当前默认值1，显式非1拒绝。mode 表示部署角色，hub.url 独立选择业务连接；模式切换不迁移身份或历史，不替用户停止另一个连接。YAML 不保存 Agent、runtime 选择或身份 token。
 
 | 角色 | 行为 |
 | --- | --- |
@@ -28,7 +28,7 @@ paths 列出实际绝对路径：
 | --- | --- |
 | config.yaml | 本机部署和选中 Hub 地址 |
 | server/hapi/ | 托管 HAPI 数据库、私有服务凭据、日志和 artifacts 字节 |
-| server/runweft/state.sqlite | 中心身份摘要、空间/成员、授权对象、机器/runtime、仓库/Agent/个人选择、Task/Round、文件与代码关联；schema 18 |
+| server/runweft/state.sqlite | 中心身份摘要、空间/成员、授权对象、机器/runtime、仓库/Agent/个人选择、Task/Round、文件与代码关联；固定schema 19 |
 | server/process.json | 托管进程及 instanceId；正常停止后移除 |
 | connections/<主机名>-<origin hash>/identity.json | 0600 用户身份与空间连接 |
 | 同目录 connect.json、machine.json | 0600 待确认交接及独立机器接入记录 |
@@ -37,7 +37,7 @@ paths 列出实际绝对路径：
 | 同目录 hapi/workspaces/repositories/ | Git、子模块、LFS 缓存 |
 | 同目录 hapi/workspaces/exports、imports、fetches | 基线与成果操作回执和中间副本 |
 | 同目录 hapi/artifact-transfers/ | 输入副本、传输回执、未交付输出候选 |
-| client.sqlite | Claude 精确调用身份与本机连接文件短事务协调；不保存权威 Agent/工作区绑定 |
+| client.sqlite | 固定schema 1；Claude精确调用身份与本机连接文件短事务协调，不保存权威Agent/工作区绑定 |
 | backups/mcp/ | 显式原生 MCP 配置修改的备份，可能含秘密，限制访问权限 |
 | logs/、cache/、tmp/ | 服务日志、可再生缓存与临时数据 |
 
@@ -47,8 +47,10 @@ paths 列出实际绝对路径：
 
 正常成果清理按 result release → workspace remove → artifact prune/remove 显式执行，未交付候选受保护。server.artifacts 配置托管中心限制，远端客户端用 artifact limits 查询实际策略；传输流式转发，代理需支持相应体积和长流，不另加固定总传输时限。
 
-## 未上线历史重置
+## 当前数据格式
 
-data reset 默认预览固定路径；--apply 才清除配置、旧全局 Agent、中心业务/原生库/附件、本机身份/机器及协调记录。无需解析旧配置。应用前检查托管服务和所有 Runner 已停止；进程状态不明或路径符号链接时，在首次删除前拒绝。
+Runweft只创建和读取唯一当前格式：中心库schema19、本机client库schema1。全新库一次创建完整结构；已有库核验版本及表、索引和约束，同格式正常打开。旧版、未知版本或结构损坏明确拒绝，不增量建表、不补字段、不迁移或清理原目录，也不提供data/reset。
 
-保留 workspaces 全树、Git 对象、artifact-transfers、日志、MCP 备份及产品目录外的仓库和模型配置；历史关联失去后需自行审查回收保留现场。重新 init、连接身份、登记机器/runtime/Agent；无 YAML 导入、旧历史认领、跨库 journal、继续或回退框架。简单增量建表保留，遇到更高版本拒绝并提示配套版本或显式重置，不自动删除数据。
+已有库核验不写原主库或WAL/SHM；拒绝时保留原字节、权限与文件集。格式不支持返回503/state_format_unsupported，损坏或结构不符返回503/state_format_invalid，提示使用独立新--home并自行保管原目录。start、serve、restart在创建服务凭据、日志或进程以及停止现有服务之前预检本机两种业务库。此约束不改造独立HAPI的内部持久化。
+
+当前配置的正常省略值、身份轮换、现行任务恢复和显式成果留存不属于历史格式转换；它们仍按各自权限和固定回执执行。

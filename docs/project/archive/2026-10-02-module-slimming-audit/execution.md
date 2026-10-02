@@ -437,3 +437,10 @@ Task剩余全链依次exit0：C2Jap7控制七项、39ptAn任务CLI四项、zMf5f
 主agent依用户及AGENTS.md持续自动本地验收授权判定通过，不再设置人工门禁。物理WAN、当前候选Mac实机、arm64完整服务/模型、HAPI全套及远端发布未执行，固定HAPI长Claude路径与撤权停机限制如实保留，不阻断本次本地实现审计关闭。接续仅同步已验证Specs、入口链接并完整归档，不改其他Change或发布。
 
 - Commit：`module-slimming-audit T13: 完成同候选验收与覆盖核对`。
+
+
+### 关闭
+
+已同步部署/CLI/Skill、业务持久协调、中心scope、资源与空间、后台/执行通道、工作区维护及发行验收事实；历史公共npm/CI记录保留。当前Specs删除data/reset和增量升级描述，说明schema19/client1唯一格式及无写拒绝。docs入口已指向本次归档，物理远端/平台及固定HAPI缺口继续列明。整个Change移入2026-10-02-module-slimming-audit，源目录不保留副本。
+
+- 归档Commit：`module-slimming-audit: sync specs and archive`。

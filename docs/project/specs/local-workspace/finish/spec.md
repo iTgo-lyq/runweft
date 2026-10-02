@@ -18,4 +18,4 @@ tracked/untracked 脏内容拒绝删除；ignored 文件/依赖默认保留并�
 
 删除异步受理，用 show 确认最终 retained 状态。进行中重复命令/中心重启查询原操作；已确认失败恢复 retained 并保留原因，修复后允许显式新尝试。删除成功移除自有 checkout、树外输入及指向预期成果的任务分支，保留报告、原生历史和操作记录，本机仍保留 base/round 引用。远端按[代码留存](../../remote-results/retention/spec.md)核对已交付或已明确释放的成果后，释放目标自有成果 refs，并独立推进 task consumer 与缓存清理；中心恢复引用仍保留。已删除环境不自动重建或续接。
 
-linked worktree 依赖源 Git common directory 与对象，备份须包含两侧和所需原生历史；当前不支持自动路径迁移。手工维护保留引用可能使报告指向的成果失去可用性，完整操作边界见[使用说明](../../../../usage.md#数据升级与诊断)。
+linked worktree 依赖源 Git common directory 与对象，备份须包含两侧和所需原生历史；当前不支持自动路径迁移。手工维护保留引用可能使报告指向的成果失去可用性，完整操作边界见[使用说明](../../../../usage.md#配置部署与数据)。
