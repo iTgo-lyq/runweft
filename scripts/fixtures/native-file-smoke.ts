@@ -14,6 +14,7 @@ import { DelegationNativeClient } from '../../src/hub/delegation/native';
 import { agentSnapshot } from '../../src/hub/delegation/context';
 import { HubResourceClient } from '../../src/hub/resources/client';
 import { closeSmoke, removeSmokeSecrets, startSmokeHapi, stopSmokeProcess } from './smoke-lifecycle';
+import { appendFixtureRound } from './fixture-round';
 
 /** Dedicated low-level file/Git smoke: current domain records, real policy and Runner; no model scan. */
 export async function nativeFileSmoke(root: string, command: string[], hapiBinary: string, env: NodeJS.ProcessEnv) {
@@ -91,10 +92,8 @@ export async function nativeFileSmoke(root: string, command: string[], hapiBinar
             round.phase = 'finished'; round.stop = 'not_started'; round.finish = 'complete'; round.executionAbsent = true; round.completedAt = Date.now();
             store.save(task, round, inputs);
             function nextRound() {
-                store.append(namespace, task.parent, randomUUID(), { id: task.id, mode: 'next', message: 'Explicit independent native resume probe' }, snapshot);
-                const bundle = store.require(namespace, task.id), next = bundle.rounds.at(-1)!;
-                next.phase = 'finished'; next.stop = 'not_started'; next.finish = 'complete'; next.executionAbsent = true; next.completedAt = Date.now();
-                store.save(bundle.task, next, bundle.inputs.filter(input => input.roundId === next.id)); Object.assign(task, bundle.task); Object.assign(round, next);
+                const next = appendFixtureRound(store, task, snapshot, { stop: 'not_started', executionAbsent: true });
+                Object.assign(task, next.task); Object.assign(round, next.round);
             }
             return { task, round, nextRound, get native() { return gateway.delegation.taskClient(task, round); } };
         }

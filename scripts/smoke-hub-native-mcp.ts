@@ -1,3 +1,4 @@
+import { preflightBrowser } from './fixtures/smoke-preflight';
 import assert from 'node:assert/strict';
 import { spawn, spawnSync } from 'node:child_process';
 import { chmodSync, copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
@@ -27,6 +28,7 @@ for (const path of [project]) mkdirSync(path, { mode: 0o700 });
 const env: NodeJS.ProcessEnv = { ...process.env };
 for (const key of Object.keys(env)) if (key.startsWith('RUNWEFT_') || key.startsWith('HAPI_') || ['CLI_API_TOKEN', 'DB_PATH', 'TELEGRAM_BOT_TOKEN'].includes(key)) delete env[key];
 delete env.HAPI_CODEX_APP_SERVER_BIN; delete env.HAPI_SESSION_ID;
+await preflightBrowser();
 const models = modelHomes(root, env), codexHome = env.CODEX_HOME!, claudeHome = env.CLAUDE_CONFIG_DIR!;
 const { nativeClaude, codexModel } = models;
 

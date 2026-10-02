@@ -10,6 +10,7 @@ import { AccessStore } from '../../src/hub/access/store';
 import { DelegationScopes, agentSnapshot } from '../../src/hub/delegation/context';
 import { TaskStore } from '../../src/tasks/store';
 import { hubConnectionPaths } from '../../src/hub/resources/connection';
+import { appendFixtureRound } from './fixture-round';
 
 export async function consoleTasks(options: { origin: string; home: string; root: string; page: Page; memberPage: Page; context: BrowserContext;
     identityToken: string; memberToken: string; memberIdentity: string; ownerToken: string; spaceId: string; machineId: string; agentId: string; memberAgentId: string;
@@ -47,11 +48,7 @@ export async function consoleTasks(options: { origin: string; home: string; root
             if (index === 0) { round.sessionId = sessionId; round.nativeSessionId = nativeId; taskId = accepted.agent_id; roundId = round.id; }
             tasks.save(bundle.task, round, bundle.inputs);
             if (index === 0) {
-                const next = tasks.append(namespace, parent, randomUUID(), { id: taskId, mode: 'next', message: 'Second browser fixture round' }, snapshot);
-                const updated = tasks.require(namespace, taskId), latest = updated.rounds.find(item => item.id === next.round_id)!;
-                latest.phase = 'finished'; latest.stop = 'stopped'; latest.finish = 'complete';
-                latest.report = marker + '_SECOND_ROUND'; latest.sessionId = sessionId; latest.nativeSessionId = nativeId;
-                tasks.save(updated.task, latest, updated.inputs.filter(input => input.roundId === latest.id));
+                appendFixtureRound(tasks, bundle.task, snapshot, { stop: 'stopped', report: marker + '_SECOND_ROUND', sessionId, nativeSessionId: nativeId });
             }
         } }).immediate();
         access.bind({ kind: 'session', id: sessionId, ownerId: actor.ownerId, spaceId: options.spaceId, machineId: options.machineId, taskId });

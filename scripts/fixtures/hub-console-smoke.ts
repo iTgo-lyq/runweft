@@ -63,9 +63,9 @@ async function importIdentity(page: Page, token: string, spaceId: string) {
 let browser: Awaited<ReturnType<typeof chromium.launch>> | undefined;
 console.log('Evidence: ' + root);
 try {
+    browser = await chromium.launch({ headless: true, executablePath: process.env.RUNWEFT_SMOKE_CHROMIUM });
     await cli(['init']); await cli(['config', 'set', 'hapi.executable', selectedBinaries.hapi.path]); await cli(['config', 'set', 'server.port', String(port)]); await cli(['start']);
     const connection = await cli(['hub', '--url', origin, 'connect', 'begin', '--name', 'Console acceptance']);
-    browser = await chromium.launch({ headless: true, executablePath: process.env.RUNWEFT_SMOKE_CHROMIUM });
     const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } }), page = await context.newPage();
     page.on('pageerror', error => pageErrors.push(error.message));
     page.on('console', message => { if (message.type() !== 'error') output.push(message.text()); });

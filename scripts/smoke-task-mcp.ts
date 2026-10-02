@@ -1,3 +1,4 @@
+import { watchNativeHost } from './fixtures/native-host';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
@@ -53,7 +54,7 @@ async function hostCall(host: 'codex' | 'claude', helper: string, proof: string)
     const child = spawn(host === 'codex' ? 'codex' : nativeClaude!, args, { cwd: project, env, stdio: ['ignore', 'pipe', 'pipe'] });
     assert(child.pid); pids.add(child.pid);
     let buffer = '', done = false, failure: Error | undefined, resultCode: number | null = null;
-    child.stderr.on('data', () => {});
+    const watchdog = watchNativeHost(child, 300_000); item.hostDiagnostics = watchdog.state;
     child.stdout.on('data', chunk => {
         buffer += chunk;
         let end;
@@ -64,12 +65,15 @@ async function hostCall(host: 'codex' | 'claude', helper: string, proof: string)
             if (event.type === 'thread.started') item.nativeId = event.thread_id;
             if (event.type === 'system' && event.subtype === 'init') item.nativeId = event.session_id;
             if (event.item?.type === 'mcp_tool_call' && event.item.server === 'runweft') {
-                const tool = event.item, call = calls.get(tool.id) ?? { name: tool.tool, args: tool.arguments, startedAt: now };
+                const tool = event.item; watchdog.progress(tool.tool); const call = calls.get(tool.id) ?? { name: tool.tool, args: tool.arguments, startedAt: now };
                 if (event.type === 'item.completed') Object.assign(call, { finishedAt: now, results: values(tool.result), error: tool.error });
                 calls.set(tool.id, call);
             }
             for (const block of event.message?.content ?? []) {
-                if (block.type === 'tool_use' && block.name.startsWith('mcp__runweft__')) calls.set(block.id, { name: block.name.slice('mcp__runweft__'.length), args: block.input, startedAt: now });
+                if (block.type === 'tool_use' && block.name.startsWith('mcp__runweft__')) {
+                    watchdog.progress(block.name.slice('mcp__runweft__'.length));
+                    calls.set(block.id, { name: block.name.slice('mcp__runweft__'.length), args: block.input, startedAt: now });
+                }
                 if (block.type === 'tool_result' && calls.has(block.tool_use_id)) Object.assign(calls.get(block.tool_use_id), { finishedAt: now, results: values(block.content), isError: block.is_error });
             }
         }
@@ -78,8 +82,7 @@ async function hostCall(host: 'codex' | 'claude', helper: string, proof: string)
         child.once('error', error => { failure = error; done = true; resolve(); });
         child.once('exit', code => { resultCode = code; done = true; resolve(); });
     });
-    const timer = setTimeout(() => child.kill('SIGTERM'), 300_000);
-    const hard = setTimeout(() => child.kill('SIGKILL'), 310_000);
+
     const approvals = new Set<string>();
     try {
         while (!done) {
@@ -98,7 +101,7 @@ async function hostCall(host: 'codex' | 'claude', helper: string, proof: string)
             }
         }
         if (failure) throw failure;
-        assert.equal(resultCode, 0, `${host} native host did not complete`);
+        watchdog.check(resultCode);
         item.calls = [...calls.values()];
         const spawned = item.calls.filter((call: any) => call.name === 'spawn_agent');
         assert.equal(spawned.length, 1, 'Host must accept exactly one child');
@@ -123,9 +126,9 @@ async function hostCall(host: 'codex' | 'claude', helper: string, proof: string)
         record(`${host}: real spawn/wait/read, child CLI spawn+send rejected, native completion and process stopped`);
         record(`${host}: actual MCP wait returns timed_out after ${item.longWaitMs}ms`);
     } finally {
-        item.calls = [...calls.values()]; clearTimeout(timer);
+        item.calls = [...calls.values()];
         if (!done) { child.kill('SIGTERM'); await exited; }
-        clearTimeout(hard);
+        watchdog.close();
     }
 }
 

@@ -6,13 +6,14 @@ import { dirname, join, resolve } from 'node:path';
 import type { HapiHttp } from '../src/hapi';
 import { nativeUserSmoke } from './fixtures/native-user-smoke';
 import { modelHomes } from './fixtures/model-homes';
-import { installedBinaries } from './fixtures/installed-binaries.mjs';
+import { preflightBinaries } from './fixtures/smoke-preflight';
+import { watchNativeHost } from './fixtures/native-host';
 import { codexMcpDefinition, replaceCodexMcp } from '../src/mcp/toml';
 import { codexCatalog } from './fixtures/codex-catalog';
 import pkg from '../package.json';
 
 type Flavor = 'codex' | 'claude';
-const executable = resolve(process.argv[2] ?? 'dist/runweft'), binaries = installedBinaries(executable);
+const executable = resolve(process.argv[2] ?? 'dist/runweft'), binaries = preflightBinaries(executable);
 const selected = process.env.RUNWEFT_SMOKE_CASE;
 const remote = process.env.RUNWEFT_SMOKE_REMOTE === '1';
 // Two remote rounds include model-driven approvals and fetches; this bounds the whole host, not an MCP request.
@@ -167,7 +168,7 @@ ${controls ? controlSteps : disconnect ? '4. 再 send_input 一次，mode=next�
     const child = spawn(host === 'codex' ? 'codex' : nativeClaude!, args, { cwd, env, stdio: ['ignore', 'pipe', 'pipe'] });
     assert(child.pid); pids.add(child.pid);
     let buffer = '', done = false, code: number | null = null, failure: Error | undefined;
-    child.stderr.on('data', () => {});
+    const watchdog = watchNativeHost(child, hostTimeoutMs); item.host = watchdog.state;
     child.stdout.on('data', chunk => {
         buffer += chunk;
         let end;
@@ -178,12 +179,12 @@ ${controls ? controlSteps : disconnect ? '4. 再 send_input 一次，mode=next�
             if (event.type === 'thread.started') item.nativeId = event.thread_id;
             if (event.type === 'system' && event.subtype === 'init') item.nativeId = event.session_id;
             if (event.item?.type === 'mcp_tool_call' && event.item.server === 'runweft') {
-                const tool = event.item, call = calls.get(tool.id) ?? { name: tool.tool, args: tool.arguments, startedAt: now };
+                const tool = event.item; watchdog.progress(tool.tool); const call = calls.get(tool.id) ?? { name: tool.tool, args: tool.arguments, startedAt: now };
                 if (event.type === 'item.completed') Object.assign(call, { finishedAt: now, results: values(tool.result), error: tool.error });
                 calls.set(tool.id, call);
             }
             for (const block of event.message?.content ?? []) {
-                if (block.type === 'tool_use' && block.name.startsWith('mcp__runweft__')) calls.set(block.id, { name: block.name.slice('mcp__runweft__'.length), args: block.input, startedAt: now });
+                if (block.type === 'tool_use' && block.name.startsWith('mcp__runweft__')) { watchdog.progress(block.name.slice('mcp__runweft__'.length)); calls.set(block.id, { name: block.name.slice('mcp__runweft__'.length), args: block.input, startedAt: now }); }
                 if (block.type === 'tool_result' && calls.has(block.tool_use_id)) Object.assign(calls.get(block.tool_use_id), { finishedAt: now, results: values(block.content), isError: block.is_error });
             }
             for (const call of calls.values()) if (call.name === 'read_agent') for (const value of call.results ?? []) {
@@ -196,9 +197,7 @@ ${controls ? controlSteps : disconnect ? '4. 再 send_input 一次，mode=next�
         child.once('error', error => { failure = error; done = true; resolve(); });
         child.once('exit', status => { code = status; done = true; resolve(); });
     });
-    item.hostTimeoutMs = hostTimeoutMs; item.hostTimedOut = false;
-    const soft = setTimeout(() => { item.hostTimedOut = true; child.kill('SIGTERM'); }, hostTimeoutMs);
-    const hard = setTimeout(() => child.kill('SIGKILL'), hostTimeoutMs + 10_000);
+    item.hostTimeoutMs = hostTimeoutMs;
     const paths = cli(remote ? targetHome : home, ['paths']);
     async function observe() {
         const listed = cli(home, ['task', 'list'], cwd).agents;
@@ -228,8 +227,7 @@ ${controls ? controlSteps : disconnect ? '4. 再 send_input 一次，mode=next�
     try {
         while (!done) { await Promise.race([exited, Bun.sleep(750)]); await observe(); }
         if (failure) throw failure;
-        assert(!item.hostTimedOut, `${id}: native host exceeded the ${hostTimeoutMs}ms whole-case budget`);
-        assert.equal(code, 0, `${id}: native host failed`);
+        watchdog.check(code);
         item.calls = [...calls.values()];
         const discoveries = item.calls.filter((call: any) => call.name === 'list_agent_definitions').flatMap((call: any) => call.results ?? []);
         assert(discoveries.some((value: any) => value.repository?.observation?.cwd === cwd
@@ -359,8 +357,8 @@ ${controls ? controlSteps : disconnect ? '4. 再 send_input 一次，mode=next�
         item.success = true;
         console.log(`PASS ${id}: ${remote ? 'remote automatic preparation, two-round inputs/outputs and Git/LFS edits, native MCP fetch, offline CLI recovery and explicit merge' : worktree ? 'prepared Git edit, project context/skill/MCP, sealed results and operator cherry-pick' : 'shared edit'}, memory resume${remote ? '' : ', pure report'}, MCP filtering, native stop${disconnect ? ', real host transport cut' : controls ? ', MCP steer/interrupt' : ''}${retryFinish ? ', native MCP retry_finish' : ''}`);
     } finally {
-        item.calls = [...calls.values()]; item.roundFacts = [...roundFacts.values()]; clearTimeout(soft);
-        if (!done) { child.kill('SIGTERM'); await exited; } clearTimeout(hard);
+        item.calls = [...calls.values()]; item.roundFacts = [...roundFacts.values()]; item.hostTimedOut = watchdog.state.timedOut;
+        if (!done) { child.kill('SIGTERM'); await exited; } watchdog.close();
 
     }
 }

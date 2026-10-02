@@ -5,12 +5,12 @@ import { basename, dirname, join, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
 import { DatabaseSync } from 'node:sqlite';
 import { spawnSync } from 'node:child_process';
-import { installedBinaries } from './installed-binaries.mjs';
+import { assertCandidateBinaries } from './installed-binaries.mjs';
 
 /** Only this family's current handoff and installed no-model lifecycle; business checks stay in consumers. */
 export function collaborationPackage(file, binary, explicitHapi, expectedOwner) {
     file = resolve(file); binary = resolve(binary);
-    const source = JSON.parse(readFileSync(file, 'utf8')), binaries = installedBinaries(binary);
+    const source = JSON.parse(readFileSync(file, 'utf8')), binaries = assertCandidateBinaries(binary, source.candidate.binaries, explicitHapi);
     assert(source.kind === 'collaboration-current' && source.success && source.handoff && source.cleanupErrors.length === 0 && !source.consumed, 'Requires live, unconsumed current collaboration handoff');
     assert.equal(source.cleanupOwner, expectedOwner);
     assert.equal(file, join(source.evidenceDir, 'evidence.json'));
@@ -19,8 +19,6 @@ export function collaborationPackage(file, binary, explicitHapi, expectedOwner) 
     assert.equal(source.root, join(source.ownedRoot, '.dev-smoke')); assert(existsSync(source.root));
     const hash = bytes => createHash('sha256').update(bytes).digest('hex');
     const hapi = explicitHapi ? resolve(explicitHapi) : binaries.hapi.path;
-    assert.equal(hash(readFileSync(hapi)), source.candidate.binaries.hapi.sha256);
-    assert.equal(binaries.runweft.sha256, source.candidate.binaries.runweft.sha256);
     // Inspect only a private copy before any start or configuration write.
     const checkRoot = mkdtempSync(join(tmpdir(), 'runweft-handoff-check-')), copy = join(checkRoot, 'state.sqlite');
     let db;
