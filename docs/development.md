@@ -113,7 +113,7 @@ bun run release:assemble dist/packages dist/website <验收说明.md> <脱敏证
 
 ## npm 可信发布
 
-五包已绑定 `iTgo-lyq/runweft` 的 `.github/workflows/npm-publish.yml`，GitHub 托管 runner 用 OIDC 获取短期发布授权，无需 npm token secret 或逐包人工验证码。[已验证记录](project/archive/2026-10-01-npm-trusted-publishing/acceptance.md)包括真实五包授权和无上传预演；[1.1.1 原 tag 验收](project/changes/npm-patch-release/execution.md)已新增实际 OIDC 上传和匿名安装。
+五包已绑定 `iTgo-lyq/runweft` 的 `.github/workflows/npm-publish.yml`，GitHub 托管 runner 用 OIDC 获取短期发布授权，无需 npm token secret 或逐包人工验证码。[已验证记录](project/archive/2026-10-01-npm-trusted-publishing/acceptance.md)包括真实五包授权和无上传预演；[1.1.1 原 tag 验收](project/archive/2026-10-02-npm-patch-release/acceptance.md)已新增实际 OIDC 上传和匿名安装。
 
 正式发版先更新 `package.json` 和常规说明中的目标版本，完成变更验收并提交干净源码，再推送严格匹配的版本 tag。`vX.Y.Z` 发布到 npm `latest`，`vX.Y.Z-beta.N` 发布到 `beta`；整数不允许前导零，N 从 0 起，alpha/rc 等其他格式拒绝。工作流从该标签构建干净候选，完成根检查、四平台打包/内容/实际安装检查后，依次发布四平台包；确认全部公开完整性后才发布主包。当前公共 1.1.1 已验证，历史 1.1.0 保持原样，不能用新候选覆盖同版本。
 

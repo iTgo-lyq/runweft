@@ -17,5 +17,13 @@
 
 ## T3 推送 main 并部署生产官网
 
-- 结果：待推送已公开的 1.1.1 输入及验收记录；Beta 仅有已评审 Plan，尚未实施。
-- 验证：推送前 packageInputs 与 v1.1.1 无差异；等待 main CLI/Pages 和公开生产检查。
+- 结果：main=bcd26695522ae166165a2661a26de592fd6efb1a 已推送，CLI run 36919283325 四平台全部通过，Pages run 36919283258 已确认 production、npm 1.1.1。唯一 URL https://25a3034a.runweft.pages.dev/；正式 https://runweft.pages.dev/ 同一八文件全部 hash/MIME 匹配，91,064 bytes。
+- 验证：原 tag 包输入与 main 无差异；正式域名三页 Playwright 200、CSS 加载、安装命令为 1.1.1、无下载链接及浏览器错误。发布、匿名安装与生产部署均已实际确认。
+- 工作区：发现并行 module-slimming-audit 文档后转到独立 codex/npm-beta-publishing 工作区，保留原目录的改动，不纳入本次提交。
+- Commit：`npm-patch-release T3: verify main CI and production website`
+
+## T4 同步发行事实并归档
+
+- 结果：按持续授权完成自动验收，发行/安装/Skill/官网当前 Specs、维护者说明和项目入口同步；全部需求映射实际证据，完整归档，不修改冻结包输入或历史交付。
+- 验证：Change 结构、文档链接、git diff 与 tag 包输入检查通过；独立工作区提交推送 main，原工作区并行审计保留。官网说明推送触发的部署另在原流程中等待结果。
+- Commit：`npm-patch-release T4: sync verified release facts and archive`

@@ -35,6 +35,6 @@
 
 普通push/PR配置为一次核心准备加相关Linux集成，先安装固定Codex以运行真实配置编辑检查；路径未知保守全组。只有tag/手动入口构建完整四平台候选，候选完整gate不按diff跳过，npm在同一run等待平台安装结果。Beta通道、发布回执和官网版本资格保护保留。该配置已通过本地actionlint、真实工具安装及Node选择测试，未触发本轮远端CI。
 
-历史公开交付与不同候选的托管平台结果见[npm首次发布](../../../archive/2026-10-01-npm-publication/acceptance.md)、[可信发布CI](../../../archive/2026-10-01-npm-trusted-publishing/acceptance.md)和[1.1.1发布记录](../../../changes/npm-patch-release/execution.md)。这些结果不迁移成本轮候选的Mac/arm64原生证据；本轮没有发布候选或部署官网。
+历史公开交付与不同候选的托管平台结果见[npm首次发布](../../../archive/2026-10-01-npm-publication/acceptance.md)、[可信发布CI](../../../archive/2026-10-01-npm-trusted-publishing/acceptance.md)、[1.1.1发布记录](../../../archive/2026-10-02-npm-patch-release/acceptance.md)和[Beta配置验收](../../../archive/2026-10-02-npm-beta-publishing/acceptance.md)。这些结果不迁移成本轮候选的Mac/arm64原生证据；本轮没有发布候选或部署官网。
 
 本轮未执行expanded十二组合、HAPI全套、Mac实机安装/模型、arm64原生服务/模型、物理跨机/WAN或生产TLS。QEMU仅验证当前arm64基本命令。Claude过长cwd历史定位的既有HAPI缺口仍使用专用短路径避开，不修改HAPI或伪造历史。

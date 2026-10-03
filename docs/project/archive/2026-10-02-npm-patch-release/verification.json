@@ -1,0 +1,484 @@
+{
+  "version": "1.1.1",
+  "source": {
+    "revision": "36257dfb3aae2da85289539b11ba8ac857bdbb10",
+    "dirty": false
+  },
+  "hapi": {
+    "revision": "3ac8b08b2aead13e9eaae459de62d9a5d5df7395",
+    "version": "0.30.7",
+    "protocolVersion": 1
+  },
+  "tag": {
+    "name": "v1.1.1",
+    "revision": "36257dfb3aae2da85289539b11ba8ac857bdbb10",
+    "event": "push",
+    "run": 36915690489,
+    "url": "https://github.com/iTgo-lyq/runweft/actions/runs/36915690489",
+    "conclusion": "success",
+    "artifact": "npm-candidate-36915690489-1"
+  },
+  "local": {
+    "typecheck": true,
+    "build": true,
+    "tests": {
+      "passed": 265,
+      "skipped": 0,
+      "failed": 0,
+      "assertions": 5305,
+      "files": 43
+    }
+  },
+  "tagCI": {
+    "tests": {
+      "passed": 263,
+      "skipped": 2,
+      "failed": 0,
+      "assertions": 5282,
+      "files": 43
+    }
+  },
+  "native": [
+    {
+      "platform": "darwin-arm64",
+      "success": true,
+      "source": {
+        "revision": "36257dfb3aae2da85289539b11ba8ac857bdbb10",
+        "dirty": false
+      },
+      "checks": [
+        "npm registry metadata and platform optional dependency installation",
+        "installed task commands and side-effect-free MCP catalog without Bun or source checkout on PATH",
+        "installed CLI services and signals with no Bun or source checkout on PATH",
+        "same-version npm reinstall preserves dedicated service data and exact paired binaries",
+        "missing platform dependency has an actionable diagnostic",
+        "npm uninstall removes executable and preserves service data"
+      ]
+    },
+    {
+      "platform": "darwin-x64",
+      "success": true,
+      "source": {
+        "revision": "36257dfb3aae2da85289539b11ba8ac857bdbb10",
+        "dirty": false
+      },
+      "checks": [
+        "npm registry metadata and platform optional dependency installation",
+        "installed task commands and side-effect-free MCP catalog without Bun or source checkout on PATH",
+        "installed CLI services and signals with no Bun or source checkout on PATH",
+        "same-version npm reinstall preserves dedicated service data and exact paired binaries",
+        "missing platform dependency has an actionable diagnostic",
+        "npm uninstall removes executable and preserves service data"
+      ]
+    },
+    {
+      "platform": "linux-arm64",
+      "success": true,
+      "source": {
+        "revision": "36257dfb3aae2da85289539b11ba8ac857bdbb10",
+        "dirty": false
+      },
+      "checks": [
+        "npm registry metadata and platform optional dependency installation",
+        "installed task commands and side-effect-free MCP catalog without Bun or source checkout on PATH",
+        "installed CLI services and signals with no Bun or source checkout on PATH",
+        "same-version npm reinstall preserves dedicated service data and exact paired binaries",
+        "missing platform dependency has an actionable diagnostic",
+        "npm uninstall removes executable and preserves service data"
+      ]
+    },
+    {
+      "platform": "linux-x64",
+      "success": true,
+      "source": {
+        "revision": "36257dfb3aae2da85289539b11ba8ac857bdbb10",
+        "dirty": false
+      },
+      "checks": [
+        "npm registry metadata and platform optional dependency installation",
+        "installed task commands and side-effect-free MCP catalog without Bun or source checkout on PATH",
+        "installed CLI services and signals with no Bun or source checkout on PATH",
+        "same-version npm reinstall preserves dedicated service data and exact paired binaries",
+        "missing platform dependency has an actionable diagnostic",
+        "npm uninstall removes executable and preserves service data"
+      ]
+    }
+  ],
+  "oidc": {
+    "packages": [
+      {
+        "name": "runweft-linux-x64",
+        "status": 201,
+        "authorized": true
+      },
+      {
+        "name": "runweft-linux-arm64",
+        "status": 201,
+        "authorized": true
+      },
+      {
+        "name": "runweft-darwin-x64",
+        "status": 201,
+        "authorized": true
+      },
+      {
+        "name": "runweft-darwin-arm64",
+        "status": 201,
+        "authorized": true
+      },
+      {
+        "name": "runweft",
+        "status": 201,
+        "authorized": true
+      }
+    ],
+    "success": true
+  },
+  "publication": {
+    "version": "1.1.1",
+    "sourceRevision": "36257dfb3aae2da85289539b11ba8ac857bdbb10",
+    "packages": [
+      {
+        "name": "runweft-linux-x64",
+        "integrity": "sha512-AxRnfDCW7I2e4P1+SHYMks03bxsMbMRNLo280iSF6MeKYxJK5KzhCzmtQC0uF0pMRyZIu+xYuGvtWXLYN0w52g==",
+        "status": "confirmed"
+      },
+      {
+        "name": "runweft-linux-arm64",
+        "integrity": "sha512-3OwZMNEpRDY8ztTHNVsXH46M3OtNr5eALqWCcVtNoxnbM/2S1trpR89OB7EGfL0bRjhUBwnfPmvns0x+WzUi5Q==",
+        "status": "confirmed"
+      },
+      {
+        "name": "runweft-darwin-x64",
+        "integrity": "sha512-ifomhlB2wtI+3kq46c/8gRvEvBJBCgsa+CfmMa7LOGhM3wqgfLkyoF7MFDsVMKicd6V+UhmrX/aJa3x/Powu2Q==",
+        "status": "confirmed"
+      },
+      {
+        "name": "runweft-darwin-arm64",
+        "integrity": "sha512-WOqHsANIPPfttoaYBQKsNDvStWSMpSf0OyD4+o/fHg7s4s+qe1134c+PbnCx1xGWUErCe0FpzH9lb2azYJXrRg==",
+        "status": "confirmed"
+      },
+      {
+        "name": "runweft",
+        "integrity": "sha512-bGoCBraK745wTOLoSj8IgGe7/7KpOIRm8D21dCkLPETYvknyXDFSDz0ydPaVvctZF5a/qaXh2/kXWYF1qzHM5A==",
+        "status": "confirmed"
+      }
+    ],
+    "success": true
+  },
+  "publicRegistry": {
+    "success": true,
+    "published": true,
+    "packages": [
+      {
+        "name": "runweft-linux-x64",
+        "version": "1.1.1",
+        "latest": "1.1.1",
+        "integrity": "sha512-AxRnfDCW7I2e4P1+SHYMks03bxsMbMRNLo280iSF6MeKYxJK5KzhCzmtQC0uF0pMRyZIu+xYuGvtWXLYN0w52g==",
+        "bytes": 134823130,
+        "tarball": "https://registry.npmjs.org/runweft-linux-x64/-/runweft-linux-x64-1.1.1.tgz",
+        "binaries": {
+          "bin/runweft": "b3a9a1154d405481b64c67795c9a81ddca89e0022d28af020c040215fe5758ff",
+          "bin/hapi": "d5a8a3cf3d09eb40c5a091845a9b5745707bd6ee195eedf0a5b5ddd5cecd93ef"
+        }
+      },
+      {
+        "name": "runweft-linux-arm64",
+        "version": "1.1.1",
+        "latest": "1.1.1",
+        "integrity": "sha512-3OwZMNEpRDY8ztTHNVsXH46M3OtNr5eALqWCcVtNoxnbM/2S1trpR89OB7EGfL0bRjhUBwnfPmvns0x+WzUi5Q==",
+        "bytes": 134040265,
+        "tarball": "https://registry.npmjs.org/runweft-linux-arm64/-/runweft-linux-arm64-1.1.1.tgz",
+        "binaries": {
+          "bin/runweft": "c8615ab31c2a144bd4b79806446d4333a485d5cef347f008bbb52231b6dc670c",
+          "bin/hapi": "04c9dfb105743f978c4555e58a200028d93f5e866ccc9b4d51237a1597f02de5"
+        }
+      },
+      {
+        "name": "runweft-darwin-x64",
+        "version": "1.1.1",
+        "latest": "1.1.1",
+        "integrity": "sha512-ifomhlB2wtI+3kq46c/8gRvEvBJBCgsa+CfmMa7LOGhM3wqgfLkyoF7MFDsVMKicd6V+UhmrX/aJa3x/Powu2Q==",
+        "bytes": 106156737,
+        "tarball": "https://registry.npmjs.org/runweft-darwin-x64/-/runweft-darwin-x64-1.1.1.tgz",
+        "binaries": {
+          "bin/runweft": "5e6d6efc7ddab27ee0a51971ecdaeb0b367d9e4f82593f7b3584a79bde543479",
+          "bin/hapi": "b710a30cc006e447b9217f7e45c4109873c46b659d9d617b4acaa66fd8c18ac8"
+        }
+      },
+      {
+        "name": "runweft-darwin-arm64",
+        "version": "1.1.1",
+        "latest": "1.1.1",
+        "integrity": "sha512-WOqHsANIPPfttoaYBQKsNDvStWSMpSf0OyD4+o/fHg7s4s+qe1134c+PbnCx1xGWUErCe0FpzH9lb2azYJXrRg==",
+        "bytes": 102301616,
+        "tarball": "https://registry.npmjs.org/runweft-darwin-arm64/-/runweft-darwin-arm64-1.1.1.tgz",
+        "binaries": {
+          "bin/runweft": "667ff04bf4c94efd823c1e129da8e9afc0a954cb01c47b82bfdcaa68eb0af066",
+          "bin/hapi": "35320e3ec52c630141ba4cf462535f9a7aa5dd16715de6fb468dab0b669c4fc2"
+        }
+      },
+      {
+        "name": "runweft",
+        "version": "1.1.1",
+        "latest": "1.1.1",
+        "integrity": "sha512-bGoCBraK745wTOLoSj8IgGe7/7KpOIRm8D21dCkLPETYvknyXDFSDz0ydPaVvctZF5a/qaXh2/kXWYF1qzHM5A==",
+        "bytes": 18986,
+        "tarball": "https://registry.npmjs.org/runweft/-/runweft-1.1.1.tgz"
+      }
+    ]
+  },
+  "anonymous": {
+    "success": true,
+    "version": "1.1.1",
+    "binaries": {
+      "runweft": {
+        "sha256": "b3a9a1154d405481b64c67795c9a81ddca89e0022d28af020c040215fe5758ff"
+      },
+      "hapi": {
+        "sha256": "d5a8a3cf3d09eb40c5a091845a9b5745707bd6ee195eedf0a5b5ddd5cecd93ef"
+      }
+    },
+    "skill": [
+      "SKILL.md",
+      "references/configuration.md",
+      "references/delegation.md",
+      "references/maintenance.md",
+      "references/onboarding.md",
+      "agents/openai.yaml"
+    ],
+    "readmeMatches": true,
+    "hapiVersion": "hapi version: 0.30.7",
+    "website": {
+      "checks": [
+        "Static website has npm metadata and contains no downloads, archives or checksums",
+        "Local / remote diagram is interactive and explicitly illustrative",
+        "Agent prompt and npm commands copy correctly; clipboard denial selects the command with accessible feedback",
+        "Home, guide and manual have no page overflow at 1440 / 1024 / 768 / 390 / 320px",
+        "Mobile menu, Escape focus and guide client/runtime switches",
+        "Relative deployment: 24 local links and anchors",
+        "Reduced motion and the same npm installation / Skill location commands without JavaScript",
+        "A failed npm install stops the DOM command before running any existing Runweft",
+        "Installing the exact DOM npm command in a dedicated prefix from the public registry",
+        "DOM npm install and Skill location succeed; the installed binary belongs to the isolated prefix and all Skill references exist",
+        "Preview root and method boundaries hold"
+      ],
+      "layouts": 19,
+      "staticBytes": 91064,
+      "browser": "153.0.8010.12",
+      "pageErrors": [],
+      "networkErrors": []
+    },
+    "isolated": true
+  },
+  "website": {
+    "ci": [
+      {
+        "id": 36919283325,
+        "name": "CLI installation",
+        "event": "push",
+        "status": "completed",
+        "conclusion": "success",
+        "source": "bcd26695522ae166165a2661a26de592fd6efb1a",
+        "url": "https://github.com/iTgo-lyq/runweft/actions/runs/36919283325"
+      },
+      {
+        "id": 36919283258,
+        "name": "website Pages",
+        "event": "push",
+        "status": "completed",
+        "conclusion": "success",
+        "source": "bcd26695522ae166165a2661a26de592fd6efb1a",
+        "url": "https://github.com/iTgo-lyq/runweft/actions/runs/36919283258"
+      }
+    ],
+    "deployment": {
+      "success": true,
+      "url": "https://25a3034a.runweft.pages.dev/",
+      "mode": "production",
+      "version": "1.1.1",
+      "files": [
+        {
+          "name": "assets/icons.svg",
+          "bytes": 1598,
+          "sha256": "d708610fe6b75591b214722352dd8dc33671bab46d8f38c21cf154552f3762fa"
+        },
+        {
+          "name": "assets/mark.svg",
+          "bytes": 297,
+          "sha256": "af2367afb3fed6d7b5bb615cf508e4defcb300975f2e575f75db4e50cb2d4168"
+        },
+        {
+          "name": "assets/site.js",
+          "bytes": 3559,
+          "sha256": "d2960a767ab23092f718609a5931bd6f2b67e4d632510a762f93169444b51340"
+        },
+        {
+          "name": "assets/style.css",
+          "bytes": 30672,
+          "sha256": "2aff264dd50554ad1dab5b91d2178a9952c94b3921c1ca837ca77d5aed10da6b"
+        },
+        {
+          "name": "guide.html",
+          "bytes": 14587,
+          "sha256": "febf14d15976ff9bdc8e64f5b385ac0d30b448a94486b477df65761dcbc4e563"
+        },
+        {
+          "name": "index.html",
+          "bytes": 16192,
+          "sha256": "a10e88d873725ec3911df764bf31b39c9736ddc75faeb852363c98c406513720"
+        },
+        {
+          "name": "manual.html",
+          "bytes": 24040,
+          "sha256": "3cb6b21de86a278857fd91755971b04084da9c9b91ef1842845493f40f492e64"
+        },
+        {
+          "name": "release.json",
+          "bytes": 119,
+          "sha256": "1913843012b63d0c31ca27149286e13a29c1973dded85db7ef8464265a351a82"
+        }
+      ],
+      "branch": "main",
+      "sourceRevision": "bcd26695522ae166165a2661a26de592fd6efb1a"
+    },
+    "http": {
+      "success": true,
+      "sourceRevision": "bcd26695522ae166165a2661a26de592fd6efb1a",
+      "bytes": 91064,
+      "unique": {
+        "success": true,
+        "url": "https://25a3034a.runweft.pages.dev/",
+        "mode": "production",
+        "version": "1.1.1",
+        "files": [
+          {
+            "name": "assets/icons.svg",
+            "bytes": 1598,
+            "sha256": "d708610fe6b75591b214722352dd8dc33671bab46d8f38c21cf154552f3762fa"
+          },
+          {
+            "name": "assets/mark.svg",
+            "bytes": 297,
+            "sha256": "af2367afb3fed6d7b5bb615cf508e4defcb300975f2e575f75db4e50cb2d4168"
+          },
+          {
+            "name": "assets/site.js",
+            "bytes": 3559,
+            "sha256": "d2960a767ab23092f718609a5931bd6f2b67e4d632510a762f93169444b51340"
+          },
+          {
+            "name": "assets/style.css",
+            "bytes": 30672,
+            "sha256": "2aff264dd50554ad1dab5b91d2178a9952c94b3921c1ca837ca77d5aed10da6b"
+          },
+          {
+            "name": "guide.html",
+            "bytes": 14587,
+            "sha256": "febf14d15976ff9bdc8e64f5b385ac0d30b448a94486b477df65761dcbc4e563"
+          },
+          {
+            "name": "index.html",
+            "bytes": 16192,
+            "sha256": "a10e88d873725ec3911df764bf31b39c9736ddc75faeb852363c98c406513720"
+          },
+          {
+            "name": "manual.html",
+            "bytes": 24040,
+            "sha256": "3cb6b21de86a278857fd91755971b04084da9c9b91ef1842845493f40f492e64"
+          },
+          {
+            "name": "release.json",
+            "bytes": 119,
+            "sha256": "1913843012b63d0c31ca27149286e13a29c1973dded85db7ef8464265a351a82"
+          }
+        ]
+      },
+      "official": {
+        "success": true,
+        "url": "https://runweft.pages.dev/",
+        "mode": "production",
+        "version": "1.1.1",
+        "files": [
+          {
+            "name": "assets/icons.svg",
+            "bytes": 1598,
+            "sha256": "d708610fe6b75591b214722352dd8dc33671bab46d8f38c21cf154552f3762fa"
+          },
+          {
+            "name": "assets/mark.svg",
+            "bytes": 297,
+            "sha256": "af2367afb3fed6d7b5bb615cf508e4defcb300975f2e575f75db4e50cb2d4168"
+          },
+          {
+            "name": "assets/site.js",
+            "bytes": 3559,
+            "sha256": "d2960a767ab23092f718609a5931bd6f2b67e4d632510a762f93169444b51340"
+          },
+          {
+            "name": "assets/style.css",
+            "bytes": 30672,
+            "sha256": "2aff264dd50554ad1dab5b91d2178a9952c94b3921c1ca837ca77d5aed10da6b"
+          },
+          {
+            "name": "guide.html",
+            "bytes": 14587,
+            "sha256": "febf14d15976ff9bdc8e64f5b385ac0d30b448a94486b477df65761dcbc4e563"
+          },
+          {
+            "name": "index.html",
+            "bytes": 16192,
+            "sha256": "a10e88d873725ec3911df764bf31b39c9736ddc75faeb852363c98c406513720"
+          },
+          {
+            "name": "manual.html",
+            "bytes": 24040,
+            "sha256": "3cb6b21de86a278857fd91755971b04084da9c9b91ef1842845493f40f492e64"
+          },
+          {
+            "name": "release.json",
+            "bytes": 119,
+            "sha256": "1913843012b63d0c31ca27149286e13a29c1973dded85db7ef8464265a351a82"
+          }
+        ]
+      }
+    },
+    "browser": {
+      "success": true,
+      "url": "https://runweft.pages.dev/",
+      "pages": [
+        {
+          "route": "",
+          "status": 200,
+          "url": "https://runweft.pages.dev/",
+          "title": "Runweft — 让你的 Agent 协作起来",
+          "heading": "一个工作区，一支 Agent 团队。",
+          "cssLoaded": true
+        },
+        {
+          "route": "guide.html",
+          "status": 200,
+          "url": "https://runweft.pages.dev/guide",
+          "title": "上手指南 — Runweft",
+          "heading": "你选择目标，Agent 完成接入。",
+          "cssLoaded": true
+        },
+        {
+          "route": "manual.html",
+          "status": 200,
+          "url": "https://runweft.pages.dev/manual",
+          "title": "完整命令参考 — Runweft",
+          "heading": "完整命令参考",
+          "cssLoaded": true
+        }
+      ],
+      "errors": [],
+      "browser": "153.0.8010.12"
+    }
+  },
+  "limits": [
+    "没有新候选模型/物理跨机或 arm64 模型组合验证",
+    "没有生成或覆盖 1.1.0 离线整包",
+    "Codex CLI 缺失的两项托管 MCP 配置测试跳过；本地两项已执行"
+  ]
+}

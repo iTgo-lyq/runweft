@@ -1,6 +1,6 @@
 # 项目文档
 
-Runweft 1.1.0 已完成 Hub 集中配置七阶段、完整后台/Skill与同候选集成发行。安装、配置、部署与数据维护见[使用说明](usage.md)，源码构建和验证见[开发说明](development.md)。
+Runweft 1.1.1 已发布；产品已完成 Hub 集中配置七阶段、完整后台/Skill与同候选集成发行。安装、配置、部署与数据维护见[使用说明](usage.md)，源码构建和验证见[开发说明](development.md)。
 
 [Hub 空间、身份与集中 Agent 配置](project/archive/2026-10-01-hub-spaces-and-agent-configuration/requirement.md)已按[七阶段交付](project/archive/2026-10-01-hub-spaces-and-agent-configuration/delivery.md)完成：独立身份/空间、HAPI对象授权、机器/runtime所有权、仓库/中心Agent、必连Hub委派、后台/Skill及最终发行。用户通过Agent/Skill操作、Web维护配置与任务；共享限空间成员，管理员不取得他人私有内容。产品设计和研究保存在同一归档，当前事实以Specs为准。
 
@@ -16,7 +16,9 @@ Runweft 1.1.0 已完成 Hub 集中配置七阶段、完整后台/Skill与同候�
 
 产品官网已统一为 npm 安装，Skill 从 npm 包内接入；静态构建无下载归档，实际 DOM 命令安装与网页自动验收通过，见[本次验收](project/archive/2026-10-02-website-npm-installation/acceptance.md)。已部署[正式官网](https://runweft.pages.dev/)与 [Cloudflare 分支预览](https://codex-cli-foundation.runweft.pages.dev/)；构建与预览见[官网说明](../website/README.md)。
 
-[Cloudflare Pages 自动部署](project/archive/2026-10-02-website-cloudflare-pages/acceptance.md)已完成 codex 分支预览：两个 Repository secrets、项目创建、真实上传及三页/资源自动校验通过。产品现已快进合入 main，[生产部署 CI](https://github.com/iTgo-lyq/runweft/actions/runs/36912561909)、正式域名八文件摘要/MIME 与三页 Playwright 检查通过；手动和 PR 的真实触发仍未实测。npm 发布仍由匹配稳定版本的 tag 触发。
+[Cloudflare Pages 自动部署](project/archive/2026-10-02-website-cloudflare-pages/acceptance.md)已完成 codex 分支预览：两个 Repository secrets、项目创建、真实上传及三页/资源自动校验通过。产品现已快进合入 main，[生产部署 CI](https://github.com/iTgo-lyq/runweft/actions/runs/36912561909)、正式域名八文件摘要/MIME 与三页 Playwright 检查通过；手动和 PR 的真实触发仍未实测。npm 正式发布由匹配源码版本的 tag 触发：稳定版 latest，Beta 版 beta。
+
+1.1.1 已通过稳定 tag/OIDC 真实上传，公共五包 latest=1.1.1；四平台托管安装、匿名 Linux x64 DOM 安装与当前 npm Skill 核对通过。main 的 CLI/Pages 及正式域名三页、八文件摘要/MIME 检查通过，见[补丁发布验收](project/archive/2026-10-02-npm-patch-release/acceptance.md)。历史离线 1.1.0 整包与分支预览保留，未追加模型或物理跨机验收。Beta tag 通道已配置，原四平台/OIDC 稳定预演通过；首个 Beta 尚未发布，Beta 门禁/参数/官网跳过目前为本地夹具证据，见[配置验收](project/archive/2026-10-02-npm-beta-publishing/acceptance.md)。
 
 已交付 Change 按独立交付结果拆分并声明依赖，归档入口如下：
 
@@ -44,6 +46,8 @@ Runweft 1.1.0 已完成 Hub 集中配置七阶段、完整后台/Skill与同候�
 | 官网统一 npm 安装（已归档） | [Requirement](project/archive/2026-10-02-website-npm-installation/requirement.md) | [验收](project/archive/2026-10-02-website-npm-installation/acceptance.md)、[产品与安装](project/specs/website/product/spec.md)、[指南](project/specs/website/guide/spec.md) |
 | 官网 Cloudflare Pages（已归档） | [Requirement](project/archive/2026-10-02-website-cloudflare-pages/requirement.md) | [真实预览验收](project/archive/2026-10-02-website-cloudflare-pages/acceptance.md)、[脱敏证据](project/archive/2026-10-02-website-cloudflare-pages/verification.json)、[官网规格](project/specs/website/product/spec.md) |
 | 模块瘦身（已归档） | [Requirement](project/archive/2026-10-02-module-slimming-audit/requirement.md) | [覆盖表](project/archive/2026-10-02-module-slimming-audit/coverage.md)、[审计清单](project/archive/2026-10-02-module-slimming-audit/research.md)、[验收](project/archive/2026-10-02-module-slimming-audit/acceptance.md)、[证据摘要](project/archive/2026-10-02-module-slimming-audit/verification.json) |
+| 1.1.1 npm 正式补丁发布（已归档） | [Requirement](project/archive/2026-10-02-npm-patch-release/requirement.md) | [验收](project/archive/2026-10-02-npm-patch-release/acceptance.md)、[公开包/原候选证据](project/archive/2026-10-02-npm-patch-release/verification.json) |
+| npm Beta tag 发布（已归档） | [Requirement](project/archive/2026-10-02-npm-beta-publishing/requirement.md) | [配置验收](project/archive/2026-10-02-npm-beta-publishing/acceptance.md)、[本地/真实 CI 证据](project/archive/2026-10-02-npm-beta-publishing/verification.json)、[操作说明](development.md#npm-可信发布) |
 
 上述归档 Change 均经一次 iclaude Plan 评审、逐任务实现提交、自动本地验收及 Specs 同步后关闭；明确由用户承担或延期的实测范围见最终验收。活跃 Change 的设计草稿不代替正式 Technical 或 Plan，也不修改已验收 Specs。
 

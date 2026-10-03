@@ -1,6 +1,6 @@
 # npm Beta tag 发布
 
-> 状态：已确认
+> 状态：已完成
 > 规模：中型
 > 更新：2026-10-02
 
@@ -13,7 +13,7 @@
 ### ADDED
 
 - `release/distribution`：推送与源码版本严格匹配的 vX.Y.Z-beta.N 标签时，使用原四平台候选、原 npm OIDC 工作流向 npm beta 标签发布同版本五包；稳定 vX.Y.Z 仍发布 latest。普通分支推送和手动入口只预演。
-- `release/acceptance`：检查数值 Beta 序号和当前发布通道的单调前进；恢复回执包含发布通道，Beta 不移动 stable latest。
+- `release/acceptance`：检查数值 Beta 序号和beta/latest 的单调前进；恢复回执包含发布通道，Beta 不移动 stable latest。
 
 ### MODIFIED
 
@@ -21,11 +21,11 @@
 
 ## 验收标准
 
-- [ ] 稳定/Beta 标签均要求精确源码版本；无 Beta 数字、alpha/rc、非法版本、版本不匹配不得正式上传。
-- [ ] Beta 发布参数使用 beta，stable 使用 latest；Beta 序号 10 大于 2，当前通道不倒退，跨通道回执拒绝恢复。
-- [ ] 五包精确依赖、四平台检查、OIDC、分平台后主包、未知上传停止和原候选恢复继续有效。
-- [ ] Beta 源码官网跳过行为清楚，稳定生产流程仍可通过；操作说明包含版本分支、标签、安装和恢复方式。
-- [ ] 本地聚焦测试、根检查/actionlint 与真实 main 的授权/预演通过；Specs 与归档清楚区分配置验证和真实 Beta 上传。
+- [x] 稳定/Beta 标签均要求精确源码版本；无 Beta 数字、alpha/rc、非法版本、版本不匹配不得正式上传。
+- [x] Beta 发布参数使用 beta，stable 使用 latest；Beta 序号 10 大于 2，Beta 同时高于当前 beta/latest，stable 只检查 latest，跨通道回执拒绝恢复。
+- [x] 五包精确依赖、四平台检查、OIDC、分平台后主包、未知上传停止和原候选恢复继续有效。
+- [x] Beta 源码官网跳过行为清楚，稳定生产流程仍可通过；操作说明包含版本分支、标签、安装和恢复方式。
+- [x] 本地聚焦测试、根检查/actionlint 与真实 main 的授权/预演通过；Specs 与归档清楚区分配置验证和真实 Beta 上传。
 
 ## 边界
 

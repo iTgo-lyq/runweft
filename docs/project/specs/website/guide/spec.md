@@ -8,7 +8,7 @@
 
 首页和指南给出相同 npm 安装命令。指南提供从 `$(npm root -g)/runweft/skills/runweft` 定位完整 Skill 的命令，说明 npm prefix/PATH、宿主 Skill 备份与 MCP 的独立接入；维护使用 npm 安装目标版本和 npm uninstall。
 
-`manual.html` 转义展示当前使用说明的 npm 参考部分，省略末尾离线工程附录；无 Markdown 下载。参考页不执行命令或 HTML。当前文档与 Skill 源码是下次发行输入，不覆盖已公开 1.1.0；接入对话明确全程 npm，避免旧包内 Skill 的下载指引。
+`manual.html` 转义展示当前使用说明的 npm 参考部分，省略末尾离线工程附录；无 Markdown 下载。参考页不执行命令或 HTML。1.1.1 发布时参考页、接入对话与公开包的文档/Skill 已由匿名安装核对；后续源码瘦身不覆盖已公开包，历史 1.1.0 保留原样。
 
 本地配置、数据位置、MCP 备份、模型登录、服务版本、排错和清理入口有具体说明。指南中的未知任务/runtime ID 和示例域名需要使用者替换，网站不自行执行这些命令或修改用户配置。
 
