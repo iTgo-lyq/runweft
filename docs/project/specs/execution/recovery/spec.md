@@ -20,6 +20,8 @@ resume 沿原有入口返回实际 HAPI session、新旧原生身份，等待该
 
 Claude 缺失检查读取当前 cwd 对应原生 transcript；Codex 用既有 native app-server 查询指定 thread，仅精确的原生缺失响应可判缺失。预检查不发送 prompt，查询进程随后关闭；明确拒绝时保留原归档状态。
 
+Claude目录统一按绝对cwd替换非ASCII字母数字为连接符；编码长度超过200时取前200码元，加连接符及完整原始cwd的UTF-16/int32 31倍累积hash绝对值的36进制表示。历史检查、扫描及launcher共用HAPI getProjectPath，尊重CLAUDE_CONFIG_DIR；不会将实际存在的长cwd历史误判missing。专用真实Claude长cwd两轮保持同native session并保留记忆，无历史重建；验证范围见[本轮验收](../../../archive/2026-10-10-hapi-session-and-shutdown/acceptance.md)。
+
 已关联受控工作区的 resume 必须携带同环境的当前有效 preparedWorkspace，实际启动前再校验；包括 HAPI 通用恢复入口，省略参数不能绕过上一轮封存与新轮准备。受控会话 clear 拒绝另开无准备会话，应通过 Runweft 结束并续轮。普通 HAPI 会话与原生内置子代理不新增这项约束，缺失目录/旧准备不作为原生历史缺失处理。
 
 shared preparedFiles 在 HAPI resume 省略时继承，显式 null 清除。Runweft 每轮传当前准备引用，无新输入时明确清除旧绑定；失效输入不作为 native_session_missing。输入副本清理和输出重传使用机器文件回执，不重放原生输入。

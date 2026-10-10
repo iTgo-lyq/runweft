@@ -16,6 +16,10 @@ HAPI Hub 仅监听私有 loopback 端口，省略 hapiPort 时自动分配。公
 
 重复 start 保持本机同一服务；停止前核对进程与 health.instanceId。前台信号关闭本次托管进程，意外退出报错，不无限重启。Runner 停止不等于终止其所有原生模型会话。status 分别显示托管服务、身份/空间连接、机器登记与 Runner 在线情况；doctor 检查配置、HAPI 版本、连接、工作区路径和 Runner，不将在线当作模型认证/执行通过。
 
+Runner停止同步拒绝新执行/RPC并取消心跳和状态重试；有连接时只发一次500ms的versioned退出通知，Hub无响应、断连或撤权不阻塞本地清理。三个后台manager同时abort，随后关闭控制服务，仅清除本PID状态及锁；局部失败仍继续后续清理。成功退出0，异常/清理失败/8秒整体超时退出1并记录阶段；控制客户端等10秒，Runweft托管期限仍为10秒。超时遗留锁沿HAPI已有陈旧PID恢复，不强删正在使用的资源。
+
+Runner凭据在启动时载入，替换本地凭据不会热更新现有进程。轮换后停止旧Runner，再以新凭据启动，保持machineId；停止本身保留独立原生session，不能据此推断任务已停止或完成。
+
 用户先通过 Web 领取/导入独立身份，再用 [hub connect](../identity/connection/spec.md) 交接到本机。auth login 生成相同确认流程，auth status 核对身份与空间。open 打开 /hub，--print 只输出无秘密地址，--hapi 打开原生界面；浏览器使用自身身份，URL 不注入 token。已移除 auth token、--token-stdin 和 hub.tokenEnv。
 
 托管原生进程的目录、数据库、地址、凭据、CORS 由 Runweft 设置，忽略冲突部署环境；用户身份环境变量不传给原生子进程。其余模型配置沿原生机制继承，不改变权限默认值或增加审批绕过。

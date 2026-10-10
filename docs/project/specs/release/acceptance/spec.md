@@ -1,6 +1,6 @@
 # 验收选择与当前证据
 
-第二轮测试瘦身已完成[本地自动验收](../../../archive/2026-10-03-test-backbone-slimming/acceptance.md)，具体删留保障与首次失败见归档。产品源码、权限和HAPI未改；旧的完整矩阵结果保留在[第一轮验收](../../../archive/2026-10-02-module-slimming-audit/acceptance.md)，不冒充本轮已执行组合。
+第二轮测试瘦身已完成[本地自动验收](../../../archive/2026-10-03-test-backbone-slimming/acceptance.md)，具体删留保障与首次失败见归档。该次产品源码、权限和HAPI未改；旧的完整矩阵结果保留在[第一轮验收](../../../archive/2026-10-02-module-slimming-audit/acceptance.md)，不冒充本轮已执行组合。
 
 ## 验证入口
 
@@ -14,7 +14,7 @@
 
 模型前实际检查安装launcher/core与HAPI身份、浏览器、两轮当前fixture的读写/消费者契约、三个消费者的失败证据出口、local/hub空原生配置接线。一个主链case只有生产、消费、清理全部成功才可复用；未知结果不重发。入口按候选、脚本/helper、原生配置及模型选择指纹拒绝不同输入的自动复用，不提供旧evidence格式兼容或自动整组重试。已完成阶段的人工工程判断与定向续验必须单列证据，不能改写失败ledger。
 
-## 本轮实际验证
+## 测试瘦身候选验收
 
 干净四平台候选为1.1.1、源码 `6a7e559fc878989c91280213e6cdd54c27fcc110`，HAPI `3ac8b08b2aead13e9eaae459de62d9a5d5df7395`。Linux x64通过专用npm registry安装；Runweft core SHA256 `c72c11210578c8db6341d60f8d0f0996c0c42fb3b1a1f66fb129229abfb38be0`，HAPI SHA256 `bdf706d7966ae4818b09029991a2bb03e70b10b0555763fc41430afd977b4fec`。后续验收/CI/项目记录调整没有改变packageInputs，未重复构建。
 
@@ -37,4 +37,13 @@
 
 历史公开交付与不同候选的托管平台结果见[npm首次发布](../../../archive/2026-10-01-npm-publication/acceptance.md)、[可信发布CI](../../../archive/2026-10-01-npm-trusted-publishing/acceptance.md)、[1.1.1发布记录](../../../archive/2026-10-02-npm-patch-release/acceptance.md)和[Beta配置验收](../../../archive/2026-10-02-npm-beta-publishing/acceptance.md)。这些结果不迁移成本轮候选的Mac/arm64原生证据；本轮没有发布候选或部署官网。
 
-本轮未执行expanded十二组合、HAPI全套、Mac实机安装/模型、arm64原生服务/模型、物理跨机/WAN或生产TLS。QEMU仅验证当前arm64基本命令。Claude过长cwd历史定位的既有HAPI缺口仍使用专用短路径避开，不修改HAPI或伪造历史。
+测试瘦身候选未执行expanded十二组合、HAPI全仓测试、Mac实机安装/模型、arm64原生服务/模型、物理跨机/WAN或生产TLS；QEMU仅验证基本命令。当时Claude长cwd历史缺口仅用专用短路径避开，现已由下述HAPI修复。
+
+
+## 2026-10-10 HAPI修复候选
+
+当前源码固定HAPI `8f774b9413fd483bc163cc06425d7646f10a7c92`；Claude长cwd历史定位和Runner有界退出已完成[本地自动验收](../../../archive/2026-10-10-hapi-session-and-shutdown/acceptance.md)。Linux x64同候选构建、248项核心、33项Node、typecheck、access四脚本及真实Claude两轮续接通过；HAPI CLI全量3049项、Runner串行集成及独立session保留验证通过。
+
+新增专项入口`bun scripts/smoke-hapi-session-and-shutdown.ts [CLI]`验证实际Runner退出码/状态/锁/控制端口、Hub无ACK/停服、启动失败/重启及真实Claude长cwd续接；它调用模型，仅在已有授权和专用认证环境运行。access的机器轮换验证严格要求旧Runner退出0并清理，不再接受旧退出1例外。
+
+当前本地Runweft SHA256 `16b613c3a44ca53d200a2f91e9fa9998d66588bb32a36b6f7b0edf2e9bc46196`，HAPI SHA256 `d72a2ddada75ea806a3abedd9d443602352eac44477eac38d9e1bd52b75467be`。本候选未推送/发布、未重跑完整发行矩阵；物理跨机、macOS和arm64实测仍未完成。公共1.1.1和此前离线发行包保留旧候选，不能视为已包含本次修复。

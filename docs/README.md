@@ -1,5 +1,7 @@
 # 项目文档
 
+当前源码已完成[Claude长路径与Runner退出修复](project/archive/2026-10-10-hapi-session-and-shutdown/acceptance.md)，固定HAPI 8f774b94。Linux x64真实长cwd两轮及正常/断连/撤权退出通过；改动仅本地提交和构建，公共1.1.1尚未包含本次修复。
+
 Runweft 1.1.1 已发布；产品已完成 Hub 集中配置七阶段、完整后台/Skill与同候选集成发行。安装、配置、部署与数据维护见[使用说明](usage.md)，源码构建和验证见[开发说明](development.md)。
 
 [当前数据基线与本机测试环境清理](project/archive/2026-10-10-current-data-baseline/execution.md)已完成。用户确认截至2026-10-10尚未在其他机器部署，数据库和本地配置以当前源码结构为首次部署基线，历史测试格式迁移不作为发行前提。本机16个历史测试目录已删除；原始临时现场不再保留，已跟踪的验收说明和脱敏摘要、源码及正式交付保留。

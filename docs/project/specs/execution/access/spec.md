@@ -40,6 +40,6 @@ SSE 对原生实时与重放事件按当前归属过滤，短期 JWT 可供 Even
 
 `createAccessGateway` 接收私有 HAPI 地址、部署密钥和业务库路径，返回可信对象/派生/文件服务。业务回调接收验证后的用户主体与现有 RequestLease，领域 API 仍负责对象授权与提交前重查。原生服务必须放在私有 loopback；网关失败不旁路透传。
 
-`bun run test:integration access`中的smoke-hub-access验证真实HAPI HTTP/文件，smoke-hub-realtime验证真实HAPI Socket/终端/SSE 和未改造 Runner 的登记/心跳/目录 RPC。终端与 fork/clear 使用协议执行端，不能视为真实模型或 PTY 验证。普通用户不开放原生全局 storage/settings/usage/devices/push/voice/workGraph、Codex Desktop 导入和其他 runtime 管理接口。
+`bun run test:integration access`中的smoke-hub-access验证真实HAPI HTTP/文件，smoke-hub-realtime验证真实HAPI Socket/终端/SSE 和配套 HAPI Runner 的登记/心跳/目录 RPC。终端与 fork/clear 使用协议执行端，不能视为真实模型或 PTY 验证。普通用户不开放原生全局 storage/settings/usage/devices/push/voice/workGraph、Codex Desktop 导入和其他 runtime 管理接口。
 
 默认网关组合 [Hub 资源领域](../../resources/ownership/spec.md)，原生 spawn/派生及实际 outgoing RPC/ack 追加中心 runtime 授权：共享/登记/空间治理在执行边界再次检查。此钩子不替换 HAPI runtime；受管任务的直接原生输入、resume 与模型修改被拒绝，须走中心委派入口。

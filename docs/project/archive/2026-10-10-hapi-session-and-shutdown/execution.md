@@ -26,7 +26,7 @@ CLI typecheck通过；全量271文件3049项通过、11项skip。首轮全量仅
 
 ## T3
 
-- Commit：Runweft提交标题hapi-session-and-shutdown T3: pin HAPI and verify real lifecycle。
+- Commit：Runweft b4c99f1a651099e65aa9a7a098132add638878a7。
 
 package.json/gitlink固定HAPI 8f774b9413fd483bc163cc06425d7646f10a7c92；CLI0.30.7、protocol1不变。删除撤权smoke接受exit1的例外，现要求0、无信号、正常清理日志、state/lock不存在及control port关闭；新凭据恢复原machineId。新增独立smoke-hapi-session-and-shutdown入口，调用真实编译Runner及专用Claude Task。
 
@@ -35,3 +35,5 @@ package.json/gitlink固定HAPI 8f774b9413fd483bc163cc06425d7646f10a7c92；CLI0.3
 同候选Runner正常121ms、Hub无ACK617ms、Hub停服112ms及新启动原machineId114ms均退出0/无信号；启动凭据失败456ms退出1。五例state/lock均清除；启动失败控制端口从本PID日志补查，五个端口均关闭。真实268字符物理cwd两轮Claude Task完成/原生停止，保持同一HAPI/native session、回忆上一轮标记，无reconstruction。复制认证摘要未变，原配置verify通过，副本和测试服务凭据已删；cleanupErrors为空。未接触原始用户配置或已有独立HAPI服务。
 
 详细同候选hash、命令和映射见acceptance.md。原始当前现场在.dev-smoke，未提交；无需重跑已通过完整发行矩阵，本轮未做其他平台/物理远端验证。T1/T2与本轮核心/集成均为真实执行结果，算法说明、代码审阅及跨平台推断另行区分。
+
+按用户授权完成本地自动验收，Requirement/Plan已完成；同步Specs及归档。不将未发布源码视为已发布1.1.1更新。

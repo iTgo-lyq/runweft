@@ -1,6 +1,6 @@
 # 执行能力与配套版本
 
-Runweft 使用 package.json 固定的 HAPI revision 及配套构建，原有健康、协议版本和 Runner 诊断仍有效。当前执行封装只接受 codex/claude，不静默切换 runtime。
+Runweft 当前固定 HAPI `8f774b9413fd483bc163cc06425d7646f10a7c92`（CLI0.30.7、protocol1）及配套构建，原有健康、协议版本和 Runner 诊断仍有效。当前执行封装只接受 codex/claude，不静默切换 runtime。
 
 HAPI health 的 spawnReceipts:1 表示可重查启动；execution:1 表示本版本执行观察协议。会话 metadata.capabilities.execution:1 在对应控制器就绪后发布；归档后可保留用于历史查询，不证明会话仍活跃。缺少所需能力明确拒绝，提示更新配套 Hub/Runner。
 

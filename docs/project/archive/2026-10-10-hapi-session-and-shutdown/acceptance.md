@@ -8,7 +8,7 @@
 ## 候选
 
 - HAPI：8f774b9413fd483bc163cc06425d7646f10a7c92，CLI0.30.7、protocol1；包含路径46430e47及退出8f774b94两个任务提交。
-- Runweft：package.json/gitlink引用同一HAPI；dist/runweft及dist/hapi均从该干净HAPI构建。真实center status核对pin，所有集成/原生用同一二进制。
+- Runweft任务提交：b4c99f1a651099e65aa9a7a098132add638878a7（T1记录c2ec2a7、T2记录ea44c9b）；package.json/gitlink引用同一HAPI；dist/runweft及dist/hapi均从该干净HAPI构建。真实center status核对pin，所有集成/原生用同一二进制。
 - SHA256：Runweft `16b613c3a44ca53d200a2f91e9fa9998d66588bb32a36b6f7b0edf2e9bc46196`；HAPI `d72a2ddada75ea806a3abedd9d443602352eac44477eac38d9e1bd52b75467be`。
 
 ## 需求映射

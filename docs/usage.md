@@ -75,6 +75,8 @@ runweft runtime check <runtimeId>
 
 Claude 执行工具用 `runtime register claude`。enroll 在本机生成独立机器凭据，重跑恢复同一接入；不将身份 token 交给 Runner。机器与 runtime 是 Hub 全局所有者资源，名称可重复，引用用完整 UUID。一个机器的同类型 runtime 保持一个 ID。发现工具/机器在线不等于模型可执行，check/doctor 不运行模型。
 
+轮换机器凭据后，执行 runner stop 再 runner start，使新凭据生效；运行中的Runner不热换凭据。Hub失联或旧凭据被撤销时，停止仍完成本地清理；独立原生会话保留，停止Runner不等于停止任务。
+
 ```sh
 runweft machine list
 runweft machine show <machineId>
