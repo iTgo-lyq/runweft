@@ -6,7 +6,7 @@ Runweft 1.1.1 已发布；产品已完成 Hub 集中配置七阶段、完整后�
 
 [Hub 空间、身份与集中 Agent 配置](project/archive/2026-10-01-hub-spaces-and-agent-configuration/requirement.md)已按[七阶段交付](project/archive/2026-10-01-hub-spaces-and-agent-configuration/delivery.md)完成：独立身份/空间、HAPI对象授权、机器/runtime所有权、仓库/中心Agent、必连Hub委派、后台/Skill及最终发行。用户通过Agent/Skill操作、Web维护配置与任务；共享限空间成员，管理员不取得他人私有内容。产品设计和研究保存在同一归档，当前事实以Specs为准。
 
-完整交付为 `dist/runweft-1.1.0-release/`、`dist/runweft-1.1.0-release.tar.gz` 及 `.sha256`：四平台/主包、Skill、静态官网、对应源码/离线Git bundle、可读验收和脱敏证据。Linux x64真实安装通过十二组原生MCP、十组消费者、后台/连接Playwright、升级与清理；256项根测试通过。具体hash、位置及边界见[1.1.0完整验收](project/archive/2026-10-01-hub-spaces-and-agent-configuration/acceptance.md)。原离线候选保留不覆盖；公共 npm 五包现已发布，匿名下载和 Linux x64 专用安装通过，见[npm 发布验收](project/archive/2026-10-01-npm-publication/acceptance.md)。官网现已部署生产与分支预览；在线 Hub/Merlin 未更新。
+完整交付为 `dist/runweft-1.1.0-release/`、`dist/runweft-1.1.0-release.tar.gz` 及 `.sha256`：四平台/主包、Skill、静态官网、对应源码/离线Git bundle、可读验收和脱敏证据。Linux x64真实安装通过十二组原生MCP、十组消费者、后台/连接Playwright、升级与清理；256项根测试通过。具体hash、位置及边界见[1.1.0完整验收](project/archive/2026-10-01-hub-spaces-and-agent-configuration/acceptance.md)。原离线候选保留不覆盖；公共 npm 五包现已发布，匿名下载和 Linux x64 专用安装通过，见[npm 发布验收](project/archive/2026-10-01-npm-publication/acceptance.md)。官网现已部署生产与分支预览。
 
 [原版最终交付验收](project/archive/2026-09-30-integrated-release/acceptance.md)汇总当时的四平台产物、校验和、需求对应及原始证据。Linux x64 完成真实安装、20 组核心协作、8 组附件、2 组 MCP 控制、原生历史重建、升级回退和 Playwright；Mac 实机由用户验证，Linux arm64 为 QEMU CLI/配置验证，物理远端延期。远端功能已通过同机独立 Hub/多 Runner 真实链路。早期四平台基础安装证据不代替最终原生协作。
 
