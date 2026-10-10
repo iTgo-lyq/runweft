@@ -164,20 +164,20 @@ try {
     const rejected = await fetch(base + '/api/auth', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ accessToken: original.active.token }) });
     assert.equal(rejected.status, 401); await rejected.arrayBuffer();
     const revokedRunner = runner!;
-    try { await stopRunner(); }
-    catch (error) {
-        // Fixed HAPI can hit its one-second shutdown fallback after its machine socket is revoked.
-        assert.equal(revokedRunner.exitCode, 1); assert.equal(revokedRunner.signalCode, null);
-        assert.throws(() => process.kill(revokedRunner.pid, 0), { code: 'ESRCH' });
-        const logs = join(recordPath, '..', 'hapi', 'logs');
-        const files = readdirSync(logs).filter(file => file.endsWith(`-pid-${revokedRunner.pid}-runner.log`)); assert.equal(files.length, 1);
-        const text = readFileSync(join(logs, files[0]), 'utf8');
-        for (const marker of ['Received SIGTERM', 'Starting proper cleanup (source: os-signal', 'Startup malfunctioned, forcing exit with code 1']) assert(text.includes(marker));
-        assert(!text.includes('[FATAL]')); assert(!text.includes('Cleanup completed, exiting process'));
-        evidence.revokedRunnerShutdown = { pid: revokedRunner.pid, exitCode: 1, log: join(logs, files[0]),
-            limitation: 'revoked socket prevents updateRunnerState during shutdown; fixed HAPI one-second fallback exits, not graceful cleanup', exited: true };
-        runner = undefined;
-    }
+    const runnerHome = join(recordPath, '..', 'hapi');
+    const runnerState = JSON.parse(readFileSync(join(runnerHome, 'runner.state.json'), 'utf8'));
+    await stopRunner();
+    assert.equal(revokedRunner.exitCode, 0); assert.equal(revokedRunner.signalCode, null);
+    assert.throws(() => process.kill(revokedRunner.pid, 0), { code: 'ESRCH' });
+    assert(!existsSync(join(runnerHome, 'runner.state.json')) && !existsSync(join(runnerHome, 'runner.state.json.lock')));
+    await assert.rejects(fetch(`http://127.0.0.1:${runnerState.httpPort}/list`, { method: 'POST', signal: AbortSignal.timeout(1000) }));
+    const logs = join(runnerHome, 'logs');
+    const files = readdirSync(logs).filter(file => file.endsWith(`-pid-${revokedRunner.pid}-runner.log`)); assert.equal(files.length, 1);
+    const text = readFileSync(join(logs, files[0]), 'utf8');
+    for (const marker of ['Received SIGTERM', 'Starting proper cleanup (source: os-signal', 'Cleanup completed, exiting process (code 0)']) assert(text.includes(marker));
+    for (const marker of ['[FATAL]', 'forcing exit', 'Cleanup failed']) assert(!text.includes(marker));
+    evidence.revokedRunnerShutdown = { pid: revokedRunner.pid, exitCode: 0, signal: null, log: join(logs, files[0]),
+        stateRemoved: true, lockRemoved: true, controlPortClosed: true };
     await startRunner(recordPath);
     await until(async () => { try { return (await owner.discover(machineId)).tools.every(t => t.toolFound); } catch { return false; } }, 'Runner reconnection after credential rotation');
     assert.equal((await cli(af, ['machine', 'enroll'])).machineId, machineId);
