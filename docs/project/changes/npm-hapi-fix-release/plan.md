@@ -25,7 +25,7 @@ HAPI 先推送；Runweft 先 tag 发布、公共安装验证后推送 main。冻
 
 ### T2 可信发布及匿名安装
 
-- 状态：进行中
+- 状态：已阻塞
 - 交付：不可变 v1.1.2、成功原 run、原候选五包及公开安装证据。
 - 依赖：T1
 - 验收：四平台安装通过，publication success=true/五包 confirmed，公开 latest/元数据/SHA-512 与候选一致；Linux x64 安装、Skill、配套 HAPI 校验通过。
@@ -33,9 +33,9 @@ HAPI 先推送；Runweft 先 tag 发布、公共安装验证后推送 main。冻
 
 ### T3 推送 Runweft main 与官网验收
 
-- 状态：待开始
+- 状态：进行中
 - 交付：main 已快进推送，生产官网指向 1.1.2。
-- 依赖：T2
+- 依赖：main推送按明确授权先完成；官网部署仍依赖T2
 - 验收：main CI 和 Pages 成功，production 回执、唯一 URL/正式域名八文件与三页浏览器检查通过。
 - 验证：fetch/正常推送，packageInputs 与 tag 无差异；原工作流/回执、HTTP 摘要和 Playwright。
 

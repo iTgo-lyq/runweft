@@ -1,6 +1,6 @@
 # 项目文档
 
-当前源码已完成[Claude长路径与Runner退出修复](project/archive/2026-10-10-hapi-session-and-shutdown/acceptance.md)，固定HAPI 8f774b94。Linux x64真实长cwd两轮及正常/断连/撤权退出通过；改动仅本地提交和构建，公共1.1.1尚未包含本次修复。
+当前源码已完成[Claude长路径与Runner退出修复](project/archive/2026-10-10-hapi-session-and-shutdown/acceptance.md)，固定HAPI 8f774b94。Linux x64真实长cwd两轮及正常/断连/撤权退出通过；修复随当前main和v1.1.2 tag推送；[发布CI](https://github.com/iTgo-lyq/runweft/actions/runs/38041451856)构建及Linux全部集成通过，但GitHub产物额度阻断候选上传，1.1.2尚未公开。当前公共版本仍为1.1.1，未包含本次修复；恢复进度见[发布执行记录](project/changes/npm-hapi-fix-release/execution.md)。
 
 Runweft 1.1.1 已发布；产品已完成 Hub 集中配置七阶段、完整后台/Skill与同候选集成发行。安装、配置、部署与数据维护见[使用说明](usage.md)，源码构建和验证见[开发说明](development.md)。
 
