@@ -1,0 +1,117 @@
+{
+  "version": "1.1.2",
+  "source": {
+    "revision": "ee66fe08c549908e1a49555c2ec0cc842b63d6c8",
+    "dirty": false
+  },
+  "hapi": {
+    "revision": "8f774b9413fd483bc163cc06425d7646f10a7c92",
+    "version": "0.30.7",
+    "protocolVersion": 1
+  },
+  "local": {
+    "typecheck": true,
+    "build": true,
+    "rootTests": {
+      "passed": 248,
+      "failed": 0,
+      "assertions": 4798,
+      "files": 41
+    },
+    "nodeTests": {
+      "passed": 33,
+      "failed": 0
+    }
+  },
+  "tag": {
+    "name": "v1.1.2",
+    "run": 38041451856,
+    "url": "https://github.com/iTgo-lyq/runweft/actions/runs/38041451856",
+    "attempts": [
+      {
+        "attempt": 1,
+        "conclusion": "failure",
+        "fourPlatformBuild": true,
+        "linuxModelFreeIntegration": true,
+        "artifactUploaded": false,
+        "hostedMacArmInstall": false,
+        "published": false,
+        "failure": "Artifact storage quota has been hit"
+      },
+      {
+        "attempt": 2,
+        "conclusion": "failure",
+        "fourPlatformBuild": true,
+        "linuxModelFreeIntegration": true,
+        "artifactUploaded": false,
+        "hostedMacArmInstall": false,
+        "published": false,
+        "failure": "Artifact storage quota has been hit"
+      }
+    ]
+  },
+  "main": {
+    "sourceRevision": "7b7b17c7d0ff80ad88cfd28266e8078ae1e517d4",
+    "run": 38042661930,
+    "codeChecks": true,
+    "modelFreeIntegration": true,
+    "conclusion": "failure",
+    "failure": "artifact quota only",
+    "pagesRun": 38042661938,
+    "pagesFailure": "npm 1.1.2 HTTP 404 and artifact quota"
+  },
+  "artifactCleanup": {
+    "receipt": "artifact-cleanup.json",
+    "freedBytes": 1909438212,
+    "remainingBytes": 41521,
+    "remainingCount": 20,
+    "original24BackupsVerified": true
+  },
+  "publicRegistry": [
+    {
+      "name": "runweft",
+      "distTags": {
+        "latest": "1.1.1"
+      },
+      "version112Status": 404
+    },
+    {
+      "name": "runweft-linux-x64",
+      "distTags": {
+        "latest": "1.1.1"
+      },
+      "version112Status": 404
+    },
+    {
+      "name": "runweft-linux-arm64",
+      "distTags": {
+        "latest": "1.1.1"
+      },
+      "version112Status": 404
+    },
+    {
+      "name": "runweft-darwin-x64",
+      "distTags": {
+        "latest": "1.1.1"
+      },
+      "version112Status": 404
+    },
+    {
+      "name": "runweft-darwin-arm64",
+      "distTags": {
+        "latest": "1.1.1"
+      },
+      "version112Status": 404
+    }
+  ],
+  "published": false,
+  "productionVersion": "1.1.1",
+  "productionDeployed": false,
+  "status": "blocked on GitHub artifact quota",
+  "unexecuted": [
+    "new candidate hosted Mac/arm64 installation",
+    "npm upload",
+    "public 1.1.2 download and installation",
+    "production 1.1.2 deployment"
+  ]
+}

@@ -1,0 +1,52 @@
+{
+  "success": true,
+  "userAuthorized": true,
+  "artifacts": [
+    {
+      "created_at": "2026-10-01T20:25:37Z",
+      "expired": false,
+      "expires_at": "2026-10-31T20:25:31Z",
+      "id": 11192755285,
+      "name": "npm-candidate-36921038560-1",
+      "run": 36921038560,
+      "size_in_bytes": 477359736,
+      "backupPath": "artifact-backup/11192755285-npm-candidate-36921038560-1.zip",
+      "backupSha256": "4863a8791358024815f27f041ac7da0f13349e6f5a5ba144a16bc8227909a38e"
+    },
+    {
+      "created_at": "2026-10-01T19:42:18Z",
+      "expired": false,
+      "expires_at": "2026-10-31T19:42:14Z",
+      "id": 11189578573,
+      "name": "npm-candidate-36915690489-1",
+      "run": 36915690489,
+      "size_in_bytes": 477359737,
+      "backupPath": "artifact-backup/11189578573-npm-candidate-36915690489-1.zip",
+      "backupSha256": "198dcc07116328dc838f99e65820a2c8dc8068c3d60a5d875f993bbd652c02ae"
+    },
+    {
+      "created_at": "2026-10-01T19:16:57Z",
+      "expired": false,
+      "expires_at": "2026-10-31T19:16:52Z",
+      "id": 11186938671,
+      "name": "npm-candidate-36912562431-1",
+      "run": 36912562431,
+      "size_in_bytes": 477359644,
+      "backupPath": "artifact-backup/11186938671-npm-candidate-36912562431-1.zip",
+      "backupSha256": "f90ae86850661b14c220ab3014201de2ff6c9c21349ac835b737a4a0f85b67bd"
+    },
+    {
+      "created_at": "2026-10-01T12:56:56Z",
+      "expired": false,
+      "expires_at": "2026-10-31T12:56:52Z",
+      "id": 11163910053,
+      "name": "npm-candidate-36864700225-1",
+      "run": 36864700225,
+      "size_in_bytes": 477359095,
+      "backupPath": "artifact-backup/11163910053-npm-candidate-36864700225-1.zip",
+      "backupSha256": "62af33e78b14a0347305bc1f082263e25e88acaa6a14de1efef63c8d74dc6568"
+    }
+  ],
+  "freedBytes": 1909438212,
+  "publicationReceiptsPreserved": true
+}

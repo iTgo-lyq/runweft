@@ -18,7 +18,7 @@
 
 ## 验收标准
 
-- [ ] HAPI main 包含固定修复 revision；Runweft main 包含当前全部已验收提交与 1.1.2 输入，推送后远端与本地一致。
+- [x] HAPI main 包含固定修复 revision；Runweft main 包含当前全部已验收提交与 1.1.2 输入，推送后远端与本地一致。
 - [ ] v1.1.2 触发四平台候选和实际安装验证、五包可信上传；原候选和回执可追溯。
 - [ ] 公共五包 latest=1.1.2，公开 tarball 完整性匹配原候选；专用 Linux x64 匿名 npm 安装、版本、Skill、配套 HAPI 检查通过。
 - [ ] main CI、生产 Pages 和正式域名三页/资源自动验收通过，Specs 与发行事实同步并归档。
