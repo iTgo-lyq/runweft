@@ -105,7 +105,6 @@
     }
   ],
   "published": false,
-  "productionVersion": "1.1.1",
   "productionDeployed": false,
   "status": "blocked on GitHub artifact quota",
   "unexecuted": [
@@ -113,5 +112,11 @@
     "npm upload",
     "public 1.1.2 download and installation",
     "production 1.1.2 deployment"
-  ]
+  ],
+  "productionVersionLastVerified": "1.1.1",
+  "productionOnlineCheck": {
+    "confirmed": false,
+    "httpStatus": 403,
+    "note": "Both ordinary and direct requests were refused; current live version was not verified."
+  }
 }

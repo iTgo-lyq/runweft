@@ -24,9 +24,9 @@ v1.1.2为annotated tag，固定源码ee66fe08c549908e1a49555c2ec0cc842b63d6c8；
 
 ## T3 推送 Runweft main 与官网验收
 
-首轮发布失败仅为产物上传额度，产品和Linux全部集成已通过。Runweft main=7b7b17c7d0ff80ad88cfd28266e8078ae1e517d4已正常推送，远端/本地一致，v1.1.2为main祖先。Development checks run38042661930运行中；Pages run38042661938因npm版本404和产物额度失败，正式站点保留上一版本。T3的部署/整体验收尚未完成。
+首轮发布失败仅为产物上传额度，产品和Linux全部集成已通过。Runweft main=7b7b17c7d0ff80ad88cfd28266e8078ae1e517d4已正常推送，远端/本地一致，v1.1.2为main祖先。Development checks run38042661930的类型/根/Node/actionlint/构建及全部选中集成通过，仅上传24份验收产物因额度失败；Pages run38042661938因npm版本404和产物额度失败，未运行生产上传。生产域名release.json本轮普通和直连读取均被403拒绝，当前在线版本未确认；历史最后验证为1.1.1，不将它记作本轮在线成功。T3的部署/整体验收尚未完成。
 
-- Commit：`npm-hapi-fix-release T2: record artifact quota blocker and main handoff`
+- Commit：`npm-hapi-fix-release T3: record main CI and pending production deployment`
 
 ## T4 同步 Specs 并归档
 
