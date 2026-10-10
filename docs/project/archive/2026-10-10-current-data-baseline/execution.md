@@ -27,3 +27,7 @@ iclaude在当前工作区完成一次无工具、无会话持久化Plan评审，
 产品代码、模型适配和发布流程未改，不重复整套类型/根测试/构建或模型验收；上一轮本会话执行过的248根测试、33Node检查、typecheck/build结果没有冒充本次环境清理验证。无push、tag、npm上传、其他机器操作或官网部署。
 
 - Commit：`current-data-baseline T2: clear historical local test environments and verify fresh data`。
+
+## 关闭
+
+依据用户已授权的自动本地验收，清理需求及当前格式初始化/重开已通过；首轮摘要比较缺口明确保留，不作为已执行的验证。同步deployment基线和项目入口，归档本Change。后续结构升级从此基线明确处理与测试，当前不实现迁移；远端CI、真机/跨机与发布缺口保持原范围。

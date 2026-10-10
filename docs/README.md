@@ -2,6 +2,8 @@
 
 Runweft 1.1.1 已发布；产品已完成 Hub 集中配置七阶段、完整后台/Skill与同候选集成发行。安装、配置、部署与数据维护见[使用说明](usage.md)，源码构建和验证见[开发说明](development.md)。
 
+[当前数据基线与本机测试环境清理](project/archive/2026-10-10-current-data-baseline/execution.md)已完成。用户确认截至2026-10-10尚未在其他机器部署，数据库和本地配置以当前源码结构为首次部署基线，历史测试格式迁移不作为发行前提。本机16个历史测试目录已删除；原始临时现场不再保留，已跟踪的验收说明和脱敏摘要、源码及正式交付保留。
+
 [Hub 空间、身份与集中 Agent 配置](project/archive/2026-10-01-hub-spaces-and-agent-configuration/requirement.md)已按[七阶段交付](project/archive/2026-10-01-hub-spaces-and-agent-configuration/delivery.md)完成：独立身份/空间、HAPI对象授权、机器/runtime所有权、仓库/中心Agent、必连Hub委派、后台/Skill及最终发行。用户通过Agent/Skill操作、Web维护配置与任务；共享限空间成员，管理员不取得他人私有内容。产品设计和研究保存在同一归档，当前事实以Specs为准。
 
 完整交付为 `dist/runweft-1.1.0-release/`、`dist/runweft-1.1.0-release.tar.gz` 及 `.sha256`：四平台/主包、Skill、静态官网、对应源码/离线Git bundle、可读验收和脱敏证据。Linux x64真实安装通过十二组原生MCP、十组消费者、后台/连接Playwright、升级与清理；256项根测试通过。具体hash、位置及边界见[1.1.0完整验收](project/archive/2026-10-01-hub-spaces-and-agent-configuration/acceptance.md)。原离线候选保留不覆盖；公共 npm 五包现已发布，匿名下载和 Linux x64 专用安装通过，见[npm 发布验收](project/archive/2026-10-01-npm-publication/acceptance.md)。官网现已部署生产与分支预览；在线 Hub/Merlin 未更新。

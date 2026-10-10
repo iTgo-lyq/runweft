@@ -49,6 +49,8 @@ paths 列出实际绝对路径：
 
 ## 当前数据格式
 
+首次部署的数据结构基线为Runweft源码`afdcd81a4e062f56edab533b9874f266b70f655b`：中心库schema19、本机client库schema1、配置schemaVersion1，以及该提交的连接文件、Task/Round定义。工程版本号不代替结构识别；基线之前的测试格式不提供迁移。
+
 Runweft只创建和读取唯一当前格式：中心库schema19、本机client库schema1。全新库一次创建完整结构；已有库核验版本及表、索引和约束，同格式正常打开。旧版、未知版本或结构损坏明确拒绝，不增量建表、不补字段、不迁移或清理原目录，也不提供data/reset。
 
 已有库核验不写原主库或WAL/SHM；拒绝时保留原字节、权限与文件集。格式不支持返回503/state_format_unsupported，损坏或结构不符返回503/state_format_invalid，提示使用独立新--home并自行保管原目录。start、serve、restart在创建服务凭据、日志或进程以及停止现有服务之前预检本机两种业务库。此约束不改造独立HAPI的内部持久化。
