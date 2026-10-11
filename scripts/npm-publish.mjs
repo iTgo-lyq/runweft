@@ -1,8 +1,7 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { assertFrozenCandidate } from './fixtures/release-inputs.mjs';
 
@@ -45,9 +44,9 @@ export function isRelease(env, version) {
     return channel;
 }
 
-export function npmPublishArgs(entry, { dryRun, userConfig, globalConfig, cache }) {
+export function npmPublishArgs(entry, { dryRun, userConfig, globalConfig, cache, channel = releaseChannel(entry.version) }) {
     const args = ['publish', entry.tarball, '--registry=' + registry, '--access=public',
-        '--tag=' + releaseChannel(entry.version), '--ignore-scripts', '--json', '--loglevel=error',
+        '--tag=' + channel, '--ignore-scripts', '--json', '--loglevel=error',
         `--userconfig=${userConfig}`, `--globalconfig=${globalConfig}`, `--cache=${cache}`];
     if (dryRun) args.push('--dry-run', '--force');
     return args;
@@ -82,14 +81,13 @@ export function checkManifest(entry, manifest) {
     assert.equal(manifest.name, entry.name);
     assert.equal(manifest.version, entry.version);
     assert.equal(manifest.dist?.integrity, `sha512-${entry.sha512}`, `${entry.name}: published version differs; use a new version`);
-    for (const key of ['os', 'cpu', 'libc', 'bin', 'engines', 'optionalDependencies', 'repository']) {
+    for (const key of ['os', 'cpu', 'libc', 'bin', 'engines', 'optionalDependencies', 'repository', 'runweft']) {
         assert.deepEqual(manifest[key], entry.manifest[key], `${entry.name}: registry ${key} differs`);
     }
 }
 
 // Persist before starting an upload so an interrupted request is never blindly repeated.
-export async function publishCandidate(index, entries, { metadata, tags, upload, save, receipt = {}, pause = () => new Promise(r => setTimeout(r, 5000)), timeoutMs = 20 * 60_000 }) {
-    const channel = releaseChannel(index.version);
+export async function publishCandidate(index, entries, { metadata, tags, upload, save, receipt = {}, channel = releaseChannel(index.version), pause = () => new Promise(r => setTimeout(r, 5000)), timeoutMs = 20 * 60_000 }) {
     if (receipt.version) {
         assert.equal(receipt.version, index.version, 'Receipt version differs from candidate');
         assert.equal(receipt.sourceRevision, index.source.revision, 'Restore the original candidate for partial publication');
@@ -184,7 +182,7 @@ export async function publishCandidate(index, entries, { metadata, tags, upload,
     }
 }
 
-async function metadata(entry, version = entry.version) {
+export async function metadata(entry, version = entry.version) {
     const response = await fetch(`${registry}${entry.name}/${version}`, {
         headers: { 'cache-control': 'no-cache' }, signal: AbortSignal.timeout(30_000) });
     if (response.status === 404) return null;
@@ -192,52 +190,10 @@ async function metadata(entry, version = entry.version) {
     return response.json();
 }
 
-async function distTags(entry) {
+export async function distTags(entry) {
     const response = await fetch(`${registry}-/package/${entry.name}/dist-tags`, {
         headers: { 'cache-control': 'no-cache' }, signal: AbortSignal.timeout(30_000) });
     if (response.status === 404) return {};
     assert.equal(response.status, 200, `${entry.name}: npm dist-tags HTTP ${response.status}`);
     return response.json();
-}
-
-async function main() {
-    assert.equal(process.argv.length, 2, 'Usage: node scripts/npm-publish.mjs (mode is selected by GitHub event)');
-    const { index, entries } = validateCandidate(resolve('dist/packages'));
-    if (process.env.GITHUB_SHA) assert.equal(index.source.revision, process.env.GITHUB_SHA, 'Candidate must belong to this workflow commit');
-    const publish = isRelease(process.env, index.version);
-    const channel = releaseChannel(index.version);
-    const root = resolve('.dev-smoke/npm-publish');
-    mkdirSync(root, { recursive: true });
-    const userConfig = join(root, 'npmrc'), globalConfig = join(root, 'npmrc-global');
-    writeFileSync(userConfig, '', { mode: 0o600 }); writeFileSync(globalConfig, '', { mode: 0o600 });
-    const env = { ...process.env };
-    for (const key of Object.keys(env)) if (/^npm_config_/i.test(key) || ['NPM_TOKEN', 'NODE_AUTH_TOKEN'].includes(key)) delete env[key];
-    function npm(entry, dryRun) {
-        const args = npmPublishArgs(entry, { dryRun, userConfig, globalConfig, cache: join(root, 'npm-cache') });
-        const result = spawnSync('npm', args, { env, encoding: 'utf8', timeout: 10 * 60_000, maxBuffer: 4 * 1024 * 1024 });
-        if (result.stderr) process.stderr.write(result.stderr);
-        return result;
-    }
-    if (!publish) {
-        for (const entry of entries) {
-            if (await metadata(entry)) console.log(`${entry.name}@${index.version} already published; use a new version for a release. Candidate preflight only.`);
-            const result = npm(entry, true);
-            assert.equal(result.status, 0, `${entry.name}: npm dry-run failed`);
-            const report = JSON.parse(result.stdout);
-            const packed = report[entry.name] ?? report[0];
-            assert.equal(packed.integrity, `sha512-${entry.sha512}`);
-            console.log(`${entry.name}@${index.version}: dry-run integrity verified`);
-        }
-        writeFileSync(join(root, 'preflight.json'), JSON.stringify({ source: index.source, version: index.version, channel, success: true, published: false }, null, 2));
-        return;
-    }
-    const receiptFile = join(root, 'publication.json');
-    const receipt = existsSync(receiptFile) ? JSON.parse(readFileSync(receiptFile, 'utf8')) : {};
-    await publishCandidate(index, entries, { receipt, metadata, tags: distTags, upload: entry => npm(entry, false).status,
-        save: state => writeFileSync(receiptFile, JSON.stringify(state, null, 2)) });
-    console.log(`Five packages ${index.version}: public registry integrity and ${channel} dist-tags confirmed`);
-}
-
-if (resolve(process.argv[1] ?? '') === fileURLToPath(import.meta.url)) {
-    main().catch(error => { console.error(error.message); process.exitCode = 1; });
 }

@@ -35,6 +35,7 @@ const requests = [];
 const entries = new Map(index.packages.map(entry => [entry.name, {
     ...entry, manifest: JSON.parse(readFileSync(join(packageRoot, entry.path, 'package.json'), 'utf8')),
 }]));
+const publicRegistry = process.env.RUNWEFT_SMOKE_PUBLIC_REGISTRY === '1';
 let registry;
 const server = createServer((request, response) => {
     const path = decodeURIComponent(new URL(request.url, 'http://localhost').pathname);
@@ -54,8 +55,8 @@ const server = createServer((request, response) => {
         [entry.version]: { ...entry.manifest, dist: { tarball: `${registry}/tarballs/${basename(entry.tarball)}`, integrity: `sha512-${entry.sha512}` } },
     } }));
 });
-await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
-registry = `http://127.0.0.1:${server.address().port}`;
+if (!publicRegistry) await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+registry = publicRegistry ? 'https://registry.npmjs.org/' : `http://127.0.0.1:${server.address().port}`;
 async function command(executable, args, overrides = {}) {
     const child = spawn(executable, args, { cwd: consumer, env, stdio: 'inherit', ...overrides });
     const result = await new Promise((resolve, reject) => {
@@ -83,8 +84,11 @@ try {
     assert(guide.includes('task result fetch')); assert(guide.includes('task result release'));
     assert(guide.includes('hub connect')); assert(guide.includes('/hub'));
     assert(readFileSync(join(platformDirectory, 'skills/runweft/SKILL.md'), 'utf8').includes('hub connect begin/complete'));
-    assert(requests.includes('/runweft'));
-    assert(requests.some(path => path.endsWith(`${platformName}-${index.version}.tgz`)));
+    if (!publicRegistry) {
+        assert(requests.includes('/runweft'));
+        assert(requests.some(path => path.endsWith(`${platformName}-${index.version}.tgz`)));
+    }
+    evidence.registry = registry;
     for (const file of ['bin/runweft', 'bin/hapi', 'HAPI-LICENSE', 'HAPI-NOTICE', 'SOURCES.txt', 'hapi-source.tar.gz']) assert(existsSync(join(platformDirectory, file)), `Missing packaged ${file}`);
     const cleanEnv = { ...env, PATH: `${nodeOnly}:/usr/bin:/bin`, RUNWEFT_SMOKE_ROOT: join(root, 'services') };
     const version = spawnSync(cli, ['--version'], { env: cleanEnv, cwd: consumer, encoding: 'utf8' });
@@ -142,7 +146,8 @@ try {
     }
     evidence.success = true;
 } finally {
-    await new Promise(resolve => server.close(resolve));
+    if (!publicRegistry) await new Promise(resolve => server.close(resolve));
     writeFileSync(join(root, 'evidence.json'), JSON.stringify(evidence, null, 2));
     console.log(`Installation evidence: ${join(root, 'evidence.json')}`);
+    console.log('RUNWEFT_INSTALL_EVIDENCE=' + JSON.stringify(evidence));
 }

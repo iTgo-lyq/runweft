@@ -36,7 +36,7 @@ node website/serve.mjs
 | pull_request 的官网相关变更 | 聚焦测试、构建和公共 npm 检查，不上传 |
 | workflow_dispatch | 所选 main/codex 分支按同一规则部署；tag/其他分支只检查 |
 
-仅规范稳定版本运行表中的构建/公开 npm/部署步骤。codex/** 的 push 或 dispatch 遇到 Beta 根版本时执行聚焦检查并写 summary，跳过构建、准备/上传和 website-static 产物；main 或 PR 遇到 Beta 版本直接失败，避免生产更新被静默跳过。真实 builder 仍只接受稳定版本，不生成 Beta 产品站点。
+仅规范稳定版本运行表中的构建/公开 npm/部署步骤。codex/** 的 push 或 dispatch 遇到 Beta 根版本时执行聚焦检查并写 summary，跳过构建和准备/上传；main 或 PR 遇到 Beta 版本直接失败，避免生产更新被静默跳过。真实 builder 仍只接受稳定版本，不生成 Beta 产品站点。
 
 相关路径为 website/**、package.json、docs/usage.md、scripts/npm-publish.mjs 和该工作流。默认分支 main 已包含产品与工作流，生产和 codex 预览推送均已实测；PR 和手动入口的真实触发尚未实测。
 
@@ -49,11 +49,11 @@ Pages 项目默认 `runweft`；已有专用项目可在同一设置的 Variables
 
 无凭证的开发推送仍完成检查，summary 明确标为“未部署”并提示缺失名称；生产和手动部署缺凭证会失败。Token 仅进入 Pages 准备步骤与官方上传 action，Wrangler 4.146.0 在 runner 临时目录的独立 npm 工程安装，不写入根工程或上传目录。
 
-上传前验证静态文件白名单、npm 元数据、五包完整性字段/精确平台依赖及公开 tarball HEAD；此检查不代替各平台真实安装验收。npm 版本尚未公开时停止；发布完成后从最新 main 手动运行官网工作流。不要重跑旧生产提交。
+上传前验证静态文件白名单、npm 元数据、五包latest已晋级到官网版本、完整性字段/精确平台依赖及公开tarball HEAD；此检查不代替各平台真实安装验收。npm 版本尚未公开时停止；发布完成后从最新 main 手动运行官网工作流。不要重跑旧生产提交。
 
-上传后仅使用 action 返回的唯一部署 URL，确认 preview/production 分类；在 HTTP 校验前保存已上传 URL 与环境回执，成功后更新 success。跟随同一项目域内的 HTML 规范化重定向，在约三分钟重试窗口内等待传播并核对全部八个文件的字节摘要与 MIME；单次网络请求最多三十秒。Access 保护、错误页面或版本不一致均失败。`website-pages-evidence` 和 `website-static` Actions 产物保留七天，不含凭证或程序包；部署 URL 在 job summary 和 deployment.json 中。
+上传后仅使用 action 返回的唯一部署 URL，确认 preview/production 分类；在 HTTP 校验前保存已上传 URL 与环境回执，成功后更新 success。跟随同一项目域内的 HTML 规范化重定向，在约三分钟重试窗口内等待传播并核对全部八个文件的字节摘要与 MIME；单次网络请求最多三十秒。Access 保护、错误页面或版本不一致均失败。不使用Actions artifact；脱敏部署JSON、八文件摘要与部署URL保存在任务日志/summary，验收时按对应commit本地重建静态文件并核对。
 
-上传结果未知或在线检查失败时，先检查 Cloudflare 控制台和该唯一 URL，核对当前 run 的产物，避免盲目重发；修正后从最新提交运行。无需修改既有 npm 的标签发布规则。
+上传结果未知或在线检查失败时，先检查 Cloudflare 控制台和该唯一 URL，核对当前run日志中的摘要，避免盲目重发；修正后从最新提交运行。无需修改既有 npm 的标签发布规则。
 
 ## 其他静态托管
 

@@ -9,9 +9,11 @@
 
 两个仓库 main 推送、v1.1.2 四平台候选和五包上传、匿名安装及生产官网验收完成，记录实际来源与范围。
 
+2026-10-11更新：先发布beta，从公共npm做四平台验收后晋级latest；原tag不移动，发布/官网不依赖artifact。T1已完成记录保留，先执行新增T5，再恢复T2/T3/T4。
+
 ## 决策与风险
 
-HAPI 先推送；Runweft 先 tag 发布、公共安装验证后推送 main。冻结同一候选，不重发未知上传；最终文档仅修改不触发 Pages 的项目记录和 Specs，推送后断言 tag 为 main 祖先；本轮不继承旧版本模型或物理跨机证据。持续授权覆盖方案和验收，Plan 完成后一次 iclaude 评审并由主 agent 判断。
+两个main与不可变tag已推送。更新后的main工作流显式恢复原tag，beta上传同job构建的候选；四平台从公共npm安装精确版本后才晋级latest。不重发未知或部分上传；日志、任务输出与仓库摘要保留证据，不使用artifact；本轮不继承旧版本模型或物理跨机证据。更新Plan完成一次iclaude评审，由主agent判断落实。
 
 ## 任务
 
@@ -26,10 +28,10 @@ HAPI 先推送；Runweft 先 tag 发布、公共安装验证后推送 main。冻
 ### T2 可信发布及匿名安装
 
 - 状态：已阻塞
-- 交付：不可变 v1.1.2、成功原 run、原候选五包及公开安装证据。
-- 依赖：T1
-- 验收：四平台安装通过，publication success=true/五包 confirmed，公开 latest/元数据/SHA-512 与候选一致；Linux x64 安装、Skill、配套 HAPI 校验通过。
-- 验证：原 tag push/SHA/候选/回执、匿名 registry 下载、现有 Playwright DOM 安装与冻结源码检查；不覆盖旧 dist/packages。复查main CI暴露的准备释放测试时序问题只修正测试等待条件，定向复现、重复验证及完整根测试后提交，packageInputs继续冻结。
+- 交付：不可变v1.1.2、更新工作流dispatch的候选日志描述、五包beta/四平台公共安装/latest晋级和匿名安装证据。
+- 依赖：T1、T5
+- 验收：四平台矩阵和晋级job成功，五包latest/元数据/SHA-512与beta候选相同；Linux x64安装、Skill、配套HAPI校验通过。
+- 验证：tag/source与控制提交映射、候选日志、匿名registry下载/安装、Playwright DOM命令、冻结源码检查；不覆盖旧dist/packages。不再重跑旧artifact发布run38041451856。
 
 ### T3 推送 Runweft main 与官网验收
 
@@ -37,7 +39,7 @@ HAPI 先推送；Runweft 先 tag 发布、公共安装验证后推送 main。冻
 - 交付：main 已快进推送，生产官网指向 1.1.2。
 - 依赖：main推送按明确授权先完成；官网部署仍依赖T2
 - 验收：main CI 和 Pages 成功，production 回执、唯一 URL/正式域名八文件与三页浏览器检查通过。
-- 验证：fetch/正常推送，packageInputs 与 tag 无差异；原工作流/回执、HTTP 摘要和 Playwright。
+- 验证：fetch/正常推送，packageInputs与tag无差异；最新main工作流日志、对应源码静态构建、HTTP摘要和Playwright。
 
 ### T4 同步 Specs 并归档
 
@@ -46,6 +48,14 @@ HAPI 先推送；Runweft 先 tag 发布、公共安装验证后推送 main。冻
 - 依赖：T3
 - 验收：需求映射真实证据，远端本地 main 一致，工作区干净。
 - 验证：Change 结构、链接、git diff 与冻结包输入；最终文档提交推送及其必要 CI。
+
+### T5 改造beta验收及latest晋级
+
+- 状态：已完成
+- 交付：原tag恢复入口、同job构建/beta上传、公共npm四平台安装矩阵、OIDC晋级、无artifact的CI/Pages证据。
+- 依赖：T1
+- 验收：源码/tag/五包摘要绑定，安装失败不晋级；partial/未知上传不重建重发，标签授权错误可操作；工作流无安装包/回执artifact依赖。
+- 验证：当前工作区一次iclaude更新Plan评审；发布/恢复/晋级/摘要冲突与矩阵门禁的Node检查、actionlint、类型/根测试；专用公共npm安装等价验收，然后真实工作流恢复v1.1.2。任务实现提交后继续T2实际发行，不把本地夹具当真实发布结果。
 
 ## 整体验证
 

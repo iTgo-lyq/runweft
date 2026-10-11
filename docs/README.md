@@ -1,6 +1,6 @@
 # 项目文档
 
-当前源码已完成[Claude长路径与Runner退出修复](project/archive/2026-10-10-hapi-session-and-shutdown/acceptance.md)，固定HAPI 8f774b94。Linux x64真实长cwd两轮及正常/断连/撤权退出通过；两个仓库main和v1.1.2 tag已推送。2026-10-11第三次[发布CI](https://github.com/iTgo-lyq/runweft/actions/runs/38041451856)的核心检查、四平台构建及Linux全部集成通过，但产物上传仍报额度不足。四份旧候选已完整备份后清理超过一天，远端仅余41521字节回执/证据；需账户侧核查累计存储用量、付款方式或阻断预算，不能仅等待统计刷新。公共五包仍为1.1.1，1.1.2均不存在；本次main CI发现的准备释放测试时序问题已修正，证据和恢复进度见[发布执行记录](project/changes/npm-hapi-fix-release/execution.md)。
+当前源码已完成[Claude长路径与Runner退出修复](project/archive/2026-10-10-hapi-session-and-shutdown/acceptance.md)，固定HAPI 8f774b94；两个仓库main与不可变v1.1.2已推送。2026-10-11旧发布run第三次因Actions artifact额度失败，未上传npm。按用户确认已改造为beta上传、四平台公共npm安装验收、再晋级latest，发布/核心/官网不再使用artifact。新流程本地类型/248项根测试/42项Node/actionlint及公共1.1.1等价真实安装通过；1.1.2的真实beta/四平台/晋级与官网待执行。五包publisher须允许npm publish与Allow npm dist-tag，实际权限在远端操作核验；详细来源和恢复入口见[发布执行记录](project/changes/npm-hapi-fix-release/execution.md)。
 
 Runweft 1.1.1 已发布；产品已完成 Hub 集中配置七阶段、完整后台/Skill与同候选集成发行。安装、配置、部署与数据维护见[使用说明](usage.md)，源码构建和验证见[开发说明](development.md)。
 

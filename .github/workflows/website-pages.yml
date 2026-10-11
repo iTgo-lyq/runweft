@@ -78,19 +78,6 @@ jobs:
           PAGES_DEPLOYMENT_URL: ${{ steps.pages.outputs.deployment-url }}
           PAGES_ENVIRONMENT: ${{ steps.pages.outputs.pages-environment }}
         run: node website/publish.mjs verify
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - name: Keep sanitized deployment evidence and file hashes in logs
         if: always()
-        with:
-          name: website-pages-evidence
-          path: .dev-smoke/website-pages/*.json
-          include-hidden-files: true
-          overwrite: true
-          if-no-files-found: ignore
-          retention-days: 7
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        if: steps.release.outputs.build == 'true'
-        with:
-          name: website-static
-          path: dist/website/
-          overwrite: true
-          retention-days: 7
+        run: node scripts/report-evidence.mjs .dev-smoke/website-pages

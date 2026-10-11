@@ -4,32 +4,24 @@
 > 状态：已确认
 > 更新：2026-10-11
 
-## 发布路径
+## 发布输入与范围
 
-本地输入核对、编译检查完成后，将独立 HAPI 仓库 main 快进到 8f774b9413fd483bc163cc06425d7646f10a7c92 并推送，确保 Runweft CI 能取得固定子模块。不发布 HAPI 独立版本；Runweft 继续附带固定 HAPI 0.30.7。
+独立HAPI main已推送8f774b9413fd483bc163cc06425d7646f10a7c92，Runweft main为当前已验收产品及1.1.2输入。v1.1.2不可变，精确commit为ee66fe08c549908e1a49555c2ec0cc842b63d6c8；基线格式、配套HAPI0.30.7与模型/物理跨机范围保持前一Change验收边界。不重复模型调用，不生成离线整包，不修改用户原生配置。
 
-根工程版本、README 常规安装和使用说明统一为 1.1.2，历史 1.1.0 离线附录保留。执行类型检查、根 ./test、Node 检查和本机编译；正式候选由现有 npm-publish.yml 复用 cli-install.yml 一次构建，完成四平台安装和全部无模型集成。
+本轮旧artifact上传三次因存储额度失败，均未上传npm。四份旧候选已按授权完整备份并删除；用户明确改造发布以解除artifact依赖，不再等待账户存储额度。历史失败/清理与评审记录保存在execution.md及verification.json。
 
-沿用上次正式发布顺序：先推送不可变 v1.1.2 tag，原工作流通过后使用 GitHub OIDC 上传四个平台并确认公开，再上传主包。公共 npm 验收后推送 Runweft main，避免官网在包未公开时失败。发布前确认目标版本五包不存在、远端 tag 不存在。
+## 已确认的beta验收与晋级方案
 
-读取同一 run 的候选索引、manifest、publication/OIDC 回执，匿名下载校验 SHA-512。使用现有网站 Playwright 自动验收执行真实 DOM 命令，安装到专用 npm prefix/config/cache，核对版本、程序/HAPI 摘要与原候选、当前 Skill。main 推送后取得生产 Pages 回执及静态文件，验证唯一部署 URL、正式域名八文件 MIME/SHA-256 与三页浏览器行为。
+npm-publish.yml保留tag入口；空手动输入只预演，main上的显式release-tag输入可恢复已推送且包输入未改变的tag，本次为v1.1.2。控制工作流使用当前提交；独立checkout原tag精确commit及固定HAPI构建一次，保持原tag不变。当前控制提交与原tag的packageInputs必须相同。
 
-## 冻结与失败处理
+构建与beta上传同一job运行，基础检查和Linux四组集成先通过。五包统一--tag=beta，按四平台先、主包后上传；记录源revision、HAPI、完整manifest、SHA-512和程序SHA-256的紧凑描述，在首个上传前输出到日志，成功后通过job output传给四平台矩阵。禁止输出OIDC/token；不上传候选或回执artifact。
 
-tag 后保持 scripts/fixtures/release-inputs.mjs 的 packageInputs 与原候选无差异，只提交未打入包的验收记录和 Specs。tag、公共版本和原候选不覆盖。上传未知时先核查原回执及 registry，明确可恢复后只重跑原 run 的失败 job；不重跑整个 run 重建同版本。实现缺口先定位，不能通过降低验收条件发布。
+矩阵包含Linux x64/arm64、Mac x64/arm64。各job核验五包公开manifest/完整性，下载主包与本平台tarball并验摘要，然后在专用prefix/cache从公共npm安装精确版本，复用smoke-install的版本、配对程序摘要、MCP目录、服务/信号、重装/卸载保障。每个job输出脱敏验收JSON，矩阵整体success是晋级的前提；不用beta浮动标签下载。
 
-HAPI 与 Runweft main 使用正常快进，不 force push；推送前再次 fetch 核对祖先关系。CI/匿名安装仅使用专用数据和配置，凭据由托管工作流注入，不读取或记录其值。当前格式基线沿用已验收规格，不新增历史迁移。
+晋级job只接受同一run成功的beta输出和四平台矩阵结果，重新核验五包及其完整性后以OIDC修改dist-tags；平台latest先、主包latest最后。稳定版本晋级latest，原有X.Y.Z-beta.N保持beta不晋级，版本号与标签不混淆。并发发布不取消；禁止倒退标签或改动与候选无关版本。beta公开意味着可显式安装，失败不覆盖同名版本，使用新版本修复。
 
-## 评审后的执行边界
+失败重跑优先复用原成功beta job输出。若beta job本身失败但五包均已公开，读取原attempt日志中的候选描述、逐包核验后恢复，不重新打包；部分公开或上传结果未知直接停止，保留日志并使用新版本处理，禁止盲目重发。无公开版本且上次尚未开始上传可重建。日志不可取得时停止，不猜测候选摘要。
 
-两个 main 若不可快进，先保留 tag 和现场并重新调查，不 rebase、force push 或纳入未验证内容。最终记录只改 docs/project 和 docs/README.md，避免重触发 Pages；推送后断言 v1.1.2 为 origin/main 祖先。当前 46 个提交包含首次远端执行的 CI 瘦身流程，发布绑定仍为 npm-publish.yml/无 environment，本次实际 tag run 才是其远端发布证据。
+npm CLI固定11.21.0，五包publisher需同时允许npm publish和Allow npm dist-tag；既有上传授权不证明标签授权。不扩展npm token或用户配置。缺权限时完成本地实现/验证并给出五包设置链接、需启用的选项。核心检查与Pages同样取消artifact步骤，脱敏证据输出日志/摘要；网站静态文件按对应commit在本机重建并与部署文件摘要核对。
 
-未产生任何上传的候选基础设施瞬时失败可在确认 registry 五包版本不存在、原回执无上传后重跑构建，记录新 attempt/候选；一旦上传只能恢复原 publish job。包输入缺陷使用下一版本，不移动已推送 tag。公开后安装失败不推 main，保留回执并调查；不擅自回退 dist-tags。
-
-数据格式兼容不增加为本轮前提：用户已确认尚无其他部署、以当前格式作为首次部署基线，历史格式明确拒绝并保留原文件；使用说明已经要求先结束任务、重启对应角色。Runweft 版本从 1.1.1 升至 1.1.2，运行期版本诊断可以提示旧服务；HAPI 版本相同不能代替修订/摘要核验。匿名 DOM 安装读取 tag 对应本地站点，Skill 来自 npm 包内；最终公开记录保存实际完整性和部署摘要，不只引用短期产物链接。
-
-## 产物额度阻断后的调整
-
-首轮构建及Linux全部集成成功，但远端产物额度阻断候选上传，五包未上传。按用户明确要求先正常推送已验证源码到Runweft main；既有官网公共npm检查会停止，生产1.1.1站点保留。T2仍阻塞、T3继续记录main推送和待部署事实，不同步1.1.2公开发行Specs或归档。备份可清理候选后请求远端删除范围；额度恢复再执行原未上传tag的候选流程，公开成功后从最新main运行官网。
-
-四份旧候选已按授权完整备份并删除，超过24小时后的第三次上传仍因额度失败。当前产物占用仅41521字节不能证明累计周期额度或预算允许新增存储；恢复前需账户侧核查，具体诊断和证据见execution.md。不把6–12小时统计刷新当作恢复承诺，不持续重复完整构建。
+控制提交执行当前测试，原tag仅构建/打包；源码相等与固定Bun1.4.2/HAPI gitlink在构建前断言。上传检查beta不得倒退，官网公共检查须五包latest等于官网版本。main的显式source-run-id支持用修正后工作流读取旧run日志恢复完整公开候选；验证来源workflow、tag/source与全部摘要，不要求私有仓库不提供的provenance。旧run38041451856仍含原artifact/直接latest工作流，不再重跑。Cloudflare Pages为现有直接上传，与GitHub Pages部署artifact无关；不接受评审提出的GitHub Pages额度前提或未知上传重试建议。

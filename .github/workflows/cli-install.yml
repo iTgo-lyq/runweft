@@ -1,111 +1,31 @@
 name: CLI installation
 
 on:
-  workflow_dispatch:
   workflow_call:
     inputs:
-      candidate-name:
+      release:
         type: string
-        default: cli-candidate
-      retention-days:
-        type: number
-        default: 7
-    outputs:
-      candidate-name:
-        value: ${{ jobs.build.outputs.candidate-name }}
+        required: true
 
 permissions:
   contents: read
 
-concurrency:
-  group: cli-install-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
-
 jobs:
-  build:
-    runs-on: ubuntu-24.04
-    timeout-minutes: 45
-    env:
-      CODEX_HOME: ${{ github.workspace }}/.dev-smoke/ci-codex
-      CLAUDE_CONFIG_DIR: ${{ github.workspace }}/.dev-smoke/ci-claude
-    outputs:
-      candidate-name: ${{ steps.candidate.outputs.name }}
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          submodules: true
-          persist-credentials: false
-      - id: candidate
-        env:
-          CANDIDATE_NAME: ${{ inputs.candidate-name || 'cli-candidate' }}
-        run: echo "name=$CANDIDATE_NAME" >> "$GITHUB_OUTPUT"
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
-        with:
-          node-version: '24'
-      - name: Check release tag version
-        run: |
-          node --input-type=module <<'NODE'
-          import fs from 'node:fs';
-          import { isRelease } from './scripts/npm-publish.mjs';
-          isRelease(process.env, JSON.parse(fs.readFileSync('package.json')).version);
-          NODE
-      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
-        with:
-          bun-version: '1.4.2'
-      - run: bun install --frozen-lockfile
-      - run: bun install --frozen-lockfile
-        working-directory: hapi
-      - name: Install native clients for version and tool discovery only
-        run: |
-          mkdir -p "$CODEX_HOME" "$CLAUDE_CONFIG_DIR"
-          npm install --prefix .dev-smoke/native-tools --ignore-scripts --registry=https://registry.npmjs.org/ @openai/codex@0.159.2 @anthropic-ai/claude-code@2.1.283
-          node .dev-smoke/native-tools/node_modules/@anthropic-ai/claude-code/install.cjs
-          .dev-smoke/native-tools/node_modules/.bin/codex --version
-          .dev-smoke/native-tools/node_modules/.bin/claude --version
-          echo "$GITHUB_WORKSPACE/.dev-smoke/native-tools/node_modules/.bin" >> "$GITHUB_PATH"
-      - run: bun run typecheck && bun run test
-      - run: node --test ./scripts/tests/*.test.mjs ./website/publish.test.mjs
-      - run: bunx playwright install --with-deps chromium
-      - run: bun run package --all
-      - name: Check every model-free integration group on the candidate
-        run: |
-          for group in access storage web service-package; do
-            bun scripts/smoke-integration.ts "$group" dist/packages/runweft-linux-x64/bin/runweft || exit $?
-          done
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: ${{ steps.candidate.outputs.name }}
-          path: |
-            dist/packages/index.json
-            dist/packages/SHA256SUMS
-            dist/packages/runweft-skill-*.tgz
-            dist/packages/*/package.json
-            dist/packages/tarballs/*.tgz
-          compression-level: 0
-          retention-days: ${{ inputs.retention-days || 7 }}
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        if: always()
-        with:
-          name: evidence-linux-x64-${{ github.workflow }}-${{ github.run_attempt }}
-          path: .dev-smoke/**/evidence.json
-          include-hidden-files: true
-          if-no-files-found: ignore
-          retention-days: ${{ inputs.retention-days || 7 }}
-
   install:
-    needs: build
     strategy:
       fail-fast: false
       matrix:
         include:
+          - runner: ubuntu-24.04
+            platform: linux-x64
+          - runner: ubuntu-24.04-arm
+            platform: linux-arm64
           - runner: macos-15
             platform: darwin-arm64
           - runner: macos-15-intel
             platform: darwin-x64
-          - runner: ubuntu-24.04-arm
-            platform: linux-arm64
     runs-on: ${{ matrix.runner }}
-    timeout-minutes: 20
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -117,16 +37,16 @@ jobs:
         with:
           bun-version: '1.4.2'
       - run: bun install --frozen-lockfile
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-        with:
-          name: ${{ needs.build.outputs.candidate-name }}
-          path: dist/packages
-      - run: node scripts/smoke-install.mjs
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - name: Download and verify public npm candidate
+        id: candidate
+        env:
+          RELEASE_DESCRIPTOR: ${{ inputs.release }}
+        run: node scripts/npm-release.mjs download
+      - name: Install exact public version and verify paired binaries and services
+        env:
+          CANDIDATE_DIRECTORY: ${{ steps.candidate.outputs.directory }}
+          RUNWEFT_SMOKE_PUBLIC_REGISTRY: '1'
+        run: node scripts/smoke-install.mjs "$CANDIDATE_DIRECTORY"
+      - name: Keep sanitized installation evidence in logs
         if: always()
-        with:
-          name: evidence-${{ matrix.platform }}-${{ github.workflow }}-${{ github.run_attempt }}
-          path: .dev-smoke/**/evidence.json
-          include-hidden-files: true
-          if-no-files-found: ignore
-          retention-days: ${{ inputs.retention-days || 7 }}
+        run: node scripts/report-evidence.mjs

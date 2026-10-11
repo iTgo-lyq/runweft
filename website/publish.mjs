@@ -72,6 +72,9 @@ async function request(url, options, fetchImpl) {
 export async function checkNpmRelease(release, fetchImpl = fetch) {
   const records = [];
   for (const name of packageNames) {
+    const tagResponse = await request(`${registry}-/package/${name}/dist-tags`, { headers: { 'cache-control': 'no-cache' } }, fetchImpl);
+    assert.equal(tagResponse.status, 200, `${name} dist-tags HTTP ${tagResponse.status}；先完成 npm 发布。`);
+    assert.equal((await tagResponse.json()).latest, release.version, `${name} latest 尚未晋级 ${release.version}；先完成四平台验收与 npm 晋级。`);
     const response = await request(`${registry}${name}/${release.version}`, { headers: { 'cache-control': 'no-cache' } }, fetchImpl);
     assert.equal(response.status, 200, `${name}@${release.version} 尚未公开或 npm HTTP ${response.status}；先完成 npm 发布。`);
     const manifest = await response.json();

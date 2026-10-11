@@ -54,4 +54,18 @@ v1.1.2为annotated tag，固定源码ee66fe08c549908e1a49555c2ec0cc842b63d6c8；
 
 ## 恢复入口
 
-账户侧核查累计用量、付款方式和预算，确认允许新增Actions产物后，核对v1.1.2仍指向ee66fe08、五包版本尚不存在，再重跑原run38041451856的完整候选（当前无任何候选或上传）；当前产物占用低不能单独证明额度已恢复。若出现公开包或publication回执，先核查原候选完整性，改为只恢复原publish job，不能重新构建已上传版本。候选成功后完成原回执/公开下载/专用npm及Playwright安装验收，再从最新main运行website-pages.yml。生产/匿名安装尚未完成，不以构建或Linux集成代替。
+用户已授权替换artifact发布路径。旧run38041451856不再重跑；更新流程经本地验证推送main后，以显式release-tag=v1.1.2恢复原tag。五包beta/四平台公共安装/晋级通过后，从最新main运行官网。需要修正工作流恢复已全部公开版本时，提供source-run-id读取原日志描述；部分公开或未知上传停止，不重建重发。
+
+## T5 改造beta验收及latest晋级
+
+更新Plan在当前工作区完成一次iclaude无工具/无持久会话评审（退出0、is_error=false、293001ms）。采纳控制提交测试/原tag打包、固定包输入/工具链/gitlink、beta与latest不倒退、官网五包latest门禁、矩阵结果门禁、原日志描述和main显式source-run-id恢复、幂等部分晋级及权限报错。拒绝将Cloudflare直接上传误认为GitHub Pages artifact部署，拒绝未知上传自动重试，私有仓库无provenance不作为恢复前提。
+
+发布/安装/核心/官网四个工作流已取消全部artifact步骤。构建与beta上传同job；四平台从公共npm校验tarball并安装精确版本，全部成功后平台先、主包后晋级latest。main显式release-tag可构建不可变原tag；source-run-id/原attempt日志支持完整已公开候选恢复，partial/未知上传停止。旧直接latest的CLI入口移除；官网要求五包latest等于站点版本。
+
+验证：类型检查通过；根248项/0失败/4799断言/41文件/62.42s；Node42项/0失败；actionlint通过；v1.1.2 packageInputs冻结、Change结构及diff检查通过。显式main恢复入口在本机解析tag/source为ee66fe08、当前五包1.1.2不存在并选择build，未上传。
+
+等价真实公共安装：从原1.1.1候选恢复五包manifest/摘要，匿名核验全部五包，实际下载主包与Linux x64 tarball并验SHA-512，再从公共npm安装到专用prefix/cache。程序/HAPI hash与原候选一致，MCP目录、无Bun服务/信号、身份/机器配置、重装、缺依赖诊断与卸载/数据保留均通过。证据为.dev-smoke/npm-hapi-fix-release/public-install/install-wBNjrR/evidence.json；这是1.1.1的新链路等价验证，不能替代1.1.2或Mac/arm64验收。
+
+- Commit：`npm-hapi-fix-release T5: validate beta packages before promoting latest without artifacts`
+
+公开1.1.2尚未上传；接下来推送main并启动新dispatch，T2的真实beta/四平台/latest与T3官网结果另行记录。

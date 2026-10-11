@@ -69,7 +69,7 @@ bun run test:native <已安装bin/runweft> all <上次evidence.json>
 | 仅测试、开发文档、发布脚本 | 保留核心/Node检查，不构建四平台候选 |
 | 官网相关改动 | 独立website流程；PR验证、稳定main生产、稳定codex预览，Beta按下文规则处理 |
 | stable/Beta tag | npm流程仅调用一次四平台候选；完整根/Node/四组无模型集成，不按diff跳过；四平台安装全部成功后发布 |
-| 手动CLI安装 / npm流程 | 完整候选检查；npm手动入口只预演，不上传 |
+| npm流程 | 空手动输入只预演；版本tag或main显式release-tag先beta、四平台公共安装后晋级 |
 
 同仓codex分支的PR复用push检查，不再重复普通分支四平台打包。CI没有模型认证、不运行真实模型。工作流本地静态与选择测试不代表远端runner已经通过。
 
@@ -114,28 +114,23 @@ bun run release:assemble dist/packages dist/website <验收说明.md> <脱敏证
 
 ## npm 可信发布
 
-五包已绑定 `iTgo-lyq/runweft` 的 `.github/workflows/npm-publish.yml`，GitHub 托管 runner 用 OIDC 获取短期发布授权，无需 npm token secret 或逐包人工验证码。[已验证记录](project/archive/2026-10-01-npm-trusted-publishing/acceptance.md)包括真实五包授权和无上传预演；[1.1.1 原 tag 验收](project/archive/2026-10-02-npm-patch-release/acceptance.md)已新增实际 OIDC 上传和匿名安装。
+五包绑定 `iTgo-lyq/runweft` 的 `npm-publish.yml`。托管runner使用Node24/npm11.21.0与OIDC，不保存长期npm token；publisher需要允许 `npm publish` 和 `Allow npm dist-tag`。现有五包上传授权已真实验证，标签权限由实际晋级操作验证；本仓库为私有，不生成自动npm provenance。
 
-正式发版先更新 `package.json` 和常规说明中的目标版本，完成变更验收并提交干净源码，再推送严格匹配的版本 tag。`vX.Y.Z` 发布到 npm `latest`，`vX.Y.Z-beta.N` 发布到 `beta`；整数不允许前导零，N 从 0 起，alpha/rc 等其他格式拒绝。工作流从该标签构建干净候选，完成根检查、四平台打包/内容/实际安装检查后，依次发布四平台包；确认全部公开完整性后才发布主包。当前公共 1.1.1 已验证，历史 1.1.0 保持原样，不能用新候选覆盖同版本。
+先更新根版本和常规说明，完成检查并提交干净源码，再推送严格匹配的不可变tag。稳定版本为 `vX.Y.Z`，预发行版本为 `vX.Y.Z-beta.N`；整数不允许前导零，不接受alpha/rc。发布控制提交与tag的packageInputs必须相同；控制提交执行当前测试，独立checkout原tag及固定HAPI构建一次。基础检查和四组Linux集成通过后，构建job依次上传四平台包与主包，全部使用 `--tag=beta`。
 
-main/codex 分支使用上述核心/相关集成检查，不再触发发布候选或在线授权预演。默认分支 main 已包含工作流，可从 Actions 手动运行预演；手动入口不发布 npm。本仓库为私有，当前不会生成自动 npm provenance。
+四平台矩阵从公共npm下载精确版本，核对五包元数据、主包与本平台tarball SHA-512，再从公共registry安装到专用prefix/cache；必须实际找到匹配的平台包、核对Runweft/HAPI SHA-256并通过服务/信号、MCP目录、重装与卸载验证。矩阵全部成功后晋级job复查完整性，先更新四个平台latest、最后更新主包latest； `X.Y.Z-beta.N` 仍保留beta，不晋级latest。标签操作允许同候选部分晋级恢复，不允许倒退或改动其他新版本。
 
-Beta 从最新 main 创建独立 codex 开发分支，准备例如 1.1.2-beta.1 的根版本与常规说明，完成检查并提交后再推送 tag：
+beta是公开渠道。稳定版本 `X.Y.Z --tag=beta` 尚未成为默认latest，但可显式安装或被版本范围匹配；失败后不能覆盖同版本，须使用新版本修复。版本、来源、HAPI、manifest/五包SHA-512/程序SHA-256在首个上传前输出 `RUNWEFT_RELEASE_DESCRIPTOR`，成功后经任务output传给矩阵。安装与晋级证据保存任务日志/摘要，最终脱敏摘要写入仓库验收记录；不上传或下载Actions artifact。
+
+main/codex普通推送只做核心/相关集成检查，不发布npm。手动入口 `release-tag` 留空只预演；显式填写已有tag时，仅允许选择main，构建原tag源码并执行上述完整发布，不能移动旧tag。当前恢复例子：
 
 ```sh
-git fetch origin
-git switch -c codex/release-1.1.2-beta.1 origin/main
-# 更新 package.json、README 与 docs/usage.md 的常规版本目标；检查并提交干净源码
-git push origin HEAD
-git tag -a v1.1.2-beta.1 -m "Runweft 1.1.2-beta.1"
-git push origin v1.1.2-beta.1
+gh workflow run npm-publish.yml --repo iTgo-lyq/runweft --ref main -f release-tag=v1.1.2
 ```
 
-Beta 仍运行原四平台构建/安装、同一五包 OIDC 与发布顺序，不需要新增 Secret 或可信 publisher。Beta 必须高于每包当前的 beta 和 latest，stable 只与 latest 比较；同版本仅允许原候选恢复。发布后读取实际 dist-tags，Beta 的 latest 必须与上传前相同，回执保留 channel/latestBefore/distTags；变化时失败并提示检查，不自动修正标签。
+安装或晋级失败时只重跑失败job，复用原成功beta输出和npm原包。beta job失败但五包全部公开时，从同run原attempt日志恢复候选描述，不重新构建。需要修正后工作流恢复旧run时，从最新main手动运行并填写 `release-tag` 与原 `source-run-id`；日志来源workflow、tag/source、所有摘要必须一致。日志不可取得、部分公开或上传结果未知均停止，不盲目重发；只有无公开版本且上次尚未开始上传可重建。旧artifact工作流run38041451856不再重跑。
 
-首次 Beta 公开后可用 `npm install -g runweft@beta --registry=https://registry.npmjs.org/ --include=optional` 跟随 Beta 通道，或使用 `runweft@1.1.2-beta.1` 固定版本；默认 `runweft` 仍安装 latest。Beta 源版本不合入 main；转正式版时准备稳定源码和同名稳定 tag，再按 npm → main/官网顺序交付。
-
-上传前发现同版本不同完整性会停止；上传结果未知不自动重发。部分完成时检查 `npm-publication` 回执，仅在上传前失败、accepted 等待超时或公开完整性已经确认时，使用原 run 的 **Re-run failed jobs** 恢复原候选与通道回执；uploading 且仍未公开时继续停止，先定位结果。候选和回执保留三十天；重跑整个 run 会重新构建，不能当作相同候选。到期或未知结果先核实公开 registry 和回执，不直接重新上传。
+缺少标签权限会停在beta和旧latest。逐包进入 `https://www.npmjs.com/package/<包名>/access` 的Trusted publishing设置，允许 `npm publish` 与 `Allow npm dist-tag`，仓库 `iTgo-lyq/runweft`、文件 `npm-publish.yml`、environment留空；需重建绑定时保留这些字段。开启后只重跑promote，不重复安装或上传。
 
 ## 官网 Cloudflare Pages
 

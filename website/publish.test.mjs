@@ -27,6 +27,8 @@ const manifest = name => ({ name, version: site.release.version,
   dist: { integrity, tarball: `${registry}${name}/-/${name}-${site.release.version}.tgz` },
   ...(name === 'runweft' ? { optionalDependencies: Object.fromEntries(packageNames.slice(0, -1).map(item => [item, site.release.version])) } : {}),
 });
+const checkRelease = (release, fetchImpl) => checkNpmRelease(release, (url, options) =>
+  String(url).endsWith('/dist-tags') ? Promise.resolve(json({ latest: release.version })) : fetchImpl(url, options));
 const account = { accountId: 'a'.repeat(32), apiToken: 'fixture-token', projectName: 'runweft' };
 const project = { name: 'runweft', production_branch: 'main', subdomain: 'runweft-test.pages.dev' };
 
@@ -65,6 +67,7 @@ test('five public exact versions and tarball HEAD are checked without downloadin
   const requests = [];
   const result = await checkNpmRelease(site.release, async (url, options) => {
     requests.push({ url, method: options.method });
+    if (String(url).endsWith('/dist-tags')) return json({ latest: site.release.version });
     if (options.method === 'HEAD') return new Response(null, { status: 200 });
     const name = new URL(url).pathname.split('/')[1];
     assert.equal(options.headers['cache-control'], 'no-cache');
@@ -72,22 +75,26 @@ test('five public exact versions and tarball HEAD are checked without downloadin
   });
   assert.deepEqual(result.map(item => item.name), packageNames);
   assert.equal(requests.filter(item => item.method === 'HEAD').length, 5);
-  assert.equal(requests.length, 10);
+  assert.equal(requests.length, 15);
+});
+
+test('a beta-only public stable version cannot deploy the website before latest promotion', async () => {
+  await assert.rejects(checkNpmRelease(site.release, async () => json({ latest: '1.0.0', beta: site.release.version })), /latest 尚未晋级/);
 });
 
 test('npm missing, wrong identity, integrity, dependency and tarball failures stop checking', async () => {
-  await assert.rejects(checkNpmRelease(site.release, async () => json({}, 404)), /先完成 npm 发布/);
-  await assert.rejects(checkNpmRelease(site.release, async () => { throw new Error('fixture network'); }), /网络/);
+  await assert.rejects(checkRelease(site.release, async () => json({}, 404)), /先完成 npm 发布/);
+  await assert.rejects(checkRelease(site.release, async () => { throw new Error('fixture network'); }), /网络/);
   for (const modify of [m => { m.name = 'wrong'; }, m => { m.version = '0.0.0'; }, m => { m.dist.integrity = 'sha512-incomplete'; }, m => { m.dist.tarball = 'https://private.invalid/package.tgz'; }]) {
-    await assert.rejects(checkNpmRelease(site.release, async () => { const m = manifest(packageNames[0]); modify(m); return json(m); }));
+    await assert.rejects(checkRelease(site.release, async () => { const m = manifest(packageNames[0]); modify(m); return json(m); }));
   }
-  await assert.rejects(checkNpmRelease(site.release, async (url, options) => {
+  await assert.rejects(checkRelease(site.release, async (url, options) => {
     if (options.method === 'HEAD') return json({}, 200);
     const m = manifest(new URL(url).pathname.split('/')[1]);
     if (m.name === 'runweft') m.optionalDependencies['runweft-linux-x64'] = '0.0.0';
     return json(m);
   }), /平台依赖/);
-  await assert.rejects(checkNpmRelease(site.release, async (url, options) => options.method === 'HEAD' ? json({}, 404) : json(manifest(packageNames[0]))), /tarball 不可访问/);
+  await assert.rejects(checkRelease(site.release, async (url, options) => options.method === 'HEAD' ? json({}, 404) : json(manifest(packageNames[0]))), /tarball 不可访问/);
 });
 
 test('existing Direct Upload project is read only; explicit 404 creates with main production', async () => {

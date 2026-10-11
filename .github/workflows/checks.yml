@@ -81,10 +81,6 @@ jobs:
             }
           }
           NODE
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - name: Keep sanitized integration evidence in logs
         if: always()
-        with:
-          name: integration-evidence
-          path: .dev-smoke/**/evidence.json
-          include-hidden-files: true
-          if-no-files-found: ignore
+        run: node scripts/report-evidence.mjs

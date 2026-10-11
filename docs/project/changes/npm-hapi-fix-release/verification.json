@@ -245,5 +245,65 @@
       "conclusion": "success",
       "productionIntegrationRepeated": false
     }
+  },
+  "betaFlow": {
+    "implementation": "beta publication, public npm four-platform installation, OIDC latest promotion; no Actions artifacts",
+    "planReview": {
+      "tool": "iclaude",
+      "isError": false,
+      "durationMs": 293001,
+      "adopted": [
+        "immutable tag packaging and current controller tests",
+        "non-regressing beta/latest and website latest gate",
+        "four-platform job success gate",
+        "original logged descriptor recovery using source-run-id",
+        "idempotent partial promotion"
+      ],
+      "rejected": [
+        "GitHub Pages artifact requirement for Cloudflare Direct Upload",
+        "blind retries of unknown uploads",
+        "provenance requirement for private repository"
+      ]
+    },
+    "local": {
+      "typecheck": true,
+      "rootTests": {
+        "pass": 248,
+        "fail": 0,
+        "assertions": 4799,
+        "files": 41,
+        "seconds": 62.42
+      },
+      "nodeTests": {
+        "pass": 42,
+        "fail": 0
+      },
+      "actionlint": true,
+      "frozenPackageInputs": true,
+      "publicInstallEquivalent": {
+        "version": "1.1.1",
+        "source": {
+          "revision": "36257dfb3aae2da85289539b11ba8ac857bdbb10",
+          "dirty": false
+        },
+        "registry": "https://registry.npmjs.org/",
+        "binaries": {
+          "runweft": "b3a9a1154d405481b64c67795c9a81ddca89e0022d28af020c040215fe5758ff",
+          "hapi": "d5a8a3cf3d09eb40c5a091845a9b5745707bd6ee195eedf0a5b5ddd5cecd93ef"
+        },
+        "checks": [
+          "npm registry metadata and platform optional dependency installation",
+          "installed task commands and side-effect-free MCP catalog without Bun or source checkout on PATH",
+          "installed CLI services and signals with no Bun or source checkout on PATH",
+          "same-version npm reinstall preserves dedicated service data and exact paired binaries",
+          "missing platform dependency has an actionable diagnostic",
+          "npm uninstall removes executable and preserves service data"
+        ],
+        "success": true
+      }
+    },
+    "releaseRun": null,
+    "published": false,
+    "promotionPermissionVerified": false
   }
 }
