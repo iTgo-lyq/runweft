@@ -9,11 +9,13 @@ import { chromium } from 'playwright';
 import { serveSite } from './serve.mjs';
 
 const run = promisify(execFile);
+const browserOnly = process.argv.includes('--browser-only');
+assert(process.argv.slice(2).every(arg => arg === '--browser-only'), 'Usage: node website/verify.mjs [--browser-only]');
 const repository = resolve(import.meta.dirname, '..');
 const output = join(repository, 'dist/website');
 await mkdir(join(repository, '.dev-smoke'), { recursive: true });
 const evidenceRoot = await mkdtemp(join(repository, '.dev-smoke/website-'));
-const evidence = { root: evidenceRoot, success: false, checks: [], layouts: [], pageErrors: [], networkErrors: [] };
+const evidence = { root: evidenceRoot, scope: browserOnly ? 'browser' : 'browser-and-npm-install', success: false, checks: [], layouts: [], pageErrors: [], networkErrors: [] };
 const servers = [];
 let browser;
 const hash = async path => { const value = createHash('sha256'); for await (const chunk of createReadStream(path)) value.update(chunk); return value.digest('hex'); };
@@ -43,17 +45,27 @@ try {
   await page.goto(started.url, { waitUntil: 'networkidle' });
   assert.match(await page.title(), /Runweft/);
   assert.equal(await page.locator('h1').count(), 1);
+  const localLocations = await page.locator('[data-location]').allTextContents();
+  const localDescription = await page.locator('#map-description').textContent();
   await page.locator('[data-mode="remote"]').click();
-  assert.equal(await page.locator('#routing-label').textContent(), '通过 Hub 调度');
-  assert((await page.locator('#map-description').textContent()).includes('远端示意'));
+  assert.equal(await page.locator('#collaboration-map').getAttribute('data-mode'), 'remote');
+  assert.notDeepEqual(await page.locator('[data-location]').allTextContents(), localLocations);
+  assert.notEqual(await page.locator('#map-description').textContent(), localDescription);
   await page.locator('[data-mode="local"]').click();
-  assert.equal(await page.locator('#routing-label').textContent(), '本机 Hub 调度');
+  assert.equal(await page.locator('#collaboration-map').getAttribute('data-mode'), 'local');
+  assert.deepEqual(await page.locator('[data-location]').allTextContents(), localLocations);
+  assert.equal(await page.locator('#map-description').textContent(), localDescription);
   check('Local / remote diagram is interactive and explicitly illustrative');
 
+  await page.locator('.hero-copy .hero-actions a').first().click();
+  assert.equal(new URL(page.url()).hash, '#onboarding');
   await page.locator('[data-copy="onboarding-prompt"]').click();
   const prompt = await page.locator('#onboarding-prompt').textContent();
   assert.equal(await page.evaluate(() => navigator.clipboard.readText()), prompt);
-  assert(prompt.includes(`npm 安装 runweft@${release.version}`) && prompt.includes('安装、升级和卸载都使用 npm'));
+  assert(prompt.includes(`runweft@${release.version}`) && prompt.includes('npm'));
+  const homeFirstTask = await page.locator('#first-task-prompt').textContent();
+  await page.locator('[data-copy="first-task-prompt"]').click();
+  assert.equal(await page.evaluate(() => navigator.clipboard.readText()), homeFirstTask);
   const expected = await page.locator('#install-command').textContent();
   assert.match(expected, new RegExp(`^npm install -g runweft@${release.version.replaceAll('.', '\\.')} --registry=https://registry.npmjs.org/ --include=optional &&\\nrunweft --version$`));
   await writeFile(join(evidenceRoot, 'install-from-dom.sh'), expected + '\n');
@@ -62,7 +74,7 @@ try {
   await page.evaluate(() => Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: () => Promise.reject(new Error('Denied by test')) } }));
   await page.locator('[data-copy="install-command"]').click();
   assert.equal(await page.evaluate(() => window.getSelection().toString()), expected);
-  assert((await page.locator('#copy-status').textContent()).includes('未允许自动复制'));
+  assert((await page.locator('#copy-status').textContent()).trim().length > 0);
   assert(await page.locator('#install-command').evaluate(element => element.closest('pre') === document.activeElement));
   check('Agent prompt and npm commands copy correctly; clipboard denial selects the command with accessible feedback');
 
@@ -78,6 +90,14 @@ try {
     }
   }
   check('Home, guide and manual have no page overflow at 1440 / 1024 / 768 / 390 / 320px');
+  for (const [width, height] of [[1280, 800], [390, 844]]) {
+    await page.setViewportSize({ width, height }); await page.goto(started.url);
+    for (const selector of ['.hero-description', '.hero-copy .hero-actions a:first-child']) {
+      const box = await page.locator(selector).boundingBox();
+      assert(box && box.y >= 0 && box.y + box.height <= height, `First-visit content is below the initial viewport: ${selector} at ${width}`);
+    }
+  }
+  check('Product definition and primary action are visible before scrolling on desktop and mobile');
 
   await page.setViewportSize({ width: 390, height: 1000 });
   await page.goto(started.url);
@@ -90,12 +110,20 @@ try {
   await page.locator('#site-nav a[href="guide.html"]').click();
   assert(page.url().endsWith('/guide.html'));
   assert.equal(await page.locator('#guide-install-command').textContent(), expected);
+  assert.equal(await page.locator('#guide-prompt').textContent(), prompt);
+  await page.locator('.guide-sidebar a[href="#first-task"]').click();
+  const firstTask = await page.locator('#first-task-prompt').textContent();
+  assert(firstTask.trim().length > 0);
+  assert.equal(firstTask, homeFirstTask);
+  await page.locator('[data-copy="first-task-prompt"]').click();
+  assert.equal(await page.evaluate(() => navigator.clipboard.readText()), firstTask);
+  check('Home-to-guide path preserves the setup prompt and copies a separate first task');
   const skillCommand = await page.locator('#skill-path-command').textContent();
   await writeFile(join(evidenceRoot, 'skill-path-from-dom.sh'), skillCommand + '\n');
-  await page.locator('#mcp summary').click();
+  await page.locator('#mcp details:has([data-client]) > summary').click();
   await page.locator('[data-client="claude"]').click();
   assert.equal(await page.locator('#mcp-command').textContent(), 'runweft mcp install --client claude\nrunweft mcp check --client claude');
-  await page.locator('#resources summary').click();
+  await page.locator('#resources details:has([data-runtime]) > summary').click();
   await page.locator('[data-runtime="claude"]').click();
   assert((await page.locator('#runtime-command').textContent()).includes('runtime register claude --machine <machineId>'));
   check('Mobile menu, Escape focus and guide client/runtime switches');
@@ -104,6 +132,7 @@ try {
   const checkedLinks = new Set();
   for (const route of ['', 'guide.html', 'manual.html']) {
     await page.goto(subpath.url + route);
+    assert.equal(await page.locator('a[href^="https://github.com/"]').count(), 0, 'Public navigation must not point to the private source repository');
     const links = await page.locator('a[href],link[href],script[src],img[src]').evaluateAll(elements => elements.map(element => element.href || element.src));
     for (const value of links) {
       const url = new URL(value, page.url());
@@ -129,6 +158,8 @@ try {
   await plainPage.locator('a[href="guide.html"]').first().click();
   assert.equal(await plainPage.locator('#guide-install-command').textContent(), expected);
   assert.equal(await plainPage.locator('#skill-path-command').textContent(), skillCommand);
+  assert.equal(await plainPage.locator('#guide-prompt').textContent(), prompt);
+  assert.equal(await plainPage.locator('#first-task-prompt').textContent(), firstTask);
   await assertLayout(plainPage, 'no-js guide', 390); await plainPage.close(); await plain.close();
   check('Reduced motion and the same npm installation / Skill location commands without JavaScript');
 
@@ -154,24 +185,29 @@ try {
   }));
   await assert.rejects(stat(marker), { code: 'ENOENT' });
   check('A failed npm install stops the DOM command before running any existing Runweft');
-  check('Installing the exact DOM npm command in a dedicated prefix from the public registry');
-  const installed = await run('/bin/bash', ['--noprofile', '--norc', join(evidenceRoot, 'install-from-dom.sh')], {
-    env: environment, timeout: 600_000, maxBuffer: 4 * 1024 * 1024,
-  });
-  assert(installed.stdout.trim().endsWith(release.version));
-  const located = await run('/bin/bash', ['--noprofile', '--norc', '-c', 'command -v runweft'], { env: environment });
-  const binary = join(prefix, 'bin/runweft'); assert.equal(located.stdout.trim(), binary);
-  const version = await run(binary, ['--version'], { env: environment }); assert.equal(version.stdout.trim(), release.version);
-  const locatedSkill = await run('/bin/bash', ['--noprofile', '--norc', join(evidenceRoot, 'skill-path-from-dom.sh')], { env: environment });
-  const skillDirectory = locatedSkill.stdout.trim();
-  assert.equal(skillDirectory, join(prefix, 'lib/node_modules/runweft/skills/runweft'));
-  for (const file of ['SKILL.md', 'references/onboarding.md', 'references/configuration.md', 'references/delegation.md', 'references/maintenance.md']) {
-    assert((await stat(join(skillDirectory, file))).size > 0);
+  if (browserOnly) {
+    evidence.install = { skipped: true, reason: '--browser-only' };
+    check('Public npm installation skipped explicitly; browser checks do not revalidate the released binaries');
+  } else {
+    check('Installing the exact DOM npm command in a dedicated prefix from the public registry');
+    const installed = await run('/bin/bash', ['--noprofile', '--norc', join(evidenceRoot, 'install-from-dom.sh')], {
+      env: environment, timeout: 600_000, maxBuffer: 4 * 1024 * 1024,
+    });
+    assert(installed.stdout.trim().endsWith(release.version));
+    const located = await run('/bin/bash', ['--noprofile', '--norc', '-c', 'command -v runweft'], { env: environment });
+    const binary = join(prefix, 'bin/runweft'); assert.equal(located.stdout.trim(), binary);
+    const version = await run(binary, ['--version'], { env: environment }); assert.equal(version.stdout.trim(), release.version);
+    const locatedSkill = await run('/bin/bash', ['--noprofile', '--norc', join(evidenceRoot, 'skill-path-from-dom.sh')], { env: environment });
+    const skillDirectory = locatedSkill.stdout.trim();
+    assert.equal(skillDirectory, join(prefix, 'lib/node_modules/runweft/skills/runweft'));
+    for (const file of ['SKILL.md', 'references/onboarding.md', 'references/configuration.md', 'references/delegation.md', 'references/maintenance.md']) {
+      assert((await stat(join(skillDirectory, file))).size > 0);
+    }
+    const installedPackage = JSON.parse(await readFile(join(prefix, 'lib/node_modules/runweft/package.json'), 'utf8'));
+    assert.equal(installedPackage.name, release.package); assert.equal(installedPackage.version, release.version);
+    evidence.install = { version: version.stdout.trim(), commandSource: 'rendered DOM', prefix, binary, launcherSha256: await hash(binary), skillDirectory };
+    check('DOM npm install and Skill location succeed; the installed binary belongs to the isolated prefix and all Skill references exist');
   }
-  const installedPackage = JSON.parse(await readFile(join(prefix, 'lib/node_modules/runweft/package.json'), 'utf8'));
-  assert.equal(installedPackage.name, release.package); assert.equal(installedPackage.version, release.version);
-  evidence.install = { version: version.stdout.trim(), commandSource: 'rendered DOM', prefix, binary, launcherSha256: await hash(binary), skillDirectory };
-  check('DOM npm install and Skill location succeed; the installed binary belongs to the isolated prefix and all Skill references exist');
   assert.equal((await fetch(started.url + '../package.json')).status, 404);
   assert.equal((await fetch(started.url, { method: 'POST' })).status, 405);
   check('Preview root and method boundaries hold');

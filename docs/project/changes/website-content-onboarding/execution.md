@@ -23,3 +23,10 @@
 - 事实核对：默认 Hub 地址、MCP 身份/空间返回、Runner online、成果取回与原生续接条件对应源码/Skill；没有把只读任务要求写成沙箱保障。样式未改，801px 标题自然换行，无裁切。
 - 验证：静态构建；九种宽度首屏定义/主 CTA 可见、无横向溢出；复制、模式切换、无页面异常通过。已查看桌面/移动首页、801px 首页、移动指南、参考页与首页全页截图。证据见 `home-iclaude/evidence.json` 和 `after/`。
 - Commit：`website-content-onboarding T4: integrate iclaude-authored website copy`。
+
+## T2 验证上手路径并完善维护说明
+
+- 结果：官网验证器增加显式 `--browser-only`，默认仍真实安装 npm；新增首页主入口、两页接入与首项任务提示一致性、首屏可见及公开导航检查，折叠选择器适配指南结构。README 说明验收范围，并将历史部署数据标为历史。
+- 验证：`node --test ./website/publish.test.mjs` 15/15；`node website/verify.mjs --browser-only` 全部通过，三页五宽度、24 个相对链接/锚点、复制拒绝/焦点、菜单/切换、无 JS、reduced motion 和失败安装短路均通过。原始证据 `/home/tiger/workspace/runweft/.dev-smoke/website-fdgP6n/evidence.json`，本 Change 副本 `browser-evidence.json`。
+- 包边界：`assertFrozenCandidate` 对 `v1.1.3` 源码 `dab91e089c63a64a4d275a81b7b793354d86200b` 校验通过；程序、Skill、使用说明及版本未改。本次显式跳过重复 npm 安装，不新增平台/原生模型/跨机验证结论。
+- Commit：`website-content-onboarding T2: verify onboarding path and document browser checks`。

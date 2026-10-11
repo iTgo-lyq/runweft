@@ -71,7 +71,7 @@ node website/build.mjs
 node website/publish.mjs check
 ```
 
-最后一步访问公共 npm；API/路由失败路径用专用夹具测试。[正式官网](https://runweft.pages.dev/)已由main手动生产工作流部署，[生产 CI](https://github.com/iTgo-lyq/runweft/actions/runs/38151944692)全部通过，唯一部署 URL 为 [18292ca9.runweft.pages.dev](https://18292ca9.runweft.pages.dev/)。15项部署测试、唯一 URL 与正式域名的八文件摘要/MIME，以及正式域名三页 Playwright 检查通过；产物为 91,656 字节，安装版本为 npm 1.1.3。
+最后一步访问公共 npm；API/路由失败路径用专用夹具测试。[正式官网](https://runweft.pages.dev/)随 main 更新，当前行为与最近部署证据见[官网规格](../docs/project/specs/website/product/spec.md)。2026-10-11 的 npm 1.1.3 官网已通过[生产 CI](https://github.com/iTgo-lyq/runweft/actions/runs/38151944692)和三页/八文件检查；其唯一 URL 为 [18292ca9.runweft.pages.dev](https://18292ca9.runweft.pages.dev/)，91,656 字节仅对应这次历史构建。
 
 [codex 分支在线预览](https://codex-cli-foundation.runweft.pages.dev/)仍可访问，预览验收范围见[归档记录](../docs/project/archive/2026-10-02-website-cloudflare-pages/acceptance.md)。生产/分支别名会跟随后续部署变化，固定构建验收使用唯一 URL；main手动入口已真实通过；PR入口尚未实测。
 
@@ -82,7 +82,16 @@ bunx playwright install chromium --only-shell
 node website/verify.mjs
 ```
 
-已有兼容浏览器可用 RUNWEFT_SITE_CHROMIUM 指定可执行路径。验收覆盖三个页面、320–1440px、复制成功/拒绝与焦点、菜单、FAQ、MCP/runtime 切换、无 JS、reduced motion 和子路径全部本地链接。
+仅修改官网内容、已发布程序与 Skill 保持不变时，可显式只验收网页：
+
+```sh
+node website/build.mjs
+node website/verify.mjs --browser-only
+```
+
+该模式保留 DOM 命令、安装失败短路和全部浏览器检查，跳过再次下载/安装已发布 npm 包，证据标注 scope 与 install.skipped；不能作为新的平台安装证明。默认不加参数仍执行真实 npm 安装。
+
+已有兼容浏览器可用 RUNWEFT_SITE_CHROMIUM 指定可执行路径。验收覆盖三个页面、320–1440px、首屏定义/主入口、首页到指南路径、两页接入及首项任务提示一致性、复制成功/拒绝与焦点、菜单、FAQ、MCP/runtime 切换、无 JS、reduced motion 和子路径全部本地链接。
 
 安装命令及 Skill 目录命令从实际页面 DOM 获取。安装使用独立 HOME、npm prefix/userconfig/globalconfig/cache，清除继承的 npm 配置与认证环境变量，PATH 仅含本次安装、Node/npm 和系统工具。失败 npm 夹具确认不继续运行旧程序；公共 registry 实际安装核对入口归属、版本和五个 Skill 文档。不改用户 MCP/Skill，不启动模型。该检查不代表 Mac/arm64 实机运行。
 
