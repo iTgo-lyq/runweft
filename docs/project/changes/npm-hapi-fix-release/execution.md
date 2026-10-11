@@ -83,6 +83,12 @@ REST恢复run38148688849读取原描述并核验公共五包成功，跳过构�
 
 本次复查确认main=c306d0d535ce5e5aaee95e02c64123b97499deaa与远端一致，Development checks run38043993010成功。它是项目记录改动的核心检查，不重跑四组Linux集成；完整候选集成证据来自上述tag attempt3。1.1.2仍未公开，本次没有触发生产官网部署或匿名安装，T3继续阻塞。
 
+五包latest晋级和匿名安装通过后，从最新main显式运行website-pages.yml，run38151944692成功，固定生产URL为https://18292ca9.runweft.pages.dev/。实际Cloudflare Direct Upload返回production，公开npm五包latest门禁、15项官网检查、八文件白名单和唯一URL摘要/MIME均成功；任务无artifact。
+
+正式域名https://runweft.pages.dev/八文件全部200、MIME/SHA-256匹配1.1.3静态构建（91,656字节），三个页面Playwright通过，安装命令为runweft@1.1.3，未见页面或资源错误。旧403与此前1.1.1历史记录保留，本次1.1.3在线状态已实际确认。main修正CI及完整发布的当前结果见verification.json；tag与包输入始终未变。
+
+- Commit：`npm-hapi-fix-release T3: verify production website for npm 1.1.3`
+
 ## T4 同步 Specs 并归档
 
 待执行。

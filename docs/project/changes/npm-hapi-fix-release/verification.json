@@ -333,6 +333,16 @@
           }
         }
       ]
+    },
+    "postPublicationChecks": {
+      "run": 38151924994,
+      "url": "https://github.com/iTgo-lyq/runweft/actions/runs/38151924994",
+      "sourceRevision": "6a8e693bedd7078663f1fcadc2a3b97e8045e1ea",
+      "conclusion": "success",
+      "job": 114506968174,
+      "rootPassed": 249,
+      "nodePassed": 28,
+      "logSha256": "efd6d5f7fa8fe31e92a79c26eae879cb98cb9d28ba93a2917608bfddac82e7e3"
     }
   },
   "artifactCleanup": {
@@ -400,16 +410,85 @@
     }
   ],
   "published": true,
-  "productionDeployed": false,
-  "status": "npm 1.1.3 published and promoted; production website validation pending",
-  "unexecuted": [
-    "production 1.1.3 deployment"
-  ],
-  "productionVersionLastVerified": "1.1.1",
+  "productionDeployed": true,
+  "status": "npm and production 1.1.3 verified; Specs/archive pending",
+  "unexecuted": [],
+  "productionVersionLastVerified": "1.1.3",
   "productionOnlineCheck": {
-    "confirmed": false,
-    "httpStatus": 403,
-    "note": "Both ordinary and direct requests were refused; current live version was not verified."
+    "confirmed": true,
+    "httpStatus": 200,
+    "evidence": {
+      "success": true,
+      "http": {
+        "success": true,
+        "url": "https://runweft.pages.dev/",
+        "mode": "production",
+        "version": "1.1.3",
+        "files": [
+          {
+            "name": "assets/icons.svg",
+            "bytes": 1598,
+            "sha256": "d708610fe6b75591b214722352dd8dc33671bab46d8f38c21cf154552f3762fa"
+          },
+          {
+            "name": "assets/mark.svg",
+            "bytes": 297,
+            "sha256": "af2367afb3fed6d7b5bb615cf508e4defcb300975f2e575f75db4e50cb2d4168"
+          },
+          {
+            "name": "assets/site.js",
+            "bytes": 3559,
+            "sha256": "d2960a767ab23092f718609a5931bd6f2b67e4d632510a762f93169444b51340"
+          },
+          {
+            "name": "assets/style.css",
+            "bytes": 30672,
+            "sha256": "2aff264dd50554ad1dab5b91d2178a9952c94b3921c1ca837ca77d5aed10da6b"
+          },
+          {
+            "name": "guide.html",
+            "bytes": 14587,
+            "sha256": "63eecddea7b5a719096ed9f6979cb51a4c970261554195704d702a2010db4d09"
+          },
+          {
+            "name": "index.html",
+            "bytes": 16192,
+            "sha256": "5c83fe12714a3bb886338b06a7e47bbe361bdc22e2884e7a28e822dbe767c9f3"
+          },
+          {
+            "name": "manual.html",
+            "bytes": 24632,
+            "sha256": "517eda52506f6b2aa2399feba8f7959b34f2fdcedbfcad75791f9052da8246ad"
+          },
+          {
+            "name": "release.json",
+            "bytes": 119,
+            "sha256": "694c70c7de1100a2d306e04730b5686ce0ab9c2bcd8c50d4c4bde3defdc68c61"
+          }
+        ]
+      },
+      "pages": [
+        {
+          "url": "https://runweft.pages.dev/",
+          "status": 200,
+          "version": "1.1.3",
+          "cssLoaded": true
+        },
+        {
+          "url": "https://runweft.pages.dev/guide",
+          "status": 200,
+          "version": "1.1.3",
+          "cssLoaded": true
+        },
+        {
+          "url": "https://runweft.pages.dev/manual",
+          "status": 200,
+          "version": "1.1.3",
+          "cssLoaded": true
+        }
+      ],
+      "errors": []
+    }
   },
   "publicRegistryCheckedAt": "2026-10-11T15:35:31.158561+00:00",
   "quotaRecheck": {
@@ -2283,5 +2362,211 @@
     ],
     "readmeMatchesFrozenSource": true,
     "websiteEvidence": "/home/tiger/workspace/runweft/.dev-smoke/website-roIFKN/evidence.json"
+  },
+  "productionDeployment": {
+    "run": 38151944692,
+    "runUrl": "https://github.com/iTgo-lyq/runweft/actions/runs/38151944692",
+    "job": 114507028591,
+    "sourceRevision": "6a8e693bedd7078663f1fcadc2a3b97e8045e1ea",
+    "url": "https://18292ca9.runweft.pages.dev/",
+    "conclusion": "success",
+    "artifacts": 0,
+    "logSha256": "1d65a87173101b63befedea807a1a80aba8e1a54ef53df702640d3f28b92791e",
+    "records": {
+      "check": {
+        "success": true,
+        "sourceRevision": "6a8e693bedd7078663f1fcadc2a3b97e8045e1ea",
+        "release": {
+          "version": "1.1.3",
+          "installation": "npm",
+          "package": "runweft",
+          "registry": "https://registry.npmjs.org/"
+        },
+        "files": [
+          {
+            "name": "assets/icons.svg",
+            "bytes": 1598,
+            "sha256": "d708610fe6b75591b214722352dd8dc33671bab46d8f38c21cf154552f3762fa"
+          },
+          {
+            "name": "assets/mark.svg",
+            "bytes": 297,
+            "sha256": "af2367afb3fed6d7b5bb615cf508e4defcb300975f2e575f75db4e50cb2d4168"
+          },
+          {
+            "name": "assets/site.js",
+            "bytes": 3559,
+            "sha256": "d2960a767ab23092f718609a5931bd6f2b67e4d632510a762f93169444b51340"
+          },
+          {
+            "name": "assets/style.css",
+            "bytes": 30672,
+            "sha256": "2aff264dd50554ad1dab5b91d2178a9952c94b3921c1ca837ca77d5aed10da6b"
+          },
+          {
+            "name": "guide.html",
+            "bytes": 14587,
+            "sha256": "63eecddea7b5a719096ed9f6979cb51a4c970261554195704d702a2010db4d09"
+          },
+          {
+            "name": "index.html",
+            "bytes": 16192,
+            "sha256": "5c83fe12714a3bb886338b06a7e47bbe361bdc22e2884e7a28e822dbe767c9f3"
+          },
+          {
+            "name": "manual.html",
+            "bytes": 24632,
+            "sha256": "517eda52506f6b2aa2399feba8f7959b34f2fdcedbfcad75791f9052da8246ad"
+          },
+          {
+            "name": "release.json",
+            "bytes": 119,
+            "sha256": "694c70c7de1100a2d306e04730b5686ce0ab9c2bcd8c50d4c4bde3defdc68c61"
+          }
+        ],
+        "bytes": 91656,
+        "packages": [
+          {
+            "name": "runweft-linux-x64",
+            "version": "1.1.3",
+            "integrity": "sha512-BtbeRiYJ514HNqQ9lE1YOdXeAzYf1D3Jd3oyNvAB3BdG6s/Msm7S4rWdb1R3vSd91KvkiJYmq3KfpSeR6O14uA=="
+          },
+          {
+            "name": "runweft-linux-arm64",
+            "version": "1.1.3",
+            "integrity": "sha512-V2wiz1JSzJH4CwOcPINEqpbvrGwWdOrQIwgINpsJMSahlNxX5l4Xj/IQPgyNNLevrqQYVTYXR5YQMUOnaPgrEA=="
+          },
+          {
+            "name": "runweft-darwin-x64",
+            "version": "1.1.3",
+            "integrity": "sha512-3H6GiIxeUfxw3roYZCCQ58dHls/ieUUKOY9yFD+qd/I5z6MnzNHlFOWN2ahRZTzwL2/pU6MMZPF5oPolwuxhRQ=="
+          },
+          {
+            "name": "runweft-darwin-arm64",
+            "version": "1.1.3",
+            "integrity": "sha512-VwdQ5bmRMEfZrS560M+EboXAtT1WyAhihXipEQajd2EG8e3m9LTaNdsqsOFsCcwj91zcnASz5gKWTJRtXVnY/w=="
+          },
+          {
+            "name": "runweft",
+            "version": "1.1.3",
+            "integrity": "sha512-Z57l5GtKk0ueeATYYE2yBRr/pCM5wrfxUbnSn0cDMR95VndBTjwKXSHNz+qmlVqYN8iHrHIAq4OYiGmxZExmkw=="
+          }
+        ]
+      },
+      "deployment": {
+        "success": true,
+        "url": "https://18292ca9.runweft.pages.dev/",
+        "mode": "production",
+        "version": "1.1.3",
+        "files": [
+          {
+            "name": "assets/icons.svg",
+            "bytes": 1598,
+            "sha256": "d708610fe6b75591b214722352dd8dc33671bab46d8f38c21cf154552f3762fa"
+          },
+          {
+            "name": "assets/mark.svg",
+            "bytes": 297,
+            "sha256": "af2367afb3fed6d7b5bb615cf508e4defcb300975f2e575f75db4e50cb2d4168"
+          },
+          {
+            "name": "assets/site.js",
+            "bytes": 3559,
+            "sha256": "d2960a767ab23092f718609a5931bd6f2b67e4d632510a762f93169444b51340"
+          },
+          {
+            "name": "assets/style.css",
+            "bytes": 30672,
+            "sha256": "2aff264dd50554ad1dab5b91d2178a9952c94b3921c1ca837ca77d5aed10da6b"
+          },
+          {
+            "name": "guide.html",
+            "bytes": 14587,
+            "sha256": "63eecddea7b5a719096ed9f6979cb51a4c970261554195704d702a2010db4d09"
+          },
+          {
+            "name": "index.html",
+            "bytes": 16192,
+            "sha256": "5c83fe12714a3bb886338b06a7e47bbe361bdc22e2884e7a28e822dbe767c9f3"
+          },
+          {
+            "name": "manual.html",
+            "bytes": 24632,
+            "sha256": "517eda52506f6b2aa2399feba8f7959b34f2fdcedbfcad75791f9052da8246ad"
+          },
+          {
+            "name": "release.json",
+            "bytes": 119,
+            "sha256": "694c70c7de1100a2d306e04730b5686ce0ab9c2bcd8c50d4c4bde3defdc68c61"
+          }
+        ],
+        "branch": "main",
+        "sourceRevision": "6a8e693bedd7078663f1fcadc2a3b97e8045e1ea"
+      },
+      "eligibility": {
+        "version": "1.1.3",
+        "build": true,
+        "sourceRevision": "6a8e693bedd7078663f1fcadc2a3b97e8045e1ea"
+      },
+      "prepare": {
+        "deployed": false,
+        "mode": "production",
+        "branch": "main",
+        "project": "runweft",
+        "subdomain": "runweft.pages.dev",
+        "created": false
+      }
+    }
+  },
+  "websiteStatic": {
+    "release": {
+      "version": "1.1.3",
+      "installation": "npm",
+      "package": "runweft",
+      "registry": "https://registry.npmjs.org/"
+    },
+    "files": [
+      {
+        "name": "assets/icons.svg",
+        "bytes": 1598,
+        "sha256": "d708610fe6b75591b214722352dd8dc33671bab46d8f38c21cf154552f3762fa"
+      },
+      {
+        "name": "assets/mark.svg",
+        "bytes": 297,
+        "sha256": "af2367afb3fed6d7b5bb615cf508e4defcb300975f2e575f75db4e50cb2d4168"
+      },
+      {
+        "name": "assets/site.js",
+        "bytes": 3559,
+        "sha256": "d2960a767ab23092f718609a5931bd6f2b67e4d632510a762f93169444b51340"
+      },
+      {
+        "name": "assets/style.css",
+        "bytes": 30672,
+        "sha256": "2aff264dd50554ad1dab5b91d2178a9952c94b3921c1ca837ca77d5aed10da6b"
+      },
+      {
+        "name": "guide.html",
+        "bytes": 14587,
+        "sha256": "63eecddea7b5a719096ed9f6979cb51a4c970261554195704d702a2010db4d09"
+      },
+      {
+        "name": "index.html",
+        "bytes": 16192,
+        "sha256": "5c83fe12714a3bb886338b06a7e47bbe361bdc22e2884e7a28e822dbe767c9f3"
+      },
+      {
+        "name": "manual.html",
+        "bytes": 24632,
+        "sha256": "517eda52506f6b2aa2399feba8f7959b34f2fdcedbfcad75791f9052da8246ad"
+      },
+      {
+        "name": "release.json",
+        "bytes": 119,
+        "sha256": "694c70c7de1100a2d306e04730b5686ce0ab9c2bcd8c50d4c4bde3defdc68c61"
+      }
+    ],
+    "bytes": 91656
   }
 }
