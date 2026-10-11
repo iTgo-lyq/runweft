@@ -68,7 +68,7 @@ bun run test:native <已安装bin/runweft> all <上次evidence.json>
 | 产品/测试夹具实现 | 按实际Git差异选择access/storage/web/本机service；未知路径和新分支保守全选四组 |
 | 仅测试、开发文档、发布脚本 | 保留核心/Node检查，不构建四平台候选 |
 | 官网相关改动 | 独立website流程；PR验证、稳定main生产、稳定codex预览，Beta按下文规则处理 |
-| stable/Beta tag | npm流程仅调用一次四平台候选；完整根/Node/四组无模型集成，不按diff跳过；四平台安装全部成功后发布 |
+| stable/Beta tag | npm流程仅调用一次四平台候选；完整根/Node/四组无模型集成，不按diff跳过；先上传beta，四平台公共npm安装全部成功后晋级latest |
 | npm流程 | 空手动输入只预演；版本tag或main显式release-tag先beta、四平台公共安装后晋级 |
 
 同仓codex分支的PR复用push检查，不再重复普通分支四平台打包。CI没有模型认证、不运行真实模型。工作流本地静态与选择测试不代表远端runner已经通过。
@@ -114,7 +114,7 @@ bun run release:assemble dist/packages dist/website <验收说明.md> <脱敏证
 
 ## npm 可信发布
 
-五包绑定 `iTgo-lyq/runweft` 的 `npm-publish.yml`。托管runner使用Node24/npm11.21.0与OIDC，不保存长期npm token；publisher需要允许 `npm publish` 和 `Allow npm dist-tag`。现有五包上传授权已真实验证，标签权限由实际晋级操作验证；本仓库为私有，不生成自动npm provenance。
+五包绑定 `iTgo-lyq/runweft` 的 `npm-publish.yml`。托管runner使用Node24/npm11.21.0与OIDC，不保存长期npm token；publisher需要允许 `npm publish` 和 `Allow npm dist-tag`。五包上传和标签权限均由1.1.3真实发布及晋级确认；本仓库为私有，不生成自动npm provenance。
 
 先更新根版本和常规说明，完成检查并提交干净源码，再推送严格匹配的不可变tag。稳定版本为 `vX.Y.Z`，预发行版本为 `vX.Y.Z-beta.N`；整数不允许前导零，不接受alpha/rc。发布控制提交与tag的packageInputs必须相同；控制提交执行当前测试，独立checkout原tag及固定HAPI构建一次。基础检查和四组Linux集成通过后，构建job依次上传四平台包与主包，全部使用 `--tag=beta`。
 
@@ -125,7 +125,7 @@ beta是公开渠道。稳定版本 `X.Y.Z --tag=beta` 尚未成为默认latest�
 main/codex普通推送只做核心/相关集成检查，不发布npm。手动入口 `release-tag` 留空只预演；显式填写已有tag时，仅允许选择main，构建原tag源码并执行上述完整发布，不能移动旧tag。当前恢复例子：
 
 ```sh
-gh workflow run npm-publish.yml --repo iTgo-lyq/runweft --ref main -f release-tag=v1.1.2
+gh workflow run npm-publish.yml --repo iTgo-lyq/runweft --ref main -f release-tag=v1.1.3 -f source-run-id=38149709526
 ```
 
 安装或晋级失败时只重跑失败job，复用原成功beta输出和npm原包。beta job失败但五包全部公开时，从同run原attempt日志恢复候选描述，不重新构建。需要修正后工作流恢复旧run时，从最新main手动运行并填写 `release-tag` 与原 `source-run-id`；日志来源workflow、tag/source、所有摘要必须一致。日志不可取得、部分公开或上传结果未知均停止，不盲目重发；只有无公开版本且上次尚未开始上传可重建。旧artifact工作流run38041451856不再重跑。
@@ -134,8 +134,8 @@ gh workflow run npm-publish.yml --repo iTgo-lyq/runweft --ref main -f release-ta
 
 ## 官网 Cloudflare Pages
 
-网站使用独立 `website-pages.yml`：稳定版本的官网相关 main 推送发布生产、codex 分支推送发布预览，PR 只检查；codex push/dispatch 的 Beta 执行聚焦检查后明确跳过构建/上传，main 或 PR 的 Beta 版本直接失败；操作和 Secrets 见[官网说明](../website/README.md#cloudflare-pages-自动部署)。产品已合入 main，[生产推送 CI](https://github.com/iTgo-lyq/runweft/actions/runs/36921038133)通过；PR 和手动入口已配置，真实触发未实测。
+网站使用独立 `website-pages.yml`：稳定版本的官网相关 main 推送发布生产、codex 分支推送发布预览，PR 只检查；codex push/dispatch 的 Beta 执行聚焦检查后明确跳过构建/上传，main 或 PR 的 Beta 版本直接失败；操作和 Secrets 见[官网说明](../website/README.md#cloudflare-pages-自动部署)。产品已合入 main，[最新手动生产CI](https://github.com/iTgo-lyq/runweft/actions/runs/38151944692)通过；PR入口尚未实测。
 
-两个凭证已保存为 Repository secrets；[正式官网](https://runweft.pages.dev/)已通过八文件摘要/MIME 和三页 Playwright 检查，[分支预览验收](project/archive/2026-10-02-website-cloudflare-pages/acceptance.md)另存归档。工作流先保存上传回执，在约三分钟窗口内等待网络传播；官网部署不触发程序发版，当前生产安装目标为已公开的 npm 1.1.1。
+两个凭证已保存为 Repository secrets；[正式官网](https://runweft.pages.dev/)已通过八文件摘要/MIME 和三页 Playwright 检查，[分支预览验收](project/archive/2026-10-02-website-cloudflare-pages/acceptance.md)另存归档。工作流先保存上传回执，在约三分钟窗口内等待网络传播；官网部署不触发程序发版，当前生产安装目标为已晋级latest的npm1.1.3。
 
 发版顺序为更新稳定版本并验收、推送匹配版本 tag、等待五个 npm 包发布通过、运行最新分支的官网工作流。npm 未公开时官网检查停止属于预期；Pages 不自动触发 npm 发布。生产部署拒绝旧 main SHA，不能通过重跑旧任务恢复旧官网；确需回退时先提交明确的源代码/版本回退。

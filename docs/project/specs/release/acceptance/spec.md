@@ -33,9 +33,11 @@
 
 ## CI与公开交付边界
 
-普通push/PR配置为一次核心准备加相关Linux集成，先安装固定Codex以运行真实配置编辑检查；路径未知保守全组。只有tag/手动入口构建完整四平台候选，候选完整gate不按diff跳过，npm在同一run等待平台安装结果。Beta通道、发布回执和官网版本资格保护保留。该配置已通过本地actionlint、真实工具安装及Node选择测试，未触发本轮远端CI。
+普通push/PR执行一次核心准备及按diff选择的Linux集成；路径未知保守全选。正式tag或main显式release-tag构建完整四平台候选，完整根/Node/Linux gate不按diff跳过；同job先上传beta，公共npm四平台原生安装全部成功才晋级latest。发布/核心/官网证据保存在日志/summary及仓库摘要，不依赖Actions artifact。实际main及1.1.3流程已通过，见[本次验收](../../../archive/2026-10-11-npm-hapi-fix-release/acceptance.md)。
 
-历史公开交付与不同候选的托管平台结果见[npm首次发布](../../../archive/2026-10-01-npm-publication/acceptance.md)、[可信发布CI](../../../archive/2026-10-01-npm-trusted-publishing/acceptance.md)、[1.1.1发布记录](../../../archive/2026-10-02-npm-patch-release/acceptance.md)和[Beta配置验收](../../../archive/2026-10-02-npm-beta-publishing/acceptance.md)。这些结果不迁移成本轮候选的Mac/arm64原生证据；本轮没有发布候选或部署官网。
+1.1.3公共候选源码为 `dab91e089c63a64a4d275a81b7b793354d86200b`，HAPI为 `8f774b9413fd483bc163cc06425d7646f10a7c92`。四平台托管runner均通过精确公共npm安装、摘要/配对程序、MCP目录、默认服务/信号、重装/卸载保留；五包latest/beta=1.1.3。Linux x64匿名五包下载、实际网页DOM安装、六Skill文件/README核对，以及生产官网八文件摘要/MIME和三页Playwright通过。当前Linux Runweft SHA256 `75b79a5d9683676422fbc121a3177f6c2082e1a3ffcb06c90b572629d9e151e4`，HAPI SHA256 `269d3f183b7bdcb17839bd688769d3c6a88e56a1d2f605c6f791b83bbb7dc16e`。
+
+历史模型协作范围仍属于各自候选；本轮不追加模型调用，不以托管安装替代Mac/arm64模型、用户物理机器或跨机/WAN实测。旧候选记录见[npm首次发布](../../../archive/2026-10-01-npm-publication/acceptance.md)、[1.1.1发布记录](../../../archive/2026-10-02-npm-patch-release/acceptance.md)和[Beta配置验收](../../../archive/2026-10-02-npm-beta-publishing/acceptance.md)。X.Y.Z-beta.N尚未真实发布，其版本/不晋级门禁为本地夹具证据；稳定1.1.3的beta上传及晋级为真实执行。
 
 测试瘦身候选未执行expanded十二组合、HAPI全仓测试、Mac实机安装/模型、arm64原生服务/模型、物理跨机/WAN或生产TLS；QEMU仅验证基本命令。当时Claude长cwd历史缺口仅用专用短路径避开，现已由下述HAPI修复。
 
@@ -46,4 +48,4 @@
 
 新增专项入口`bun scripts/smoke-hapi-session-and-shutdown.ts [CLI]`验证实际Runner退出码/状态/锁/控制端口、Hub无ACK/停服、启动失败/重启及真实Claude长cwd续接；它调用模型，仅在已有授权和专用认证环境运行。access的机器轮换验证严格要求旧Runner退出0并清理，不再接受旧退出1例外。
 
-当前本地Runweft SHA256 `16b613c3a44ca53d200a2f91e9fa9998d66588bb32a36b6f7b0edf2e9bc46196`，HAPI SHA256 `d72a2ddada75ea806a3abedd9d443602352eac44477eac38d9e1bd52b75467be`。本候选未推送/发布、未重跑完整发行矩阵；物理跨机、macOS和arm64实测仍未完成。公共1.1.1和此前离线发行包保留旧候选，不能视为已包含本次修复。
+当前公共1.1.3包含固定HAPI修复；该专项的模型与退出证据见归档，公开候选的四平台安装范围以上述1.1.3记录为准。历史1.1.1及离线交付保留原字节。

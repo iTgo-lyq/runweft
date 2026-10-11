@@ -10,7 +10,7 @@ Runweft 官网是独立静态站点，不与业务看板或 HAPI 服务混用。
 
 ## 静态交付
 
-website/build.mjs 读取根 package.json 的稳定版本、网站源码和当前使用说明，不依赖 dist/packages 或构建网络。输出仅包含三页 HTML、资源和 release.json；元数据为 version、installation=npm、package=runweft 和公开 registry，不冒充程序候选来源。正式部署前须确认目标版本已公开且可安装。
+website/build.mjs 读取根 package.json 的稳定版本、网站源码和当前使用说明，不依赖 dist/packages 或构建网络。输出仅包含三页 HTML、资源和 release.json；元数据为 version、installation=npm、package=runweft 和公开 registry，不冒充程序候选来源。正式部署前须确认五包latest均为目标版本，公开元数据/完整性与精确平台依赖可安装；只有beta的稳定候选停止部署。
 
 暂存全部成功后才替换旧输出；非法版本、未知模板占位符失败保留旧站点并清理暂存。参考页转义使用说明，在明确的离线工程附录之前截取。站内页面和资源均使用相对路径，支持根路径和子路径部署。
 
@@ -22,10 +22,12 @@ website/serve.mjs 提供 loopback GET/HEAD 预览，只能读取站点目录。�
 
 website-pages.yml 复用规范版本识别，稳定版本使用托管 runner 构建、检查公共 npm 版本并上传 Direct Upload 项目；main 的官网相关推送部署 production，codex 分支部署 preview，action 返回环境须与请求模式匹配。生产部署先确认 run 的 SHA 为 main 当前提交，拒绝旧提交覆盖官网。仅 codex/** push/dispatch 的 Beta 在聚焦检查后明确跳过构建、准备/上传与静态产物；main 或 PR 的 Beta 版本失败，真实构建器仍只接受稳定版本。Beta 跳过仅有本地夹具证据，尚未真实触发。
 
-[正式官网](https://runweft.pages.dev/)已通过[真实 main 推送 CI](https://github.com/iTgo-lyq/runweft/actions/runs/36922124955)，唯一 URL 为 [32bf891f.runweft.pages.dev](https://32bf891f.runweft.pages.dev/)；唯一 URL 与正式域名八文件摘要/MIME、正式域名三个页面的 Playwright 检查通过，静态产物为 91,064 字节，安装版本为 npm 1.1.1。[codex 分支预览](https://codex-cli-foundation.runweft.pages.dev/)的项目创建、后续复用和实际预览证据另见[Pages 验收](../../../archive/2026-10-02-website-cloudflare-pages/acceptance.md)。
+[正式官网](https://runweft.pages.dev/)安装版本为npm1.1.3，已通过[main手动生产CI](https://github.com/iTgo-lyq/runweft/actions/runs/38151944692)；固定构建唯一URL为[https://18292ca9.runweft.pages.dev/](https://18292ca9.runweft.pages.dev/)。唯一URL与正式域名八文件摘要/MIME、正式域名三页Playwright通过，静态输出91,656字节，见[验收](../../../archive/2026-10-11-npm-hapi-fix-release/acceptance.md)。[codex分支预览](https://codex-cli-foundation.runweft.pages.dev/)保留原配置，范围见[Pages验收](../../../archive/2026-10-02-website-cloudflare-pages/acceptance.md)。
 
-准备步骤和官方上传 action 使用 Repository secrets 的 CLOUDFLARE_ACCOUNT_ID/CLOUDFLARE_API_TOKEN；凭证不写入静态站点或验收 JSON。主包/四平台包的公开版本、SHA-512 字段、精确可选依赖和 tarball HEAD 均通过；不下载程序、不调用 npm 发布。静态输出为八文件白名单，拒绝链接、隐藏文件、归档和未知文件。
+准备步骤和官方上传 action 使用 Repository secrets 的 CLOUDFLARE_ACCOUNT_ID/CLOUDFLARE_API_TOKEN；凭证不写入静态站点或验收 JSON。主包/四平台包的公开版本、SHA-512 字段、精确可选依赖和 tarball HEAD 均通过；五包latest必须与站点版本一致，不下载程序、不调用npm发布。静态输出为八文件白名单，拒绝链接、隐藏文件、归档和未知文件。
 
 校验前保存唯一 URL 与实际环境回执，在约三分钟窗口内重试暂时不可达请求，错误只记录有限网络错误码。在线验证跟随项目域内 HTML 重定向，核对三个页面、release.json、四个资源的 MIME 与 SHA-256；固定构建验收使用唯一 URL。
 
-部署脚本的路由、未公开 npm/错误依赖、Pages 权限/已有配置拒绝、缺凭证与失败回执通过 14 项聚焦测试。PR 只检查，手动入口按分支路由；这两个入口已配置，真实触发尚未实测。
+部署脚本的路由、未公开 npm/错误依赖、Pages 权限/已有配置拒绝、缺凭证与失败回执通过15项聚焦测试。PR 只检查，手动入口按分支路由；main手动入口已真实通过；PR入口未实测。
+
+官网使用Cloudflare Direct Upload，不依赖Actions artifact；脱敏部署回执、八文件摘要与URL保存在日志/summary及仓库验收记录，静态输出按对应提交重建核对。

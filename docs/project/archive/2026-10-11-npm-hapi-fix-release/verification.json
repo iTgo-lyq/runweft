@@ -411,7 +411,7 @@
   ],
   "published": true,
   "productionDeployed": true,
-  "status": "npm and production 1.1.3 verified; Specs/archive pending",
+  "status": "npm 1.1.3 and production verified; automatic acceptance complete",
   "unexecuted": [],
   "productionVersionLastVerified": "1.1.3",
   "productionOnlineCheck": {
@@ -2568,5 +2568,6 @@
       }
     ],
     "bytes": 91656
-  }
+  },
+  "automaticAcceptanceAuthorized": true
 }

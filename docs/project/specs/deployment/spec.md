@@ -60,3 +60,5 @@ Runweft只创建和读取唯一当前格式：中心库schema19、本机client�
 已有库核验不写原主库或WAL/SHM；拒绝时保留原字节、权限与文件集。格式不支持返回503/state_format_unsupported，损坏或结构不符返回503/state_format_invalid，提示使用独立新--home并自行保管原目录。start、serve、restart在创建服务凭据、日志或进程以及停止现有服务之前预检本机两种业务库。此约束不改造独立HAPI的内部持久化。
 
 当前配置的正常省略值、身份轮换、现行任务恢复和显式成果留存不属于历史格式转换；它们仍按各自权限和固定回执执行。
+
+当前业务格式验证读取专用临时副本；以读写方式打开副本，允许macOS为WAL模式数据库创建所需边文件，原数据库、WAL、SHM与身份字节不变。业务库固定schema19/client1，配置固定schemaVersion1；两个Mac原生空WAL/旧损坏拒绝/并发创建回归及四平台实际npm服务验收通过，来源见[本轮验收](../../archive/2026-10-11-npm-hapi-fix-release/acceptance.md)。

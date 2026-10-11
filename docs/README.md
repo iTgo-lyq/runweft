@@ -1,6 +1,6 @@
 # 项目文档
 
-当前Runweft 1.1.3已由不可变v1.1.3源码通过beta上传、四平台公共npm安装验收和OIDC latest晋级；五包匿名下载/摘要、Linux x64 DOM安装及Skill核对通过，固定HAPI 8f774b94包含已验收的[Claude长路径与Runner退出修复](project/archive/2026-10-10-hapi-session-and-shutdown/acceptance.md)。发布/核心/官网均不依赖Actions artifact。main CI、生产官网1.1.3部署与正式域名八文件/三页验收通过，1.1.2 beta未晋级，修正Mac校验的1.1.3为正式版本；来源和范围见[发布执行记录](project/changes/npm-hapi-fix-release/execution.md)。
+当前Runweft 1.1.3已由不可变v1.1.3源码通过beta上传、四平台公共npm安装验收和OIDC latest晋级；五包匿名下载/摘要、Linux x64 DOM安装及Skill核对通过，固定HAPI 8f774b94包含已验收的[Claude长路径与Runner退出修复](project/archive/2026-10-10-hapi-session-and-shutdown/acceptance.md)。发布/核心/官网均不依赖Actions artifact。main CI、生产官网1.1.3部署与正式域名八文件/三页验收通过，1.1.2 beta未晋级，修正Mac校验的1.1.3为正式版本；来源和范围见[发布验收](project/archive/2026-10-11-npm-hapi-fix-release/acceptance.md)。
 
 Runweft 1.1.3 已发布；产品已完成 Hub 集中配置七阶段、完整后台/Skill与同候选集成发行。安装、配置、部署与数据维护见[使用说明](usage.md)，源码构建和验证见[开发说明](development.md)。
 
@@ -20,9 +20,9 @@ Runweft 1.1.3 已发布；产品已完成 Hub 集中配置七阶段、完整后�
 
 产品官网已统一为 npm 安装，Skill 从 npm 包内接入；静态构建无下载归档，实际 DOM 命令安装与网页自动验收通过，见[本次验收](project/archive/2026-10-02-website-npm-installation/acceptance.md)。已部署[正式官网](https://runweft.pages.dev/)与 [Cloudflare 分支预览](https://codex-cli-foundation.runweft.pages.dev/)；构建与预览见[官网说明](../website/README.md)。
 
-[Cloudflare Pages 自动部署](project/archive/2026-10-02-website-cloudflare-pages/acceptance.md)已完成 codex 分支预览：两个 Repository secrets、项目创建、真实上传及三页/资源自动校验通过。产品现已快进合入 main，[生产部署 CI](https://github.com/iTgo-lyq/runweft/actions/runs/36912561909)、正式域名八文件摘要/MIME 与三页 Playwright 检查通过；手动和 PR 的真实触发仍未实测。npm 正式发布由匹配源码版本的 tag 触发：稳定版 latest，Beta 版 beta。
+[Cloudflare Pages 自动部署](project/archive/2026-10-02-website-cloudflare-pages/acceptance.md)已完成 codex 分支预览：两个 Repository secrets、项目创建、真实上传及三页/资源自动校验通过。产品现已快进合入 main，[生产部署 CI](https://github.com/iTgo-lyq/runweft/actions/runs/36912561909)、正式域名八文件摘要/MIME 与三页 Playwright 检查通过；手动和 PR 的真实触发仍未实测。npm 正式发布由匹配源码版本的 tag 触发：稳定版先beta、四平台验收后latest，X.Y.Z-beta.N验收后保持beta。
 
-1.1.1 已通过稳定 tag/OIDC 真实上传，公共五包 latest=1.1.1；四平台托管安装、匿名 Linux x64 DOM 安装与当前 npm Skill 核对通过。main 的 CLI/Pages 及正式域名三页、八文件摘要/MIME 检查通过，见[补丁发布验收](project/archive/2026-10-02-npm-patch-release/acceptance.md)。历史离线 1.1.0 整包与分支预览保留，未追加模型或物理跨机验收。Beta tag 通道已配置，原四平台/OIDC 稳定预演通过；首个 Beta 尚未发布，Beta 门禁/参数/官网跳过目前为本地夹具证据，见[配置验收](project/archive/2026-10-02-npm-beta-publishing/acceptance.md)。
+1.1.1 已通过稳定 tag/OIDC 真实上传，公共五包 latest=1.1.1；四平台托管安装、匿名 Linux x64 DOM 安装与当前 npm Skill 核对通过。main 的 CLI/Pages 及正式域名三页、八文件摘要/MIME 检查通过，见[补丁发布验收](project/archive/2026-10-02-npm-patch-release/acceptance.md)。历史离线 1.1.0 整包与分支预览保留，未追加模型或物理跨机验收。Beta tag 通道已配置，原四平台/OIDC 稳定预演通过；首个 X.Y.Z-beta.N 尚未发布，Beta 门禁/参数/官网跳过目前为本地夹具证据，见[配置验收](project/archive/2026-10-02-npm-beta-publishing/acceptance.md)。
 
 已交付 Change 按独立交付结果拆分并声明依赖，归档入口如下：
 
