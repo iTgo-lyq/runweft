@@ -237,6 +237,13 @@
       "assertions": 4798,
       "files": 41,
       "seconds": 62.41
+    },
+    "remoteAfterFix": {
+      "sourceRevision": "cfd813b570203ad8b297029d52fe8b6c4950ef9c",
+      "run": 38132424780,
+      "url": "https://github.com/iTgo-lyq/runweft/actions/runs/38132424780",
+      "conclusion": "success",
+      "productionIntegrationRepeated": false
     }
   }
 }

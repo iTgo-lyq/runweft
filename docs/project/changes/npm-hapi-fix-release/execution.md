@@ -36,6 +36,10 @@ v1.1.2为annotated tag，固定源码ee66fe08c549908e1a49555c2ec0cc842b63d6c8；
 
 - Commit：`npm-hapi-fix-release T2: wait for completed preparation in release test`
 
+修正提交cfd813b570203ad8b297029d52fe8b6c4950ef9c的main run38132424780/core job114449324442成功：类型、完整根测试、Node和actionlint均通过；仅测试/文档变化，四组生产集成未重复。本提交仅保存该CI结果，T2/T3仍因发布额度阻塞。
+
+- Commit：`npm-hapi-fix-release T2: preserve successful timing-fix CI evidence`
+
 ## T3 推送 Runweft main 与官网验收
 
 首轮发布失败仅为产物上传额度，产品和Linux全部集成已通过。Runweft main=7b7b17c7d0ff80ad88cfd28266e8078ae1e517d4已正常推送，远端/本地一致，v1.1.2为main祖先。Development checks run38042661930的类型/根/Node/actionlint/构建及全部选中集成通过，仅上传24份验收产物因额度失败；Pages run38042661938因npm版本404和产物额度失败，未运行生产上传。生产域名release.json本轮普通和直连读取均被403拒绝，当前在线版本未确认；历史最后验证为1.1.1，不将它记作本轮在线成功。T3的部署/整体验收尚未完成。
