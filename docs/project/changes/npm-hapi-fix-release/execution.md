@@ -52,6 +52,12 @@ v1.1.2为annotated tag，固定源码ee66fe08c549908e1a49555c2ec0cc842b63d6c8；
 
 - Commit：`npm-hapi-fix-release T2: scope native expiry authentication check to its page`
 
+run38145808969的基础/四平台打包/完整Linux集成及OIDC检查成功；五包实际beta上传并全部公开，latest保持1.1.1。Linux x64/arm64公共安装与服务通过；两个macOS平台均在首次Hub start失败，版本/help/MCP目录及配对程序hash已通过，promote被跳过。所有五包完整公开、原候选描述可从成功beta日志取得，因此后续使用source-run-id=38145808969恢复原包，不重新构建或上传。
+
+失败服务日志未进入原CI报告，暂不能定位Mac启动根因。增加专用smoke-service失败报告中的service.log/hapi-hub.log尾部，先读取现场身份/机器/HAPI凭据并脱敏，再限制每份8192字符；不收集模型日志。受控本地检查保留两份启动诊断、遮盖六种凭据、保留原异常并限制长度；Node语法、冻结包输入与Change结构检查通过。修正只增验收诊断，继续以原公共候选验证，尚不声称Mac问题已解决。
+
+- Commit：`npm-hapi-fix-release T2: retain sanitized installed service startup diagnostics`
+
 ## T3 推送 Runweft main 与官网验收
 
 首轮发布失败仅为产物上传额度，产品和Linux全部集成已通过。Runweft main=7b7b17c7d0ff80ad88cfd28266e8078ae1e517d4已正常推送，远端/本地一致，v1.1.2为main祖先。Development checks run38042661930的类型/根/Node/actionlint/构建及全部选中集成通过，仅上传24份验收产物因额度失败；Pages run38042661938因npm版本404和产物额度失败，未运行生产上传。生产域名release.json本轮普通和直连读取均被403拒绝，当前在线版本未确认；历史最后验证为1.1.1，不将它记作本轮在线成功。T3的部署/整体验收尚未完成。

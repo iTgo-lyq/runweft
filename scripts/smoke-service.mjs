@@ -143,7 +143,31 @@ try {
     assert.notEqual(run(freshHome, ['machine', 'enroll']).machineId, machine.machineId);
     record('explicit stop preserves worktrees, pending transfers and backups; independent new Hub rejects foreign identity and enrolls fresh machine');
     evidence.success = true;
-} catch (error) { evidence.error = error.message; throw error; }
+} catch (error) {
+    evidence.error = error.message;
+    try {
+        const directories = [home, remote, freshHome].filter(directory => existsSync(join(directory, 'config.yaml')));
+        const paths = directories.map(directory => run(directory, ['paths']));
+        const credentials = [...secrets, 'unused-smoke-value'];
+        for (const item of paths) for (const file of [item.identityConnection, item.machineConnection,
+            join(item.hapiClient, 'settings.json'), join(item.hapiServer, 'settings.json')]) {
+            if (!existsSync(file)) continue;
+            const saved = JSON.parse(readFileSync(file, 'utf8'));
+            for (const value of [saved.token, saved.active?.token, saved.cliApiToken]) {
+                if (typeof value === 'string' && value) credentials.push(value);
+            }
+        }
+        evidence.serviceLogs = {};
+        for (const [index, item] of paths.entries()) for (const name of ['service.log', 'hapi-hub.log']) {
+            const file = join(item.logs, name);
+            if (!existsSync(file)) continue;
+            let text = readFileSync(file, 'utf8');
+            for (const credential of credentials) text = text.replaceAll(credential, '[redacted]');
+            evidence.serviceLogs[`${index}/${name}`] = text.slice(-8192);
+        }
+    } catch { evidence.diagnosticsUnavailable = true; }
+    throw error;
+}
 finally {
     if (foreground && foreground.exitCode === null && foreground.signalCode === null) {
         const exited = new Promise(resolve => foreground.once('exit', resolve)); foreground.kill('SIGTERM');
