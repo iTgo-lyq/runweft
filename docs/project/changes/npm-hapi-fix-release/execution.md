@@ -67,6 +67,14 @@ REST恢复run38148688849读取原描述并核验公共五包成功，跳过构�
 - Commit：`npm-hapi-fix-release T2: diagnose database creation on native macOS`
 - Commit：`npm-hapi-fix-release T2: include pinned HAPI types in native diagnosis`
 
+实际发布run38149709526使用v1.1.3固定源码dab91e089c63a64a4d275a81b7b793354d86200b和固定HAPI8f774b94；四平台构建及完整Linux集成通过后，五包以beta上传。Linux x64/arm64、macOS x64/arm64四个托管job从公共npm读取精确1.1.3、核验摘要并安装，配对程序/MCP目录/无Bun服务/信号/重装/缺依赖/卸载保留均成功。晋级job实际OIDC更新五包latest，平台先、主包后；用户配置的dist-tag权限由本次真实写入确认。发布与安装均无artifact。
+
+匿名实际下载全部五包并核验SHA-512、manifest/HAPI与原日志描述一致，latest/beta均为1.1.3。Linux x64专用HOME/prefix/cache从网站DOM执行npm安装，Playwright三页/320–1440px/复制与失败/无JS/子路径通过；配对程序hash、六Skill文件和两份README逐字匹配冻结候选。1.1.3候选的249项根测试、43项Node与类型检查及四组Linux集成通过；本机同候选版本构建和两Mac原生数据库8项回归通过。完整记录见verification.json；本次未调用模型或物理跨机验收。
+
+- Commit：`npm-hapi-fix-release T2: verify public beta installs and latest promotion`
+
+首次本机DOM复验误读未重建的dist/website（1.1.2）；额外程序hash核对明确拒绝，未记作1.1.3验收。重新build1.1.3并核验八文件摘要后，独立DOM场景website-roIFKN安装实际1.1.3成功，配对程序/Skill/README匹配候选。验证记录保留版本误配与纠正结果。
+
 ## T3 推送 Runweft main 与官网验收
 
 首轮发布失败仅为产物上传额度，产品和Linux全部集成已通过。Runweft main=7b7b17c7d0ff80ad88cfd28266e8078ae1e517d4已正常推送，远端/本地一致，v1.1.2为main祖先。Development checks run38042661930的类型/根/Node/actionlint/构建及全部选中集成通过，仅上传24份验收产物因额度失败；Pages run38042661938因npm版本404和产物额度失败，未运行生产上传。生产域名release.json本轮普通和直连读取均被403拒绝，当前在线版本未确认；历史最后验证为1.1.1，不将它记作本轮在线成功。T3的部署/整体验收尚未完成。

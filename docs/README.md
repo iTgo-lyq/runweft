@@ -1,8 +1,8 @@
 # 项目文档
 
-当前源码已完成[Claude长路径与Runner退出修复](project/archive/2026-10-10-hapi-session-and-shutdown/acceptance.md)，固定HAPI 8f774b94；两个仓库main与不可变v1.1.2已推送。2026-10-11旧发布run第三次因Actions artifact额度失败，未上传npm。按用户确认已改造为beta上传、四平台公共npm安装验收、再晋级latest，发布/核心/官网不再使用artifact。新流程本地类型/248项根测试/42项Node/actionlint及公共1.1.1等价真实安装通过；1.1.2的真实beta/四平台/晋级与官网待执行。五包publisher须允许npm publish与Allow npm dist-tag，实际权限在远端操作核验；详细来源和恢复入口见[发布执行记录](project/changes/npm-hapi-fix-release/execution.md)。
+当前Runweft 1.1.3已由不可变v1.1.3源码通过beta上传、四平台公共npm安装验收和OIDC latest晋级；五包匿名下载/摘要、Linux x64 DOM安装及Skill核对通过，固定HAPI 8f774b94包含已验收的[Claude长路径与Runner退出修复](project/archive/2026-10-10-hapi-session-and-shutdown/acceptance.md)。发布/核心/官网均不依赖Actions artifact。main CI通过，生产官网1.1.3部署与正式域名验收待完成，1.1.2 beta未晋级，修正Mac校验的1.1.3为正式版本；来源和范围见[发布执行记录](project/changes/npm-hapi-fix-release/execution.md)。
 
-Runweft 1.1.1 已发布；产品已完成 Hub 集中配置七阶段、完整后台/Skill与同候选集成发行。安装、配置、部署与数据维护见[使用说明](usage.md)，源码构建和验证见[开发说明](development.md)。
+Runweft 1.1.3 已发布；产品已完成 Hub 集中配置七阶段、完整后台/Skill与同候选集成发行。安装、配置、部署与数据维护见[使用说明](usage.md)，源码构建和验证见[开发说明](development.md)。
 
 [当前数据基线与本机测试环境清理](project/archive/2026-10-10-current-data-baseline/execution.md)已完成。用户确认截至2026-10-10尚未在其他机器部署，数据库和本地配置以当前源码结构为首次部署基线，历史测试格式迁移不作为发行前提。本机16个历史测试目录已删除；原始临时现场不再保留，已跟踪的验收说明和脱敏摘要、源码及正式交付保留。
 

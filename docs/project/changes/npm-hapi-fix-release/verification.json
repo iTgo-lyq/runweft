@@ -1,7 +1,7 @@
 {
-  "version": "1.1.2",
+  "version": "1.1.3",
   "source": {
-    "revision": "ee66fe08c549908e1a49555c2ec0cc842b63d6c8",
+    "revision": "dab91e089c63a64a4d275a81b7b793354d86200b",
     "dirty": false
   },
   "hapi": {
@@ -11,83 +11,23 @@
   },
   "local": {
     "typecheck": true,
-    "build": true,
     "rootTests": {
-      "passed": 248,
+      "passed": 249,
       "failed": 0,
-      "assertions": 4798,
-      "files": 41
+      "assertions": 4801,
+      "files": 41,
+      "seconds": 62.68
     },
-    "nodeTests": {
-      "passed": 33,
-      "failed": 0
-    }
+    "nodeTests": 43,
+    "build": true,
+    "compiledVersion": "1.1.3"
   },
   "tag": {
-    "name": "v1.1.2",
-    "run": 38041451856,
-    "url": "https://github.com/iTgo-lyq/runweft/actions/runs/38041451856",
-    "attempts": [
-      {
-        "attempt": 1,
-        "conclusion": "failure",
-        "fourPlatformBuild": true,
-        "linuxModelFreeIntegration": true,
-        "artifactUploaded": false,
-        "hostedMacArmInstall": false,
-        "published": false,
-        "failure": "Artifact storage quota has been hit"
-      },
-      {
-        "attempt": 2,
-        "conclusion": "failure",
-        "fourPlatformBuild": true,
-        "linuxModelFreeIntegration": true,
-        "artifactUploaded": false,
-        "hostedMacArmInstall": false,
-        "published": false,
-        "failure": "Artifact storage quota has been hit"
-      },
-      {
-        "attempt": 3,
-        "date": "2026-10-11",
-        "conclusion": "failure",
-        "buildJob": 114444727984,
-        "fourPlatformBuild": true,
-        "linuxModelFreeIntegration": true,
-        "integration": {
-          "groups": [
-            "access",
-            "storage",
-            "web",
-            "service-package"
-          ],
-          "startedAt": "2026-10-11T10:12:22Z",
-          "completedAt": "2026-10-11T10:22:04Z"
-        },
-        "rootTests": {
-          "passed": 248,
-          "failed": 0,
-          "assertions": 4801,
-          "files": 41,
-          "seconds": 86.11
-        },
-        "nodeTests": {
-          "passed": 33,
-          "failed": 0
-        },
-        "artifactUploaded": false,
-        "hostedMacArmInstall": false,
-        "installJob": 114447184896,
-        "installConclusion": "skipped",
-        "publishJob": 114447185478,
-        "publishConclusion": "skipped",
-        "published": false,
-        "failure": "Artifact storage quota has been hit",
-        "localLog": ".dev-smoke/npm-hapi-fix-release/ci-build-third.log",
-        "logSha256": "750e56dcc99ee0df95daca1fec2985144ba5f2d57dd8bb3996a2fbe5fc4197f3"
-      }
-    ]
+    "name": "v1.1.3",
+    "sourceRevision": "dab91e089c63a64a4d275a81b7b793354d86200b",
+    "run": 38149709526,
+    "url": "https://github.com/iTgo-lyq/runweft/actions/runs/38149709526",
+    "conclusion": "success"
   },
   "main": {
     "sourceRevision": "7b7b17c7d0ff80ad88cfd28266e8078ae1e517d4",
@@ -128,6 +68,271 @@
       "conclusion": "success",
       "allIntegrationGroups": true,
       "artifactDependency": false
+    },
+    "version113Checks": {
+      "run": 38149695886,
+      "url": "https://github.com/iTgo-lyq/runweft/actions/runs/38149695886",
+      "sourceRevision": "dab91e089c63a64a4d275a81b7b793354d86200b",
+      "job": 114500430905,
+      "conclusion": "success",
+      "rootTests": {
+        "passed": 249,
+        "failed": 0
+      },
+      "nodeTests": 28,
+      "steps": [
+        {
+          "name": "Set up job",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run actions/setup-node@820762786026740c76f36085b0efc47a31fe5020",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run bun install --frozen-lockfile",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run bun install --frozen-lockfile",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install Codex for the real native configuration tests",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run bun run typecheck && bun run test",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run node --test ./scripts/tests/*.test.mjs",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.12",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run node scripts/ci-scope.mjs",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install Claude for integration discovery only",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Run bunx playwright install --with-deps chromium",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Run bun run build:hapi && bun run build",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Run selected local integration groups",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Keep sanitized integration evidence in logs",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Run oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Run actions/setup-node@820762786026740c76f36085b0efc47a31fe5020",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+          "conclusion": "success"
+        },
+        {
+          "name": "Complete job",
+          "conclusion": "success"
+        }
+      ],
+      "logSha256": "f95b3fbfc76d3e863d056662cc58906b9fbf987c139e0799f6d538adb14c06ea"
+    },
+    "packagePathFixChecks": {
+      "run": 38144328713,
+      "job": 114484410025,
+      "sourceRevision": "301ec9e19462e7aeecc5c9b45d899dfc55a321a9",
+      "conclusion": "success",
+      "logSha256": "066d48f8f890d31f7ef0d93093858f77dfb6532a8af5374aca8ed0955d4f45bc"
+    },
+    "consoleExpiryFixChecks": {
+      "run": 38145790372,
+      "job": 114488726042,
+      "sourceRevision": "4f6cec3d789fe54836472d4211a2e4696e911a15",
+      "conclusion": "success",
+      "logSha256": "4fff176fc08564aea9d27c4ee13245fb941d2ad3127cc3e33b46d8b9f1c5d429",
+      "evidence": [
+        {
+          "path": ".dev-smoke/hub-connect-qTCMwn/evidence.json",
+          "report": {
+            "root": "/home/runner/work/runweft/runweft/.dev-smoke/hub-connect-qTCMwn",
+            "binary": "/home/runner/work/runweft/runweft/dist/runweft",
+            "binaries": {
+              "runweft": {
+                "path": "/home/runner/work/runweft/runweft/dist/runweft",
+                "sha256": "ab418d3aa3b92008131a4d79104687de0bc3a35fd34d86b957331a65b9bf33fa"
+              },
+              "hapi": {
+                "path": "/home/runner/work/runweft/runweft/dist/hapi",
+                "sha256": "6c2540fdcada4d52834d2b4bb69a3ea650f9abfd275beb1b7f896db89ab433e1"
+              }
+            },
+            "success": true,
+            "checks": [
+              "anonymous confirmation link shows origin, machine and code; never automatically confirms",
+              "WebCrypto encrypts current identity after explicit space selection; Hub persists ciphertext and token digest only",
+              "compiled CLI decrypts and validates identity/membership, saves atomically, consumes once and survives concurrent completion",
+              "mobile confirmation requires an active identity; cancellation invalidates the request and preserves the existing connection",
+              "origin mismatch cannot confirm; CLI output, browser URLs and console contain no identity token, private key or polling secret"
+            ],
+            "screenshots": [
+              "/home/runner/work/runweft/runweft/.dev-smoke/hub-connect-qTCMwn/confirmed-desktop.png",
+              "/home/runner/work/runweft/runweft/.dev-smoke/hub-connect-qTCMwn/pending-mobile.png"
+            ],
+            "cleanupErrors": [],
+            "scope": "installed default Hub and adjacent HAPI, public identity API, readonly SQLite assertions, RSA/WebCrypto and Chromium; no models"
+          }
+        },
+        {
+          "path": ".dev-smoke/hub-console-ZUvvLU/evidence.json",
+          "report": {
+            "root": "/home/runner/work/runweft/runweft/.dev-smoke/hub-console-ZUvvLU",
+            "binary": "/home/runner/work/runweft/runweft/dist/runweft",
+            "sourceFixtures": [],
+            "binaries": {
+              "runweft": {
+                "path": "/home/runner/work/runweft/runweft/dist/runweft",
+                "sha256": "ab418d3aa3b92008131a4d79104687de0bc3a35fd34d86b957331a65b9bf33fa"
+              },
+              "hapi": {
+                "path": "/home/runner/work/runweft/runweft/dist/hapi",
+                "sha256": "6c2540fdcada4d52834d2b4bb69a3ea650f9abfd275beb1b7f896db89ab433e1"
+              }
+            },
+            "origin": "http://127.0.0.1:45887",
+            "checks": [
+              "encrypted Web/CLI onboarding, independent enrollment and online Runner",
+              "browser registers actual Codex runtime, shares explicitly without claiming model readiness",
+              "repository create recovers lost response by receipt without duplicate; member UI and API remain read-only",
+              "full Agent definition, optimistic version conflict preserves form, owner-only history and private member invisibility",
+              "member sharing without edit/history rights, independent per-repository choices and actual runtime resolution",
+              "private governance summary excludes instructions and cannot grant owner editing rights",
+              "authorized current overview DOM projections distinguish uncertain/absent/stopped execution and delivery retention; names, summary and attention are text only",
+              "combined current filters, escaped local/global 503 retain prior data and recovery clears error; busy action suppresses duplicate reads",
+              "task inventory and count isolate identities; filtering, pagination, full report paging and escaped content",
+              "real HAPI history loads and refreshes through scoped tab JWT; live SSE uses authorization header, never URL or localStorage",
+              "native approval and file deep links use same identity with real HAPI and a declared session RPC fixture, no model or OS shell",
+              "actual identity rotation rejects old long token and native JWT, expired SSE clears tab credential; independent owner remains authorized and explicit reopen gets new scope token",
+              "actual empty owner space differs from no-match filter; space switch clears prior view and JWT cache never reuses another scope",
+              "served console clear lifecycle ignores late authorized success and failure even with uncancelled HTTP; cleared view/navigation never revive",
+              "same-browser native tabs keep different identities; foreign API, managed resume and shared-machine terminal denied; expiry never creates identity",
+              "390px layout, service-provided last-owner controls and logout clear prior resource data"
+            ],
+            "screenshots": [
+              "/home/runner/work/runweft/runweft/.dev-smoke/hub-console-ZUvvLU/runtimes-desktop.png",
+              "/home/runner/work/runweft/runweft/.dev-smoke/hub-console-ZUvvLU/agents-desktop.png",
+              "/home/runner/work/runweft/runweft/.dev-smoke/hub-console-ZUvvLU/agents-mobile.png",
+              "/home/runner/work/runweft/runweft/.dev-smoke/hub-console-ZUvvLU/tasks-detail-375.png",
+              "/home/runner/work/runweft/runweft/.dev-smoke/hub-console-ZUvvLU/tasks-detail-1200.png",
+              "/home/runner/work/runweft/runweft/.dev-smoke/hub-console-ZUvvLU/native-detail-desktop.png",
+              "/home/runner/work/runweft/runweft/.dev-smoke/hub-console-ZUvvLU/native-file-desktop.png",
+              "/home/runner/work/runweft/runweft/.dev-smoke/hub-console-ZUvvLU/runtimes-mobile.png",
+              "/home/runner/work/runweft/runweft/.dev-smoke/hub-console-ZUvvLU/members-mobile.png"
+            ],
+            "success": true,
+            "cleanupErrors": [],
+            "scope": "compiled CLI, real HAPI/Runner and Chromium; task history and session RPC are explicit browser fixtures, no model execution or OS terminal",
+            "consoleSuccess": true
+          }
+        },
+        {
+          "path": ".dev-smoke/hub-identity-Fj2ce9/evidence.json",
+          "report": {
+            "root": "/home/runner/work/runweft/runweft/.dev-smoke/hub-identity-Fj2ce9",
+            "binary": "/home/runner/work/runweft/runweft/dist/runweft",
+            "candidate": {
+              "core": {
+                "path": "/home/runner/work/runweft/runweft/dist/runweft",
+                "sha256": "ab418d3aa3b92008131a4d79104687de0bc3a35fd34d86b957331a65b9bf33fa"
+              },
+              "hapi": {
+                "path": "/home/runner/work/runweft/runweft/dist/hapi",
+                "sha256": "6c2540fdcada4d52834d2b4bb69a3ea650f9abfd275beb1b7f896db89ab433e1"
+              }
+            },
+            "cleanupErrors": [],
+            "success": true,
+            "checks": [
+              "compiled /hub creates identity, downloads backup, refreshes same identity and escapes user names",
+              "two browser identities join by single-use invitation; admin cannot create another admin",
+              "keyboard entry, profile rename, space creation/switching and owner role changes work through Web",
+              "rotation survives lost response; old token rejected; saved token restores original identity",
+              "desktop and mobile views, secret-free DOM attributes and unknown Hub route 404",
+              "current public authority exchanges only identity credentials, rejects root and JWT scope substitution; raw identity cannot access native routes or either Socket namespace",
+              "identity/invitation plaintext absent from state DB, WAL and logs after negative probes",
+              "compiled service restart preserves identities and membership without native Runner"
+            ],
+            "screenshots": [
+              "/home/runner/work/runweft/runweft/.dev-smoke/hub-identity-Fj2ce9/desktop.png",
+              "/home/runner/work/runweft/runweft/.dev-smoke/hub-identity-Fj2ce9/mobile.png"
+            ]
+          }
+        },
+        {
+          "path": ".dev-smoke/integration-0fNhqC/evidence.json",
+          "report": {
+            "group": "web",
+            "binaries": {
+              "runweft": {
+                "path": "/home/runner/work/runweft/runweft/dist/runweft",
+                "sha256": "ab418d3aa3b92008131a4d79104687de0bc3a35fd34d86b957331a65b9bf33fa"
+              },
+              "hapi": {
+                "path": "/home/runner/work/runweft/runweft/dist/hapi",
+                "sha256": "6c2540fdcada4d52834d2b4bb69a3ea650f9abfd275beb1b7f896db89ab433e1"
+              }
+            },
+            "startedAt": "2026-10-11T14:09:19.522Z",
+            "success": true,
+            "cases": [
+              {
+                "script": "smoke-hub.ts",
+                "startedAt": "2026-10-11T14:09:19.955Z",
+                "elapsedMs": 8746,
+                "exitCode": 0
+              },
+              {
+                "script": "smoke-hub-connect.ts",
+                "startedAt": "2026-10-11T14:09:28.701Z",
+                "elapsedMs": 6826,
+                "exitCode": 0
+              },
+              {
+                "script": "smoke-hub-console.ts",
+                "startedAt": "2026-10-11T14:09:35.527Z",
+                "elapsedMs": 23341,
+                "exitCode": 0
+              }
+            ]
+          }
+        }
+      ]
     }
   },
   "artifactCleanup": {
@@ -139,48 +344,66 @@
   },
   "publicRegistry": [
     {
-      "name": "runweft",
+      "name": "runweft-darwin-arm64",
+      "version": "1.1.3",
       "distTags": {
-        "latest": "1.1.1"
+        "latest": "1.1.3",
+        "beta": "1.1.3"
       },
-      "version112Status": 404
-    },
-    {
-      "name": "runweft-linux-x64",
-      "distTags": {
-        "latest": "1.1.1"
-      },
-      "version112Status": 404
-    },
-    {
-      "name": "runweft-linux-arm64",
-      "distTags": {
-        "latest": "1.1.1"
-      },
-      "version112Status": 404
+      "integrity": "sha512-VwdQ5bmRMEfZrS560M+EboXAtT1WyAhihXipEQajd2EG8e3m9LTaNdsqsOFsCcwj91zcnASz5gKWTJRtXVnY/w==",
+      "bytes": 102299421,
+      "success": true
     },
     {
       "name": "runweft-darwin-x64",
+      "version": "1.1.3",
       "distTags": {
-        "latest": "1.1.1"
+        "latest": "1.1.3",
+        "beta": "1.1.3"
       },
-      "version112Status": 404
+      "integrity": "sha512-3H6GiIxeUfxw3roYZCCQ58dHls/ieUUKOY9yFD+qd/I5z6MnzNHlFOWN2ahRZTzwL2/pU6MMZPF5oPolwuxhRQ==",
+      "bytes": 106158084,
+      "success": true
     },
     {
-      "name": "runweft-darwin-arm64",
+      "name": "runweft-linux-arm64",
+      "version": "1.1.3",
       "distTags": {
-        "latest": "1.1.1"
+        "latest": "1.1.3",
+        "beta": "1.1.3"
       },
-      "version112Status": 404
+      "integrity": "sha512-V2wiz1JSzJH4CwOcPINEqpbvrGwWdOrQIwgINpsJMSahlNxX5l4Xj/IQPgyNNLevrqQYVTYXR5YQMUOnaPgrEA==",
+      "bytes": 134042985,
+      "success": true
+    },
+    {
+      "name": "runweft-linux-x64",
+      "version": "1.1.3",
+      "distTags": {
+        "latest": "1.1.3",
+        "beta": "1.1.3"
+      },
+      "integrity": "sha512-BtbeRiYJ514HNqQ9lE1YOdXeAzYf1D3Jd3oyNvAB3BdG6s/Msm7S4rWdb1R3vSd91KvkiJYmq3KfpSeR6O14uA==",
+      "bytes": 134822332,
+      "success": true
+    },
+    {
+      "name": "runweft",
+      "version": "1.1.3",
+      "distTags": {
+        "latest": "1.1.3",
+        "beta": "1.1.3"
+      },
+      "integrity": "sha512-Z57l5GtKk0ueeATYYE2yBRr/pCM5wrfxUbnSn0cDMR95VndBTjwKXSHNz+qmlVqYN8iHrHIAq4OYiGmxZExmkw==",
+      "bytes": 19218,
+      "success": true
     }
   ],
-  "published": false,
+  "published": true,
   "productionDeployed": false,
-  "status": "macOS database copy validation fixed; preparing 1.1.3 candidate",
+  "status": "npm 1.1.3 published and promoted; production website validation pending",
   "unexecuted": [
-    "successful macOS installed Hub startup",
-    "latest promotion",
-    "production 1.1.2 deployment"
+    "production 1.1.3 deployment"
   ],
   "productionVersionLastVerified": "1.1.1",
   "productionOnlineCheck": {
@@ -188,7 +411,7 @@
     "httpStatus": 403,
     "note": "Both ordinary and direct requests were refused; current live version was not verified."
   },
-  "publicRegistryCheckedAt": "2026-10-11T10:22:44.646597+00:00",
+  "publicRegistryCheckedAt": "2026-10-11T15:35:31.158561+00:00",
   "quotaRecheck": {
     "date": "2026-10-11",
     "moreThan24HoursAfterCleanup": true,
@@ -309,9 +532,9 @@
         "success": true
       }
     },
-    "releaseRun": 38145808969,
-    "published": false,
-    "promotionPermissionVerified": false,
+    "releaseRun": 38149709526,
+    "published": true,
+    "promotionPermissionVerified": true,
     "releaseAttempts": [
       {
         "run": 38136994670,
@@ -547,6 +770,14 @@
             "logSha256": "696e1f9bcfac2b79fe7421fe162ea8c3a7c257b9e491e3d5691c451eb71c8e37"
           }
         ]
+      },
+      {
+        "run": 38149709526,
+        "controllerRevision": "dab91e089c63a64a4d275a81b7b793354d86200b",
+        "sourceRevision": "dab91e089c63a64a4d275a81b7b793354d86200b",
+        "conclusion": "success",
+        "published": true,
+        "artifactDependency": false
       }
     ],
     "packageDirectoryFix": {
@@ -603,15 +834,15 @@
       "packageInputsUnchanged": true
     },
     "releaseDescriptor": {
-      "version": "1.1.2",
+      "version": "1.1.3",
       "product": "hub-console-v1",
       "skill": {
-        "tarball": "runweft-skill-1.1.2.tgz",
-        "sha256": "e7cee2ceab8c537b9078918b855cb4bc9cbc2c100d85d82243b9958c0556cc4d",
-        "sha512": "uYtNbza5tOgF6LTufaO+qZTDM/4OnmhVfluvHU0pPVVLB31evaw2XP1CcG1n3qWojItpIxVvLaVzq/ONtwOuhA=="
+        "tarball": "runweft-skill-1.1.3.tgz",
+        "sha256": "1ce2161a02feab5bface4aca2b6c558872d0bdc0108e8fd06c8b8b29e78f5e5b",
+        "sha512": "PaSE+vKbh2rOOsJ6qJQSZWFpcJnx+UnrxvgHEMq8u7SilZ85ULGUelwmyU2VZqlaQHbMrzvJXQ2juk8MP/Y7+A=="
       },
       "source": {
-        "revision": "ee66fe08c549908e1a49555c2ec0cc842b63d6c8",
+        "revision": "dab91e089c63a64a4d275a81b7b793354d86200b",
         "dirty": false
       },
       "bunVersion": "1.4.2",
@@ -623,17 +854,17 @@
       "packages": [
         {
           "name": "runweft-darwin-arm64",
-          "version": "1.1.2",
+          "version": "1.1.3",
           "path": "runweft-darwin-arm64",
-          "tarball": "tarballs/runweft-darwin-arm64-1.1.2.tgz",
-          "sha512": "WDFYmDDhiNP+ktkaPGXfAUdG9ifqWN+Vl9hbdfQeJyi0Ph51pJH/9UPJIEfzebH4wE3C4nsvQbWkw4Fiywxi9A==",
+          "tarball": "tarballs/runweft-darwin-arm64-1.1.3.tgz",
+          "sha512": "VwdQ5bmRMEfZrS560M+EboXAtT1WyAhihXipEQajd2EG8e3m9LTaNdsqsOFsCcwj91zcnASz5gKWTJRtXVnY/w==",
           "binaries": {
-            "bin/runweft": "1aa432a2de06cbfda292d38ad3ffb16697fc013c978dad223285d0b964c75c9b",
+            "bin/runweft": "8d624d93ceca228dcfea5d333eceba52db6781dc1c91070decef4241324a47ba",
             "bin/hapi": "1f1f6e723d1fbebcb4122c3fe4984b730c638ce665d713b72357ea8bf2345ed9"
           },
           "manifest": {
             "name": "runweft-darwin-arm64",
-            "version": "1.1.2",
+            "version": "1.1.3",
             "description": "Runweft and HAPI executables for darwin-arm64",
             "repository": {
               "type": "git",
@@ -670,17 +901,17 @@
         },
         {
           "name": "runweft-darwin-x64",
-          "version": "1.1.2",
+          "version": "1.1.3",
           "path": "runweft-darwin-x64",
-          "tarball": "tarballs/runweft-darwin-x64-1.1.2.tgz",
-          "sha512": "7tkuyyDPrzzSv7AK6BZl/PbvQA+gac1OCW10Yjf3K8HsVPSnu5+DjE86Fy32atP+o+jcaEWUEWufriBqK3G9Iw==",
+          "tarball": "tarballs/runweft-darwin-x64-1.1.3.tgz",
+          "sha512": "3H6GiIxeUfxw3roYZCCQ58dHls/ieUUKOY9yFD+qd/I5z6MnzNHlFOWN2ahRZTzwL2/pU6MMZPF5oPolwuxhRQ==",
           "binaries": {
-            "bin/runweft": "c9461c54c5f7d4edf3f33a2f6df189168d3ba813d4b640e63ffda3396acc1a10",
+            "bin/runweft": "b335a865316b56b17c652e5e4ee417cad303100cbc8c5fa754c250433a7c8049",
             "bin/hapi": "01b2ed4050780d7f4a19f63f9766822d266991cc1b3f1d6df963dbde0b91546c"
           },
           "manifest": {
             "name": "runweft-darwin-x64",
-            "version": "1.1.2",
+            "version": "1.1.3",
             "description": "Runweft and HAPI executables for darwin-x64",
             "repository": {
               "type": "git",
@@ -717,17 +948,17 @@
         },
         {
           "name": "runweft-linux-arm64",
-          "version": "1.1.2",
+          "version": "1.1.3",
           "path": "runweft-linux-arm64",
-          "tarball": "tarballs/runweft-linux-arm64-1.1.2.tgz",
-          "sha512": "yErj0Pri7tZ6FuiU9WvGEy8mKmP6yNNFSuVAiQoLpYJy6SGt4OhqqKesTJGdXvD4eXMWdSe3DPbCQnXREwKT4w==",
+          "tarball": "tarballs/runweft-linux-arm64-1.1.3.tgz",
+          "sha512": "V2wiz1JSzJH4CwOcPINEqpbvrGwWdOrQIwgINpsJMSahlNxX5l4Xj/IQPgyNNLevrqQYVTYXR5YQMUOnaPgrEA==",
           "binaries": {
-            "bin/runweft": "a2542d36e5201cdc1a0bec9f890e1267317db93d49b026f373557fcc533cd3fb",
+            "bin/runweft": "7f8dfeb3229a6dc4029ed78fbbd9e43a6e9f5bfa99cee25c1833666afb1d8268",
             "bin/hapi": "44b7cc3768ecf4bace7ef5b91e9e5c2aa94a2350ac73147a92d6741488bcf51f"
           },
           "manifest": {
             "name": "runweft-linux-arm64",
-            "version": "1.1.2",
+            "version": "1.1.3",
             "description": "Runweft and HAPI executables for linux-arm64",
             "repository": {
               "type": "git",
@@ -767,17 +998,17 @@
         },
         {
           "name": "runweft-linux-x64",
-          "version": "1.1.2",
+          "version": "1.1.3",
           "path": "runweft-linux-x64",
-          "tarball": "tarballs/runweft-linux-x64-1.1.2.tgz",
-          "sha512": "GrX0cFg2zNmQGI1ZoFVYe5pf6N4723scb5AJVkC3Rnypot9K2jo7vEWOQJtYRz2ANRitrR44FvJVsIarQDNSRg==",
+          "tarball": "tarballs/runweft-linux-x64-1.1.3.tgz",
+          "sha512": "BtbeRiYJ514HNqQ9lE1YOdXeAzYf1D3Jd3oyNvAB3BdG6s/Msm7S4rWdb1R3vSd91KvkiJYmq3KfpSeR6O14uA==",
           "binaries": {
-            "bin/runweft": "aade61b89ad39de1fb14935640032d98d16c70c8a7207ebff7775aeba680c41d",
+            "bin/runweft": "75b79a5d9683676422fbc121a3177f6c2082e1a3ffcb06c90b572629d9e151e4",
             "bin/hapi": "269d3f183b7bdcb17839bd688769d3c6a88e56a1d2f605c6f791b83bbb7dc16e"
           },
           "manifest": {
             "name": "runweft-linux-x64",
-            "version": "1.1.2",
+            "version": "1.1.3",
             "description": "Runweft and HAPI executables for linux-x64",
             "repository": {
               "type": "git",
@@ -817,13 +1048,13 @@
         },
         {
           "name": "runweft",
-          "version": "1.1.2",
+          "version": "1.1.3",
           "path": "runweft",
-          "tarball": "tarballs/runweft-1.1.2.tgz",
-          "sha512": "rzz45TMqdzIq19fGmLF7Dt2eMD8wWYfzM/4L0DGiTT4jvm0VH8p+BXLYa8aWfWfnVD5zObXddRdqq1cIyWBA0Q==",
+          "tarball": "tarballs/runweft-1.1.3.tgz",
+          "sha512": "Z57l5GtKk0ueeATYYE2yBRr/pCM5wrfxUbnSn0cDMR95VndBTjwKXSHNz+qmlVqYN8iHrHIAq4OYiGmxZExmkw==",
           "manifest": {
             "name": "runweft",
-            "version": "1.1.2",
+            "version": "1.1.3",
             "repository": {
               "type": "git",
               "url": "git+https://github.com/iTgo-lyq/runweft.git"
@@ -841,16 +1072,16 @@
               "node": ">=20"
             },
             "optionalDependencies": {
-              "runweft-darwin-arm64": "1.1.2",
-              "runweft-darwin-x64": "1.1.2",
-              "runweft-linux-arm64": "1.1.2",
-              "runweft-linux-x64": "1.1.2"
+              "runweft-darwin-arm64": "1.1.3",
+              "runweft-darwin-x64": "1.1.3",
+              "runweft-linux-arm64": "1.1.3",
+              "runweft-linux-x64": "1.1.3"
             }
           }
         }
       ],
-      "controlRevision": "4f6cec3d789fe54836472d4211a2e4696e911a15",
-      "runId": "38145808969",
+      "controlRevision": "dab91e089c63a64a4d275a81b7b793354d86200b",
+      "runId": "38149709526",
       "latestBefore": {
         "runweft-linux-x64": "1.1.1",
         "runweft-linux-arm64": "1.1.1",
@@ -1242,7 +1473,539 @@
         "conclusion": "failure",
         "reason": "diagnostic checkout omitted HAPI shared sources; no database probe executed"
       }
-    ]
+    ],
+    "originalBetaRelease": {
+      "run": 38145808969,
+      "descriptor": {
+        "version": "1.1.2",
+        "product": "hub-console-v1",
+        "skill": {
+          "tarball": "runweft-skill-1.1.2.tgz",
+          "sha256": "e7cee2ceab8c537b9078918b855cb4bc9cbc2c100d85d82243b9958c0556cc4d",
+          "sha512": "uYtNbza5tOgF6LTufaO+qZTDM/4OnmhVfluvHU0pPVVLB31evaw2XP1CcG1n3qWojItpIxVvLaVzq/ONtwOuhA=="
+        },
+        "source": {
+          "revision": "ee66fe08c549908e1a49555c2ec0cc842b63d6c8",
+          "dirty": false
+        },
+        "bunVersion": "1.4.2",
+        "hapi": {
+          "revision": "8f774b9413fd483bc163cc06425d7646f10a7c92",
+          "version": "0.30.7",
+          "protocolVersion": 1
+        },
+        "packages": [
+          {
+            "name": "runweft-darwin-arm64",
+            "version": "1.1.2",
+            "path": "runweft-darwin-arm64",
+            "tarball": "tarballs/runweft-darwin-arm64-1.1.2.tgz",
+            "sha512": "WDFYmDDhiNP+ktkaPGXfAUdG9ifqWN+Vl9hbdfQeJyi0Ph51pJH/9UPJIEfzebH4wE3C4nsvQbWkw4Fiywxi9A==",
+            "binaries": {
+              "bin/runweft": "1aa432a2de06cbfda292d38ad3ffb16697fc013c978dad223285d0b964c75c9b",
+              "bin/hapi": "1f1f6e723d1fbebcb4122c3fe4984b730c638ce665d713b72357ea8bf2345ed9"
+            },
+            "manifest": {
+              "name": "runweft-darwin-arm64",
+              "version": "1.1.2",
+              "description": "Runweft and HAPI executables for darwin-arm64",
+              "repository": {
+                "type": "git",
+                "url": "git+https://github.com/iTgo-lyq/runweft.git"
+              },
+              "os": [
+                "darwin"
+              ],
+              "cpu": [
+                "arm64"
+              ],
+              "files": [
+                "bin",
+                "skills",
+                "README.md",
+                "HAPI-LICENSE",
+                "HAPI-NOTICE",
+                "tool-licenses",
+                "TUNWG-LICENSE",
+                "SOURCES.txt",
+                "hapi-source.tar.gz"
+              ],
+              "engines": {
+                "node": ">=20"
+              },
+              "runweft": {
+                "hapi": {
+                  "revision": "8f774b9413fd483bc163cc06425d7646f10a7c92",
+                  "version": "0.30.7",
+                  "protocolVersion": 1
+                }
+              }
+            }
+          },
+          {
+            "name": "runweft-darwin-x64",
+            "version": "1.1.2",
+            "path": "runweft-darwin-x64",
+            "tarball": "tarballs/runweft-darwin-x64-1.1.2.tgz",
+            "sha512": "7tkuyyDPrzzSv7AK6BZl/PbvQA+gac1OCW10Yjf3K8HsVPSnu5+DjE86Fy32atP+o+jcaEWUEWufriBqK3G9Iw==",
+            "binaries": {
+              "bin/runweft": "c9461c54c5f7d4edf3f33a2f6df189168d3ba813d4b640e63ffda3396acc1a10",
+              "bin/hapi": "01b2ed4050780d7f4a19f63f9766822d266991cc1b3f1d6df963dbde0b91546c"
+            },
+            "manifest": {
+              "name": "runweft-darwin-x64",
+              "version": "1.1.2",
+              "description": "Runweft and HAPI executables for darwin-x64",
+              "repository": {
+                "type": "git",
+                "url": "git+https://github.com/iTgo-lyq/runweft.git"
+              },
+              "os": [
+                "darwin"
+              ],
+              "cpu": [
+                "x64"
+              ],
+              "files": [
+                "bin",
+                "skills",
+                "README.md",
+                "HAPI-LICENSE",
+                "HAPI-NOTICE",
+                "tool-licenses",
+                "TUNWG-LICENSE",
+                "SOURCES.txt",
+                "hapi-source.tar.gz"
+              ],
+              "engines": {
+                "node": ">=20"
+              },
+              "runweft": {
+                "hapi": {
+                  "revision": "8f774b9413fd483bc163cc06425d7646f10a7c92",
+                  "version": "0.30.7",
+                  "protocolVersion": 1
+                }
+              }
+            }
+          },
+          {
+            "name": "runweft-linux-arm64",
+            "version": "1.1.2",
+            "path": "runweft-linux-arm64",
+            "tarball": "tarballs/runweft-linux-arm64-1.1.2.tgz",
+            "sha512": "yErj0Pri7tZ6FuiU9WvGEy8mKmP6yNNFSuVAiQoLpYJy6SGt4OhqqKesTJGdXvD4eXMWdSe3DPbCQnXREwKT4w==",
+            "binaries": {
+              "bin/runweft": "a2542d36e5201cdc1a0bec9f890e1267317db93d49b026f373557fcc533cd3fb",
+              "bin/hapi": "44b7cc3768ecf4bace7ef5b91e9e5c2aa94a2350ac73147a92d6741488bcf51f"
+            },
+            "manifest": {
+              "name": "runweft-linux-arm64",
+              "version": "1.1.2",
+              "description": "Runweft and HAPI executables for linux-arm64",
+              "repository": {
+                "type": "git",
+                "url": "git+https://github.com/iTgo-lyq/runweft.git"
+              },
+              "os": [
+                "linux"
+              ],
+              "cpu": [
+                "arm64"
+              ],
+              "libc": [
+                "glibc"
+              ],
+              "files": [
+                "bin",
+                "skills",
+                "README.md",
+                "HAPI-LICENSE",
+                "HAPI-NOTICE",
+                "tool-licenses",
+                "TUNWG-LICENSE",
+                "SOURCES.txt",
+                "hapi-source.tar.gz"
+              ],
+              "engines": {
+                "node": ">=20"
+              },
+              "runweft": {
+                "hapi": {
+                  "revision": "8f774b9413fd483bc163cc06425d7646f10a7c92",
+                  "version": "0.30.7",
+                  "protocolVersion": 1
+                }
+              }
+            }
+          },
+          {
+            "name": "runweft-linux-x64",
+            "version": "1.1.2",
+            "path": "runweft-linux-x64",
+            "tarball": "tarballs/runweft-linux-x64-1.1.2.tgz",
+            "sha512": "GrX0cFg2zNmQGI1ZoFVYe5pf6N4723scb5AJVkC3Rnypot9K2jo7vEWOQJtYRz2ANRitrR44FvJVsIarQDNSRg==",
+            "binaries": {
+              "bin/runweft": "aade61b89ad39de1fb14935640032d98d16c70c8a7207ebff7775aeba680c41d",
+              "bin/hapi": "269d3f183b7bdcb17839bd688769d3c6a88e56a1d2f605c6f791b83bbb7dc16e"
+            },
+            "manifest": {
+              "name": "runweft-linux-x64",
+              "version": "1.1.2",
+              "description": "Runweft and HAPI executables for linux-x64",
+              "repository": {
+                "type": "git",
+                "url": "git+https://github.com/iTgo-lyq/runweft.git"
+              },
+              "os": [
+                "linux"
+              ],
+              "cpu": [
+                "x64"
+              ],
+              "libc": [
+                "glibc"
+              ],
+              "files": [
+                "bin",
+                "skills",
+                "README.md",
+                "HAPI-LICENSE",
+                "HAPI-NOTICE",
+                "tool-licenses",
+                "TUNWG-LICENSE",
+                "SOURCES.txt",
+                "hapi-source.tar.gz"
+              ],
+              "engines": {
+                "node": ">=20"
+              },
+              "runweft": {
+                "hapi": {
+                  "revision": "8f774b9413fd483bc163cc06425d7646f10a7c92",
+                  "version": "0.30.7",
+                  "protocolVersion": 1
+                }
+              }
+            }
+          },
+          {
+            "name": "runweft",
+            "version": "1.1.2",
+            "path": "runweft",
+            "tarball": "tarballs/runweft-1.1.2.tgz",
+            "sha512": "rzz45TMqdzIq19fGmLF7Dt2eMD8wWYfzM/4L0DGiTT4jvm0VH8p+BXLYa8aWfWfnVD5zObXddRdqq1cIyWBA0Q==",
+            "manifest": {
+              "name": "runweft",
+              "version": "1.1.2",
+              "repository": {
+                "type": "git",
+                "url": "git+https://github.com/iTgo-lyq/runweft.git"
+              },
+              "description": "One CLI for HAPI execution and Runweft collaboration",
+              "bin": {
+                "runweft": "bin/runweft.cjs"
+              },
+              "files": [
+                "bin",
+                "skills",
+                "README.md"
+              ],
+              "engines": {
+                "node": ">=20"
+              },
+              "optionalDependencies": {
+                "runweft-darwin-arm64": "1.1.2",
+                "runweft-darwin-x64": "1.1.2",
+                "runweft-linux-arm64": "1.1.2",
+                "runweft-linux-x64": "1.1.2"
+              }
+            }
+          }
+        ],
+        "controlRevision": "4f6cec3d789fe54836472d4211a2e4696e911a15",
+        "runId": "38145808969",
+        "latestBefore": {
+          "runweft-linux-x64": "1.1.1",
+          "runweft-linux-arm64": "1.1.1",
+          "runweft-darwin-x64": "1.1.1",
+          "runweft-darwin-arm64": "1.1.1",
+          "runweft": "1.1.1"
+        }
+      },
+      "publishedLatest": false
+    },
+    "controllerRevision": "dab91e089c63a64a4d275a81b7b793354d86200b",
+    "nativeInstallations": [
+      {
+        "job": {
+          "id": 114505399817,
+          "name": "install / install (macos-15, darwin-arm64)",
+          "conclusion": "success",
+          "startedAt": "2026-10-11T15:28:09Z",
+          "completedAt": "2026-10-11T15:28:40Z",
+          "logSha256": "b708d322af9e224be81fd383da0189a7cb178ae36b2c91120d27a85e0dfe4ef7"
+        },
+        "platform": "darwin",
+        "architecture": "arm64",
+        "version": "1.1.3",
+        "source": {
+          "revision": "dab91e089c63a64a4d275a81b7b793354d86200b",
+          "dirty": false
+        },
+        "root": "/Users/runner/work/runweft/runweft/.dev-smoke/install-3aLFQ3",
+        "registryRequests": [],
+        "checks": [
+          "npm registry metadata and platform optional dependency installation",
+          "installed task commands and side-effect-free MCP catalog without Bun or source checkout on PATH",
+          "installed CLI services and signals with no Bun or source checkout on PATH",
+          "same-version npm reinstall preserves dedicated service data and exact paired binaries",
+          "missing platform dependency has an actionable diagnostic",
+          "npm uninstall removes executable and preserves service data"
+        ],
+        "success": true,
+        "binaries": {
+          "runweft": "8d624d93ceca228dcfea5d333eceba52db6781dc1c91070decef4241324a47ba",
+          "hapi": "1f1f6e723d1fbebcb4122c3fe4984b730c638ce665d713b72357ea8bf2345ed9"
+        },
+        "installedBinaries": {
+          "runweft": {
+            "path": "/Users/runner/work/runweft/runweft/.dev-smoke/install-3aLFQ3/prefix/lib/node_modules/runweft/node_modules/runweft-darwin-arm64/bin/runweft",
+            "sha256": "8d624d93ceca228dcfea5d333eceba52db6781dc1c91070decef4241324a47ba"
+          },
+          "hapi": {
+            "path": "/Users/runner/work/runweft/runweft/.dev-smoke/install-3aLFQ3/prefix/lib/node_modules/runweft/node_modules/runweft-darwin-arm64/bin/hapi",
+            "sha256": "1f1f6e723d1fbebcb4122c3fe4984b730c638ce665d713b72357ea8bf2345ed9"
+          }
+        },
+        "registry": "https://registry.npmjs.org/"
+      },
+      {
+        "job": {
+          "id": 114505399825,
+          "name": "install / install (macos-15-intel, darwin-x64)",
+          "conclusion": "success",
+          "startedAt": "2026-10-11T15:28:07Z",
+          "completedAt": "2026-10-11T15:29:25Z",
+          "logSha256": "6816c20406ec7796c00bfd19387f99ec7adc22f7e98de158a57414d793d3ae02"
+        },
+        "platform": "darwin",
+        "architecture": "x64",
+        "version": "1.1.3",
+        "source": {
+          "revision": "dab91e089c63a64a4d275a81b7b793354d86200b",
+          "dirty": false
+        },
+        "root": "/Users/runner/work/runweft/runweft/.dev-smoke/install-QO64Iu",
+        "registryRequests": [],
+        "checks": [
+          "npm registry metadata and platform optional dependency installation",
+          "installed task commands and side-effect-free MCP catalog without Bun or source checkout on PATH",
+          "installed CLI services and signals with no Bun or source checkout on PATH",
+          "same-version npm reinstall preserves dedicated service data and exact paired binaries",
+          "missing platform dependency has an actionable diagnostic",
+          "npm uninstall removes executable and preserves service data"
+        ],
+        "success": true,
+        "binaries": {
+          "runweft": "b335a865316b56b17c652e5e4ee417cad303100cbc8c5fa754c250433a7c8049",
+          "hapi": "01b2ed4050780d7f4a19f63f9766822d266991cc1b3f1d6df963dbde0b91546c"
+        },
+        "installedBinaries": {
+          "runweft": {
+            "path": "/Users/runner/work/runweft/runweft/.dev-smoke/install-QO64Iu/prefix/lib/node_modules/runweft/node_modules/runweft-darwin-x64/bin/runweft",
+            "sha256": "b335a865316b56b17c652e5e4ee417cad303100cbc8c5fa754c250433a7c8049"
+          },
+          "hapi": {
+            "path": "/Users/runner/work/runweft/runweft/.dev-smoke/install-QO64Iu/prefix/lib/node_modules/runweft/node_modules/runweft-darwin-x64/bin/hapi",
+            "sha256": "01b2ed4050780d7f4a19f63f9766822d266991cc1b3f1d6df963dbde0b91546c"
+          }
+        },
+        "registry": "https://registry.npmjs.org/"
+      },
+      {
+        "job": {
+          "id": 114505399882,
+          "name": "install / install (ubuntu-24.04, linux-x64)",
+          "conclusion": "success",
+          "startedAt": "2026-10-11T15:28:07Z",
+          "completedAt": "2026-10-11T15:28:52Z",
+          "logSha256": "c50ff668595d2cd37cd2fb11661266fdeca4b2eab779d420e832656f70e7c207"
+        },
+        "platform": "linux",
+        "architecture": "x64",
+        "version": "1.1.3",
+        "source": {
+          "revision": "dab91e089c63a64a4d275a81b7b793354d86200b",
+          "dirty": false
+        },
+        "root": "/home/runner/work/runweft/runweft/.dev-smoke/install-gmUlPP",
+        "registryRequests": [],
+        "checks": [
+          "npm registry metadata and platform optional dependency installation",
+          "installed task commands and side-effect-free MCP catalog without Bun or source checkout on PATH",
+          "installed CLI services and signals with no Bun or source checkout on PATH",
+          "same-version npm reinstall preserves dedicated service data and exact paired binaries",
+          "missing platform dependency has an actionable diagnostic",
+          "npm uninstall removes executable and preserves service data"
+        ],
+        "success": true,
+        "binaries": {
+          "runweft": "75b79a5d9683676422fbc121a3177f6c2082e1a3ffcb06c90b572629d9e151e4",
+          "hapi": "269d3f183b7bdcb17839bd688769d3c6a88e56a1d2f605c6f791b83bbb7dc16e"
+        },
+        "installedBinaries": {
+          "runweft": {
+            "path": "/home/runner/work/runweft/runweft/.dev-smoke/install-gmUlPP/prefix/lib/node_modules/runweft/node_modules/runweft-linux-x64/bin/runweft",
+            "sha256": "75b79a5d9683676422fbc121a3177f6c2082e1a3ffcb06c90b572629d9e151e4"
+          },
+          "hapi": {
+            "path": "/home/runner/work/runweft/runweft/.dev-smoke/install-gmUlPP/prefix/lib/node_modules/runweft/node_modules/runweft-linux-x64/bin/hapi",
+            "sha256": "269d3f183b7bdcb17839bd688769d3c6a88e56a1d2f605c6f791b83bbb7dc16e"
+          }
+        },
+        "registry": "https://registry.npmjs.org/"
+      },
+      {
+        "job": {
+          "id": 114505399889,
+          "name": "install / install (ubuntu-24.04-arm, linux-arm64)",
+          "conclusion": "success",
+          "startedAt": "2026-10-11T15:28:09Z",
+          "completedAt": "2026-10-11T15:28:45Z",
+          "logSha256": "4c07235f700cb64383e9017dc7d109f87b1a51e1ebd0666b1ef75f8fc0a86d96"
+        },
+        "platform": "linux",
+        "architecture": "arm64",
+        "version": "1.1.3",
+        "source": {
+          "revision": "dab91e089c63a64a4d275a81b7b793354d86200b",
+          "dirty": false
+        },
+        "root": "/home/runner/work/runweft/runweft/.dev-smoke/install-YeEcud",
+        "registryRequests": [],
+        "checks": [
+          "npm registry metadata and platform optional dependency installation",
+          "installed task commands and side-effect-free MCP catalog without Bun or source checkout on PATH",
+          "installed CLI services and signals with no Bun or source checkout on PATH",
+          "same-version npm reinstall preserves dedicated service data and exact paired binaries",
+          "missing platform dependency has an actionable diagnostic",
+          "npm uninstall removes executable and preserves service data"
+        ],
+        "success": true,
+        "binaries": {
+          "runweft": "7f8dfeb3229a6dc4029ed78fbbd9e43a6e9f5bfa99cee25c1833666afb1d8268",
+          "hapi": "44b7cc3768ecf4bace7ef5b91e9e5c2aa94a2350ac73147a92d6741488bcf51f"
+        },
+        "installedBinaries": {
+          "runweft": {
+            "path": "/home/runner/work/runweft/runweft/.dev-smoke/install-YeEcud/prefix/lib/node_modules/runweft/node_modules/runweft-linux-arm64/bin/runweft",
+            "sha256": "7f8dfeb3229a6dc4029ed78fbbd9e43a6e9f5bfa99cee25c1833666afb1d8268"
+          },
+          "hapi": {
+            "path": "/home/runner/work/runweft/runweft/.dev-smoke/install-YeEcud/prefix/lib/node_modules/runweft/node_modules/runweft-linux-arm64/bin/hapi",
+            "sha256": "44b7cc3768ecf4bace7ef5b91e9e5c2aa94a2350ac73147a92d6741488bcf51f"
+          }
+        },
+        "registry": "https://registry.npmjs.org/"
+      }
+    ],
+    "promotion": {
+      "version": "1.1.3",
+      "source": {
+        "revision": "dab91e089c63a64a4d275a81b7b793354d86200b",
+        "dirty": false
+      },
+      "channel": "latest",
+      "promoted": true,
+      "success": true,
+      "distTags": {
+        "runweft-linux-x64": {
+          "latest": "1.1.3",
+          "beta": "1.1.3"
+        },
+        "runweft-linux-arm64": {
+          "latest": "1.1.3",
+          "beta": "1.1.3"
+        },
+        "runweft-darwin-x64": {
+          "latest": "1.1.3",
+          "beta": "1.1.3"
+        },
+        "runweft-darwin-arm64": {
+          "latest": "1.1.3",
+          "beta": "1.1.3"
+        },
+        "runweft": {
+          "latest": "1.1.3",
+          "beta": "1.1.3"
+        }
+      }
+    },
+    "releaseJobs": [
+      {
+        "id": 114500424269,
+        "name": "beta",
+        "conclusion": "success",
+        "startedAt": "2026-10-11T15:03:47Z",
+        "completedAt": "2026-10-11T15:28:04Z",
+        "logSha256": "2a71435d5d24b0de9c3a35a9b394406d78d9f3a9e40fbdde0926454b8bdaf77c"
+      },
+      {
+        "id": 114505399817,
+        "name": "install / install (macos-15, darwin-arm64)",
+        "conclusion": "success",
+        "startedAt": "2026-10-11T15:28:09Z",
+        "completedAt": "2026-10-11T15:28:40Z",
+        "logSha256": "b708d322af9e224be81fd383da0189a7cb178ae36b2c91120d27a85e0dfe4ef7"
+      },
+      {
+        "id": 114505399825,
+        "name": "install / install (macos-15-intel, darwin-x64)",
+        "conclusion": "success",
+        "startedAt": "2026-10-11T15:28:07Z",
+        "completedAt": "2026-10-11T15:29:25Z",
+        "logSha256": "6816c20406ec7796c00bfd19387f99ec7adc22f7e98de158a57414d793d3ae02"
+      },
+      {
+        "id": 114505399882,
+        "name": "install / install (ubuntu-24.04, linux-x64)",
+        "conclusion": "success",
+        "startedAt": "2026-10-11T15:28:07Z",
+        "completedAt": "2026-10-11T15:28:52Z",
+        "logSha256": "c50ff668595d2cd37cd2fb11661266fdeca4b2eab779d420e832656f70e7c207"
+      },
+      {
+        "id": 114505399889,
+        "name": "install / install (ubuntu-24.04-arm, linux-arm64)",
+        "conclusion": "success",
+        "startedAt": "2026-10-11T15:28:09Z",
+        "completedAt": "2026-10-11T15:28:45Z",
+        "logSha256": "4c07235f700cb64383e9017dc7d109f87b1a51e1ebd0666b1ef75f8fc0a86d96"
+      },
+      {
+        "id": 114505672253,
+        "name": "promote",
+        "conclusion": "success",
+        "startedAt": "2026-10-11T15:29:27Z",
+        "completedAt": "2026-10-11T15:30:15Z",
+        "logSha256": "2862e31248284be64df7cf3a481e678190215f2da028e9a4da3e93ba9d2e8d19"
+      }
+    ],
+    "artifacts": 0,
+    "releaseChecks": {
+      "rootPassed": 249,
+      "rootFailed": 0,
+      "nodePassed": 43,
+      "types": true,
+      "fourPlatformBuild": true,
+      "linuxModelFreeGroups": [
+        "access",
+        "storage",
+        "web",
+        "service-package"
+      ]
+    }
   },
   "macStateFix": {
     "diagnosisRun": 38149256050,
@@ -1307,5 +2070,218 @@
       }
     ],
     "temporaryWorkflowRemoved": true
+  },
+  "original112Candidate": {
+    "version": "1.1.2",
+    "source": {
+      "revision": "ee66fe08c549908e1a49555c2ec0cc842b63d6c8",
+      "dirty": false
+    },
+    "tag": {
+      "name": "v1.1.2",
+      "run": 38041451856,
+      "url": "https://github.com/iTgo-lyq/runweft/actions/runs/38041451856",
+      "attempts": [
+        {
+          "attempt": 1,
+          "conclusion": "failure",
+          "fourPlatformBuild": true,
+          "linuxModelFreeIntegration": true,
+          "artifactUploaded": false,
+          "hostedMacArmInstall": false,
+          "published": false,
+          "failure": "Artifact storage quota has been hit"
+        },
+        {
+          "attempt": 2,
+          "conclusion": "failure",
+          "fourPlatformBuild": true,
+          "linuxModelFreeIntegration": true,
+          "artifactUploaded": false,
+          "hostedMacArmInstall": false,
+          "published": false,
+          "failure": "Artifact storage quota has been hit"
+        },
+        {
+          "attempt": 3,
+          "date": "2026-10-11",
+          "conclusion": "failure",
+          "buildJob": 114444727984,
+          "fourPlatformBuild": true,
+          "linuxModelFreeIntegration": true,
+          "integration": {
+            "groups": [
+              "access",
+              "storage",
+              "web",
+              "service-package"
+            ],
+            "startedAt": "2026-10-11T10:12:22Z",
+            "completedAt": "2026-10-11T10:22:04Z"
+          },
+          "rootTests": {
+            "passed": 248,
+            "failed": 0,
+            "assertions": 4801,
+            "files": 41,
+            "seconds": 86.11
+          },
+          "nodeTests": {
+            "passed": 33,
+            "failed": 0
+          },
+          "artifactUploaded": false,
+          "hostedMacArmInstall": false,
+          "installJob": 114447184896,
+          "installConclusion": "skipped",
+          "publishJob": 114447185478,
+          "publishConclusion": "skipped",
+          "published": false,
+          "failure": "Artifact storage quota has been hit",
+          "localLog": ".dev-smoke/npm-hapi-fix-release/ci-build-third.log",
+          "logSha256": "750e56dcc99ee0df95daca1fec2985144ba5f2d57dd8bb3996a2fbe5fc4197f3"
+        }
+      ]
+    },
+    "localValidation": {
+      "typecheck": true,
+      "build": true,
+      "rootTests": {
+        "passed": 248,
+        "failed": 0,
+        "assertions": 4798,
+        "files": 41
+      },
+      "nodeTests": {
+        "passed": 33,
+        "failed": 0
+      }
+    }
+  },
+  "websiteDomBaselineMismatch": {
+    "evidence": ".dev-smoke/website-Le4QFJ/evidence.json",
+    "testedVersion": "1.1.2",
+    "expectedVersion": "1.1.3",
+    "acceptedFor113": false,
+    "reason": "local dist/website had not been rebuilt",
+    "correction": "rebuild 1.1.3 and compare all eight static hashes before repeating DOM installation"
+  },
+  "publicDownload": {
+    "version": "1.1.3",
+    "source": {
+      "revision": "dab91e089c63a64a4d275a81b7b793354d86200b",
+      "dirty": false
+    },
+    "hapi": {
+      "revision": "8f774b9413fd483bc163cc06425d7646f10a7c92",
+      "version": "0.30.7",
+      "protocolVersion": 1
+    },
+    "packages": [
+      {
+        "name": "runweft-darwin-arm64",
+        "version": "1.1.3",
+        "distTags": {
+          "latest": "1.1.3",
+          "beta": "1.1.3"
+        },
+        "integrity": "sha512-VwdQ5bmRMEfZrS560M+EboXAtT1WyAhihXipEQajd2EG8e3m9LTaNdsqsOFsCcwj91zcnASz5gKWTJRtXVnY/w==",
+        "bytes": 102299421,
+        "success": true
+      },
+      {
+        "name": "runweft-darwin-x64",
+        "version": "1.1.3",
+        "distTags": {
+          "latest": "1.1.3",
+          "beta": "1.1.3"
+        },
+        "integrity": "sha512-3H6GiIxeUfxw3roYZCCQ58dHls/ieUUKOY9yFD+qd/I5z6MnzNHlFOWN2ahRZTzwL2/pU6MMZPF5oPolwuxhRQ==",
+        "bytes": 106158084,
+        "success": true
+      },
+      {
+        "name": "runweft-linux-arm64",
+        "version": "1.1.3",
+        "distTags": {
+          "latest": "1.1.3",
+          "beta": "1.1.3"
+        },
+        "integrity": "sha512-V2wiz1JSzJH4CwOcPINEqpbvrGwWdOrQIwgINpsJMSahlNxX5l4Xj/IQPgyNNLevrqQYVTYXR5YQMUOnaPgrEA==",
+        "bytes": 134042985,
+        "success": true
+      },
+      {
+        "name": "runweft-linux-x64",
+        "version": "1.1.3",
+        "distTags": {
+          "latest": "1.1.3",
+          "beta": "1.1.3"
+        },
+        "integrity": "sha512-BtbeRiYJ514HNqQ9lE1YOdXeAzYf1D3Jd3oyNvAB3BdG6s/Msm7S4rWdb1R3vSd91KvkiJYmq3KfpSeR6O14uA==",
+        "bytes": 134822332,
+        "success": true
+      },
+      {
+        "name": "runweft",
+        "version": "1.1.3",
+        "distTags": {
+          "latest": "1.1.3",
+          "beta": "1.1.3"
+        },
+        "integrity": "sha512-Z57l5GtKk0ueeATYYE2yBRr/pCM5wrfxUbnSn0cDMR95VndBTjwKXSHNz+qmlVqYN8iHrHIAq4OYiGmxZExmkw==",
+        "bytes": 19218,
+        "success": true
+      }
+    ],
+    "success": true
+  },
+  "anonymousInstall": {
+    "success": true,
+    "version": "1.1.3",
+    "hapi": {
+      "revision": "8f774b9413fd483bc163cc06425d7646f10a7c92",
+      "version": "0.30.7",
+      "protocolVersion": 1
+    },
+    "hapiVersion": "hapi version: 0.30.7",
+    "binaries": {
+      "runweft": {
+        "file": "/home/tiger/workspace/runweft/.dev-smoke/website-roIFKN/install-home/npm-global/lib/node_modules/runweft/node_modules/runweft-linux-x64/bin/runweft",
+        "sha256": "75b79a5d9683676422fbc121a3177f6c2082e1a3ffcb06c90b572629d9e151e4"
+      },
+      "hapi": {
+        "file": "/home/tiger/workspace/runweft/.dev-smoke/website-roIFKN/install-home/npm-global/lib/node_modules/runweft/node_modules/runweft-linux-x64/bin/hapi",
+        "sha256": "269d3f183b7bdcb17839bd688769d3c6a88e56a1d2f605c6f791b83bbb7dc16e"
+      }
+    },
+    "skill": [
+      {
+        "file": "SKILL.md",
+        "sha256": "4a2e5f822dddd2638d02eabf5e17953fc13956f7c22d085a58ad449d08e3579e"
+      },
+      {
+        "file": "references/configuration.md",
+        "sha256": "07c10e3f3d2425496d937bb0b07afe2626416d07fdd677fdcc51d6d0fdff87b1"
+      },
+      {
+        "file": "references/delegation.md",
+        "sha256": "32a74e354c5f64f36f9b3ba753d2ebc9be6ce73aa02c1a35952f2f1d3aed092a"
+      },
+      {
+        "file": "references/maintenance.md",
+        "sha256": "db83735e4ede0d1b635d2afa48f3117538ef649ec3882277c1d7ebb7ea624a60"
+      },
+      {
+        "file": "references/onboarding.md",
+        "sha256": "4c8da002df6eaa386602456c6b28d21b777cff955ec3040b77e3a66540119590"
+      },
+      {
+        "file": "agents/openai.yaml",
+        "sha256": "901c92d7ca662560669e26cca49f34b5f96bd34522086aa47a8efbfa176e1178"
+      }
+    ],
+    "readmeMatchesFrozenSource": true,
+    "websiteEvidence": "/home/tiger/workspace/runweft/.dev-smoke/website-roIFKN/evidence.json"
   }
 }
