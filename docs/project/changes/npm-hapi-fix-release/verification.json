@@ -1048,6 +1048,200 @@
       "localMode": "existing",
       "rebuilt": false,
       "reuploaded": false
-    }
+    },
+    "recoveryRuns": [
+      {
+        "run": 38148688849,
+        "url": "https://github.com/iTgo-lyq/runweft/actions/runs/38148688849",
+        "controllerRevision": "12a026b538ca3b7da4c178fef50fb5ee3afc2b7a",
+        "sourceRunId": 38145808969,
+        "mode": "existing",
+        "betaJob": {
+          "id": 114497357992,
+          "name": "beta",
+          "conclusion": "success",
+          "startedAt": "2026-10-11T14:48:44Z",
+          "completedAt": "2026-10-11T14:49:01Z",
+          "logSha256": "efe85710b9027bca1d3b1fbec44e78feb8f1be35a3752008044b92ca699cb61d"
+        },
+        "nativeInstallations": [
+          {
+            "job": {
+              "id": 114497420846,
+              "name": "install / install (macos-15, darwin-arm64)",
+              "conclusion": "failure",
+              "startedAt": "2026-10-11T14:49:06Z",
+              "completedAt": "2026-10-11T14:49:27Z",
+              "logSha256": "005ad09aee0e5fe0dda1bdbe92001d33988bebcd0151f58b4fe4cd6487e94a5a"
+            },
+            "platform": "darwin",
+            "architecture": "arm64",
+            "version": "1.1.2",
+            "source": {
+              "revision": "ee66fe08c549908e1a49555c2ec0cc842b63d6c8",
+              "dirty": false
+            },
+            "root": "/Users/runner/work/runweft/runweft/.dev-smoke/install-1Bb5hy",
+            "registryRequests": [],
+            "checks": [
+              "npm registry metadata and platform optional dependency installation",
+              "installed task commands and side-effect-free MCP catalog without Bun or source checkout on PATH"
+            ],
+            "success": false,
+            "binaries": {
+              "runweft": "1aa432a2de06cbfda292d38ad3ffb16697fc013c978dad223285d0b964c75c9b",
+              "hapi": "1f1f6e723d1fbebcb4122c3fe4984b730c638ce665d713b72357ea8bf2345ed9"
+            },
+            "installedBinaries": {
+              "runweft": {
+                "path": "/Users/runner/work/runweft/runweft/.dev-smoke/install-1Bb5hy/prefix/lib/node_modules/runweft/node_modules/runweft-darwin-arm64/bin/runweft",
+                "sha256": "1aa432a2de06cbfda292d38ad3ffb16697fc013c978dad223285d0b964c75c9b"
+              },
+              "hapi": {
+                "path": "/Users/runner/work/runweft/runweft/.dev-smoke/install-1Bb5hy/prefix/lib/node_modules/runweft/node_modules/runweft-darwin-arm64/bin/hapi",
+                "sha256": "1f1f6e723d1fbebcb4122c3fe4984b730c638ce665d713b72357ea8bf2345ed9"
+              }
+            },
+            "registry": "https://registry.npmjs.org/"
+          },
+          {
+            "job": {
+              "id": 114497420869,
+              "name": "install / install (macos-15-intel, darwin-x64)",
+              "conclusion": "failure",
+              "startedAt": "2026-10-11T14:49:04Z",
+              "completedAt": "2026-10-11T14:50:00Z",
+              "logSha256": "f7b137f1739d5fe77abbaf7400b48fa37c1d01fb56a55192eff3d48e6dbc43ef"
+            },
+            "platform": "darwin",
+            "architecture": "x64",
+            "version": "1.1.2",
+            "source": {
+              "revision": "ee66fe08c549908e1a49555c2ec0cc842b63d6c8",
+              "dirty": false
+            },
+            "root": "/Users/runner/work/runweft/runweft/.dev-smoke/install-AKN46U",
+            "registryRequests": [],
+            "checks": [
+              "npm registry metadata and platform optional dependency installation",
+              "installed task commands and side-effect-free MCP catalog without Bun or source checkout on PATH"
+            ],
+            "success": false,
+            "binaries": {
+              "runweft": "c9461c54c5f7d4edf3f33a2f6df189168d3ba813d4b640e63ffda3396acc1a10",
+              "hapi": "01b2ed4050780d7f4a19f63f9766822d266991cc1b3f1d6df963dbde0b91546c"
+            },
+            "installedBinaries": {
+              "runweft": {
+                "path": "/Users/runner/work/runweft/runweft/.dev-smoke/install-AKN46U/prefix/lib/node_modules/runweft/node_modules/runweft-darwin-x64/bin/runweft",
+                "sha256": "c9461c54c5f7d4edf3f33a2f6df189168d3ba813d4b640e63ffda3396acc1a10"
+              },
+              "hapi": {
+                "path": "/Users/runner/work/runweft/runweft/.dev-smoke/install-AKN46U/prefix/lib/node_modules/runweft/node_modules/runweft-darwin-x64/bin/hapi",
+                "sha256": "01b2ed4050780d7f4a19f63f9766822d266991cc1b3f1d6df963dbde0b91546c"
+              }
+            },
+            "registry": "https://registry.npmjs.org/"
+          },
+          {
+            "job": {
+              "id": 114497420884,
+              "name": "install / install (ubuntu-24.04, linux-x64)",
+              "conclusion": "success",
+              "startedAt": "2026-10-11T14:49:03Z",
+              "completedAt": "2026-10-11T14:49:47Z",
+              "logSha256": "de914c02966cbb1e14653a0ba764b6917b89563d9dc5bbb51a936951f5aacb29"
+            },
+            "platform": "linux",
+            "architecture": "x64",
+            "version": "1.1.2",
+            "source": {
+              "revision": "ee66fe08c549908e1a49555c2ec0cc842b63d6c8",
+              "dirty": false
+            },
+            "root": "/home/runner/work/runweft/runweft/.dev-smoke/install-ouIlgc",
+            "registryRequests": [],
+            "checks": [
+              "npm registry metadata and platform optional dependency installation",
+              "installed task commands and side-effect-free MCP catalog without Bun or source checkout on PATH",
+              "installed CLI services and signals with no Bun or source checkout on PATH",
+              "same-version npm reinstall preserves dedicated service data and exact paired binaries",
+              "missing platform dependency has an actionable diagnostic",
+              "npm uninstall removes executable and preserves service data"
+            ],
+            "success": true,
+            "binaries": {
+              "runweft": "aade61b89ad39de1fb14935640032d98d16c70c8a7207ebff7775aeba680c41d",
+              "hapi": "269d3f183b7bdcb17839bd688769d3c6a88e56a1d2f605c6f791b83bbb7dc16e"
+            },
+            "installedBinaries": {
+              "runweft": {
+                "path": "/home/runner/work/runweft/runweft/.dev-smoke/install-ouIlgc/prefix/lib/node_modules/runweft/node_modules/runweft-linux-x64/bin/runweft",
+                "sha256": "aade61b89ad39de1fb14935640032d98d16c70c8a7207ebff7775aeba680c41d"
+              },
+              "hapi": {
+                "path": "/home/runner/work/runweft/runweft/.dev-smoke/install-ouIlgc/prefix/lib/node_modules/runweft/node_modules/runweft-linux-x64/bin/hapi",
+                "sha256": "269d3f183b7bdcb17839bd688769d3c6a88e56a1d2f605c6f791b83bbb7dc16e"
+              }
+            },
+            "registry": "https://registry.npmjs.org/"
+          },
+          {
+            "job": {
+              "id": 114497420980,
+              "name": "install / install (ubuntu-24.04-arm, linux-arm64)",
+              "conclusion": "success",
+              "startedAt": "2026-10-11T14:49:06Z",
+              "completedAt": "2026-10-11T14:49:40Z",
+              "logSha256": "1af2e878a36761582263f4810e3c1002e745c1ff5ff7a080f7ea8e45e8654315"
+            },
+            "platform": "linux",
+            "architecture": "arm64",
+            "version": "1.1.2",
+            "source": {
+              "revision": "ee66fe08c549908e1a49555c2ec0cc842b63d6c8",
+              "dirty": false
+            },
+            "root": "/home/runner/work/runweft/runweft/.dev-smoke/install-mXARtJ",
+            "registryRequests": [],
+            "checks": [
+              "npm registry metadata and platform optional dependency installation",
+              "installed task commands and side-effect-free MCP catalog without Bun or source checkout on PATH",
+              "installed CLI services and signals with no Bun or source checkout on PATH",
+              "same-version npm reinstall preserves dedicated service data and exact paired binaries",
+              "missing platform dependency has an actionable diagnostic",
+              "npm uninstall removes executable and preserves service data"
+            ],
+            "success": true,
+            "binaries": {
+              "runweft": "a2542d36e5201cdc1a0bec9f890e1267317db93d49b026f373557fcc533cd3fb",
+              "hapi": "44b7cc3768ecf4bace7ef5b91e9e5c2aa94a2350ac73147a92d6741488bcf51f"
+            },
+            "installedBinaries": {
+              "runweft": {
+                "path": "/home/runner/work/runweft/runweft/.dev-smoke/install-mXARtJ/prefix/lib/node_modules/runweft/node_modules/runweft-linux-arm64/bin/runweft",
+                "sha256": "a2542d36e5201cdc1a0bec9f890e1267317db93d49b026f373557fcc533cd3fb"
+              },
+              "hapi": {
+                "path": "/home/runner/work/runweft/runweft/.dev-smoke/install-mXARtJ/prefix/lib/node_modules/runweft/node_modules/runweft-linux-arm64/bin/hapi",
+                "sha256": "44b7cc3768ecf4bace7ef5b91e9e5c2aa94a2350ac73147a92d6741488bcf51f"
+              }
+            },
+            "registry": "https://registry.npmjs.org/"
+          }
+        ],
+        "promoted": false,
+        "rebuilt": false,
+        "reuploaded": false,
+        "macFailure": "Runweft database unable to open; HAPI Hub ready"
+      }
+    ],
+    "diagnosisRuns": [
+      {
+        "run": 38148938055,
+        "conclusion": "failure",
+        "reason": "diagnostic checkout omitted HAPI shared sources; no database probe executed"
+      }
+    ]
   }
 }

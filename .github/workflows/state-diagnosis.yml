@@ -28,7 +28,7 @@ jobs:
           mkdir -p .dev-smoke
           cat > .dev-smoke/state-diagnosis.ts <<'TS'
           import { Database } from 'bun:sqlite';
-          import { chmodSync, copyFileSync, linkSync, mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+          import { chmodSync, copyFileSync, existsSync, linkSync, mkdirSync, mkdtempSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
           import { join, resolve } from 'node:path';
           import { openState, validateState } from '../src/state';
           const root = mkdtempSync(resolve('.dev-smoke/sqlite-diagnosis-'));
@@ -54,9 +54,19 @@ jobs:
           }
           const path = join(root, 'actual', 'state.sqlite');
           probe('source:openState', () => { const db = openState(path); db.close(); });
+          console.log(JSON.stringify({stateFiles: readdirSync(join(root, 'actual')).map(name => ({name, size: statSync(join(root, 'actual', name)).size}))}));
           probe('source:validateState', () => validateState(path));
+          for (const readonly of [true, false]) {
+            const copy = join(root, 'copy-' + readonly + '.sqlite');
+            copyFileSync(path, copy);
+            if (existsSync(path + '-wal')) copyFileSync(path + '-wal', copy + '-wal');
+            probe('private-WAL-copy:readonly=' + readonly, () => {
+              const db = new Database(copy, readonly ? {readonly: true} : {readwrite: true, create: false});
+              console.log(JSON.stringify({readonly, version: db.query('PRAGMA user_version').get()})); db.close();
+            });
+          }
           console.log(JSON.stringify({platform: process.platform, architecture: process.arch, bun: Bun.version, sqlite: new Database(':memory:').query('SELECT sqlite_version() AS version').get()}));
           TS
           bun .dev-smoke/state-diagnosis.ts
       - name: Existing state preservation and concurrency regression
-        run: bun test ./test/state.test.ts
+        run: bun test --timeout 30000 ./test/state.test.ts

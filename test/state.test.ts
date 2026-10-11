@@ -33,6 +33,18 @@ test('fresh state has only the current schema and reopens without changing store
     const reopened = openState(path); expect(reopened.query('SELECT id, tokenDigest FROM hub_users').get()).toEqual({ id: 'owner', tokenDigest: 'digest' }); reopened.close();
     expect(readdirSync(root).filter(name => name.startsWith('.state-create-'))).toEqual([]);
 });
+test('format validation accepts freshly closed empty WAL databases without changing original files', () => {
+    for (const kind of ['hub', 'client'] as const) {
+        const { root, path } = location(), db = openState(path, kind);
+        db.close();
+        const before = files(root);
+        validateState(path, kind);
+        expect(files(root)).toEqual(before);
+        const reopened = openState(path, kind);
+        expect(reopened.query('PRAGMA user_version').get()).toEqual({ user_version: kind === 'hub' ? STATE_SCHEMA_VERSION : 1 });
+        reopened.close();
+    }
+});
 test('unsupported versions, including a version present only in WAL, are refused without writes', () => {
     for (const version of [0, 18, STATE_SCHEMA_VERSION + 1]) {
         const { root, path } = location(); const db = new Database(path);

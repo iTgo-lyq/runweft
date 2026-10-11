@@ -62,6 +62,11 @@ run38145808969的基础/四平台打包/完整Linux集成及OIDC检查成功；�
 
 - Commit：`npm-hapi-fix-release T2: recover source logs through the GitHub REST download`
 
+REST恢复run38148688849读取原描述并核验公共五包成功，跳过构建和上传。四平台实际原包重验仍为Linux两平台成功、Mac两平台失败、晋级跳过。Mac脱敏日志证实HAPI Hub ready且health=200，随后Runweft报unable to open database file并关闭HAPI；不是原生工具路径或npm权限错误。增加两个Mac原生SQLite诊断job定位创建/重开/只读验证；首次run38148938055因诊断checkout未带HAPI shared源码提前失败，补齐固定submodule后再执行。该诊断不上传npm或推进标签。
+
+- Commit：`npm-hapi-fix-release T2: diagnose database creation on native macOS`
+- Commit：`npm-hapi-fix-release T2: include pinned HAPI types in native diagnosis`
+
 ## T3 推送 Runweft main 与官网验收
 
 首轮发布失败仅为产物上传额度，产品和Linux全部集成已通过。Runweft main=7b7b17c7d0ff80ad88cfd28266e8078ae1e517d4已正常推送，远端/本地一致，v1.1.2为main祖先。Development checks run38042661930的类型/根/Node/actionlint/构建及全部选中集成通过，仅上传24份验收产物因额度失败；Pages run38042661938因npm版本404和产物额度失败，未运行生产上传。生产域名release.json本轮普通和直连读取均被403拒绝，当前在线版本未确认；历史最后验证为1.1.1，不将它记作本轮在线成功。T3的部署/整体验收尚未完成。
@@ -91,3 +96,9 @@ run38145808969的基础/四平台打包/完整Linux集成及OIDC检查成功；�
 - Commit：`npm-hapi-fix-release T5: validate beta packages before promoting latest without artifacts`
 
 公开1.1.2尚未上传；接下来推送main并启动新dispatch，T2的真实beta/四平台/latest与T3官网结果另行记录。
+
+## T6 修复原生macOS数据库校验并准备新补丁
+
+原生诊断run38149037317的Mac arm64确认磁盘/内存创建及普通只读拷贝均成功，source openState成功后validateState在PRAGMA user_version查询抛SQLITE_CANTOPEN/errno14；无需改动新建方式。进一步在私有副本比较只读/读写并增加新鲜空WAL保留骨干回归。已公开1.1.2不能覆盖，下一候选为1.1.3；数据库schema19/client1/config1不变。
+
+- Commit：`npm-hapi-fix-release T6: reproduce validation of empty WAL on macOS`
