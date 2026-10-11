@@ -1,6 +1,8 @@
 # 产品官网与安装
 
-Runweft 官网是独立静态站点，不与业务看板或 HAPI 服务混用。首页以“交给 Agent 完成接入”为主入口，提供可复制对话，介绍 Codex/Claude Code、任务委派、独立工作区、会话留存和 Git/附件回收。委派必须连接 Hub；local 仅表示可托管本机 Hub，不是离线 Agent 模式。本地/远端协作图是明确标注的交互示意。
+Runweft 官网是独立静态站点，不与业务看板或 HAPI 服务混用。首页明确 Codex/Claude Code 的任务委派用途，按评审、独立实现、远端测试/构建介绍场景及报告、代码、附件。主入口引导 Agent 接入，npm 手动安装为次入口；接入提示与重开客户端后的首次任务分别可复制。官网导航链接到公开 npm。
+
+委派必须连接 Hub；local 仅表示可托管本机 Hub，不是离线 Agent 模式。本机/远端图是交互示意：本机评审用共享目录、实现用独立 worktree；远端从已提交版本准备独立 worktree。首页文案、指南及参考导读由 iclaude 编写，原有视觉样式保留。
 
 ## npm 安装
 
@@ -22,7 +24,7 @@ website/serve.mjs 提供 loopback GET/HEAD 预览，只能读取站点目录。�
 
 website-pages.yml 复用规范版本识别，稳定版本使用托管 runner 构建、检查公共 npm 版本并上传 Direct Upload 项目；main 的官网相关推送部署 production，codex 分支部署 preview，action 返回环境须与请求模式匹配。生产部署先确认 run 的 SHA 为 main 当前提交，拒绝旧提交覆盖官网。仅 codex/** push/dispatch 的 Beta 在聚焦检查后明确跳过构建、准备/上传与静态产物；main 或 PR 的 Beta 版本失败，真实构建器仍只接受稳定版本。Beta 跳过仅有本地夹具证据，尚未真实触发。
 
-[正式官网](https://runweft.pages.dev/)安装版本为npm1.1.3，已通过[main手动生产CI](https://github.com/iTgo-lyq/runweft/actions/runs/38151944692)；固定构建唯一URL为[https://18292ca9.runweft.pages.dev/](https://18292ca9.runweft.pages.dev/)。唯一URL与正式域名八文件摘要/MIME、正式域名三页Playwright通过，静态输出91,656字节，见[验收](../../../archive/2026-10-11-npm-hapi-fix-release/acceptance.md)。[codex分支预览](https://codex-cli-foundation.runweft.pages.dev/)保留原配置，范围见[Pages验收](../../../archive/2026-10-02-website-cloudflare-pages/acceptance.md)。
+[正式官网](https://runweft.pages.dev/)安装版本为 npm 1.1.3，内容更新已通过 [main Pages CI](https://github.com/iTgo-lyq/runweft/actions/runs/38159759169)。固定构建为 [9417cc0a.runweft.pages.dev](https://9417cc0a.runweft.pages.dev/)，静态输出 102,120 字节；唯一 URL 与正式域名的八文件摘要/MIME、三页 Playwright 均通过，见[内容更新验收](../../../archive/2026-10-12-website-content-onboarding/acceptance.md)。[codex 分支预览](https://codex-cli-foundation.runweft.pages.dev/)保留原配置，范围见[Pages 验收](../../../archive/2026-10-02-website-cloudflare-pages/acceptance.md)。
 
 准备步骤和官方上传 action 使用 Repository secrets 的 CLOUDFLARE_ACCOUNT_ID/CLOUDFLARE_API_TOKEN；凭证不写入静态站点或验收 JSON。主包/四平台包的公开版本、SHA-512 字段、精确可选依赖和 tarball HEAD 均通过；五包latest必须与站点版本一致，不下载程序、不调用npm发布。静态输出为八文件白名单，拒绝链接、隐藏文件、归档和未知文件。
 
@@ -31,3 +33,5 @@ website-pages.yml 复用规范版本识别，稳定版本使用托管 runner 构
 部署脚本的路由、未公开 npm/错误依赖、Pages 权限/已有配置拒绝、缺凭证与失败回执通过15项聚焦测试。PR 只检查，手动入口按分支路由；main手动入口已真实通过；PR入口未实测。
 
 官网使用Cloudflare Direct Upload，不依赖Actions artifact；脱敏部署回执、八文件摘要与URL保存在日志/summary及仓库验收记录，静态输出按对应提交重建核对。
+
+官网内容改动可使用 `website/verify.mjs --browser-only` 验证三页、首屏入口、两页提示一致性及既有交互；证据明确标注跳过 npm 安装。默认模式仍从实际 DOM 取命令，在独立环境执行公共 npm 安装。

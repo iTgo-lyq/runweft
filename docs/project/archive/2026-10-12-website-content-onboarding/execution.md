@@ -30,3 +30,10 @@
 - 验证：`node --test ./website/publish.test.mjs` 15/15；`node website/verify.mjs --browser-only` 全部通过，三页五宽度、24 个相对链接/锚点、复制拒绝/焦点、菜单/切换、无 JS、reduced motion 和失败安装短路均通过。原始证据 `/home/tiger/workspace/runweft/.dev-smoke/website-fdgP6n/evidence.json`，本 Change 副本 `browser-evidence.json`。
 - 包边界：`assertFrozenCandidate` 对 `v1.1.3` 源码 `dab91e089c63a64a4d275a81b7b793354d86200b` 校验通过；程序、Skill、使用说明及版本未改。本次显式跳过重复 npm 安装，不新增平台/原生模型/跨机验证结论。
 - Commit：`website-content-onboarding T2: verify onboarding path and document browser checks`。
+
+## T3 发布验收、Specs 同步与归档
+
+- 结果：按既有授权快进合入 main 并推送；Pages 正式部署完成，唯一 URL 为 `https://9417cc0a.runweft.pages.dev/`，正式域名三页为 iclaude 新稿。
+- 验证：main CI 与 Pages CI 成功；正式域名及唯一 URL 的八文件摘要/MIME、三页浏览器、首页主入口/示意切换通过。CI/local 文件一致，静态总量 102,120 字节，Actions artifact 为零；具体来源和范围见 acceptance.md、verification.json。
+- 关闭：按用户持续授权完成自动验收，同步 website/product 与 website/guide Specs、文档入口，将本 Change 归档到 `2026-10-12-website-content-onboarding`。本次未执行重复 npm 安装或新模型任务。
+- Commit：`website-content-onboarding T3: record production acceptance and archive`。
