@@ -101,8 +101,8 @@ test('MCP controls use exact rounds and native approval IDs; child associations 
     expect(h.calls.interrupt).toBeGreaterThan(0);
 });
 
-test('cancelled and disconnected MCP waits leave accepted work running and center finishes it once', async () => {
-    for (const workspace_mode of ['shared', 'worktree']) for (const mode of ['cancel', 'disconnect']) {
+for (const workspace_mode of ['shared', 'worktree']) for (const mode of ['cancel', 'disconnect']) {
+    test(`MCP ${mode} leaves ${workspace_mode} work running and center finishes it once`, async () => {
         const git = workspaces(), h = await fixture('codex', git.handler);
         const first = await h.call('spawn_agent', { agent_type: h.agent.id, message: 'Accepted once', workspace_mode });
         const active = await until(() => h.call('read_agent', { id: first.agent_id }), v => v.inputs?.[0]?.observation?.phase === 'accepted');
@@ -116,8 +116,8 @@ test('cancelled and disconnected MCP waits leave accepted work running and cente
         const done = await until(() => h.post('read', { id: first.agent_id }), v => v.status === 'completed');
         if (workspace_mode === 'worktree') expect(done.git.status).toBe('sealed');
         expect(h.calls.spawn).toBe(1); expect(h.calls.stop).toBe(1);
-    }
-});
+    });
+}
 
 test('both MCP hosts pin explicit Git bases, repair only finishing and resume with sealed result facts', async () => {
     for (const host of ['codex', 'claude'] as const) {
