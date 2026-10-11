@@ -269,7 +269,8 @@ export function validateState(path: string, kind: StateKind = 'hub') {
         copyFileSync(path, copy);
         try { copyFileSync(path + '-wal', copy + '-wal'); }
         catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error; }
-        db = new Database(copy, { readonly: true });
+        // macOS needs a writable private copy to open a WAL database without sidecar files.
+        db = new Database(copy, { readwrite: true, create: false });
         const version = (db.query('PRAGMA user_version').get() as { user_version: number }).user_version;
         if (version !== (kind === 'hub' ? STATE_SCHEMA_VERSION : 1)) throw formatError('state_format_unsupported');
         if (JSON.stringify(structure(db)) !== (kind === 'hub' ? expectedStructure : expectedClientStructure)) throw formatError('state_format_invalid');

@@ -28,4 +28,4 @@ npm CLI固定11.21.0，五包publisher需同时允许npm publish和Allow npm dis
 
 ## macOS实际安装缺口与新补丁
 
-完整原包恢复run38148688849确认两Linux安装成功、两Mac启动失败；HAPI Hub ready后Runweft数据库报SQLITE_CANTOPEN。原生诊断run38149037317确认新建数据库成功，随后validateState的私有副本查询失败。原1.1.2不可覆盖；定位并修正副本验证后使用1.1.3和新tag，现有schema19/client1/config1不变。格式校验仍不得修改原数据库、WAL、SHM或身份；旧/未知/损坏格式拒绝行为和并发新建保障继续验证。待原生受控只读/读写副本比较给出具体修正证据。
+完整原包恢复run38148688849确认两Linux安装成功、两Mac启动失败；HAPI Hub ready后Runweft数据库报SQLITE_CANTOPEN。原生诊断run38149037317确认新建数据库成功，随后validateState的私有副本查询失败。原1.1.2不可覆盖；定位并修正副本验证后使用1.1.3和新tag，现有schema19/client1/config1不变。格式校验仍不得修改原数据库、WAL、SHM或身份；旧/未知/损坏格式拒绝行为和并发新建保障继续验证。run38149256050在两Mac均确认WAL模式数据库关闭后只有主文件，私有只读副本查询errno14、读写副本查询schema19成功；新增回归原实现两平台均失败（其余7项通过）。仅将验证副本改为readwrite/create:false，使SQLite在专用临时目录建立边文件；原数据库/WAL/SHM仍只被复制，格式拒绝和新建逻辑不改。

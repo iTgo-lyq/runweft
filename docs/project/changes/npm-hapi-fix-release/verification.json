@@ -1243,5 +1243,48 @@
         "reason": "diagnostic checkout omitted HAPI shared sources; no database probe executed"
       }
     ]
+  },
+  "macStateFix": {
+    "diagnosisRun": 38149256050,
+    "url": "https://github.com/iTgo-lyq/runweft/actions/runs/38149256050",
+    "platforms": [
+      "darwin-arm64",
+      "darwin-x64"
+    ],
+    "originalFiles": [
+      "state.sqlite"
+    ],
+    "readonlyPrivateCopy": "SQLITE_CANTOPEN/14 at PRAGMA user_version",
+    "readwritePrivateCopy": {
+      "user_version": 19
+    },
+    "baselineRegression": {
+      "passed": 7,
+      "failed": 1
+    },
+    "localBeforeFix": {
+      "passed": 8,
+      "failed": 0
+    },
+    "localAfterFix": {
+      "passed": 8,
+      "failed": 0
+    },
+    "originalDataWrites": false,
+    "schemaVersionUnchanged": true,
+    "nextVersion": "1.1.3",
+    "localValidation": {
+      "typecheck": true,
+      "rootTests": {
+        "passed": 249,
+        "failed": 0,
+        "assertions": 4801,
+        "files": 41,
+        "seconds": 62.68
+      },
+      "nodeTests": 43,
+      "build": true,
+      "compiledVersion": "1.1.3"
+    }
   }
 }

@@ -102,3 +102,9 @@ REST恢复run38148688849读取原描述并核验公共五包成功，跳过构�
 原生诊断run38149037317的Mac arm64确认磁盘/内存创建及普通只读拷贝均成功，source openState成功后validateState在PRAGMA user_version查询抛SQLITE_CANTOPEN/errno14；无需改动新建方式。进一步在私有副本比较只读/读写并增加新鲜空WAL保留骨干回归。已公开1.1.2不能覆盖，下一候选为1.1.3；数据库schema19/client1/config1不变。
 
 - Commit：`npm-hapi-fix-release T6: reproduce validation of empty WAL on macOS`
+
+run38149256050的两个Mac均确定复现：新建并关闭的数据库处于WAL模式，原目录仅state.sqlite、无WAL/SHM；同一主文件的只读副本PRAGMA查询SQLITE_CANTOPEN/14，读写副本返回schema19。新增骨干回归两平台均失败，其余7项成功；Linux原实现8项均通过。修正只将私有验证副本用readwrite/create:false打开，允许SQLite在临时副本目录创建边文件，原数据不写入；本机8项与类型检查通过。1.1.3五包和tag均不存在，README/usage/package版本更新，下一步验证新源码与原生Mac回归。
+
+修正后完整249项根测试/0失败/4801断言/41文件/62.68秒、类型、43项Node和本机build通过，编译程序报告1.1.3。新建策略和数据库结构不改，未知/损坏原目录拒绝和字节保留、并发新建与CLI入口骨干继续通过。尚待两Mac原生修正回归，不把Linux结果代替Mac。
+
+- Commit：`npm-hapi-fix-release T6: validate private WAL copies across platforms for 1.1.3`
