@@ -135,6 +135,11 @@ test('workflow topology requires all four platforms and has no artifact dependen
     assert.deepEqual(publish.jobs.promote.needs, ['beta', 'install']);
     assert.match(publish.jobs.promote.if, /needs\.install\.result == 'success'/);
     assert.equal(publish.concurrency.group, 'npm-publish'); assert.equal(publish.concurrency['cancel-in-progress'], false);
+    const sourceCheckout = publish.jobs.beta.steps.find(step => step.name === 'Check out exact tag source for packaging');
+    const integration = publish.jobs.beta.steps.find(step => step.name === 'Check every model-free integration group on the frozen candidate');
+    const candidateDirectory = sourceCheckout.with.path + '/dist/packages';
+    assert.equal(integration.env.RUNWEFT_SMOKE_PACKAGES, candidateDirectory);
+    assert(integration.run.includes(candidateDirectory + '/runweft-linux-x64/bin/runweft'));
     assert.deepEqual(install.jobs.install.strategy.matrix.include.map(row => row.platform).sort(),
         ['darwin-arm64', 'darwin-x64', 'linux-arm64', 'linux-x64']);
     assert.equal(install.permissions['id-token'], undefined);

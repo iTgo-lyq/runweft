@@ -95,6 +95,8 @@ jobs:
         working-directory: .dev-smoke/release-source
       - name: Check every model-free integration group on the frozen candidate
         if: steps.prepared.outputs.build == 'true'
+        env:
+          RUNWEFT_SMOKE_PACKAGES: .dev-smoke/release-source/dist/packages
         run: |
           for group in access storage web service-package; do
             bun scripts/smoke-integration.ts "$group" .dev-smoke/release-source/dist/packages/runweft-linux-x64/bin/runweft || exit $?

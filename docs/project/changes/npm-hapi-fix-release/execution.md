@@ -40,6 +40,12 @@ v1.1.2为annotated tag，固定源码ee66fe08c549908e1a49555c2ec0cc842b63d6c8；
 
 - Commit：`npm-hapi-fix-release T2: preserve successful timing-fix CI evidence`
 
+新beta流程run38136994670在上传前停止：类型/248项根测试/42项Node/四平台构建通过，access/storage/web全部成功，service-package的服务检查通过，但verify-packages仍读取控制目录dist/packages/index.json，独立原tag构建实际在.dev-smoke/release-source/dist/packages。日志确认ENOENT，两个包检查尚未执行；OIDC/上传/四平台公共安装/晋级均被跳过。公共五包1.1.2仍不存在，无已上传或未知候选。
+
+在工作流集成步骤显式设置既有RUNWEFT_SMOKE_PACKAGES指向原tag候选目录，并在现有拓扑检查中绑定checkout目录、安装包目录与CLI路径。Node42项、actionlint、冻结包输入及diff检查通过；产品与tag不变。用户已在本机浏览器完成五包dist-tag权限设置，实际OIDC标签操作仍待远端核验。新main完整Development checks run38136970052/core114462725972已通过类型/根/Node/actionlint/构建与全部四组集成，无artifact依赖。
+
+- Commit：`npm-hapi-fix-release T2: point package validation at immutable source output`
+
 ## T3 推送 Runweft main 与官网验收
 
 首轮发布失败仅为产物上传额度，产品和Linux全部集成已通过。Runweft main=7b7b17c7d0ff80ad88cfd28266e8078ae1e517d4已正常推送，远端/本地一致，v1.1.2为main祖先。Development checks run38042661930的类型/根/Node/actionlint/构建及全部选中集成通过，仅上传24份验收产物因额度失败；Pages run38042661938因npm版本404和产物额度失败，未运行生产上传。生产域名release.json本轮普通和直连读取均被403拒绝，当前在线版本未确认；历史最后验证为1.1.1，不将它记作本轮在线成功。T3的部署/整体验收尚未完成。

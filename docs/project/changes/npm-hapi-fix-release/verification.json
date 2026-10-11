@@ -120,6 +120,14 @@
       "httpStatus": 409,
       "localLog": ".dev-smoke/npm-hapi-fix-release/ci-main-recheck.log",
       "logSha256": "1a214a8e325be29dea7edbb93fd72f659029157e626ce55b6cbceb58f6b358d1"
+    },
+    "betaFlowChecks": {
+      "sourceRevision": "31838577c6ec3dcb14d80a0430ad229b6bd939a3",
+      "run": 38136970052,
+      "job": 114462725972,
+      "conclusion": "success",
+      "allIntegrationGroups": true,
+      "artifactDependency": false
     }
   },
   "artifactCleanup": {
@@ -168,11 +176,11 @@
   ],
   "published": false,
   "productionDeployed": false,
-  "status": "blocked on GitHub artifact quota",
+  "status": "resuming beta publication after fixing frozen candidate package directory",
   "unexecuted": [
-    "new candidate hosted Mac/arm64 installation",
-    "npm upload",
-    "public 1.1.2 download and installation",
+    "1.1.2 beta upload",
+    "1.1.2 hosted four-platform public installation",
+    "latest promotion",
     "production 1.1.2 deployment"
   ],
   "productionVersionLastVerified": "1.1.1",
@@ -304,6 +312,180 @@
     },
     "releaseRun": null,
     "published": false,
-    "promotionPermissionVerified": false
+    "promotionPermissionVerified": false,
+    "releaseAttempts": [
+      {
+        "run": 38136994670,
+        "sourceRevision": "ee66fe08c549908e1a49555c2ec0cc842b63d6c8",
+        "controllerRevision": "31838577c6ec3dcb14d80a0430ad229b6bd939a3",
+        "conclusion": "failure",
+        "published": false,
+        "failure": "service-package verifier looked for dist/packages/index.json instead of the frozen source checkout",
+        "integration": [
+          {
+            "group": "access",
+            "success": true,
+            "cases": [
+              {
+                "script": "smoke-hub-access.ts",
+                "startedAt": "2026-10-11T11:53:47.093Z",
+                "elapsedMs": 8576,
+                "exitCode": 0
+              },
+              {
+                "script": "smoke-hub-realtime.ts",
+                "startedAt": "2026-10-11T11:53:55.669Z",
+                "elapsedMs": 61418,
+                "exitCode": 0
+              },
+              {
+                "script": "smoke-hub-resources.ts",
+                "startedAt": "2026-10-11T11:54:57.087Z",
+                "elapsedMs": 71260,
+                "exitCode": 0
+              },
+              {
+                "script": "smoke-hub-configuration.ts",
+                "startedAt": "2026-10-11T11:56:08.347Z",
+                "elapsedMs": 16417,
+                "exitCode": 0
+              }
+            ]
+          },
+          {
+            "group": "storage",
+            "success": true,
+            "cases": [
+              {
+                "script": "smoke-artifacts.ts",
+                "startedAt": "2026-10-11T11:56:25.465Z",
+                "elapsedMs": 23724,
+                "exitCode": 0
+              },
+              {
+                "script": "smoke-inputs.ts",
+                "startedAt": "2026-10-11T11:56:49.189Z",
+                "elapsedMs": 11802,
+                "exitCode": 0
+              },
+              {
+                "script": "smoke-outputs.ts",
+                "startedAt": "2026-10-11T11:57:00.991Z",
+                "elapsedMs": 11466,
+                "exitCode": 0
+              },
+              {
+                "script": "smoke-artifact-prune.ts",
+                "startedAt": "2026-10-11T11:57:12.457Z",
+                "elapsedMs": 9521,
+                "exitCode": 0
+              },
+              {
+                "script": "smoke-repository-export.ts",
+                "startedAt": "2026-10-11T11:57:21.978Z",
+                "elapsedMs": 9416,
+                "exitCode": 0
+              },
+              {
+                "script": "smoke-repository-import.ts",
+                "startedAt": "2026-10-11T11:57:31.394Z",
+                "elapsedMs": 15216,
+                "exitCode": 0
+              },
+              {
+                "script": "smoke-result-export.ts",
+                "startedAt": "2026-10-11T11:57:46.610Z",
+                "elapsedMs": 20513,
+                "exitCode": 0
+              },
+              {
+                "script": "smoke-result-export.ts",
+                "startedAt": "2026-10-11T11:58:07.123Z",
+                "elapsedMs": 31441,
+                "exitCode": 0
+              },
+              {
+                "script": "smoke-workspace-preparation.ts",
+                "startedAt": "2026-10-11T11:58:38.564Z",
+                "elapsedMs": 57376,
+                "exitCode": 0
+              },
+              {
+                "script": "smoke-hub-delegation-native.ts",
+                "startedAt": "2026-10-11T11:59:35.940Z",
+                "elapsedMs": 15713,
+                "exitCode": 0
+              },
+              {
+                "script": "smoke-hub-delegation-preparation.ts",
+                "startedAt": "2026-10-11T11:59:51.653Z",
+                "elapsedMs": 8784,
+                "exitCode": 0
+              }
+            ]
+          },
+          {
+            "group": "service-package",
+            "success": false,
+            "cases": [
+              {
+                "script": "smoke-service.mjs",
+                "startedAt": "2026-10-11T12:00:32.423Z",
+                "elapsedMs": 16611,
+                "exitCode": 0
+              },
+              {
+                "script": "smoke-hub-service.ts",
+                "startedAt": "2026-10-11T12:00:49.034Z",
+                "elapsedMs": 21983,
+                "exitCode": 0
+              },
+              {
+                "script": "verify-packages.mjs",
+                "startedAt": "2026-10-11T12:01:11.017Z",
+                "elapsedMs": 30,
+                "exitCode": 1
+              }
+            ]
+          },
+          {
+            "group": "web",
+            "success": true,
+            "cases": [
+              {
+                "script": "smoke-hub.ts",
+                "startedAt": "2026-10-11T12:00:01.769Z",
+                "elapsedMs": 6120,
+                "exitCode": 0
+              },
+              {
+                "script": "smoke-hub-connect.ts",
+                "startedAt": "2026-10-11T12:00:07.889Z",
+                "elapsedMs": 4827,
+                "exitCode": 0
+              },
+              {
+                "script": "smoke-hub-console.ts",
+                "startedAt": "2026-10-11T12:00:12.716Z",
+                "elapsedMs": 19058,
+                "exitCode": 0
+              }
+            ]
+          }
+        ],
+        "logSha256": "314e912ed49eb387a57e72738be5fc1550ddc8c190281af5d26bf4857b1f9254"
+      }
+    ],
+    "packageDirectoryFix": {
+      "environment": "RUNWEFT_SMOKE_PACKAGES=.dev-smoke/release-source/dist/packages",
+      "workflowRegression": true,
+      "nodeTests": {
+        "pass": 42,
+        "fail": 0
+      },
+      "actionlint": true,
+      "packageInputsUnchanged": true
+    },
+    "promotionPermissionUserConfirmed": true
   }
 }
