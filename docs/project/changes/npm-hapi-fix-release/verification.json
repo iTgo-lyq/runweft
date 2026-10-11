@@ -1035,6 +1035,19 @@
         "maxCharacters": 8192,
         "originalExceptionPreserved": true
       }
+    },
+    "logRecovery": {
+      "failedRun": 38147983143,
+      "failedJob": 114495252489,
+      "failure": "gh terminal escape filter rejected source beta log",
+      "restDownload": true,
+      "signedDownloadWithoutAuthorization": true,
+      "ansiRecoveryProbe": true,
+      "nodeTests": 43,
+      "realSourceRunRecovery": 38145808969,
+      "localMode": "existing",
+      "rebuilt": false,
+      "reuploaded": false
     }
   }
 }

@@ -4,7 +4,7 @@ import { createHash } from 'node:crypto';
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { parse } from 'yaml';
-import { assertDescriptor, downloadRelease, promoteRelease, readReleaseLog, recoveryMode, verifyPublicRelease } from '../npm-release.mjs';
+import { assertDescriptor, downloadJobLog, downloadRelease, promoteRelease, readReleaseLog, recoveryMode, verifyPublicRelease } from '../npm-release.mjs';
 import { npmPublishArgs, packageNames, publishCandidate, registry } from '../npm-publish.mjs';
 
 const bytes = Buffer.from('public tarball fixture');
@@ -62,6 +62,24 @@ test('recovery refuses partial, unknown, missing provenance log and wrong source
     assert.deepEqual(readReleaseLog(log), { release, uploadStarted: true });
     const bad = structuredClone(release); bad.packages[0].path = '../escape';
     assert.throws(() => assertDescriptor(bad));
+});
+
+test('source log recovery captures ANSI as data and keeps GitHub authorization off the signed download', async () => {
+    const release = descriptor(), calls = [], location = 'https://logs.example.test/source?signed=fixture';
+    const log = '\u001b[36m2026-10-11T00:00:00Z normal runner output\u001b[0m\n' +
+        '2026-10-11T00:00:00Z RUNWEFT_RELEASE_DESCRIPTOR=' + JSON.stringify(release) + '\nRUNWEFT_UPLOAD_STARTED=runweft\n';
+    const recovered = await downloadJobLog('owner/repo', 123, { token: 'fixture-token', request: async (url, options) => {
+        calls.push({ url: String(url), options });
+        return calls.length === 1 ? new Response(null, { status: 302, headers: { location } }) : new Response(log);
+    } });
+    assert.deepEqual(readReleaseLog(recovered), { release, uploadStarted: true });
+    assert.equal(calls[0].url, 'https://api.github.com/repos/owner/repo/actions/jobs/123/logs');
+    assert.equal(calls[0].options.redirect, 'manual');
+    assert.equal(calls[0].options.headers.authorization, 'Bearer fixture-token');
+    assert.equal(calls[1].url, location);
+    assert.equal(calls[1].options.headers, undefined);
+    await assert.rejects(downloadJobLog('owner/repo', 123, { token: 'fixture-token',
+        request: async () => new Response(null, { status: 403 }) }), /redirect HTTP 403/);
 });
 
 test('four native job failures prevent promotion before any public check or mutation', async () => {

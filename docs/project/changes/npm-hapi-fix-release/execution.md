@@ -58,6 +58,10 @@ run38145808969的基础/四平台打包/完整Linux集成及OIDC检查成功；�
 
 - Commit：`npm-hapi-fix-release T2: retain sanitized installed service startup diagnostics`
 
+恢复run38147983143在prepare读取原beta job日志时被新版gh的终端转义字符过滤拒绝，矩阵与晋级未执行。改用GitHub REST的302日志下载接口：凭据只发给api.github.com，签名下载不携带授权；日志仅作为原描述解析输入，不打印完整日志或签名URL。带ANSI的受控日志验证原候选解析、授权隔离与403明确拒绝；43项Node检查通过。真实原run日志恢复在本机成功，选择existing并核验五包公开摘要，未构建或上传。仍需四平台原包验收，不将恢复成功记为Mac服务成功。
+
+- Commit：`npm-hapi-fix-release T2: recover source logs through the GitHub REST download`
+
 ## T3 推送 Runweft main 与官网验收
 
 首轮发布失败仅为产物上传额度，产品和Linux全部集成已通过。Runweft main=7b7b17c7d0ff80ad88cfd28266e8078ae1e517d4已正常推送，远端/本地一致，v1.1.2为main祖先。Development checks run38042661930的类型/根/Node/actionlint/构建及全部选中集成通过，仅上传24份验收产物因额度失败；Pages run38042661938因npm版本404和产物额度失败，未运行生产上传。生产域名release.json本轮普通和直连读取均被403拒绝，当前在线版本未确认；历史最后验证为1.1.1，不将它记作本轮在线成功。T3的部署/整体验收尚未完成。

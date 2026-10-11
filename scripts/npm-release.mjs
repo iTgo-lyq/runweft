@@ -146,7 +146,27 @@ export async function promoteRelease(release, { installationResult, read = metad
     return { version: release.version, source: release.source, channel: 'latest', promoted: true, success: true, distTags: finalTags };
 }
 
-function previousRunLog(env) {
+export async function downloadJobLog(repository, jobId, { token = process.env.GH_TOKEN, request = fetch } = {}) {
+    assert.match(repository, /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/);
+    assert.match(String(jobId), /^\d+$/);
+    assert(token, 'GH_TOKEN is required to read the source workflow log');
+    // Capture the REST log as data; gh's terminal escape filter rejects ordinary runner ANSI output.
+    const response = await request('https://api.github.com/repos/' + repository + '/actions/jobs/' + jobId + '/logs', {
+        redirect: 'manual', signal: AbortSignal.timeout(60_000),
+        headers: { accept: 'application/vnd.github+json', authorization: 'Bearer ' + token },
+    });
+    assert.equal(response.status, 302, 'Source job log redirect HTTP ' + response.status);
+    const location = response.headers.get('location');
+    assert(location, 'Source job log redirect missing');
+    const url = new URL(location);
+    assert(url.protocol === 'https:' && !url.username && !url.password, 'Invalid source job log redirect');
+    // The signed download is anonymous. Never forward the GitHub credential or print the URL/log.
+    const download = await request(url, { signal: AbortSignal.timeout(60_000) });
+    assert.equal(download.status, 200, 'Source job log download HTTP ' + download.status);
+    return download.text();
+}
+
+async function previousRunLog(env) {
     const id = env.SOURCE_RUN_ID || env.GITHUB_RUN_ID;
     assert.match(id ?? '', /^\d+$/);
     assert.match(env.GITHUB_REPOSITORY ?? '', /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/);
@@ -157,8 +177,8 @@ function previousRunLog(env) {
     let log = '';
     for (let attempt = 1; attempt <= attempts; attempt++) {
         const jobs = JSON.parse(command('gh', ['api', base + '/attempts/' + attempt + '/jobs?per_page=100'])).jobs;
-        for (const job of jobs.filter(job => job.name === 'beta')) log += command('gh', ['api',
-            'repos/' + env.GITHUB_REPOSITORY + '/actions/jobs/' + job.id + '/logs']) + '\n';
+        for (const job of jobs.filter(job => job.name === 'beta')) log += await downloadJobLog(
+            env.GITHUB_REPOSITORY, job.id, { token: env.GH_TOKEN }) + '\n';
     }
     return readReleaseLog(log);
 }
@@ -180,7 +200,7 @@ async function prepare(env) {
     assert.equal(command('git', ['rev-parse', revision + ':hapi']), pkg.hapi.revision, 'HAPI gitlink differs');
     assertFrozenCandidate({ source: { revision, dirty: false } });
     let prior = {};
-    if (publishing && (env.SOURCE_RUN_ID || Number(env.GITHUB_RUN_ATTEMPT) > 1)) prior = previousRunLog(env);
+    if (publishing && (env.SOURCE_RUN_ID || Number(env.GITHUB_RUN_ATTEMPT) > 1)) prior = await previousRunLog(env);
     const manifests = publishing ? await Promise.all(packageNames.map(name => metadata({ name, version: pkg.version }))) : Array(5).fill(null);
     const mode = recoveryMode(manifests, prior, revision, pkg.version);
     if (mode === 'existing') {
