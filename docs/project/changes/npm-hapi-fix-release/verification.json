@@ -47,6 +47,45 @@
         "hostedMacArmInstall": false,
         "published": false,
         "failure": "Artifact storage quota has been hit"
+      },
+      {
+        "attempt": 3,
+        "date": "2026-10-11",
+        "conclusion": "failure",
+        "buildJob": 114444727984,
+        "fourPlatformBuild": true,
+        "linuxModelFreeIntegration": true,
+        "integration": {
+          "groups": [
+            "access",
+            "storage",
+            "web",
+            "service-package"
+          ],
+          "startedAt": "2026-10-11T10:12:22Z",
+          "completedAt": "2026-10-11T10:22:04Z"
+        },
+        "rootTests": {
+          "passed": 248,
+          "failed": 0,
+          "assertions": 4801,
+          "files": 41,
+          "seconds": 86.11
+        },
+        "nodeTests": {
+          "passed": 33,
+          "failed": 0
+        },
+        "artifactUploaded": false,
+        "hostedMacArmInstall": false,
+        "installJob": 114447184896,
+        "installConclusion": "skipped",
+        "publishJob": 114447185478,
+        "publishConclusion": "skipped",
+        "published": false,
+        "failure": "Artifact storage quota has been hit",
+        "localLog": ".dev-smoke/npm-hapi-fix-release/ci-build-third.log",
+        "logSha256": "750e56dcc99ee0df95daca1fec2985144ba5f2d57dd8bb3996a2fbe5fc4197f3"
       }
     ]
   },
@@ -58,7 +97,13 @@
     "conclusion": "failure",
     "failure": "artifact quota only",
     "pagesRun": 38042661938,
-    "pagesFailure": "npm 1.1.2 HTTP 404 and artifact quota"
+    "pagesFailure": "npm 1.1.2 HTTP 404 and artifact quota",
+    "documentationChecks": {
+      "sourceRevision": "c306d0d535ce5e5aaee95e02c64123b97499deaa",
+      "run": 38043993010,
+      "conclusion": "success",
+      "modelFreeIntegrationRepeated": false
+    }
   },
   "artifactCleanup": {
     "receipt": "artifact-cleanup.json",
@@ -118,5 +163,22 @@
     "confirmed": false,
     "httpStatus": 403,
     "note": "Both ordinary and direct requests were refused; current live version was not verified."
+  },
+  "publicRegistryCheckedAt": "2026-10-11T10:22:44.646597+00:00",
+  "quotaRecheck": {
+    "date": "2026-10-11",
+    "moreThan24HoursAfterCleanup": true,
+    "remainingCount": 20,
+    "remainingBytes": 41521,
+    "releaseRunArtifactCount": 0,
+    "billingReportAvailable": false,
+    "billingReportReason": "Existing GitHub authentication lacks user scope.",
+    "accountCauseConfirmed": false,
+    "accountChecksRequired": [
+      "accrued shared Actions/Packages storage",
+      "payment method",
+      "budgets blocking usage"
+    ],
+    "reference": "https://docs.github.com/en/billing/concepts/product-billing/github-actions"
   }
 }

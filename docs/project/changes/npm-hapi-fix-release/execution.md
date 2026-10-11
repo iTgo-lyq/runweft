@@ -22,11 +22,19 @@ v1.1.2为annotated tag，固定源码ee66fe08c549908e1a49555c2ec0cc842b63d6c8；
 
 - Commit：`npm-hapi-fix-release T2: preserve quota recovery evidence`
 
+2026-10-11距清理超过24小时，重新fetch确认两个main/固定HAPI及v1.1.2包输入未变，原run无产物、五包1.1.2均不存在，再执行原run attempt3。build job114444727984的类型检查、248项根测试（4801断言、41文件、86.11秒）、33项Node检查、四平台构建和四组Linux集成全部通过；集成10:12:22Z–10:22:04Z。两个upload-artifact步骤仍分别在10:22:04Z/10:22:06Z报Artifact storage quota has been hit；install job114447184896和publish job114447185478被跳过。10:22:44Z公共五包latest=1.1.1、1.1.2均404，远端仍20份41521字节，原run没有任何候选或发布回执。原日志保存在.dev-smoke/npm-hapi-fix-release/ci-build-third.log。
+
+[GitHub计费说明](https://docs.github.com/en/billing/concepts/product-billing/github-actions)区分当前占用和按小时累计的周期用量：删除产物不扣除已累计用量，产物与GitHub Packages共用额度，付款方式或阻断预算也可能限制新增存储。6–12小时仅为统计刷新说明，不能保证删除后恢复。账单API需要现有凭据缺少的user scope，未取得账户累计用量、付款方式或预算明细；这些原因仍属待核查，不能把推断写成已确认根因。等待一天后的实际上传仍失败，恢复前需账户侧确认允许新增Actions产物，不再无条件重复完整构建。
+
+- Commit：`npm-hapi-fix-release T2: record persistent quota failure after daily recheck`
+
 ## T3 推送 Runweft main 与官网验收
 
 首轮发布失败仅为产物上传额度，产品和Linux全部集成已通过。Runweft main=7b7b17c7d0ff80ad88cfd28266e8078ae1e517d4已正常推送，远端/本地一致，v1.1.2为main祖先。Development checks run38042661930的类型/根/Node/actionlint/构建及全部选中集成通过，仅上传24份验收产物因额度失败；Pages run38042661938因npm版本404和产物额度失败，未运行生产上传。生产域名release.json本轮普通和直连读取均被403拒绝，当前在线版本未确认；历史最后验证为1.1.1，不将它记作本轮在线成功。T3的部署/整体验收尚未完成。
 
 - Commit：`npm-hapi-fix-release T3: record main CI and pending production deployment`
+
+本次复查确认main=c306d0d535ce5e5aaee95e02c64123b97499deaa与远端一致，Development checks run38043993010成功。它是项目记录改动的核心检查，不重跑四组Linux集成；完整候选集成证据来自上述tag attempt3。1.1.2仍未公开，本次没有触发生产官网部署或匿名安装，T3继续阻塞。
 
 ## T4 同步 Specs 并归档
 
@@ -34,4 +42,4 @@ v1.1.2为annotated tag，固定源码ee66fe08c549908e1a49555c2ec0cc842b63d6c8；
 
 ## 恢复入口
 
-确认GitHub额度已恢复、v1.1.2仍指向ee66fe08、五包版本尚不存在后，重跑原run38041451856的完整候选（当前无任何候选或上传）。若出现公开包或publication回执，先核查原候选完整性，改为只恢复原publish job，不能重新构建已上传版本。候选成功后完成原回执/公开下载/专用npm及Playwright安装验收，再从最新main运行website-pages.yml。生产/匿名安装尚未完成，不以构建或Linux集成代替。
+账户侧核查累计用量、付款方式和预算，确认允许新增Actions产物后，核对v1.1.2仍指向ee66fe08、五包版本尚不存在，再重跑原run38041451856的完整候选（当前无任何候选或上传）；当前产物占用低不能单独证明额度已恢复。若出现公开包或publication回执，先核查原候选完整性，改为只恢复原publish job，不能重新构建已上传版本。候选成功后完成原回执/公开下载/专用npm及Playwright安装验收，再从最新main运行website-pages.yml。生产/匿名安装尚未完成，不以构建或Linux集成代替。
