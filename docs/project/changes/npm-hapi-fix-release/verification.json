@@ -176,7 +176,7 @@
   ],
   "published": false,
   "productionDeployed": false,
-  "status": "resuming beta publication after fixing frozen candidate package directory",
+  "status": "resuming beta publication after scoping expiry authentication assertion to the tested page",
   "unexecuted": [
     "1.1.2 beta upload",
     "1.1.2 hosted four-platform public installation",
@@ -474,6 +474,29 @@
           }
         ],
         "logSha256": "314e912ed49eb387a57e72738be5fc1550ddc8c190281af5d26bf4857b1f9254"
+      },
+      {
+        "run": 38144335853,
+        "controllerRevision": "301ec9e19462e7aeecc5c9b45d899dfc55a321a9",
+        "sourceRevision": "ee66fe08c549908e1a49555c2ec0cc842b63d6c8",
+        "conclusion": "failure",
+        "published": false,
+        "failure": "shared browser authentication count changed from 8 to 9 during expiry test",
+        "integration": [
+          {
+            "group": "storage",
+            "success": true
+          },
+          {
+            "group": "web",
+            "success": false
+          },
+          {
+            "group": "access",
+            "success": true
+          }
+        ],
+        "logSha256": "4cb5bfdeac6e92cb19fe162fefa86d3c69a4997cc177b516560febdfa3cf58f4"
       }
     ],
     "packageDirectoryFix": {
@@ -486,6 +509,48 @@
       "actionlint": true,
       "packageInputsUnchanged": true
     },
-    "promotionPermissionUserConfirmed": true
+    "promotionPermissionUserConfirmed": true,
+    "consoleExpiryTestFix": {
+      "productionCodeChanged": false,
+      "cause": "Playwright Page.clock uses the BrowserContext clock; an aggregate auth count included other tabs. The assertion now counts only the tested native page.",
+      "controlledReproduction": {
+        "before": {
+          "originalGlobalCount": 8,
+          "globalAfter": 9,
+          "originalNativeCount": 4,
+          "nativeAfter": 4,
+          "otherAuthStatus": 200
+        },
+        "oldAssertionExitCode": 1,
+        "after": {
+          "originalGlobalCount": 8,
+          "globalAfter": 9,
+          "originalNativeCount": 4,
+          "nativeAfter": 4,
+          "otherAuthStatus": 200
+        },
+        "newAssertionExitCode": 0
+      },
+      "normalBrowser": {
+        "success": true,
+        "checks": 16,
+        "binaries": {
+          "runweft": {
+            "path": "/home/tiger/workspace/runweft/dist/runweft",
+            "sha256": "7b15dd291e295b0af747168d0eb07476d29c7175b07960ec0deb18141fa963bb"
+          },
+          "hapi": {
+            "path": "/home/tiger/workspace/runweft/dist/hapi",
+            "sha256": "d72a2ddada75ea806a3abedd9d443602352eac44477eac38d9e1bd52b75467be"
+          }
+        }
+      },
+      "controlledBrowser": {
+        "success": true,
+        "checks": 16
+      },
+      "typecheck": true,
+      "packageInputsUnchanged": true
+    }
   }
 }

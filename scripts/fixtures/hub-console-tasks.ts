@@ -23,6 +23,7 @@ export async function consoleTasks(options: { origin: string; home: string; root
     const scopes = new DelegationScopes(access), sockets: Socket[] = [], nativePages: Page[] = [];
     const heartbeats: ReturnType<typeof setInterval>[] = [];
     const urls: string[] = [], authBodies: string[] = [], errors: string[] = [];
+    const authByPage = new Map<Page, number>();
     const nativeRequests: { path: string; claims: ReturnType<typeof decodeJwt> }[] = [];
     const observed = new Set<Page>(), credentials = new Set([options.identityToken, options.memberIdentity, options.ownerToken, options.memberToken]);
     const machine = JSON.parse(readFileSync(hubConnectionPaths(home, origin).machineConnection, 'utf8'));
@@ -69,7 +70,10 @@ export async function consoleTasks(options: { origin: string; home: string; root
         tab.on('request', request => {
             try {
             urls.push(request.url()); const path = new URL(request.url()).pathname;
-            if (path === '/api/auth') authBodies.push(request.postData() ?? '');
+            if (path === '/api/auth') {
+                authBodies.push(request.postData() ?? '');
+                authByPage.set(tab, (authByPage.get(tab) ?? 0) + 1);
+            }
             if (path.startsWith('/api/sessions/') || path === '/api/events') {
                 const authorization = request.headers().authorization ?? '';
                 assert(authorization.startsWith('Bearer ') && !authorization.includes(options.identityToken) && !authorization.includes(options.memberIdentity));
@@ -289,11 +293,12 @@ export async function consoleTasks(options: { origin: string; home: string; root
         const beforeReloadJwt = await native.evaluate(() => sessionStorage.getItem('runweft.native.access'));
         await native.clock.install(); await native.reload(); await native.getByText('OWNER_CONSOLE_HISTORY_NATIVE_MESSAGE', { exact: true }).waitFor();
         assert((await native.evaluate(() => sessionStorage.getItem('runweft.native.access'))) === beforeReloadJwt, 'Reload must preserve JWT lifetime');
-        const authCountBeforeExpiry = authBodies.length;
+        // Playwright's clock advances the whole context, including other native/Hub tabs.
+        const authCountBeforeExpiry = authByPage.get(native) ?? 0;
         await native.clock.fastForward(16 * 60_000); await native.waitForURL(/\/hub#native-expired/);
         assert.match(await native.locator('#notice').innerText(), /限时身份/);
         assert(await native.evaluate(() => sessionStorage.getItem('runweft.native.access') === null), 'Expired native credential must clear');
-        assert.equal(authBodies.length, authCountBeforeExpiry);
+        assert.equal(authByPage.get(native) ?? 0, authCountBeforeExpiry);
         assert(await page.locator('#workspace').isVisible());
 
         assert(urls.every(url => !new URL(url).searchParams.has('token'))); assert.deepEqual(errors, []);
