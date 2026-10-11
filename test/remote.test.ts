@@ -172,7 +172,8 @@ test('offline target and lost release/unpin replies resume after restart without
 test('failed partial publication can release its owned candidates and pins while pending or foreign preparations remain protected', async () => {
     const h = await remoteFixture(cleanups); h.faults.partialDelivery = true;
     const first = (await h.prepare('prepare', h.preparationPayload())).preparation as PreparationView;
-    await until(() => h.inspect(first.id), item => item.phase === 'failed');
+    // The public view can reflect a failed snapshot before the preparation record finishes advancing.
+    await until(() => h.gateway.delegation.preparations.store.preparations().find(item => item.id === first.id)?.phase, phase => phase === 'failed');
     await h.prepare('release', { parent: h.parent, id: first.id });
     const released = await until(() => h.inspect(first.id), item => item.phase === 'released');
     expect(released.cleanup.sourceReleased).toBe(true); expect([...h.transfers.values()].filter(item => item.request.action === 'capture').every(item => item.retention === 'released')).toBe(true);

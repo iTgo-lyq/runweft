@@ -29,7 +29,7 @@ HAPI 先推送；Runweft 先 tag 发布、公共安装验证后推送 main。冻
 - 交付：不可变 v1.1.2、成功原 run、原候选五包及公开安装证据。
 - 依赖：T1
 - 验收：四平台安装通过，publication success=true/五包 confirmed，公开 latest/元数据/SHA-512 与候选一致；Linux x64 安装、Skill、配套 HAPI 校验通过。
-- 验证：原 tag push/SHA/候选/回执、匿名 registry 下载、现有 Playwright DOM 安装与冻结源码检查；不覆盖旧 dist/packages。
+- 验证：原 tag push/SHA/候选/回执、匿名 registry 下载、现有 Playwright DOM 安装与冻结源码检查；不覆盖旧 dist/packages。复查main CI暴露的准备释放测试时序问题只修正测试等待条件，定向复现、重复验证及完整根测试后提交，packageInputs继续冻结。
 
 ### T3 推送 Runweft main 与官网验收
 

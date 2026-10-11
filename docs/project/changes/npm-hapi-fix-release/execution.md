@@ -28,6 +28,14 @@ v1.1.2为annotated tag，固定源码ee66fe08c549908e1a49555c2ec0cc842b63d6c8；
 
 - Commit：`npm-hapi-fix-release T2: record persistent quota failure after daily recheck`
 
+该记录推送b5fed93后，main run38131900480/core job114447777444出现一次准备释放测试失败：247项通过、1项失败，release返回409/preparation_pending。类型检查通过，后续Node/集成未执行；保留首次失败日志.dev-smoke/npm-hapi-fix-release/ci-main-recheck.log，不把它当作额度故障或直接重跑掩盖。
+
+定位到WorkspacePreparations.view会在底层snapshot失败时先返回派生failed，而实际preparation记录下一轮才更新；release检查实际记录。专用现场延后preparation推进、继续snapshot推进，确定复现“view failed/record preparing → release409”；推进记录后释放及source/pin清理成功。只将现有test/remote.test.ts等待条件改为实际preparation记录failed，保留未决和外人保护断言，生产代码与packageInputs未改。修改前该单测本地20次通过，仅有上述真实CI失败，不能声称本地随机复现；定向调度现场为独立因果证据。
+
+修正后该文件11项测试连续20次共220项通过（3720断言、0失败、53.30秒），类型检查通过，完整根测试248项通过（4798断言、41文件、62.41秒）。包输入冻结及Change结构检查通过；再次正常推送测试修正并核查新main CI，正式tag仍为ee66fe08，公开发布继续等待账户额度恢复。
+
+- Commit：`npm-hapi-fix-release T2: wait for completed preparation in release test`
+
 ## T3 推送 Runweft main 与官网验收
 
 首轮发布失败仅为产物上传额度，产品和Linux全部集成已通过。Runweft main=7b7b17c7d0ff80ad88cfd28266e8078ae1e517d4已正常推送，远端/本地一致，v1.1.2为main祖先。Development checks run38042661930的类型/根/Node/actionlint/构建及全部选中集成通过，仅上传24份验收产物因额度失败；Pages run38042661938因npm版本404和产物额度失败，未运行生产上传。生产域名release.json本轮普通和直连读取均被403拒绝，当前在线版本未确认；历史最后验证为1.1.1，不将它记作本轮在线成功。T3的部署/整体验收尚未完成。

@@ -103,6 +103,23 @@
       "run": 38043993010,
       "conclusion": "success",
       "modelFreeIntegrationRepeated": false
+    },
+    "recheckTestFailure": {
+      "sourceRevision": "b5fed93fa7f19c01813187c0970070acea56ccbd",
+      "run": 38131900480,
+      "job": 114447777444,
+      "conclusion": "failure",
+      "rootTests": {
+        "passed": 247,
+        "failed": 1,
+        "assertions": 4793,
+        "files": 41,
+        "seconds": 73.67
+      },
+      "code": "preparation_pending",
+      "httpStatus": 409,
+      "localLog": ".dev-smoke/npm-hapi-fix-release/ci-main-recheck.log",
+      "logSha256": "1a214a8e325be29dea7edbb93fd72f659029157e626ce55b6cbceb58f6b358d1"
     }
   },
   "artifactCleanup": {
@@ -180,5 +197,46 @@
       "budgets blocking usage"
     ],
     "reference": "https://docs.github.com/en/billing/concepts/product-billing/github-actions"
+  },
+  "preparationTestTimingFix": {
+    "changedFile": "test/remote.test.ts",
+    "productionCodeChanged": false,
+    "packageInputsUnchanged": true,
+    "cause": "The derived view can report a failed snapshot before the preparation record reaches failed. The release test now waits for the actual preparation record.",
+    "controlledReproduction": {
+      "success": true,
+      "scheduling": "deferred preparation advancement while snapshot advancement proceeds",
+      "before": {
+        "publicPhase": "failed",
+        "recordPhase": "preparing",
+        "releaseCode": "preparation_pending",
+        "status": 409
+      },
+      "after": {
+        "recordPhase": "failed",
+        "releasePhase": "released",
+        "sourceReleased": true,
+        "pinsReleased": true
+      }
+    },
+    "beforeRandomLocalRuns": {
+      "passed": 20,
+      "failed": 0
+    },
+    "afterFileRuns": {
+      "runs": 20,
+      "passed": 220,
+      "failed": 0,
+      "assertions": 3720,
+      "seconds": 53.3
+    },
+    "typecheck": true,
+    "rootTests": {
+      "passed": 248,
+      "failed": 0,
+      "assertions": 4798,
+      "files": 41,
+      "seconds": 62.41
+    }
   }
 }
