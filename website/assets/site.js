@@ -29,8 +29,8 @@ for (const button of document.querySelectorAll('[data-mode]')) {
     for (const other of document.querySelectorAll('[data-mode]')) other.setAttribute('aria-pressed', String(other === button));
     document.querySelector('#collaboration-map').dataset.mode = button.dataset.mode;
     document.querySelector('#routing-label').textContent = remote ? '通过 Hub 调度' : '本机 Hub 调度';
-    for (const element of document.querySelectorAll('[data-location]')) element.textContent = remote ? '远端机器 · 独立 worktree' : '本机 · 独立 worktree';
-    document.querySelector('#map-description').textContent = remote ? '远端示意：固定 Git 基线先到达执行机，任务结束后从中心取回成果。' : '本地示意：从主工作区派生两个独立 worktree，任务完成后由主 agent 审查合入。';
+    for (const element of document.querySelectorAll('[data-location]')) element.textContent = remote ? '远端 · 独立工作目录' : element.dataset.location === 'review' ? '本机 · 共享目录' : '本机 · 独立工作目录';
+    document.querySelector('#map-description').textContent = remote ? '远端示意：从已提交的 Git 版本准备独立目录，使用执行机器上的工具，完成后取回报告、代码和文件。' : '本地示意：评审读取当前目录，功能实现在独立目录中进行；完成后取回报告与代码，再决定是否合入。';
   });
 }
 
