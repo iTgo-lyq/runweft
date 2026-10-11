@@ -176,7 +176,7 @@
   ],
   "published": false,
   "productionDeployed": false,
-  "status": "five beta packages published; diagnosing macOS startup without rebuilding or reuploading",
+  "status": "macOS database copy validation fixed; preparing 1.1.3 candidate",
   "unexecuted": [
     "successful macOS installed Hub startup",
     "latest promotion",
@@ -1285,6 +1285,27 @@
       "nodeTests": 43,
       "build": true,
       "compiledVersion": "1.1.3"
-    }
+    },
+    "fixedRun": 38149534513,
+    "fixedRunUrl": "https://github.com/iTgo-lyq/runweft/actions/runs/38149534513",
+    "fixedNativeValidation": [
+      {
+        "platform": "darwin-arm64",
+        "job": 114499900215,
+        "passed": 8,
+        "failed": 0,
+        "assertions": 93,
+        "logSha256": "c6f100c8f934b9c3aa6d8a449932f44f43e76992d4c7122c9c24979db7a096f8"
+      },
+      {
+        "platform": "darwin-x64",
+        "job": 114499900450,
+        "passed": 8,
+        "failed": 0,
+        "assertions": 93,
+        "logSha256": "4252f6fc57ff68f0a12469913e46eab4f7b5f46d32a37a2fd4fc239fb5005aab"
+      }
+    ],
+    "temporaryWorkflowRemoved": true
   }
 }

@@ -108,3 +108,7 @@ run38149256050的两个Mac均确定复现：新建并关闭的数据库处于WAL
 修正后完整249项根测试/0失败/4801断言/41文件/62.68秒、类型、43项Node和本机build通过，编译程序报告1.1.3。新建策略和数据库结构不改，未知/损坏原目录拒绝和字节保留、并发新建与CLI入口骨干继续通过。尚待两Mac原生修正回归，不把Linux结果代替Mac。
 
 - Commit：`npm-hapi-fix-release T6: validate private WAL copies across platforms for 1.1.3`
+
+修正源码de14c0a的原生run38149534513，两Mac均确认source validateState成功，各8项回归/0失败/93断言，覆盖新鲜无边文件WAL、Hub/client格式、原目录字节保留、旧/损坏拒绝、并发新建和CLI入口。临时state-diagnosis.yml删除；长期骨干保留在test/state.test.ts，正式四平台公共安装仍由T2执行。1.1.3五包和tag尚不存在，固定HAPI/工具链不改。
+
+- Commit：`npm-hapi-fix-release T6: complete native database validation and freeze 1.1.3`
