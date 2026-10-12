@@ -1,0 +1,189 @@
+{
+  "iclaude": {
+    "sessionId": "af38d350-983f-4f17-ac20-ed4114908fc8",
+    "result": "Plan 评审与全部新增官网文案完成；采纳局部样式、左栏三行能力、800px 换列、窄屏比例缩小、按图裁切和可见焦点建议。"
+  },
+  "layouts": [
+    {
+      "width": 1440,
+      "beforeHeight": 1376.03125,
+      "afterHeight": 375.734375,
+      "previews": [
+        {
+          "x": 879,
+          "y": 430.359375,
+          "width": 180,
+          "height": 240
+        },
+        {
+          "x": 1075,
+          "y": 430.359375,
+          "width": 180,
+          "height": 240
+        }
+      ],
+      "heroBoundsUnchanged": true
+    },
+    {
+      "width": 1280,
+      "beforeHeight": 1376.03125,
+      "afterHeight": 375.734375,
+      "previews": [
+        {
+          "x": 799,
+          "y": 430.359375,
+          "width": 180,
+          "height": 240
+        },
+        {
+          "x": 995,
+          "y": 430.359375,
+          "width": 180,
+          "height": 240
+        }
+      ],
+      "heroBoundsUnchanged": true
+    },
+    {
+      "width": 1024,
+      "beforeHeight": 1358.03125,
+      "afterHeight": 385.03125,
+      "previews": [
+        {
+          "x": 580,
+          "y": 430.265625,
+          "width": 180,
+          "height": 240
+        },
+        {
+          "x": 776,
+          "y": 430.265625,
+          "width": 180,
+          "height": 240
+        }
+      ],
+      "heroBoundsUnchanged": true
+    },
+    {
+      "width": 768,
+      "beforeHeight": 1308.65625,
+      "afterHeight": 641.484375,
+      "previews": [
+        {
+          "x": 55,
+          "y": 429.546875,
+          "width": 180,
+          "height": 240
+        },
+        {
+          "x": 251,
+          "y": 429.546875,
+          "width": 180,
+          "height": 240
+        }
+      ],
+      "heroBoundsUnchanged": true
+    },
+    {
+      "width": 390,
+      "beforeHeight": 2417.125,
+      "afterHeight": 633.515625,
+      "previews": [
+        {
+          "x": 44,
+          "y": 445.859375,
+          "width": 145,
+          "height": 193.328125
+        },
+        {
+          "x": 201,
+          "y": 445.859375,
+          "width": 145,
+          "height": 193.328125
+        }
+      ],
+      "heroBoundsUnchanged": true
+    },
+    {
+      "width": 320,
+      "beforeHeight": 2234.53125,
+      "afterHeight": 612.1875,
+      "previews": [
+        {
+          "x": 44,
+          "y": 468.734375,
+          "width": 110,
+          "height": 146.65625
+        },
+        {
+          "x": 166,
+          "y": 468.734375,
+          "width": 110,
+          "height": 146.65625
+        }
+      ],
+      "heroBoundsUnchanged": true
+    }
+  ],
+  "targeted": {
+    "success": true,
+    "checks": [
+      {
+        "asset": "hapi-session.webp",
+        "sha256": "960fad5c099256392cf540623c58df81b78ee60762e45acb40166e3f644b80d3",
+        "bytes": 72756
+      },
+      {
+        "asset": "hapi-code.webp",
+        "sha256": "a0db1e9f1fb79d04668aeff99ec32d824a8c8dee265644fb41d07f2e1428a7ff",
+        "bytes": 113894
+      },
+      {
+        "width": 1440,
+        "deepLink": true,
+        "keyboardFocus": {
+          "style": "solid",
+          "width": "3px",
+          "offset": "5px"
+        }
+      },
+      {
+        "width": 390,
+        "deepLink": true,
+        "keyboardFocus": {
+          "style": "solid",
+          "width": "3px",
+          "offset": "5px"
+        }
+      },
+      {
+        "width": 320,
+        "deepLink": true,
+        "keyboardFocus": {
+          "style": "solid",
+          "width": "3px",
+          "offset": "5px"
+        }
+      },
+      {
+        "otherResultsBandPixelIdentical": true
+      }
+    ]
+  },
+  "local": {
+    "publishTests": 15,
+    "browserPages": 3,
+    "widths": [
+      1440,
+      1280,
+      1024,
+      768,
+      390,
+      320
+    ],
+    "browserEvidence": ".dev-smoke/website-dP2ffc/evidence.json",
+    "browserScope": "browser-only",
+    "npmInstallationRepeated": false,
+    "frozenReleaseInputs": true
+  }
+}

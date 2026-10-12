@@ -52,14 +52,21 @@
     <article class="feature"><span class="feature-icon"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#check"/></svg></span><h3>权限照原来的规则</h3><p>Runweft 不改 Codex / Claude Code 的权限设置，要不要审批由它们自己的配置决定。需要审批时，那一步会停下等你，任务标为“需要处理”，主 Agent 等待时也能看到。</p><span class="feature-detail">原生权限 · 网页审批</span></article>
     <article class="feature"><span class="feature-icon"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#folder"/></svg></span><h3>会话留着，下一轮接着做</h3><p>每轮结束会关闭执行进程，但原生会话和工作目录都保留。下一轮通常回到原来的会话，前面的上下文和改动都在；启动配置改了或会话已丢失，才会换新会话。</p><span class="feature-detail">会话和目录跨轮保留</span></article>
   </div>
-  <div class="results-band"><div class="results-band-copy"><p class="eyebrow">HAPI 会话网页</p><h3>过程、审批、文件，<br>在浏览器里跟进。</h3><p>Runweft 任务页记录每一轮的状态和报告；想看细节，从任务详情打开这项任务的原生会话和文件。<br>手机上也一样：用浏览器打开能访问的 Hub 地址，导入你的身份、选同一个空间。</p><a class="text-link" href="guide.html#native-session">怎样打开原生会话</a></div><div class="result-list"><div><span class="result-icon"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#terminal"/></svg></span><span><strong>消息和工具调用</strong><small>每一步说了什么、做了什么，历史都在</small></span></div><div><span class="result-icon"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#check"/></svg></span><span><strong>待处理的审批</strong><small>在会话页直接同意或拒绝</small></span></div><div><span class="result-icon"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#file"/></svg></span><span><strong>文件和改动</strong><small>执行期间浏览文件，查看 Git 暂存和未暂存的改动</small></span></div></div></div>
-  <div id="session-screenshots" class="session-gallery">
-    <p class="session-gallery-intro">以下是 HAPI 官方截图，展示 Runweft 复用的会话和文件界面。实际界面以所用版本为准。</p>
-    <div class="session-shot-grid">
-    <figure class="session-shot"><a class="session-shot-image" href="assets/hapi-session.webp" aria-labelledby="session-shot-title session-shot-open"><img src="assets/hapi-session.webp" width="946" height="2048" loading="lazy" decoding="async" alt="HAPI 手机端会话页：Codex 调用 shell_command 运行 git status -sb、git diff --stat 等命令，随后给出代码评审报告。"><span id="session-shot-open">查看原图</span></a><figcaption><h3 id="session-shot-title">查看执行过程</h3><p>消息、工具调用和最终报告按顺序呈现。</p></figcaption></figure>
-    <figure class="session-shot"><a class="session-shot-image" href="assets/hapi-code.webp" aria-labelledby="file-shot-title file-shot-open"><img src="assets/hapi-code.webp" width="946" height="2048" loading="lazy" decoding="async" alt="HAPI 手机端文件页：语法高亮显示 server/src/configuration.ts 的 TypeScript 代码。"><span id="file-shot-open">查看原图</span></a><figcaption><h3 id="file-shot-title">查看代码</h3><p>从会话中打开文件查看内容；会话在线时才能读取。</p></figcaption></figure>
+  <div id="session-screenshots" class="results-band session-band">
+    <div class="results-band-copy">
+      <p class="eyebrow">HAPI 会话网页</p><h3>任务做到哪一步，打开会话就知道。</h3>
+      <p>从 Hub 任务详情打开原生会话，跟进执行过程；需要审批或想看文件，也在这里。</p>
+      <ul class="session-capabilities">
+        <li><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#terminal"/></svg>逐条查看消息和工具调用</li>
+        <li><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#check"/></svg>在会话页同意或拒绝审批</li>
+        <li><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#file"/></svg>浏览文件，查看 Git 改动</li>
+      </ul>
+      <a class="text-link" href="guide.html#native-session">怎样打开原生会话</a>
     </div>
-    <p class="session-gallery-source"><a class="text-link" href="https://hapi.run/" rel="noopener noreferrer">图片来源：hapi.run</a></p>
+    <div class="session-shot-grid">
+      <figure class="session-shot"><a class="session-shot-image" href="assets/hapi-session.webp"><img src="assets/hapi-session.webp" width="946" height="2048" loading="lazy" decoding="async" alt="HAPI 会话页：Codex 的工具调用和代码评审结果"><span>查看完整图片</span></a><figcaption>执行过程</figcaption></figure>
+      <figure class="session-shot"><a class="session-shot-image" href="assets/hapi-code.webp"><img src="assets/hapi-code.webp" width="946" height="2048" loading="lazy" decoding="async" alt="HAPI 文件页：语法高亮的 configuration.ts 代码"><span>查看完整图片</span></a><figcaption>文件内容</figcaption></figure>
+    </div>
   </div>
 </section>
 <section id="workflow" class="workflow-section"><div class="container"><p class="eyebrow">一次委派的经过</p><div class="section-heading compact"><h2>从一句话，到拿回成果。</h2><a class="text-link" href="guide.html#first-task">发出第一条委派</a></div>

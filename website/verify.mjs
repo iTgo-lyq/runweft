@@ -27,7 +27,7 @@ const assertLayout = async (page, route, width) => {
 };
 
 const assertScreenshots = async page => {
-  const figures = page.locator('.session-shot');
+  const figures = page.locator('#session-screenshots.session-band .session-shot');
   assert.equal(await figures.count(), 2);
   for (const figure of await figures.all()) {
     await figure.scrollIntoViewIfNeeded();
@@ -36,9 +36,12 @@ const assertScreenshots = async page => {
     assert(await img.evaluate(image => image.complete && image.naturalWidth === 946 && image.naturalHeight === 2048));
     assert((await img.getAttribute('alt')).trim().length > 0);
     assert.equal(await figure.locator('a').getAttribute('href'), await img.getAttribute('src'));
-    const box = await img.boundingBox();
-    assert(box && box.width <= 320 && box.width > 0);
+    const box = await figure.locator('a').boundingBox();
+    assert(box && box.width <= 180 && box.width > 0 && box.height <= 250);
   }
+  const positions = await figures.evaluateAll(items => items.map(item => item.getBoundingClientRect().top));
+  assert(Math.abs(positions[0] - positions[1]) < 1, 'Session previews remain side by side');
+  assert.equal(await page.locator('.session-gallery-intro, .session-gallery-source').count(), 0);
 };
 
 try {

@@ -101,6 +101,6 @@ node website/verify.mjs --browser-only
 
 首页使用 HAPI 官网的会话与代码查看截图，来源为 [hapi.run](https://hapi.run/)；上游仓库许可证为 [AGPL-3.0](https://github.com/tiann/hapi/blob/main/LICENSE)。本地固定 HAPI 的 `website/public/images/app-chat-interface.png`、`app-code-view.png` 与线上同名文件已核对 SHA-256 一致。
 
-两个上游文件实际为 946×2048 WebP，本站保持字节不变，以 `assets/hapi-session.webp`、`assets/hapi-code.webp` 和正确 MIME 提供。图注与替代文本由 iclaude 编写，注明官方示意来源；不表示截图中的全部控件都是 Runweft 任务入口。
+两个上游文件实际为 946×2048 WebP，本站保持字节不变，以 `assets/hapi-session.webp`、`assets/hapi-code.webp` 和正确 MIME 提供。会话介绍、短图注与替代文本由 iclaude 编写。来源保存在本节开发记录，官网不显示来源与版本免责声明。
 
-两图桌面并排、窄屏单列，显示宽度上限 320px，懒加载并标注固有尺寸；无 JavaScript 时仍可用键盘打开原图。`publish.mjs` 只明确放行两张 WebP，更新图片须同步白名单、来源与浏览器验证。
+两图合并进 HAPI 会话介绍块，始终并排；800px 及以下文案在上、预览在下。预览最大 180×240px，窄屏等比例缩小，CSS 裁切突出主要内容；普通链接仍打开完整原图。懒加载并标注固有尺寸，无 JavaScript 时仍可用键盘打开原图。`publish.mjs` 只明确放行两张 WebP，更新图片须同步白名单、来源与浏览器验证。
