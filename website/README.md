@@ -51,7 +51,7 @@ Pages 项目默认 `runweft`；已有专用项目可在同一设置的 Variables
 
 上传前验证静态文件白名单、npm 元数据、五包latest已晋级到官网版本、完整性字段/精确平台依赖及公开tarball HEAD；此检查不代替各平台真实安装验收。npm 版本尚未公开时停止；发布完成后从最新 main 手动运行官网工作流。不要重跑旧生产提交。
 
-上传后仅使用 action 返回的唯一部署 URL，确认 preview/production 分类；在 HTTP 校验前保存已上传 URL 与环境回执，成功后更新 success。跟随同一项目域内的 HTML 规范化重定向，在约三分钟重试窗口内等待传播并核对全部八个文件的字节摘要与 MIME；单次网络请求最多三十秒。Access 保护、错误页面或版本不一致均失败。不使用Actions artifact；脱敏部署JSON、八文件摘要与部署URL保存在任务日志/summary，验收时按对应commit本地重建静态文件并核对。
+上传后仅使用 action 返回的唯一部署 URL，确认 preview/production 分类；在 HTTP 校验前保存已上传 URL 与环境回执，成功后更新 success。跟随同一项目域内的 HTML 规范化重定向，在约三分钟重试窗口内等待传播并核对全部十个文件的字节摘要与 MIME；单次网络请求最多三十秒。Access 保护、错误页面或版本不一致均失败。不使用Actions artifact；脱敏部署JSON、十文件摘要与部署URL保存在任务日志/summary，验收时按对应commit本地重建静态文件并核对。
 
 上传结果未知或在线检查失败时，先检查 Cloudflare 控制台和该唯一 URL，核对当前run日志中的摘要，避免盲目重发；修正后从最新提交运行。无需修改既有 npm 的标签发布规则。
 
@@ -59,7 +59,7 @@ Pages 项目默认 `runweft`；已有专用项目可在同一设置的 Variables
 
 将整个 `dist/website/` 目录部署到静态托管平台，例如 Cloudflare Pages。页面和资源使用相对路径，支持根路径或 `/runweft/` 等子路径，不需要 SPA fallback、Node 生产服务或 HAPI。
 
-HTML/CSS/JS 提供对应 MIME type 和 UTF-8，SVG 使用 image/svg+xml。版本须先在公共 npm 发布并验证可安装，再构建并部署网站；构建本身不检查 registry。域名、TLS、缓存和公开发布由实际托管环境配置。
+HTML/CSS/JS 提供对应 MIME type 和 UTF-8，SVG 使用 image/svg+xml，两张官方会话/代码截图使用 image/webp。版本须先在公共 npm 发布并验证可安装，再构建并部署网站；构建本身不检查 registry。域名、TLS、缓存和公开发布由实际托管环境配置。
 
 ## 自动验收
 
@@ -96,3 +96,11 @@ node website/verify.mjs --browser-only
 安装命令及 Skill 目录命令从实际页面 DOM 获取。安装使用独立 HOME、npm prefix/userconfig/globalconfig/cache，清除继承的 npm 配置与认证环境变量，PATH 仅含本次安装、Node/npm 和系统工具。失败 npm 夹具确认不继续运行旧程序；公共 registry 实际安装核对入口归属、版本和五个 Skill 文档。不改用户 MCP/Skill，不启动模型。该检查不代表 Mac/arm64 实机运行。
 
 本次服务和浏览器在结束时关闭；证据与截图、专用安装留在 `.dev-smoke/website-*/`，不提交。发行组装的根夹具同时验证 npm 元数据和旧下载目录拒绝，离线程序与 Git bundle 仍单独保留。
+
+## HAPI 官方截图
+
+首页使用 HAPI 官网的会话与代码查看截图，来源为 [hapi.run](https://hapi.run/)；上游仓库许可证为 [AGPL-3.0](https://github.com/tiann/hapi/blob/main/LICENSE)。本地固定 HAPI 的 `website/public/images/app-chat-interface.png`、`app-code-view.png` 与线上同名文件已核对 SHA-256 一致。
+
+两个上游文件实际为 946×2048 WebP，本站保持字节不变，以 `assets/hapi-session.webp`、`assets/hapi-code.webp` 和正确 MIME 提供。图注与替代文本由 iclaude 编写，注明官方示意来源；不表示截图中的全部控件都是 Runweft 任务入口。
+
+两图桌面并排、窄屏单列，显示宽度上限 320px，懒加载并标注固有尺寸；无 JavaScript 时仍可用键盘打开原图。`publish.mjs` 只明确放行两张 WebP，更新图片须同步白名单、来源与浏览器验证。

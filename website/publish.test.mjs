@@ -42,7 +42,7 @@ test('production/preview only for allowed branch push or manual; PR/tags/other r
 });
 
 test('real build has exactly static files and same npm version; no package archives', async () => {
-  assert.equal(site.files.length, 8);
+  assert.equal(site.files.length, 10);
   assert.equal(site.release.installation, 'npm');
   const bad = join(directory, 'package.tgz');
   await writeFile(bad, 'archive');
@@ -153,7 +153,7 @@ test('missing secrets explicitly skip preview, fail production, and never output
 const online = { url: 'https://abc.runweft-test.pages.dev/', subdomain: project.subdomain, mode: 'preview', pagesEnvironment: 'preview', site };
 async function serveFixture(url) {
   const name = new URL(url).pathname.slice(1);
-  const mime = name.endsWith('.html') ? 'text/html' : name.endsWith('.json') ? 'application/json' : name.endsWith('.svg') ? 'image/svg+xml' : name.endsWith('.css') ? 'text/css' : 'text/javascript';
+  const mime = name.endsWith('.html') ? 'text/html' : name.endsWith('.json') ? 'application/json' : name.endsWith('.webp') ? 'image/webp' : name.endsWith('.svg') ? 'image/svg+xml' : name.endsWith('.css') ? 'text/css' : 'text/javascript';
   const response = new Response(await readFile(join(directory, name)), { headers: { 'content-type': mime + '; charset=utf-8' } });
   Object.defineProperty(response, 'url', { value: url.replace(/\/index.html$/, '/').replace(/\.html$/, '') });
   return response;
@@ -163,8 +163,8 @@ test('unique deployment verifies all bytes and MIME after same-host HTML redirec
   let calls = 0, pauses = 0;
   const result = await verifyDeployment(online, { fetchImpl: async url => ++calls === 1 ? json({}, 503) : serveFixture(url), pause: async () => { pauses++; } });
   assert.equal(result.success, true);
-  assert.equal(result.files.length, 8);
-  assert.equal(calls, 9);
+  assert.equal(result.files.length, 10);
+  assert.equal(calls, 11);
   assert.equal(pauses, 1);
 });
 
@@ -177,7 +177,7 @@ test('first deployment can remain temporarily unreachable beyond one minute with
   }, pause: async () => { pauses++; } });
   assert.equal(result.success, true);
   assert.equal(pauses, 13);
-  assert.equal(calls, 21);
+  assert.equal(calls, 23);
 });
 
 test('verification failure retains uploaded URL/environment receipt without credentials', async () => {
@@ -210,7 +210,7 @@ test('wrong deployment, Access redirect, wrong MIME/content and propagation fail
   }
   await assert.rejects(verifyDeployment(online, { fetchImpl: async () => { const response = json({}); Object.defineProperty(response, 'url', { value: 'https://cloudflareaccess.com/login' }); return response; } }), /Access/);
   await assert.rejects(verifyDeployment(online, { fetchImpl: async () => json({}) }), /MIME/);
-  await assert.rejects(verifyDeployment(online, { fetchImpl: async () => new Response('wrong', { headers: { 'content-type': 'image/svg+xml' } }) }), /内容/);
+  await assert.rejects(verifyDeployment(online, { fetchImpl: async url => new Response('wrong', { headers: (await serveFixture(url)).headers }) }), /内容/);
   await assert.rejects(verifyDeployment(online, { fetchImpl: async () => json({}, 404), pause: async () => {}, attempts: 2 }), /HTTP 404/);
 });
 

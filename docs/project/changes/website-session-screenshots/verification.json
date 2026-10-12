@@ -1,0 +1,150 @@
+{
+  "version": "1.1.3",
+  "hapiRevision": "8f774b9413fd483bc163cc06425d7646f10a7c92",
+  "officialSources": [
+    {
+      "url": "https://hapi.run/images/app-chat-interface.png",
+      "status": 200,
+      "mime": "image/png",
+      "bytes": 72756,
+      "remoteSha256": "960fad5c099256392cf540623c58df81b78ee60762e45acb40166e3f644b80d3",
+      "localSha256": "960fad5c099256392cf540623c58df81b78ee60762e45acb40166e3f644b80d3",
+      "matches": true
+    },
+    {
+      "url": "https://hapi.run/images/app-code-view.png",
+      "status": 200,
+      "mime": "image/png",
+      "bytes": 113894,
+      "remoteSha256": "a0db1e9f1fb79d04668aeff99ec32d824a8c8dee265644fb41d07f2e1428a7ff",
+      "localSha256": "a0db1e9f1fb79d04668aeff99ec32d824a8c8dee265644fb41d07f2e1428a7ff",
+      "matches": true
+    }
+  ],
+  "authorship": {
+    "session": "4a845080-4234-42d0-852d-50d844d762cd",
+    "copySha256": "901b679bdfdbf680c808ad1d3f31d4ccfa51df3adf45984c49681d391035a039",
+    "exactCopy": true
+  },
+  "local": {
+    "publishTests": 15,
+    "websiteBuildTests": 1,
+    "scope": "browser",
+    "checks": [
+      "Static website has npm metadata and contains no downloads, archives or checksums",
+      "Local / remote diagram is interactive and explicitly illustrative",
+      "Agent prompt and npm commands copy correctly; clipboard denial selects the command with accessible feedback",
+      "Home, guide and manual have no page overflow at 1440 / 1280 / 1024 / 768 / 390 / 320px",
+      "Two HAPI screenshots decode at every viewport and retain original image links",
+      "Product definition and primary action are visible before scrolling on desktop and mobile",
+      "Home-to-guide path preserves the setup prompt and copies a separate first task",
+      "Mobile menu, Escape focus and guide client/runtime switches",
+      "Relative deployment: 27 local links and anchors",
+      "Both original WebP images open by keyboard without JavaScript",
+      "Reduced motion and the same npm installation / Skill location commands without JavaScript",
+      "A failed npm install stops the DOM command before running any existing Runweft",
+      "Public npm installation skipped explicitly; browser checks do not revalidate the released binaries",
+      "Preview root and method boundaries hold"
+    ],
+    "gallery": {
+      "success": true,
+      "views": [
+        {
+          "width": 1440,
+          "heroUnchanged": true,
+          "layout": "two columns"
+        },
+        {
+          "width": 1280,
+          "heroUnchanged": true,
+          "layout": "two columns"
+        },
+        {
+          "width": 1024,
+          "heroUnchanged": true,
+          "layout": "two columns"
+        },
+        {
+          "width": 768,
+          "heroUnchanged": true,
+          "layout": "two columns"
+        },
+        {
+          "width": 390,
+          "heroUnchanged": true,
+          "layout": "one column"
+        },
+        {
+          "width": 320,
+          "heroUnchanged": true,
+          "layout": "one column"
+        }
+      ]
+    },
+    "npmInstall": {
+      "skipped": true,
+      "reason": "--browser-only"
+    }
+  },
+  "static": {
+    "release": {
+      "version": "1.1.3",
+      "installation": "npm",
+      "package": "runweft",
+      "registry": "https://registry.npmjs.org/"
+    },
+    "files": [
+      {
+        "name": "assets/hapi-code.webp",
+        "bytes": 113894,
+        "sha256": "a0db1e9f1fb79d04668aeff99ec32d824a8c8dee265644fb41d07f2e1428a7ff"
+      },
+      {
+        "name": "assets/hapi-session.webp",
+        "bytes": 72756,
+        "sha256": "960fad5c099256392cf540623c58df81b78ee60762e45acb40166e3f644b80d3"
+      },
+      {
+        "name": "assets/icons.svg",
+        "bytes": 1598,
+        "sha256": "d708610fe6b75591b214722352dd8dc33671bab46d8f38c21cf154552f3762fa"
+      },
+      {
+        "name": "assets/mark.svg",
+        "bytes": 297,
+        "sha256": "af2367afb3fed6d7b5bb615cf508e4defcb300975f2e575f75db4e50cb2d4168"
+      },
+      {
+        "name": "assets/site.js",
+        "bytes": 4268,
+        "sha256": "ed35037638f804971bf2c292c2e446664936edcbb99c5489e0f6e961da83cebc"
+      },
+      {
+        "name": "assets/style.css",
+        "bytes": 31680,
+        "sha256": "1fbb3e4e6d1317bcc3db40517a8e398ff4e4093a3f46bd332f139d7287caac09"
+      },
+      {
+        "name": "guide.html",
+        "bytes": 22584,
+        "sha256": "d90a57b2df965fba2b488d860b1ae7395201b9dfb7df3e0a46c5fdc94d834f4f"
+      },
+      {
+        "name": "index.html",
+        "bytes": 24063,
+        "sha256": "eb02a122c3d27389af8383e6927f181da27241c88fca44fff26173cfc4bd635c"
+      },
+      {
+        "name": "manual.html",
+        "bytes": 25423,
+        "sha256": "341ba82c6e4268167759f9edadcdaeaa8a3f019f78b1d0ae708e7ce8a4d9efa4"
+      },
+      {
+        "name": "release.json",
+        "bytes": 119,
+        "sha256": "694c70c7de1100a2d306e04730b5686ce0ab9c2bcd8c50d4c4bde3defdc68c61"
+      }
+    ],
+    "bytes": 296682
+  }
+}

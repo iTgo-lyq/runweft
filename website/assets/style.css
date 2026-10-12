@@ -447,3 +447,17 @@ summary{cursor:pointer;list-style:none;position:relative;padding-right:35px!impo
 .no-script-installs{margin-top:24px}.no-script-installs>p{font-size:14px}.no-script-installs pre{overflow:auto}
 .terminal pre .conversation-copy{white-space:pre-wrap;overflow-wrap:anywhere;font-family:var(--body);font-size:16px;line-height:1.9}
 .onboarding-actions{margin-top:24px;align-items:center}
+
+.session-gallery{margin-top:36px}
+.session-gallery-intro{font-size:14px;margin-bottom:24px;max-width:800px}
+.session-shot-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:28px}
+.session-shot{min-width:0;padding:24px;background:var(--paper);border:1px solid #e7edf5;border-radius:12px}
+.session-shot-image{display:block;max-width:320px;margin:0 auto 24px;border:1px solid #dce6f1;border-radius:8px;background:white;overflow:hidden}
+.session-shot-image img{width:100%;height:auto}
+.session-shot-image span{display:block;padding:9px 16px;text-align:center;font-size:13px;color:var(--blue);border-top:1px solid #e7edf5}
+.session-shot-image:hover span{text-decoration:underline}
+.session-shot h3{font-size:18px;margin-bottom:10px}
+.session-shot figcaption p{font-size:14px;line-height:1.9}
+@media(max-width:700px){.session-shot-grid{grid-template-columns:1fr;gap:24px}.session-shot{padding:16px}.session-shot-image{margin-bottom:20px}}
+
+.session-gallery-source{margin-top:20px;font-size:13px}

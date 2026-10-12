@@ -9,6 +9,7 @@ const siteFiles = {
   'index.html': 'text/html', 'guide.html': 'text/html', 'manual.html': 'text/html',
   'release.json': 'application/json', 'assets/icons.svg': 'image/svg+xml',
   'assets/mark.svg': 'image/svg+xml', 'assets/style.css': 'text/css',
+  'assets/hapi-session.webp': 'image/webp', 'assets/hapi-code.webp': 'image/webp',
   'assets/site.js': ['text/javascript', 'application/javascript'],
 };
 const digest = bytes => createHash('sha256').update(bytes).digest('hex');

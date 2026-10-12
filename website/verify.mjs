@@ -26,6 +26,21 @@ const assertLayout = async (page, route, width) => {
   evidence.layouts.push({ route, width, ...layout });
 };
 
+const assertScreenshots = async page => {
+  const figures = page.locator('.session-shot');
+  assert.equal(await figures.count(), 2);
+  for (const figure of await figures.all()) {
+    await figure.scrollIntoViewIfNeeded();
+    const img = figure.locator('img');
+    await img.evaluate(image => image.decode());
+    assert(await img.evaluate(image => image.complete && image.naturalWidth === 946 && image.naturalHeight === 2048));
+    assert((await img.getAttribute('alt')).trim().length > 0);
+    assert.equal(await figure.locator('a').getAttribute('href'), await img.getAttribute('src'));
+    const box = await img.boundingBox();
+    assert(box && box.width <= 320 && box.width > 0);
+  }
+};
+
 try {
   const release = JSON.parse(await readFile(join(output, 'release.json'), 'utf8'));
   assert.deepEqual(release, { version: release.version, installation: 'npm', package: 'runweft', registry: 'https://registry.npmjs.org/' });
@@ -80,16 +95,17 @@ try {
 
   await page.locator('#faq details summary').first().click();
   assert(await page.locator('#faq details').first().evaluate(element => element.open));
-  for (const width of [1440, 1024, 768, 390, 320]) {
+  for (const width of [1440, 1280, 1024, 768, 390, 320]) {
     await page.setViewportSize({ width, height: 1000 });
     for (const route of ['', 'guide.html', 'manual.html']) {
       await page.goto(started.url + route);
       assert.equal(await page.locator('a[download],a[href*="downloads/"]').count(), 0);
       assert(!(await page.locator('body').textContent()).includes('尚未发布到公共 npm'));
+      if (!route) await assertScreenshots(page);
       await assertLayout(page, route || 'index.html', width);
     }
   }
-  check('Home, guide and manual have no page overflow at 1440 / 1024 / 768 / 390 / 320px');
+  check('Home, guide and manual have no page overflow at 1440 / 1280 / 1024 / 768 / 390 / 320px');
   for (const [width, height] of [[1280, 800], [390, 844]]) {
     await page.setViewportSize({ width, height }); await page.goto(started.url);
     for (const selector of ['.hero-description', '.hero-copy .hero-actions a:first-child']) {
@@ -97,6 +113,7 @@ try {
       assert(box && box.y >= 0 && box.y + box.height <= height, `First-visit content is below the initial viewport: ${selector} at ${width}`);
     }
   }
+  check('Two HAPI screenshots decode at every viewport and retain original image links');
   check('Product definition and primary action are visible before scrolling on desktop and mobile');
 
   await page.setViewportSize({ width: 390, height: 1000 });
@@ -146,6 +163,7 @@ try {
         assert(html.includes(`id="${decodeURIComponent(url.hash.slice(1))}"`), `Missing anchor: ${key}`);
       }
     }
+    if (!route) await assertScreenshots(page);
     await assertLayout(page, '/sub/' + route, 390);
   }
   check(`Relative deployment: ${checkedLinks.size} local links and anchors`);
@@ -155,6 +173,17 @@ try {
   const plain = await browser.newContext({ javaScriptEnabled: false, viewport: { width: 390, height: 1000 } });
   const plainPage = await plain.newPage(); await plainPage.goto(started.url);
   assert.equal(await plainPage.locator('#install-command').textContent(), expected);
+  await assertScreenshots(plainPage);
+  for (let index = 0; index < 2; index++) {
+    const link = plainPage.locator('.session-shot-image').nth(index);
+    const href = await link.getAttribute('href');
+    await link.focus(); await plainPage.keyboard.press('Enter');
+    await plainPage.waitForURL(new URL(href, started.url).href);
+    const response = await fetch(plainPage.url(), { method: 'HEAD' });
+    assert.equal(response.headers.get('content-type'), 'image/webp');
+    await plainPage.goBack();
+  }
+  check('Both original WebP images open by keyboard without JavaScript');
   await plainPage.locator('a[href="guide.html"]').first().click();
   assert.equal(await plainPage.locator('#guide-install-command').textContent(), expected);
   assert.equal(await plainPage.locator('#skill-path-command').textContent(), skillCommand);
