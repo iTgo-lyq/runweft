@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "id": "developer-docs",
+  "title": "收敛开发必读与打包发行文档",
+  "size": "small",
+  "status": "active",
+  "stage": "requirement",
+  "branch": "codex/redundancy-cleanup",
+  "confirmations": {},
+  "tasks": {
+    "T1": {
+      "title": "固定被移除文档的历史引用",
+      "status": "todo"
+    },
+    "T2": {
+      "title": "集中开发必读并精简文档职责",
+      "status": "todo"
+    }
+  },
+  "closure": {}
+}
