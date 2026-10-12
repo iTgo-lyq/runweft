@@ -85,3 +85,7 @@ npm latest 预计在第 23–25 分钟可用。若上传/传播缩至 4–6 分�
 2026-10-12 只读评审会话 `c99a8ada-26cd-4dee-a40b-46381445f685`，原始结果保存在 `.dev-smoke/release-throughput/iclaude-review.json`。主 agent 采纳：仅稳定版正式发布调整并行、保留预检/预发行四组、main dispatch 接续官网、元数据和文件共用重试截止时间、保留 beta job 名及增加脚本层 integration 断言、补齐 HAPI 子模块依赖、按单次实测保守估时。
 
 评审指出恢复时 main 可能修改 Hub schema；当前 prepare 已通过 assertFrozenCandidate 拒绝 packageInputs 与 tag 不同，保留该限制即可。磁盘清理与 Chromium 准备有潜在优化，但磁盘容量尚无新实测，不计入承诺收益。
+
+## 恢复基线核对
+
+2026-10-13 在独立 worktree 将分支 rebase 到 main e85ef3a，核对原分支 0e1fd6e 与重排后的 708c99b 文件树完全一致，保留完整 SpecTrail 归档与本 Change。原基线 1d06750 至 main 的发布/官网实现未变，仅普通 checks 工作流增加 SpecTrail 校验；原方案的实现依据仍有效，尚无新的性能样本。

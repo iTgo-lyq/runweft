@@ -4,13 +4,28 @@
   "title": "缩短正常发布与失败恢复时间",
   "size": "medium",
   "status": "active",
-  "stage": "requirement",
+  "stage": "technical",
   "branch": "codex/release-throughput",
-  "confirmations": {},
-  "tasks": {},
-  "waitingFor": {
-    "kind": "pause",
-    "summary": "用户于 2026-10-12 明确暂缓，原调研与方案草稿保留；仅收到明确恢复要求后继续，未形成或确认 Plan。"
+  "confirmations": {
+    "requirement": {
+      "at": "2026-10-12T17:38:12.692Z",
+      "summary": "在原完整提速范围及验收边界内恢复，保留不可变候选和所有门禁，实际性能留待授权发行测量",
+      "source": "用户 2026-10-13：建立独立 worktree 继续推进 codex/release-throughput；本分支 AGENTS.md 的既有工程决策与自动本地验收授权"
+    }
+  },
+  "tasks": {
+    "T1": {
+      "title": "公共候选读取可在总预算内恢复",
+      "status": "todo"
+    },
+    "T2": {
+      "title": "稳定候选并行验收且完整门禁后才晋级",
+      "status": "todo"
+    },
+    "T3": {
+      "title": "官网接续与发布证据自动收尾",
+      "status": "todo"
+    }
   },
   "closure": {}
 }
