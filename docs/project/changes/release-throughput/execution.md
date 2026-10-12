@@ -29,3 +29,9 @@
 只读访问既有 1.1.4 唯一 URL https://6c712b0f.runweft.pages.dev/ 和正式域名 https://runweft.pages.dev/，两处十文件 hash/MIME 均通过。新在线浏览器检查先暴露隐藏图片不应滚入视口，修正后桌面 1440px 三页通过；该次手机导航遇到代理 ERR_TUNNEL_CONNECTION_FAILED，诊断后仅续验 390px 三页，通过。证据保留在 `.dev-smoke/website-pages/deployment.json`、`browser.json` 和 `browser-390.json`，不将部分失败记录写成整组成功。未真实 dispatch、上传或新发版。
 
 独立 subagent 整体评审发现两项：T3 的历史官网 run 遗漏已补测试修正；T1/T2 的晋级默认读取器契约不匹配由追加 T4 处理，见 Review。未改写已提交任务记录。
+
+## T4 修正独立评审发现的公共读取契约
+
+晋级默认读取器直接使用 verifyPublicRelease 内部的精确版本 fetch，不把 signal 误传为 metadata 的版本。新增测试拦截真实默认 fetch，分别核对稳定/预发行的五个 URL、AbortSignal 及相应标签结果。HTTP 错误响应体取消失败时保留原状态，401/403 回归确认只请求一次、不重试。
+
+59 项发布/官网 Node 测试、typecheck、三份 workflow 的 actionlint、workflow 和 diff 检查通过。独立评审者复核全部修正并自行执行 9 项定向测试，均通过，未发现新增明确问题。根 260 项测试、build:hapi 及 T2 三组真实公共候选集成证据继续有效：产品输入、HAPI pin 未改变。新四平台 CI、真实 dispatch 及性能测量仍留待授权发行。

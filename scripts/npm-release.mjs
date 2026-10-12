@@ -150,7 +150,7 @@ export async function downloadRelease(release, directory, { read, request = fetc
 }
 
 export async function promoteRelease(release, { installationResult, betaResult, integrationResult, validationMode,
-    read = metadata, tags = distTags, setTag,
+    read, tags = distTags, setTag,
     pause = delay, timeoutMs = 3 * 60_000 }) {
     assert.equal(installationResult, 'success', 'All four native installation jobs must succeed before promotion');
     assert.equal(betaResult, 'success', 'Beta prepublication checks must succeed');

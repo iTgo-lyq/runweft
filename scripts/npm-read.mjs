@@ -52,7 +52,8 @@ export async function publicResponse(request, url, signal) {
     const response = await request(url, { redirect: 'error', headers: { 'cache-control': 'no-cache' }, signal });
     if (response.status !== 200) {
         const error = publicReadError(response.status, response.headers.get('retry-after'));
-        await response.body?.cancel();
+        // Cleanup must not replace a known HTTP failure with a retryable socket error.
+        try { await response.body?.cancel(); } catch { /* Preserve the HTTP status. */ }
         throw error;
     }
     return response;

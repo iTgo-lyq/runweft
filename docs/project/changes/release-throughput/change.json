@@ -44,7 +44,9 @@
     },
     "T4": {
       "title": "修正独立评审发现的公共读取契约",
-      "status": "todo"
+      "status": "done",
+      "verification": "59 项 Node、typecheck、actionlint、workflow/diff；独立评审复核原问题关闭并独立运行 9 项测试通过，真实新流水线待授权发行",
+      "commitTitle": "release-throughput T4: fix promotion reader and preserve fatal HTTP errors"
     }
   },
   "closure": {}

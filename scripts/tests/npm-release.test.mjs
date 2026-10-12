@@ -8,6 +8,7 @@ import { join, resolve } from 'node:path';
 import { parse } from 'yaml';
 import { assertDescriptor, downloadJobLog, downloadRelease, promoteRelease, previousRunLog, readReleaseLog, recoveryMode, releaseChecks, unpackRelease, verifyPublicRelease } from '../npm-release.mjs';
 import { npmPublishArgs, packageNames, publishCandidate, registry } from '../npm-publish.mjs';
+import { publicReadBudget, publicResponse } from '../npm-read.mjs';
 
 const bytes = Buffer.from('public tarball fixture');
 const hash = createHash('sha512').update(bytes).digest('base64');
@@ -177,6 +178,36 @@ test('promotion checks every integrity before writes and advances main last', as
         { ...publicManifest(entry), dist: { integrity: 'wrong' } } : publicManifest(entry) });
     await assert.rejects(promoteRelease(release, bad), /published version differs/);
     assert.deepEqual(bad.updates, []);
+});
+
+test('default promotion reader requests exact versions with a bounded signal for stable and prerelease', async t => {
+    for (const version of ['1.2.0', '1.2.0-beta.1']) {
+        const release = descriptor(version), urls = [];
+        t.mock.method(globalThis, 'fetch', async (url, options) => {
+            urls.push(String(url));
+            assert.equal(options.redirect, 'error'); assert(options.signal instanceof AbortSignal);
+            const entry = release.packages.find(entry => String(url) === registry + entry.name + '/' + version);
+            assert(entry, 'Incorrect exact-version URL: ' + url);
+            return Response.json(publicManifest(entry));
+        });
+        const options = promotionOptions(release, { read: undefined });
+        const result = await promoteRelease(release, options);
+        assert.equal(result.success, true); assert.equal(urls.length, 5);
+        assert.equal(options.updates.length, version.includes('-beta.') ? 0 : 5);
+        t.mock.restoreAll();
+    }
+});
+
+test('response cleanup errors cannot turn authorization failures into retried network failures', async () => {
+    for (const status of [401, 403]) {
+        let requests = 0, retries = 0;
+        const read = publicReadBudget({ pause: async () => { retries++; } });
+        await assert.rejects(read('metadata', signal => publicResponse(async () => {
+            requests++;
+            return new Response(new ReadableStream({ cancel() { throw Object.assign(new Error('socket closed'), { code: 'ECONNRESET' }); } }), { status });
+        }, registry + 'runweft/1.2.0', signal)), new RegExp('HTTP ' + status));
+        assert.equal(requests, 1); assert.equal(retries, 0);
+    }
 });
 
 test('partial promotion resumes original packages and checks outside tag changes before mutations', async () => {
