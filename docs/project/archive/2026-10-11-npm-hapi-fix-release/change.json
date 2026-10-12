@@ -1,0 +1,82 @@
+{
+  "schemaVersion": 1,
+  "id": "npm-hapi-fix-release",
+  "title": "HAPI 修复与 macOS 数据库校验正式发布",
+  "size": "medium",
+  "status": "completed",
+  "stage": "close",
+  "branch": "codex/spec-trail-adoption",
+  "confirmations": {
+    "requirement": {
+      "at": "2026-10-12T14:13:00.884Z",
+      "summary": "原 requirement.md 已完成，沿用原持续授权和评审结论。本次历史勘误登记；at 为回填时间，原事件准确时间未补造。",
+      "source": "https://github.com/iTgo-lyq/runweft/tree/433f81ffa9632ac125fbce98ab23c9b48dccb1a0/docs/project/archive/2026-10-11-npm-hapi-fix-release/requirement.md"
+    },
+    "technical": {
+      "at": "2026-10-12T14:13:00.884Z",
+      "summary": "原 technical.md 已完成，沿用原持续授权和评审结论。本次历史勘误登记；at 为回填时间，原事件准确时间未补造。",
+      "source": "https://github.com/iTgo-lyq/runweft/tree/433f81ffa9632ac125fbce98ab23c9b48dccb1a0/docs/project/archive/2026-10-11-npm-hapi-fix-release/technical.md"
+    },
+    "plan": {
+      "at": "2026-10-12T14:13:00.884Z",
+      "summary": "原 plan.md 已完成，沿用原持续授权和评审结论。本次历史勘误登记；at 为回填时间，原事件准确时间未补造。",
+      "source": "https://github.com/iTgo-lyq/runweft/tree/433f81ffa9632ac125fbce98ab23c9b48dccb1a0/docs/project/archive/2026-10-11-npm-hapi-fix-release/plan.md"
+    }
+  },
+  "tasks": {
+    "T1": {
+      "title": "准备版本输入并推送 HAPI",
+      "status": "done",
+      "verification": "历史交付证据见 execution.md 及原文 https://github.com/iTgo-lyq/runweft/tree/433f81ffa9632ac125fbce98ab23c9b48dccb1a0/docs/project/archive/2026-10-11-npm-hapi-fix-release/execution.md；本次只迁移记录，未重跑当时产品验收。"
+    },
+    "T2": {
+      "title": "可信发布及匿名安装",
+      "status": "done",
+      "verification": "历史交付证据见 execution.md 及原文 https://github.com/iTgo-lyq/runweft/tree/433f81ffa9632ac125fbce98ab23c9b48dccb1a0/docs/project/archive/2026-10-11-npm-hapi-fix-release/execution.md；本次只迁移记录，未重跑当时产品验收。"
+    },
+    "T3": {
+      "title": "推送 Runweft main 与官网验收",
+      "status": "done",
+      "verification": "历史交付证据见 execution.md 及原文 https://github.com/iTgo-lyq/runweft/tree/433f81ffa9632ac125fbce98ab23c9b48dccb1a0/docs/project/archive/2026-10-11-npm-hapi-fix-release/execution.md；本次只迁移记录，未重跑当时产品验收。"
+    },
+    "T4": {
+      "title": "同步 Specs 并归档",
+      "status": "done",
+      "verification": "历史交付证据见 execution.md 及原文 https://github.com/iTgo-lyq/runweft/tree/433f81ffa9632ac125fbce98ab23c9b48dccb1a0/docs/project/archive/2026-10-11-npm-hapi-fix-release/execution.md；本次只迁移记录，未重跑当时产品验收。"
+    },
+    "T5": {
+      "title": "改造beta验收及latest晋级",
+      "status": "done",
+      "verification": "历史交付证据见 execution.md 及原文 https://github.com/iTgo-lyq/runweft/tree/433f81ffa9632ac125fbce98ab23c9b48dccb1a0/docs/project/archive/2026-10-11-npm-hapi-fix-release/execution.md；本次只迁移记录，未重跑当时产品验收。"
+    },
+    "T6": {
+      "title": "修复原生macOS数据库校验并准备新补丁",
+      "status": "done",
+      "verification": "历史交付证据见 execution.md 及原文 https://github.com/iTgo-lyq/runweft/tree/433f81ffa9632ac125fbce98ab23c9b48dccb1a0/docs/project/archive/2026-10-11-npm-hapi-fix-release/execution.md；本次只迁移记录，未重跑当时产品验收。"
+    }
+  },
+  "closure": {
+    "verification": {
+      "result": "passed",
+      "at": "2026-10-12T14:13:00.884Z",
+      "summary": "依据原 acceptance.md 和 execution.md 的实际验证与 iclaude 评审记录；所有未测、延期和条件限制沿原文保留。本次历史勘误登记；at 为回填时间，原事件准确时间未补造。"
+    },
+    "acceptance": {
+      "result": "accepted",
+      "at": "2026-10-12T14:13:00.884Z",
+      "summary": "依据原归档的验收结论及用户授权的 Agent 自动验收；本次不代表用户重新验收或新增实测。本次历史勘误登记；at 为回填时间，原事件准确时间未补造。",
+      "source": "https://github.com/iTgo-lyq/runweft/tree/433f81ffa9632ac125fbce98ab23c9b48dccb1a0/docs/project/archive/2026-10-11-npm-hapi-fix-release/acceptance.md"
+    },
+    "specs": {
+      "result": "synced",
+      "at": "2026-10-12T14:13:00.884Z",
+      "summary": "原归档已同步的事实沿原文与 Specs 保留；本次历史迁移不改变产品行为。本次历史勘误登记；at 为回填时间，原事件准确时间未补造。"
+    },
+    "archive": {
+      "result": "done",
+      "at": "2026-10-12T14:13:00.884Z",
+      "summary": "保留原归档目录；原来源提交 433f81ffa9632ac125fbce98ab23c9b48dccb1a0，提交时间 2026-10-11T23:42:54+08:00。本次历史勘误登记；at 为回填时间，原事件准确时间未补造。",
+      "path": "docs/project/archive/2026-10-11-npm-hapi-fix-release"
+    }
+  }
+}

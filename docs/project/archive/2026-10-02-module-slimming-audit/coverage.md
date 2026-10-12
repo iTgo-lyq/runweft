@@ -299,7 +299,7 @@
 
 - `test/agent-targets.test.ts`（审计基线文件，现已退役）
 - `test/agents.test.ts`（审计基线文件，现已退役）
-- [test/resource-commands.test.ts](../../../../test/resource-commands.test.ts)
+- [test/resource-commands.test.ts](https://github.com/iTgo-lyq/runweft/blob/4d9c08c3b0dc672096baa7e8db4ad44155db877d/test/resource-commands.test.ts)
 - `test/resources.test.ts`（审计基线文件，现已退役）
 
 ### T03 任务与轮次家族测试
@@ -345,7 +345,7 @@
 
 ### T07 构建发行与官网根测试
 
-- [test/npm-publish.test.js](../../../../test/npm-publish.test.js)
+- [test/npm-publish.test.js](https://github.com/iTgo-lyq/runweft/blob/fe6017e531f06c0c01980d362b8b5b32bc6fde71/test/npm-publish.test.js)
 - [test/release-assembly.test.ts](../../../../test/release-assembly.test.ts)
 - [test/release-inputs.test.ts](../../../../test/release-inputs.test.ts)
 - [test/website-build.test.ts](../../../../test/website-build.test.ts)
@@ -370,14 +370,14 @@
 - [scripts/smoke-hub-configuration.ts](../../../../scripts/smoke-hub-configuration.ts)
 - [scripts/smoke-hub-connect.ts](../../../../scripts/smoke-hub-connect.ts)
 - [scripts/smoke-hub-console.ts](../../../../scripts/smoke-hub-console.ts)
-- [scripts/smoke-hub-consumers.ts](../../../../scripts/smoke-hub-consumers.ts)
+- [scripts/smoke-hub-consumers.ts](https://github.com/iTgo-lyq/runweft/blob/431d2e9ad16a1b7c9368bb03da0647b960a4888b/scripts/smoke-hub-consumers.ts)
 - [scripts/smoke-hub-delegation-native.ts](../../../../scripts/smoke-hub-delegation-native.ts)
 - [scripts/smoke-hub-delegation-preparation.ts](../../../../scripts/smoke-hub-delegation-preparation.ts)
-- [scripts/smoke-hub-native-mcp.ts](../../../../scripts/smoke-hub-native-mcp.ts)
+- [scripts/smoke-hub-native-mcp.ts](https://github.com/iTgo-lyq/runweft/blob/431d2e9ad16a1b7c9368bb03da0647b960a4888b/scripts/smoke-hub-native-mcp.ts)
 - [scripts/smoke-hub-realtime.ts](../../../../scripts/smoke-hub-realtime.ts)
 - [scripts/smoke-hub-resources.ts](../../../../scripts/smoke-hub-resources.ts)
 - [scripts/smoke-hub-service.ts](../../../../scripts/smoke-hub-service.ts)
-- [scripts/smoke-hub-upgrade.mjs](../../../../scripts/smoke-hub-upgrade.mjs)
+- [scripts/smoke-hub-upgrade.mjs](https://github.com/iTgo-lyq/runweft/blob/7eaa27efc0a4a239c96ea07c9774353145b23e89/scripts/smoke-hub-upgrade.mjs)
 - [scripts/smoke-hub.ts](../../../../scripts/smoke-hub.ts)
 
 ### V02 直接 HAPI 能力及文件/Git 验收
@@ -390,37 +390,37 @@
 - [scripts/smoke-repository-export.ts](../../../../scripts/smoke-repository-export.ts)
 - [scripts/smoke-repository-import.ts](../../../../scripts/smoke-repository-import.ts)
 - [scripts/smoke-result-export.ts](../../../../scripts/smoke-result-export.ts)
-- [scripts/smoke-workspaces.ts](../../../../scripts/smoke-workspaces.ts)
-- [scripts/smoke-worktree-lifecycle.ts](../../../../scripts/smoke-worktree-lifecycle.ts)
+- [scripts/smoke-workspaces.ts](https://github.com/iTgo-lyq/runweft/blob/431d2e9ad16a1b7c9368bb03da0647b960a4888b/scripts/smoke-workspaces.ts)
+- [scripts/smoke-worktree-lifecycle.ts](https://github.com/iTgo-lyq/runweft/blob/431d2e9ad16a1b7c9368bb03da0647b960a4888b/scripts/smoke-worktree-lifecycle.ts)
 
 ### V03 旧业务 smoke 与附属探针
 
 - `scripts/dashboard-browser.ts`（审计基线文件，现已退役）
 - [scripts/remote-task-probe.ts](../../../../scripts/remote-task-probe.ts)
-- [scripts/smoke-agents.ts](../../../../scripts/smoke-agents.ts)
-- [scripts/smoke-artifact-mcp.ts](../../../../scripts/smoke-artifact-mcp.ts)
+- [scripts/smoke-agents.ts](https://github.com/iTgo-lyq/runweft/blob/b3287e7b066dc7410d1dc392a4b4a0563a54438a/scripts/smoke-agents.ts)
+- [scripts/smoke-artifact-mcp.ts](https://github.com/iTgo-lyq/runweft/blob/431d2e9ad16a1b7c9368bb03da0647b960a4888b/scripts/smoke-artifact-mcp.ts)
 - [scripts/smoke-collaboration.ts](../../../../scripts/smoke-collaboration.ts)
-- [scripts/smoke-dashboard.ts](../../../../scripts/smoke-dashboard.ts)
-- [scripts/smoke-mcp.ts](../../../../scripts/smoke-mcp.ts)
+- [scripts/smoke-dashboard.ts](https://github.com/iTgo-lyq/runweft/blob/a9434db4cc0ee6b7c519405af697883a882634f4/scripts/smoke-dashboard.ts)
+- [scripts/smoke-mcp.ts](https://github.com/iTgo-lyq/runweft/blob/431d2e9ad16a1b7c9368bb03da0647b960a4888b/scripts/smoke-mcp.ts)
 - [scripts/smoke-reconstruction.ts](../../../../scripts/smoke-reconstruction.ts)
-- [scripts/smoke-remote-native.ts](../../../../scripts/smoke-remote-native.ts)
-- [scripts/smoke-resources.ts](../../../../scripts/smoke-resources.ts)
-- [scripts/smoke-result-retention.ts](../../../../scripts/smoke-result-retention.ts)
+- [scripts/smoke-remote-native.ts](https://github.com/iTgo-lyq/runweft/blob/431d2e9ad16a1b7c9368bb03da0647b960a4888b/scripts/smoke-remote-native.ts)
+- [scripts/smoke-resources.ts](https://github.com/iTgo-lyq/runweft/blob/b3287e7b066dc7410d1dc392a4b4a0563a54438a/scripts/smoke-resources.ts)
+- [scripts/smoke-result-retention.ts](https://github.com/iTgo-lyq/runweft/blob/7eaa27efc0a4a239c96ea07c9774353145b23e89/scripts/smoke-result-retention.ts)
 - [scripts/smoke-task-controls.ts](../../../../scripts/smoke-task-controls.ts)
-- [scripts/smoke-task-inputs.ts](../../../../scripts/smoke-task-inputs.ts)
-- [scripts/smoke-task-mcp.ts](../../../../scripts/smoke-task-mcp.ts)
-- [scripts/smoke-task-outputs.ts](../../../../scripts/smoke-task-outputs.ts)
-- [scripts/smoke-task-retention.ts](../../../../scripts/smoke-task-retention.ts)
-- [scripts/smoke-tasks.ts](../../../../scripts/smoke-tasks.ts)
+- [scripts/smoke-task-inputs.ts](https://github.com/iTgo-lyq/runweft/blob/431d2e9ad16a1b7c9368bb03da0647b960a4888b/scripts/smoke-task-inputs.ts)
+- [scripts/smoke-task-mcp.ts](https://github.com/iTgo-lyq/runweft/blob/431d2e9ad16a1b7c9368bb03da0647b960a4888b/scripts/smoke-task-mcp.ts)
+- [scripts/smoke-task-outputs.ts](https://github.com/iTgo-lyq/runweft/blob/c649d5400955946189609727280c91b1095e0aa7/scripts/smoke-task-outputs.ts)
+- [scripts/smoke-task-retention.ts](https://github.com/iTgo-lyq/runweft/blob/7eaa27efc0a4a239c96ea07c9774353145b23e89/scripts/smoke-task-retention.ts)
+- [scripts/smoke-tasks.ts](https://github.com/iTgo-lyq/runweft/blob/431d2e9ad16a1b7c9368bb03da0647b960a4888b/scripts/smoke-tasks.ts)
 - `scripts/smoke-upgrade.ts`（审计基线文件，现已退役）
 - [scripts/smoke-workspace-preparation.ts](../../../../scripts/smoke-workspace-preparation.ts)
-- [scripts/smoke-worktree-tasks.ts](../../../../scripts/smoke-worktree-tasks.ts)
+- [scripts/smoke-worktree-tasks.ts](https://github.com/iTgo-lyq/runweft/blob/431d2e9ad16a1b7c9368bb03da0647b960a4888b/scripts/smoke-worktree-tasks.ts)
 - [scripts/task-results-probe.ts](../../../../scripts/task-results-probe.ts)
 
 ### V04 安装与平台包验收
 
 - [scripts/smoke-arm64.mjs](../../../../scripts/smoke-arm64.mjs)
-- [scripts/smoke-artifact-package.mjs](../../../../scripts/smoke-artifact-package.mjs)
+- [scripts/smoke-artifact-package.mjs](https://github.com/iTgo-lyq/runweft/blob/431d2e9ad16a1b7c9368bb03da0647b960a4888b/scripts/smoke-artifact-package.mjs)
 - [scripts/smoke-install.mjs](../../../../scripts/smoke-install.mjs)
 - [scripts/smoke-mcp-install.mjs](../../../../scripts/smoke-mcp-install.mjs)
 - [scripts/smoke-remote-package.ts](../../../../scripts/smoke-remote-package.ts)
@@ -545,9 +545,9 @@
 - [scripts/fixtures/non-git-smoke-project.ts](../../../../scripts/fixtures/non-git-smoke-project.ts)
 - [scripts/fixtures/service-version-probe.mjs](../../../../scripts/fixtures/service-version-probe.mjs)
 - [scripts/fixtures/smoke-lifecycle.ts](../../../../scripts/fixtures/smoke-lifecycle.ts)
-- [scripts/fixtures/task-capture-receipt.ts](../../../../scripts/fixtures/task-capture-receipt.ts)
+- [scripts/fixtures/task-capture-receipt.ts](https://github.com/iTgo-lyq/runweft/blob/431d2e9ad16a1b7c9368bb03da0647b960a4888b/scripts/fixtures/task-capture-receipt.ts)
 - [scripts/fixtures/task-smoke.ts](../../../../scripts/fixtures/task-smoke.ts)
-- [scripts/fixtures/worktree-task-smoke.ts](../../../../scripts/fixtures/worktree-task-smoke.ts)
+- [scripts/fixtures/worktree-task-smoke.ts](https://github.com/iTgo-lyq/runweft/blob/431d2e9ad16a1b7c9368bb03da0647b960a4888b/scripts/fixtures/worktree-task-smoke.ts)
 - [scripts/smoke-mcp-install.d.mts](../../../../scripts/smoke-mcp-install.d.mts)
 
 ### R01 Bun测试清理入口

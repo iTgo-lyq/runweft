@@ -1,6 +1,5 @@
 # 身份 token 与空间技术方案
 
-> 状态：已确认
 > 更新：2026-09-30
 > 来源：[需求](requirement.md)。主 agent 按已有授权决定工程细节；实现前执行 iclaude Plan 评审。
 

@@ -36,7 +36,7 @@
 - 计划调整：原 T4 分成配置/文档交付与 T5 实际平台验收。CI 需要先取得提交后的代码，当前提交不表示 macOS 已验证成功；运行证据由 T5 收回。
 - Commit：`unified-cli-and-deployment T4: add platform acceptance CI and operations guide`
 
-## T4.1 公开依赖源修正
+## T6 公开依赖源修正
 
 - 证据：首次 [CI 36478758984](https://github.com/iTgo-lyq/runweft/actions/runs/36478758984) 在根依赖安装时失败；锁文件包含本机内部镜像 URL，GitHub Runner 无法解析。尚未进入平台验收，不计为通过。
 - 结果：项目显式使用公开 npm，锁文件只更换镜像前缀，包版本和 integrity 保持不变；不修改用户全局 npm 配置。

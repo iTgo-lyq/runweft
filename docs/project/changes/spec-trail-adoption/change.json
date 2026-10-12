@@ -4,7 +4,7 @@
   "title": "SpecTrail 工作流、历史 Change 与交互原型接入",
   "size": "large",
   "status": "active",
-  "stage": "plan",
+  "stage": "execution",
   "branch": "codex/spec-trail-adoption",
   "confirmations": {
     "requirement": {
@@ -16,8 +16,32 @@
       "at": "2026-10-12T13:55:11.842Z",
       "summary": "主 agent 按持续授权确定固定上游分发、证据迁移、独立原型与 R2 固定版本方案；Plan 由 iclaude 一次评审后执行。",
       "source": "AGENTS.md：方案/Plan 工程决策与自动验收授权"
+    },
+    "plan": {
+      "at": "2026-10-12T14:09:22.034Z",
+      "summary": "主 agent 按既有工程决策授权复核 Plan；iclaude 服务不可用后用户明确允许独立 subagent，已采纳 R1–R3。",
+      "source": "AGENTS.md 持续授权；当前会话允许本次改用独立 subagent；review.md"
     }
   },
-  "tasks": {},
+  "tasks": {
+    "T1": {
+      "title": "工作流替换与历史状态迁移",
+      "status": "done",
+      "verification": "39归档/163任务及暂停项迁移；全库41项契约/标题/DAG/路径通过；上游10测试、实际hook正反提交、证据字符串与47处链接核验、CI scope 2测试通过。",
+      "commitTitle": "spec-trail-adoption T1: migrate workflow and historical Changes"
+    },
+    "T2": {
+      "title": "独立 Hub 交互原型",
+      "status": "todo"
+    },
+    "T3": {
+      "title": "固定版本发布与工作台引用",
+      "status": "todo"
+    },
+    "T4": {
+      "title": "整体验收与规划分支整理",
+      "status": "todo"
+    }
+  },
   "closure": {}
 }

@@ -6,11 +6,13 @@
 
 历史迁移是用户授权的一次性勘误，不构建产品迁移框架。迁移脚本与逐项证据留在本 Change 的 research/迁移记录；临时执行器放 `.dev-smoke/`。从原 Plan 读取任务定义与完成状态，从原归档提交固定内容和证据。JSON 摘要注明回填依据，记录可追溯的 Git 提交时间，不冒充当时测试/确认的准确发生时间。无法确定的确认不虚构。保留现有规模，缺失的 large Review 仅汇集当时评审来源及本次迁移复核，不声称补做了产品验收。
 
-保留合法任务编号；T4b、T4.1 等映射到未占用的正整数编号，同步该 Change 的引用，并在 Plan 唯一执行顺序表保存原交付顺序。Markdown 移除流程状态字段和勾选标记，保留验收标准与结论正文。用户已搁置的 release-throughput 保留 active 和 waitingFor.pause；在专属 codex/release-throughput 分支保存后，从交付分支移除，避免将未归档 Change 带入主干。
+保留合法任务编号；T4b、T4.1 等映射到未占用的正整数编号，更新任务标题和 Plan 的任务指代，在唯一执行顺序表保存原依赖。原始提交标题、日志路径、命令、代码块和引用原文保留，通过编号映射关联，不全局替换证据字符串。Markdown 移除流程状态字段和勾选标记，保留验收标准与结论正文。
+
+跨 Change 依赖核对原 Requirement、architecture/delivery，仅将明确前置写入 dependsOn，组合、下游、普通引用不自动成为依赖；验证目标存在、无自依赖、无环和归档路径一致。用户已搁置的 release-throughput 保留 active 和 waitingFor.pause；在专属 codex/release-throughput 分支保存后，从交付分支移除，避免将未归档 Change 带入主干。
 
 ## 独立原型
 
-HAPI 已提供真实会话、审批和文件 UI；此次仅提取 Runweft 自有 Hub 页面，不复制 HAPI 执行或原生 UI。已有页面主体、样式和组件以当前提交为基线复制到私有原型包。宿主负责路由、内存 mock、示例场景和就绪桥接，构建不能导入 Runweft 后端或访问运行中的 Hub。身份入口只接受显式示例 token，原生会话入口显示示例说明。
+HAPI 已提供真实会话、审批和文件 UI；此次仅提取 Runweft 自有 Hub 页面，不复制 HAPI 执行或原生 UI。已有页面主体、样式和组件以当前提交为基线复制到私有原型包。宿主负责路由、内存 mock、示例场景和就绪桥接，构建不能导入 Runweft 后端或访问运行中的 Hub。createResource 等辅助函数一并替换为内存行为，在不透明 iframe 实际创建 Agent 和仓库。身份入口只接受显式示例 token，原生会话入口显示示例说明。
 
 每个原型入口输出自包含 HTML，CSS/JS 全部内联，hash 保留导航，适配不透明 iframe；不访问存储、真实接口或外部资源。DESIGN.md 从当前 Hub 色彩、字体、布局、断点和状态抽取，不引入新设计系统。构建使用现有 Bun，原型包单独声明发布依赖，避免影响 Runweft 运行产物。
 

@@ -1,7 +1,6 @@
 # 全局 Subagent 看板技术方案
 
 > 来源：[Requirement](requirement.md)、[Research](research.md)
-> 状态：已确认
 > 更新：2026-09-30
 > 确认依据：用户持续授权自主技术细化、一次 iclaude Plan 评审和本地验收；沿已有只读总览、HAPI 优先与单 CLI 决策。
 

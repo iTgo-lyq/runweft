@@ -1,6 +1,5 @@
 # 统一 CLI 与部署
 
-> 状态：草稿
 > 来源：[本 Change 需求](requirement.md)、[跨 Change 架构](../../architecture.md)
 > 按用户要求保留需求阶段的方案讨论；本文件不是已确认 Technical，也不代表已实现。
 

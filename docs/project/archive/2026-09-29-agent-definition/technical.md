@@ -1,7 +1,6 @@
 # 轻量 Agent 定义技术方案
 
 > 来源：[Requirement](requirement.md)、[Research](research.md)
-> 状态：已确认
 > 更新：2026-09-29
 > 确认方式：用户授权自主落实细节；一次 iclaude Plan 评审后实施，主 agent 独立采纳。
 

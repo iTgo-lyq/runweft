@@ -1,7 +1,5 @@
 # 本地共享目录的完整委派协作
 
-> 状态：已完成
-> 规模：大型
 > 更新：2026-09-29
 > 确认依据：只允许一层委派；任务结束关闭子执行进程，后续优先续接 session，缺失时构造历史；不要求主宿主关闭后恢复；HAPI 能力优先复用。细节按用户逐 Change 自主推进授权收敛，Plan 经一次 iclaude 评审后执行。
 
@@ -21,7 +19,7 @@
 | 前置 | [Agent 定义](../2026-09-29-agent-definition/requirement.md) | 职责、指令与 HAPI 目标可解析；发现工具由本 Change 注册 |
 | 前置 | [全局资源注册](../2026-09-29-execution-resource-registry/requirement.md) | runtime 引用解析到机器；启动前重新核对目标，不混淆业务 agent 和执行资源 |
 | 下游 | [本地独立工作区](../2026-09-29-local-workspace-execution/requirement.md) | 消费协作工具和准备/收尾条件，增加独立模式 |
-| 下游集成 | [远端代码回收](../../changes/remote-result-delivery/requirement.md) | 消费 delegation/round 关联，向调度方报告成果封存和交付；不是本 Change 的反向前置 |
+| 下游集成 | [远端代码回收](../2026-09-30-remote-result-delivery/requirement.md) | 消费 delegation/round 关联，向调度方报告成果封存和交付；不是本 Change 的反向前置 |
 
 ## 独立验收与交付边界
 
@@ -63,17 +61,17 @@
 
 ## 验收标准
 
-- [x] Agent 定义的非空 model 与 reasoningEffort 在 Codex / Claude 两种 flavor 下通过真实启动验证；定义 Change 的参数映射检查不代替实际模型支持证据。
+- Agent 定义的非空 model 与 reasoningEffort 在 Codex / Claude 两种 flavor 下通过真实启动验证；定义 Change 的参数映射检查不代替实际模型支持证据。
 
-- [x] 两种宿主与两种 runtime 的本地共享协作实际通过；CLI/MCP 派生、等待、追加和中断均能关联正确父任务、轮次与原生执行。
-- [x] 同一 cwd 的非 Git 任务也可运行，不程序化提交或清理主工作区，共享写入由主 agent 安排。
-- [x] 活跃宿主的一次工具连接中断不会重复执行已接受任务；不以主宿主重启恢复作为验收条件。
-- [x] 活跃轮次的 steer 与下一轮排队可区分；中断不会命中后续轮次。
-- [x] 同一 delegation 续接绑定原环境；准备/收尾条件未知或失败时不放行受影响轮次，真实 Git 收尾由后续工作区 Change 验收。
-- [x] 查询契约分开表达执行和交付状态，后续交付失败不触发重新执行；实际上传重试由交付提供方验收。
-- [x] 纯报告任务能完成协作，不依赖代码 bundle 或 PR。
-- [x] 受控子执行没有 Runweft MCP 工具，在 shell 中调用 Runweft CLI 派生入口也被拒绝；报告通过 HAPI 原生输出收回，内置 subagent 能力不受 Runweft 限制。
-- [x] 本轮结束关闭子进程；下一轮优先原生 resume，确认缺失才构造历史，且不重放旧工具副作用。
+- 两种宿主与两种 runtime 的本地共享协作实际通过；CLI/MCP 派生、等待、追加和中断均能关联正确父任务、轮次与原生执行。
+- 同一 cwd 的非 Git 任务也可运行，不程序化提交或清理主工作区，共享写入由主 agent 安排。
+- 活跃宿主的一次工具连接中断不会重复执行已接受任务；不以主宿主重启恢复作为验收条件。
+- 活跃轮次的 steer 与下一轮排队可区分；中断不会命中后续轮次。
+- 同一 delegation 续接绑定原环境；准备/收尾条件未知或失败时不放行受影响轮次，真实 Git 收尾由后续工作区 Change 验收。
+- 查询契约分开表达执行和交付状态，后续交付失败不触发重新执行；实际上传重试由交付提供方验收。
+- 纯报告任务能完成协作，不依赖代码 bundle 或 PR。
+- 受控子执行没有 Runweft MCP 工具，在 shell 中调用 Runweft CLI 派生入口也被拒绝；报告通过 HAPI 原生输出收回，内置 subagent 能力不受 Runweft 限制。
+- 本轮结束关闭子进程；下一轮优先原生 resume，确认缺失才构造历史，且不重放旧工具副作用。
 
 逐项证据与验证范围见[验收映射](acceptance.md)。
 

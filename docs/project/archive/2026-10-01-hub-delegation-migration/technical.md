@@ -1,6 +1,5 @@
 # Hub 委派接入与配置切换技术方案
 
-> 状态：已确认
 > 来源：[Requirement](requirement.md)、[Research](research.md)
 > 更新：2026-10-01。工程细节按既有授权制定；实施前由 iclaude 评审 Plan。
 

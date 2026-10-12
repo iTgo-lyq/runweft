@@ -62,7 +62,7 @@
 - Commit：`task-artifact-delivery T4: capture and deliver fixed output candidates`
 
 
-## T4b 输出清单、部分交付与文件补交
+## T7 输出清单、部分交付与文件补交
 
 - 结果：spawn/next 的 --output 声明在原生停止、Git 封存后捕获交付；state schema 4 保存不可变清单版本。task artifacts show/retry/collect 支持按轮次查看、固定候选重传和显式补收，原请求幂等，发布确认后释放成功 spool。文件状态、attention 与原生完成结论分开；artifactsRevision 通知补交，wait 按通知 revision 排序以避免旧轮次补交掩盖新轮次完成。已结束轮次的文件操作参与重启扫描，collect 期间下一轮等待。
 - 验证：root 全量 117 pass / 2220 assertions；随后补齐 collect 阻止排队启动和未准备 worktree 拒绝从主目录补收两项，聚焦输出测试最终 8 pass / 190 assertions，最终 typecheck 与编译通过。覆盖真实中心 SQLite/HTTP、部分发布、响应丢失、重启、固定候选、历史版本和原生调用次数；未改 HAPI，复用 T4 机器层证据。日志 `.dev-smoke/artifact-t4b-*.log`。
@@ -82,7 +82,7 @@
 - Commit：`task-artifact-delivery T5: expose expiry cleanup and storage diagnostics`
 
 
-## T5b 轮次留存释放与本机副本回收
+## T8 轮次留存释放与本机副本回收
 
 - 结果：task artifacts release 默认预览，apply 先保存轮次释放意图，再回收确认停止的输入/捕获副本和该轮各历史版本的 input/output 引用；外部及 recovery 引用保留。未交付候选需明确 --discard-pending，未知文件操作拒绝释放。释放/失败恢复参与已结束轮次扫描；同一释放重复调用继续原意图，不重放模型。受理、变化的失败和完成通过 artifactsRevision 通知，原完成版本与原生结论不变。释放期间阻止该任务新轮次/文件操作，完成后可 next；原轮次不再 retry/collect。
 - 输入与展示：shared 下载副本在确认原生停止后自动回收，中心原件继续 pin；worktree 仍在准备时释放下载中间副本，其最终输入与工作区共同保留。download_retention 与中央留存状态、历史清单分别展示，release 不删除报告/Git/worktree，也不伪称解除引用后仍保证下载。输入回收错误恢复时保留同时存在的 incomplete 输出提示；全部捕获失败的操作也显式清理其受管临时目录。

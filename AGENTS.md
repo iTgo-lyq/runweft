@@ -3,7 +3,7 @@
 ## 项目入口
 
 - 先读 `docs/README.md`、相关 Change 和已有 Specs。
-- 项目工作流见 `.agents/skills/project-workflow/SKILL.md`；需求、技术、计划与验收的既有确认在会话间持续有效，不重复询问。
+- 项目工作流见 `.agents/skills/spec-trail/SKILL.md`；流程状态只写 `change.json`，需求、技术、计划与验收的既有确认在会话间持续有效，不重复询问。
 - 用户已授权按顺序完成全部 Change：细节由主 agent 制定，每个 Change 的 Plan 形成后在当前工作区用 iclaude 评审一次，再独立判断并落实；仅 iclaude 额度耗尽时改用新 subagent。该授权覆盖方案/Plan 的工程决策与本地自动验收，不重复设置人工门禁。逐任务提交，通过验收后同步 Specs 并归档；远端实测无法完成时如实保留缺口。
 - 实现优先直观、易配置、易部署；不为假设边界堆叠防御框架。失败应清楚抛出并在入口呈现可操作的错误。
 - 当前正按 Change 实现；已确认决策见 `docs/project/architecture.md` 与各 Change，只在验证并验收后将实现行为写入 Specs。
@@ -35,3 +35,4 @@
 - 不自动修改用户 Codex / Claude Code 配置、HAPI 数据或模型凭据。真实 agent 验收需已有授权和专用环境。
 - 产品须提供显式 CLI 命令一键辅助全局安装/更新/卸载 Runweft MCP；该产品需求不代表开发过程中可擅自修改当前用户配置。自动验收使用专用配置，保留其他 MCP 和原生配置。
 - 网页测试使用 Playwright 自动验收，无需连接用户真实浏览器。
+- 独立交互原型维护在 `packages/prototype`，遵循包内 AGENTS.md 与 DESIGN.md；使用内存示例，通过 SpecTrail 登记固定发布引用。

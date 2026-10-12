@@ -1,7 +1,6 @@
 # 宿主 MCP 适配技术方案
 
 > 来源：[Requirement](requirement.md)、[Research](research.md)
-> 状态：已确认
 > 更新：2026-09-29
 > 确认方式：沿用户逐 Change 自主落实、一次 iclaude Plan 评审后执行的授权；最新子执行边界由用户直接确认。
 

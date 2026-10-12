@@ -1,7 +1,6 @@
 # 本地独立工作区技术方案
 
 > 来源：[Requirement](requirement.md)、[Research](research.md)
-> 状态：已确认
 > 更新：2026-09-29
 > 确认方式：沿用户逐 Change 自主推进授权；正式 Plan 经当前工作区一次 iclaude 评审后实施。
 

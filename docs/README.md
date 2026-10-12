@@ -67,7 +67,7 @@ Runweft 1.1.4 已发布；产品已完成 Hub 集中配置七阶段、完整后�
 
 上述归档 Change 均经一次 iclaude Plan 评审、逐任务实现提交、自动本地验收及 Specs 同步后关闭；明确由用户承担或延期的实测范围见最终验收。活跃 Change 的设计草稿不代替正式 Technical 或 Plan，也不修改已验收 Specs。
 
-按照 [project-workflow](../.agents/skills/project-workflow/SKILL.md)：
+按照 [SpecTrail](../.agents/skills/spec-trail/SKILL.md)：
 
 - [第二轮测试瘦身](project/archive/2026-10-03-test-backbone-slimming/acceptance.md)已完成并归档：保留领域骨干，收敛四组集成与六原生主链，普通CI复用准备、发布仅构建一份候选；[证据与首次失败](project/archive/2026-10-03-test-backbone-slimming/verification.json)记录248项根测试、33项Node检查、原生专项及定向修正。未执行远端CI或物理跨机验收。
 - [模块瘦身](project/archive/2026-10-02-module-slimming-audit/acceptance.md)已完成全模块审计、逐任务实施与同候选本地验收；[覆盖表](project/archive/2026-10-02-module-slimming-audit/coverage.md)与[证据清单](project/archive/2026-10-02-module-slimming-audit/research.md)保留调查依据。Runweft仅支持当前数据格式，不迁移、兼容读取或清理旧数据，已移除data/reset；现行权限与恢复保障保留。此次候选没有发布，未验证平台范围见验收。

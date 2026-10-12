@@ -30,7 +30,7 @@
 - 边界：真实模型及新历史消费者行为尚待T4V，不声明原生替代全部通过。拆分冻结与真实验收为两个任务，防止把未来验证写入当前提交。
 - Commit：`test-backbone-slimming T4: freeze native backbone and per-case evidence`
 
-## T4V 原生验收（进行中）
+## T7 原生验收（进行中）
 
 - 干净候选：`6a7e559`、版本1.1.1、HAPI pin不变；四平台 `package --all --reuse-hapi` 通过。service-package四脚本通过，真实registry安装候选见 install-Cyo3do；本地Chromium1243实际启动。
 - 初次N1：native-backbone-P97jP0 / collaboration-dz8oeB / shared-package-hrdPxT通过，包含真实local Codex→Codex两轮、65秒wait、子CLI拒绝、历史网页、重启无重放和清理。注入N2 producer前失败时，QEUI3S实际复用N1且未调用N2模型，退出1符合预期。
@@ -45,7 +45,7 @@
 - 前置发现：初次Node运行暴露原Bun import不兼容，转换后又由负例发现not.toMatch转换反向错误，均修正后通过。实际安装暴露Claude在ignore-scripts下只有占位入口，改为显式运行已检查的包内install.cjs并检查两个version后通过；Beta候选不运行stable-only网站构建，网站单独做版本资格判断。以上均在本地、零模型阶段发现，未伪称CI成功。
 - Commit：`test-backbone-slimming T5: select local checks and build one release candidate`
 
-### T4V N2消费者修正
+### T7 N2消费者修正
 
 N2在a610dfd脚本下已完成两轮、65秒wait及17次MCP调用。其消费者首试ImyBKb失败：历史读取错误地取中心serverPaths.identityConnection，Hub客户端实际身份在本case的Runner连接目录；local模式恰好同home所以初次N1未暴露。修正为按case.clientHome找到真实Runner路径，N2只重跑无模型shared消费者，不重新调用模型，原首次失败保留。消费者在未启动源进程就失败时，原清理代码把“尚未启动”标为停机不确定；改为实际检查所有源home状态及原生PID后判定安全。生产者和包输入均未变化，本次只重验受影响消费阶段，不把全局helper hash拒绝复用误当必须重跑模型。N2的producer/consumer分阶段证据在最终验收表单列，不改写失败ledger。
 
@@ -57,11 +57,11 @@ N2在a610dfd脚本下已完成两轮、65秒wait及17次MCP调用。其消费者
 
 根测试在三个新临时现场串行执行：247 pass/0 fail/4779断言/41文件，墙钟57.789、57.882、57.355秒，含每次真实fixture/lifecycle闭环，没有自动重试。三次与独立N3原生现场运行重叠（目录/端口/配置隔离），故只用作本轮稳定性样本，不作为无干扰性能对比；Technical已据实际安排明确该限制，避免为凑速度样本再重复三遍。相比基线255项，8个原npm用例迁移至Node，实际删/合并3个浅层测试、新增3个有故障价值的fixture测试；Beta另新增9个发布用例，不能把迁移当删除收益。
 
-### T4V N5证据出口修正
+### T7 N5证据出口修正
 
 N5的producer remote-mcp-R2VNPG与consumer remote-package-xfUR6U均退出0，success=true、cleanupErrors=[]，成果/留存/工作区清理完成且源consumed=true；总入口因只识别Evidence/Installed workspace前缀，漏读remote消费者的Installed remote-task前缀而退出1。归类为汇总接线失败，原ledger保留失败，不把它伪称首跑gate成功，也不为读取证据路径重跑模型。统一三个消费者为唯一Evidence出口，入口不保留旧前缀兼容。新增实际执行三个消费者缺失handoff的零模型用例，核对非零退出、失败证据可读与清理；6项fixture/lifecycle共47断言通过，typecheck通过。后续N6实际验证正常remote出口。
 
-### T4V 重建专项选择纠偏
+### T7 重建专项选择纠偏
 
 R-codex首试reconstruction-R1udSK在首轮成功、切换空原生home后失败：单runtime入口仍断言双runtime的2/4会话数量。改为严格比较实际case各轮sessionId集合；原生配置home的校验/清凭据仍覆盖两份实际创建的副本，不能随runtime筛选漏掉另一份。首轮成功且数据库证明第二轮未被接受，原生历史hash、进程退出与源配置均可核对，沿脚本已有显式恢复入口只继续第二轮，不重放首轮。首次完整失败快照另存test-backbone-plan/R-codex-first-failure.json，原ledger不改成功。typecheck通过；后续实际结果另记。
 

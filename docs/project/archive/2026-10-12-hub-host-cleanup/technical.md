@@ -1,6 +1,5 @@
 # 本机清理方案
 
-> 状态：已确认
 
 旧入口 ~/.local/bin/runweft 指向 ~/.local/share/runweft/releases/1.0.0，runweft-hub 同样调用旧入口。默认 ~/.runweft 已不存在，无 RUNWEFT 环境覆盖、MCP 或全局 Skill。
 

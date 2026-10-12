@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "id": "current-data-baseline",
+  "title": "当前数据基线与本机测试环境清理",
+  "size": "medium",
+  "status": "completed",
+  "stage": "close",
+  "branch": "codex/spec-trail-adoption",
+  "confirmations": {
+    "requirement": {
+      "at": "2026-10-12T14:13:00.884Z",
+      "summary": "原 requirement.md 已完成，沿用原持续授权和评审结论。本次历史勘误登记；at 为回填时间，原事件准确时间未补造。",
+      "source": "https://github.com/iTgo-lyq/runweft/tree/556ea266e5d336c579a68b5749c269b9daec5e49/docs/project/archive/2026-10-10-current-data-baseline/requirement.md"
+    },
+    "technical": {
+      "at": "2026-10-12T14:13:00.884Z",
+      "summary": "原 technical.md 已完成，沿用原持续授权和评审结论。本次历史勘误登记；at 为回填时间，原事件准确时间未补造。",
+      "source": "https://github.com/iTgo-lyq/runweft/tree/556ea266e5d336c579a68b5749c269b9daec5e49/docs/project/archive/2026-10-10-current-data-baseline/technical.md"
+    },
+    "plan": {
+      "at": "2026-10-12T14:13:00.884Z",
+      "summary": "原 plan.md 已完成，沿用原持续授权和评审结论。本次历史勘误登记；at 为回填时间，原事件准确时间未补造。",
+      "source": "https://github.com/iTgo-lyq/runweft/tree/556ea266e5d336c579a68b5749c269b9daec5e49/docs/project/archive/2026-10-10-current-data-baseline/plan.md"
+    }
+  },
+  "tasks": {
+    "T1": {
+      "title": "确认基线及清理边界",
+      "status": "done",
+      "verification": "历史交付证据见 execution.md 及原文 https://github.com/iTgo-lyq/runweft/tree/556ea266e5d336c579a68b5749c269b9daec5e49/docs/project/archive/2026-10-10-current-data-baseline/execution.md；本次只迁移记录，未重跑当时产品验收。"
+    },
+    "T2": {
+      "title": "清理与基线验收",
+      "status": "done",
+      "verification": "历史交付证据见 execution.md 及原文 https://github.com/iTgo-lyq/runweft/tree/556ea266e5d336c579a68b5749c269b9daec5e49/docs/project/archive/2026-10-10-current-data-baseline/execution.md；本次只迁移记录，未重跑当时产品验收。"
+    }
+  },
+  "closure": {
+    "verification": {
+      "result": "passed",
+      "at": "2026-10-12T14:13:00.884Z",
+      "summary": "依据原 execution.md 和 execution.md 的实际验证与 iclaude 评审记录；所有未测、延期和条件限制沿原文保留。本次历史勘误登记；at 为回填时间，原事件准确时间未补造。"
+    },
+    "acceptance": {
+      "result": "accepted",
+      "at": "2026-10-12T14:13:00.884Z",
+      "summary": "依据原归档的验收结论及用户授权的 Agent 自动验收；本次不代表用户重新验收或新增实测。本次历史勘误登记；at 为回填时间，原事件准确时间未补造。",
+      "source": "https://github.com/iTgo-lyq/runweft/tree/556ea266e5d336c579a68b5749c269b9daec5e49/docs/project/archive/2026-10-10-current-data-baseline/execution.md"
+    },
+    "specs": {
+      "result": "synced",
+      "at": "2026-10-12T14:13:00.884Z",
+      "summary": "原归档已同步的事实沿原文与 Specs 保留；本次历史迁移不改变产品行为。本次历史勘误登记；at 为回填时间，原事件准确时间未补造。"
+    },
+    "archive": {
+      "result": "done",
+      "at": "2026-10-12T14:13:00.884Z",
+      "summary": "保留原归档目录；原来源提交 556ea266e5d336c579a68b5749c269b9daec5e49，提交时间 2026-10-10T15:17:55+08:00。本次历史勘误登记；at 为回填时间，原事件准确时间未补造。",
+      "path": "docs/project/archive/2026-10-10-current-data-baseline"
+    }
+  }
+}

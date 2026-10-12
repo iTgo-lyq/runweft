@@ -1,7 +1,6 @@
 # 官网 Cloudflare Pages 技术方案
 
 > 来源：./requirement.md
-> 状态：已确认
 
 ## 端到端方案
 

@@ -5,6 +5,7 @@ import { pathToFileURL } from 'node:url';
 export function integrationGroups(files) {
     const groups = new Set();
     for (const file of files) {
+        if (/^(packages\/prototype\/|\.githooks\/)/.test(file) || file === 'scripts/check-workflow.mjs') continue;
         if (/^(docs\/(?!usage\.md)|test\/|scripts\/tests\/|website\/|\.agents\/)/.test(file) || /(^|\/)(README|AGENTS)\.md$/.test(file)) continue;
         if (/^scripts\/(npm-publish|check-npm-trust)\.mjs$/.test(file) || file.startsWith('.github/')) continue;
         if (/^src\/hub\/(app|console|tasks-page|native-page|style|onboarding-page)/.test(file) || /scripts\/(fixtures\/)?(hub-console|smoke-hub-console|smoke-hub-connect|smoke-hub\.ts)/.test(file)) groups.add('web');

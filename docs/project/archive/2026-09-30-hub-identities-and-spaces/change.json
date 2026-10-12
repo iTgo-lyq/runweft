@@ -1,0 +1,67 @@
+{
+  "schemaVersion": 1,
+  "id": "hub-identities-and-spaces",
+  "title": "身份 token 与空间",
+  "size": "large",
+  "status": "completed",
+  "stage": "close",
+  "branch": "codex/spec-trail-adoption",
+  "confirmations": {
+    "requirement": {
+      "at": "2026-10-12T14:13:00.884Z",
+      "summary": "原 requirement.md 已完成，沿用原持续授权和评审结论。本次历史勘误登记；at 为回填时间，原事件准确时间未补造。",
+      "source": "https://github.com/iTgo-lyq/runweft/tree/83d5cd0935e17b0feac7c6400f2f31072741113c/docs/project/archive/2026-09-30-hub-identities-and-spaces/requirement.md"
+    },
+    "technical": {
+      "at": "2026-10-12T14:13:00.884Z",
+      "summary": "原 technical.md 已完成，沿用原持续授权和评审结论。本次历史勘误登记；at 为回填时间，原事件准确时间未补造。",
+      "source": "https://github.com/iTgo-lyq/runweft/tree/83d5cd0935e17b0feac7c6400f2f31072741113c/docs/project/archive/2026-09-30-hub-identities-and-spaces/technical.md"
+    },
+    "plan": {
+      "at": "2026-10-12T14:13:00.884Z",
+      "summary": "原 plan.md 已完成，沿用原持续授权和评审结论。本次历史勘误登记；at 为回填时间，原事件准确时间未补造。",
+      "source": "https://github.com/iTgo-lyq/runweft/tree/83d5cd0935e17b0feac7c6400f2f31072741113c/docs/project/archive/2026-09-30-hub-identities-and-spaces/plan.md"
+    }
+  },
+  "tasks": {
+    "T1": {
+      "title": "身份和空间持久 API",
+      "status": "done",
+      "verification": "历史交付证据见 execution.md 及原文 https://github.com/iTgo-lyq/runweft/tree/83d5cd0935e17b0feac7c6400f2f31072741113c/docs/project/archive/2026-09-30-hub-identities-and-spaces/execution.md；本次只迁移记录，未重跑当时产品验收。"
+    },
+    "T2": {
+      "title": "Web 身份与空间管理",
+      "status": "done",
+      "verification": "历史交付证据见 execution.md 及原文 https://github.com/iTgo-lyq/runweft/tree/83d5cd0935e17b0feac7c6400f2f31072741113c/docs/project/archive/2026-09-30-hub-identities-and-spaces/execution.md；本次只迁移记录，未重跑当时产品验收。"
+    },
+    "T3": {
+      "title": "整体自动验收与规格同步",
+      "status": "done",
+      "verification": "历史交付证据见 execution.md 及原文 https://github.com/iTgo-lyq/runweft/tree/83d5cd0935e17b0feac7c6400f2f31072741113c/docs/project/archive/2026-09-30-hub-identities-and-spaces/execution.md；本次只迁移记录，未重跑当时产品验收。"
+    }
+  },
+  "closure": {
+    "verification": {
+      "result": "passed",
+      "at": "2026-10-12T14:13:00.884Z",
+      "summary": "依据原 acceptance.md 和 execution.md 的实际验证与 iclaude 评审记录；所有未测、延期和条件限制沿原文保留。本次历史勘误登记；at 为回填时间，原事件准确时间未补造。"
+    },
+    "acceptance": {
+      "result": "accepted",
+      "at": "2026-10-12T14:13:00.884Z",
+      "summary": "依据原归档的验收结论及用户授权的 Agent 自动验收；本次不代表用户重新验收或新增实测。本次历史勘误登记；at 为回填时间，原事件准确时间未补造。",
+      "source": "https://github.com/iTgo-lyq/runweft/tree/83d5cd0935e17b0feac7c6400f2f31072741113c/docs/project/archive/2026-09-30-hub-identities-and-spaces/acceptance.md"
+    },
+    "specs": {
+      "result": "synced",
+      "at": "2026-10-12T14:13:00.884Z",
+      "summary": "原归档已同步的事实沿原文与 Specs 保留；本次历史迁移不改变产品行为。本次历史勘误登记；at 为回填时间，原事件准确时间未补造。"
+    },
+    "archive": {
+      "result": "done",
+      "at": "2026-10-12T14:13:00.884Z",
+      "summary": "保留原归档目录；原来源提交 83d5cd0935e17b0feac7c6400f2f31072741113c，提交时间 2026-09-30T21:07:19+08:00。本次历史勘误登记；at 为回填时间，原事件准确时间未补造。",
+      "path": "docs/project/archive/2026-09-30-hub-identities-and-spaces"
+    }
+  }
+}

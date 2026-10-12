@@ -27,7 +27,7 @@
 - 未解决：修正后的托管整体 CI 和 action 实际 preview 输出待 T3.1；生产需 main 后续合码。
 - Commit：`website-cloudflare-pages T3: deploy preview and preserve verification receipts`
 
-## T3.1 验证修正后的托管部署
+## T5 验证修正后的托管部署
 
 - 结果：[run 36909619770](https://github.com/iTgo-lyq/runweft/actions/runs/36909619770) 整体 success；既有 Direct Upload/main 项目只读取不再次创建，实际上传仍为 codex 分支 preview。action 返回环境通过脚本比较，唯一 URL https://4c68856f.runweft.pages.dev/ 在线全部校验通过。
 - 验证：托管 runner 的 13 项测试、构建、公共 npm 五包与 HEAD、项目准备、上传和在线校验全部 success；下载最终 evidence/static，八文件 SHA-256 与 check/deployment 回执完全一致，源提交 9d22f23c712ba2ba509db8f06517ce98f366986a。已核对前次已上传 URL 后才从修正提交运行，未盲目重复未知上传。

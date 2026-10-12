@@ -1,6 +1,5 @@
 # 官网 HAPI 会话截图技术方案
 
-> 状态：已确认
 > 依据：用户补充要求先找 HAPI 官方截图或示意图；沿用工程与自动验收授权。
 
 HAPI 官方 https://hapi.run/ 的会话和代码截图分别为 /images/app-chat-interface.png 与 /images/app-code-view.png。HTTP 200，内容 SHA-256 与固定 HAPI 仓库 website/public/images 中同名资源一致；图片实际上是 WebP（946×2048），共 186,650 字节。直接复制本地上游字节，不改图；本站按真实格式命名 hapi-session.webp、hapi-code.webp 并声明 image/webp。官方另有文件列表、会话创建等截图及两张装饰插画，本次选最贴合已介绍功能的两张。

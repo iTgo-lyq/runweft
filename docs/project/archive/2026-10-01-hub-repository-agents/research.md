@@ -8,7 +8,7 @@
 
 - [资源归属规格](../../specs/resources/ownership/spec.md)已验收稳定 machine/runtime、空间分享、同步 usable 与原生启动授权。新 Agent 解析调用该领域的受控目标解析，不复制可用性或私有路径裁剪。
 - [HAPI 工作区管理](../../../../hapi/cli/src/runner/workspaces/manager.ts)的 resolveRepository 使用真实 Git 根/commonDir/objectFormat，并把 machineId/commonDir/objectFormat 摘要作为原生 repositoryId。该 ID 有明确的本机对象用途，不能换成跨 clone 的 Hub Repository UUID；远端基线、bundle 和 worktree 仍沿原契约。
-- [原 Agent 定义](../../../../src/agents/definitions.ts)保存职责、instructions、runtime、flavor、model、reasoningEffort；[解析](../../../../src/agents/client.ts)映射 Codex modelReasoningEffort / Claude effort 并固定 disabledMcpServers=['runweft']。这些业务字段和原生参数映射可复用；文件路径、slug ID、同名遮蔽、namespace 绑定不是新中心权威。
+- [原 Agent 定义](https://github.com/iTgo-lyq/runweft/blob/4a7300c6b0683bd1a601e1eced20dd9d5396b0e3/src/agents/definitions.ts)保存职责、instructions、runtime、flavor、model、reasoningEffort；[解析](https://github.com/iTgo-lyq/runweft/blob/d5ad3002d64b4329d43aa6960f93cbfd7cc76219/src/agents/client.ts)映射 Codex modelReasoningEffort / Claude effort 并固定 disabledMcpServers=['runweft']。这些业务字段和原生参数映射可复用；文件路径、slug ID、同名遮蔽、namespace 绑定不是新中心权威。
 - [资源 CLI 客户端](../../../../src/hub/resources/client.ts)已有显式 Hub、Web 备份 origin/身份检查、能力预检、身份交换和错误脱敏。仓库/Agent CLI 应抽取通用连接部分，不另造认证。
 - [资源组合网关](../../../../src/hub/resources/gateway.ts)可继续组合业务回调及 RequestLease；同库事务、稳定身份与当前成员关系已经提供。
 
@@ -18,7 +18,7 @@
 
 ## Multica 采用边界
 
-父 Change [固定版本调查](../../changes/hub-spaces-and-agent-configuration/research.md)已经记录 Agent 的 owner/访问范围、runtime 分离及中心 Git 资源。采用仅自己/指定成员/空间成员与中心配置对象；继续遵循已确认差异：共享 Agent 和 runtime 权限取交集、私有 Agent 非所有者管理员仅可治理、工作区从主仓库准备、非独立配置 repo。
+父 Change [固定版本调查](../2026-10-01-hub-spaces-and-agent-configuration/research.md)已经记录 Agent 的 owner/访问范围、runtime 分离及中心 Git 资源。采用仅自己/指定成员/空间成员与中心配置对象；继续遵循已确认差异：共享 Agent 和 runtime 权限取交集、私有 Agent 非所有者管理员仅可治理、工作区从主仓库准备、非独立配置 repo。
 
 ## 推导
 

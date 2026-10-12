@@ -142,3 +142,11 @@ gh workflow run npm-publish.yml --repo iTgo-lyq/runweft --ref main -f release-ta
 两个凭证已保存为 Repository secrets；[正式官网](https://runweft.pages.dev/)已通过十文件摘要/MIME 和三页 Playwright 检查，[分支预览验收](project/archive/2026-10-02-website-cloudflare-pages/acceptance.md)另存归档。工作流先保存上传回执，在约三分钟窗口内等待网络传播；官网部署不触发程序发版，当前生产安装目标为已晋级latest的npm1.1.4。
 
 发版顺序为更新稳定版本并验收、推送匹配版本 tag、等待五个 npm 包发布通过、运行最新分支的官网工作流。npm 未公开时官网检查停止属于预期；Pages 不自动触发 npm 发布。生产部署拒绝旧 main SHA，不能通过重跑旧任务恢复旧官网；确需回退时先提交明确的源代码/版本回退。
+
+## SpecTrail 工作流
+
+项目使用完整 SpecTrail 分发包，来源固定为 [67984848](https://github.com/iTgo-lyq/spec-trail/tree/67984848b4b3248cddc1dd0258dfba55d1a2ff6f/skills/spec-trail)。流程状态操作与确认规则见 [主 skill](../.agents/skills/spec-trail/SKILL.md)，原型流程见 [原型子 skill](../.agents/skills/spec-trail/prototype/SKILL.md)。更新时替换完整上游包，不在业务脚本复制其字段规则。
+
+新 clone 在仓库根目录运行 `git config --local core.hooksPath .githooks` 启用共享提交入口；同仓库 worktree 共用该 Git 配置。hook 调用当前工作区的 SpecTrail 校验器，只读取本次真实暂存内容。`node .agents/skills/spec-trail/setup/scripts/check-setup.mjs .` 只检查准备条件，实际 hook 仍需提交验证。`node scripts/check-workflow.mjs` 检查完整 Workflow、Change、任务顺序和依赖图，CI 同样执行。
+
+main 是守护分支，GitHub 当前未配置服务端分支保护。Change 在 `codex/<id>` 分支推进；本地提交后及时推送。主干不保留尚未归档 Change，暂停工作保存在其专属分支，不因工作流迁移恢复执行。

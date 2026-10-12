@@ -1,0 +1,984 @@
+{
+  "sourceRevision": "23ca1d42e930fc0e598676ca66f46ebba161f2ae",
+  "registeredAt": "2026-10-12T14:13:00.884Z",
+  "note": "at 是历史事实回填登记时间；branch 是此次迁移所属分支，不伪造原开发分支。原提交与证据保持可追溯。",
+  "changes": [
+    {
+      "id": "agent-definition",
+      "path": "docs/project/archive/2026-09-29-agent-definition",
+      "sourceCommit": "2ab40aad69dfe11d4486c7c724a3207896f28bda",
+      "sourceCommittedAt": "2026-09-29T16:51:08+08:00",
+      "registeredAt": "2026-10-12T14:13:00.884Z",
+      "taskMapping": {
+        "T1": "T1",
+        "T2": "T2",
+        "T3": "T3"
+      },
+      "tasks": 3,
+      "dependsOn": [
+        "unified-cli-and-deployment",
+        "execution-resource-registry"
+      ],
+      "markdownSha256Before": {
+        "execution.md": "be1d56fb00792dff1d7375e98ecba3de25d638f1d512f0bc6a84190fa8cdda2a",
+        "plan.md": "a51535ec340d8619de2ad293c85c25702b0fd82de200c83816a6ad4e85862885",
+        "requirement.md": "bc12954066f6fa7a49e0393e5cbef5caff3508f5cff0946f1450d4ce445baaa7",
+        "research.md": "d12a18fd262032ddb9c87af9c109f3532d8747c21cf6a139ba08e7f75a1f9607",
+        "technical.md": "60156dc1720a5808e3fd2c8f5ba838121f63d10abcd350139ae6898e40f8f975"
+      }
+    },
+    {
+      "id": "delegation-lifecycle",
+      "path": "docs/project/archive/2026-09-29-delegation-lifecycle",
+      "sourceCommit": "998e14aa4a1246ae9498a916ac7c12430d24bb5e",
+      "sourceCommittedAt": "2026-09-30T01:51:34+08:00",
+      "registeredAt": "2026-10-12T14:13:00.884Z",
+      "taskMapping": {
+        "T1": "T1",
+        "T2": "T2",
+        "T3": "T3",
+        "T4": "T4",
+        "T5": "T5"
+      },
+      "tasks": 5,
+      "dependsOn": [
+        "hapi-subagent-foundation",
+        "unified-cli-and-deployment",
+        "host-mcp-adapter",
+        "agent-definition",
+        "execution-resource-registry"
+      ],
+      "markdownSha256Before": {
+        "acceptance.md": "27bf85eb49870acb22362f8f21e8cdd8ad6bc9601e48cbdb021328aad17f573a",
+        "contract.md": "1a04b1cc39436308bdf95fcf9ceef0ffa7ce2c48c390dc650ff1d0f939ad6a0f",
+        "coordinator.md": "864b590ec42535c117ac1b81313a9066eb41ada323a429a83f74ac51a5880e5f",
+        "design.md": "e25f202353fa5bf6ded233a467741057b7b7dd865794d00d589cfd2f4acc425d",
+        "execution.md": "feecd2c7e768f77e383e2e0bd5e61676117eee9f3332731fc9d1dec547792f7e",
+        "plan.md": "34ab3e46dc8fc6c6db8ca291d1a5359e81c3c0a5e4c93d39b55e2781ad956aea",
+        "requirement.md": "f7005ccbe6e4b28cefb92610be7a790f60a6d33b330f01df18d74697116d259b",
+        "research.md": "a44e2de3e64fd2bda414328c0ec3821ffaf63367db68dfc7cefb53394a003dbb",
+        "technical.md": "0c4f6986ca1fd0c27911c5420960d9dbf444bc084f1f061aed6ab2d68b9bfb94"
+      }
+    },
+    {
+      "id": "execution-resource-registry",
+      "path": "docs/project/archive/2026-09-29-execution-resource-registry",
+      "sourceCommit": "2ab40aad69dfe11d4486c7c724a3207896f28bda",
+      "sourceCommittedAt": "2026-09-29T16:51:08+08:00",
+      "registeredAt": "2026-10-12T14:13:00.884Z",
+      "taskMapping": {
+        "T1": "T1",
+        "T2": "T2",
+        "T3": "T3",
+        "T4": "T4"
+      },
+      "tasks": 4,
+      "dependsOn": [
+        "unified-cli-and-deployment"
+      ],
+      "markdownSha256Before": {
+        "execution.md": "9cdf3f42e104a32af437e54b2e79ed61a6fd329a5bf6afe5b0b8201c3cb5806a",
+        "plan.md": "0b51c860ef59f7d726af0484d0ffdbe8091f3872593bc6b8f129cbad44f133ad",
+        "requirement.md": "9d49fe734c4a7f27dbdb837364a260d60263d050c49f0f450f8edd8160e9e993",
+        "research.md": "7f85fc2cbbfff716a9bc4589e76cf22d7994a5edf8a6b9c75fd253102116320a",
+        "technical.md": "1e2e0c89dcaed0dc25e658697314febe758a408d1d107c7276878149b2fa12c7"
+      }
+    },
+    {
+      "id": "hapi-subagent-foundation",
+      "path": "docs/project/archive/2026-09-29-hapi-subagent-foundation",
+      "sourceCommit": "998e14aa4a1246ae9498a916ac7c12430d24bb5e",
+      "sourceCommittedAt": "2026-09-30T01:51:34+08:00",
+      "registeredAt": "2026-10-12T14:13:00.884Z",
+      "taskMapping": {
+        "T1": "T1",
+        "T2": "T2",
+        "T3": "T3",
+        "T4": "T4"
+      },
+      "tasks": 4,
+      "dependsOn": [
+        "unified-cli-and-deployment"
+      ],
+      "markdownSha256Before": {
+        "execution.md": "e24660ec9674135b409f38818e2f141cf2b614f5b364f2302dc496847ba25f12",
+        "plan.md": "e5ca0ac07f0587603795c1fb00e756914ab785488c3c872fc1409e589603d73f",
+        "requirement.md": "f1557e37481708b08a2850cec6eaf5c14c364eb08a763b7bd67c68a3d5f58f04",
+        "research.md": "2028b0cefbf71ba7617af0724e538090f05c9c75e865501de3b65f6157eea326",
+        "technical.md": "26cb9bc17d426f6928d2c9a0fb07c16adc5908b656224b361a95e2f808b62db1"
+      }
+    },
+    {
+      "id": "host-mcp-adapter",
+      "path": "docs/project/archive/2026-09-29-host-mcp-adapter",
+      "sourceCommit": "2ab40aad69dfe11d4486c7c724a3207896f28bda",
+      "sourceCommittedAt": "2026-09-29T16:51:08+08:00",
+      "registeredAt": "2026-10-12T14:13:00.884Z",
+      "taskMapping": {
+        "T1": "T1",
+        "T2": "T2",
+        "T3": "T3",
+        "T4": "T4"
+      },
+      "tasks": 4,
+      "dependsOn": [
+        "unified-cli-and-deployment",
+        "hapi-subagent-foundation"
+      ],
+      "markdownSha256Before": {
+        "design.md": "d8041ea767d6eab7fcb24a9625bb9d218cdff10eeef7e09b98d84a1fa6da6e08",
+        "execution.md": "2b09a17f32549b3ac89e34fd7b2fd63e0fcdc67434d9ae69d6f4fffdfd2d300b",
+        "plan.md": "47dd0c9184fd13ef1b3ecb3c8447942f91f6815d2ccc2c4c3f0ece9b8b43a1c5",
+        "requirement.md": "106343d0b1dd56c051e77eb756b9404fc9cb5c2c3038cc4791dfdd881981e999",
+        "research.md": "92ba4c315ccd026b153d34ef337cd0cf6d4d506cedca2de5c7417eb3f725fb08",
+        "technical.md": "a5d8b101cb521df849903644190e3178a88dbb047d2fbae2adad03848adfaf80"
+      }
+    },
+    {
+      "id": "local-workspace-execution",
+      "path": "docs/project/archive/2026-09-29-local-workspace-execution",
+      "sourceCommit": "998e14aa4a1246ae9498a916ac7c12430d24bb5e",
+      "sourceCommittedAt": "2026-09-30T01:51:34+08:00",
+      "registeredAt": "2026-10-12T14:13:00.884Z",
+      "taskMapping": {
+        "T1": "T1",
+        "T2": "T2",
+        "T3": "T3",
+        "T4": "T4",
+        "T5": "T5"
+      },
+      "tasks": 5,
+      "dependsOn": [
+        "hapi-subagent-foundation",
+        "delegation-lifecycle"
+      ],
+      "markdownSha256Before": {
+        "acceptance.md": "d0f48603c75aa0dd5a255bc02a9b367786cef236e82a6be8700db1792007f5ca",
+        "design.md": "58b37c7c1e7e07371fc93499602ae4462c541e34d06c874fe0e7dcb9fc1feff6",
+        "execution.md": "9898c5858bc85eb342a5e566f717ce279ed3fb9476b2c6f32f638a91c580e413",
+        "plan.md": "9f252edfe87e28a171aafbf06796b64c4f51fa8b45ba2bda1f1fff9127568fbd",
+        "requirement.md": "9f7f0ac3830a28f8a809c38c3a0389b91f6e371be9b4a72210654739c5e9a5b2",
+        "research.md": "fbea500cd5e00b7bb17b70b5883e560db1ab1e78ecc8755558661e7b5215cd81",
+        "technical.md": "90787a3402e635733935e215021977533bec27bda3c75ac3e57a61a31868a9c0",
+        "workspace-contract.md": "06ba2ec38c19427eb5b86deb10e1bbe4547a1a0f20d79247a8d7e16acdd860e8"
+      }
+    },
+    {
+      "id": "task-artifact-delivery",
+      "path": "docs/project/archive/2026-09-29-task-artifact-delivery",
+      "sourceCommit": "998e14aa4a1246ae9498a916ac7c12430d24bb5e",
+      "sourceCommittedAt": "2026-09-30T01:51:34+08:00",
+      "registeredAt": "2026-10-12T14:13:00.884Z",
+      "taskMapping": {
+        "T1": "T1",
+        "T2": "T2",
+        "T3": "T3",
+        "T4": "T4",
+        "T4b": "T7",
+        "T5": "T5",
+        "T5b": "T8",
+        "T6": "T6"
+      },
+      "tasks": 8,
+      "dependsOn": [
+        "unified-cli-and-deployment",
+        "delegation-lifecycle"
+      ],
+      "markdownSha256Before": {
+        "acceptance.md": "02a72d07be722519e5ba7c32d85bfa33b2b4ea1424af8ebaa5626057fde1a50b",
+        "artifact-contract.md": "37e17dbb22b624eb2d52398d1bd80c589860bcf7a94263f95a13f990a5760b89",
+        "design.md": "5d553a6a4df14cfc5c292a63a10a3b784e0718124935ed30a9c67cdb023a6c25",
+        "execution.md": "9de9338e58b63967a8b1f365163b38e485d6c0055dae500909e980e23185d7c1",
+        "plan.md": "13c377c9a01df954761fc9d06eb71876a23df9caf13a8f566478071410506670",
+        "requirement.md": "e4e0cdde376ca6526c76c13f80f9757725de1d129dfe88e09880abf3a7ac8946",
+        "research.md": "62cb1332b5318cc3640dac8945eff7f05bb792cd685a2d7f5c89d0d90c67e87d",
+        "technical.md": "7cc89b6077656070fe3ca3a5e206a1fe4e03bf06e616459dd5a3d03d836c6855"
+      }
+    },
+    {
+      "id": "unified-cli-and-deployment",
+      "path": "docs/project/archive/2026-09-29-unified-cli-and-deployment",
+      "sourceCommit": "76212cb7094959ece72af5ad4bab3cbd07465813",
+      "sourceCommittedAt": "2026-09-29T23:09:00+08:00",
+      "registeredAt": "2026-10-12T14:13:00.884Z",
+      "taskMapping": {
+        "T1": "T1",
+        "T2": "T2",
+        "T3": "T3",
+        "T4": "T4",
+        "T4.1": "T6",
+        "T5": "T5"
+      },
+      "tasks": 6,
+      "dependsOn": [],
+      "markdownSha256Before": {
+        "design.md": "ae5fb394af827e3c23bc8f8be08e810ab5555c7c9015fda9d5a44741bce5b31c",
+        "execution.md": "e2dec99b76a1c96691931937610760dd5b0de5ba8742803ce60b99c84bf4cbca",
+        "plan.md": "408c8ff3908149a18ec49aba607329aeeb6b46a23aac55def601fe60c1fd4e54",
+        "requirement.md": "85a980024713f0142d740c9dd32263fa8d3d828870387b94c43f4c05ba902cd6",
+        "research.md": "991f75cade98b7d9ba70c7150f2a1d6e1f4b6766f7ad10a1378fc9f86ed57b32",
+        "technical.md": "3752ab8b23a28e0e552827cb4c19027ede14b1abb22ed71436a1f85abf12948d"
+      }
+    },
+    {
+      "id": "hapi-default-chinese",
+      "path": "docs/project/archive/2026-09-30-hapi-default-chinese",
+      "sourceCommit": "b93002a0f48402b657925e672fcf5062b6e64ea0",
+      "sourceCommittedAt": "2026-09-30T19:39:20+08:00",
+      "registeredAt": "2026-10-12T14:13:00.884Z",
+      "taskMapping": {
+        "T1": "T1",
+        "T2": "T2"
+      },
+      "tasks": 2,
+      "dependsOn": [],
+      "markdownSha256Before": {
+        "execution.md": "a7797e86f99193ae910ee989d7a0738cc247038aa5778390716a5de6314133dd",
+        "plan.md": "9e69c9eb5aeda68aaaef4c6829ff16ad61b3849011d6c33ad033503ade459cb8",
+        "requirement.md": "dcd03821ece0c8ec3331920b1442a660741bb4a8b525b04d45e5457a7aeef2fb",
+        "technical.md": "e160ef967d3004701cabe721aa72004ad488e7bcbf51e83cf3d4e622bfd0d3d8"
+      }
+    },
+    {
+      "id": "hub-hapi-access",
+      "path": "docs/project/archive/2026-09-30-hub-hapi-access",
+      "sourceCommit": "627838264f04c961fa3272ac7c4198c552601980",
+      "sourceCommittedAt": "2026-09-30T22:47:09+08:00",
+      "registeredAt": "2026-10-12T14:13:00.884Z",
+      "taskMapping": {
+        "T1": "T1",
+        "T2": "T2",
+        "T3": "T3",
+        "T4": "T4"
+      },
+      "tasks": 4,
+      "dependsOn": [
+        "hub-identities-and-spaces"
+      ],
+      "markdownSha256Before": {
+        "acceptance.md": "8852994ff77787c3361f2f1ba33dc980753379ccc3069b6aa42e34b440b92765",
+        "execution.md": "7386cb9b9df3e7f81b5dcff720790cecdb0e0eec8734938e1c4a6467514513ab",
+        "plan.md": "42e91142753f1a951616b57a45ed9d6ad6fd92f0eb30deb8dd7e57288dd7e0e3",
+        "requirement.md": "c26c99deb7f8eb2f0ab9a847a3110d8c10ccf886089d0c9a87e7bfd9c52cd1bf",
+        "research.md": "885ef991242ac0774dac224be090d2cadf24729cd45a102674eb609602a9cd8c",
+        "technical.md": "474df6f5026bb3d74d2c2c4758f2ea6b337798e3c8cff4f05a173f9a120ee798",
+        "validation-matrix.md": "d1464aa81eadc36f130359f2c3b2a162af7c750896077813f33e40292d932785"
+      }
+    },
+    {
+      "id": "hub-identities-and-spaces",
+      "path": "docs/project/archive/2026-09-30-hub-identities-and-spaces",
+      "sourceCommit": "83d5cd0935e17b0feac7c6400f2f31072741113c",
+      "sourceCommittedAt": "2026-09-30T21:07:19+08:00",
+      "registeredAt": "2026-10-12T14:13:00.884Z",
+      "taskMapping": {
+        "T1": "T1",
+        "T2": "T2",
+        "T3": "T3"
+      },
+      "tasks": 3,
+      "dependsOn": [],
+      "markdownSha256Before": {
+        "acceptance.md": "9fafedf9763a13f8be0ddcfb1ebd0abd54931e169d43ef459203ec6af02bfc0d",
+        "execution.md": "8a4ca629845edbbd86cc2d212c7d4c924d0274d9ece60872960bfa4e24cfb57c",
+        "plan.md": "1d776f73c8d631b9f5bb4c259794303fb2ea536c3ca0e53293cce41d7fdb3262",
+        "requirement.md": "c89750f3834be2d31f62afc97c84aa13675282b010735bc8f248e8eebfdf85d0",
+        "technical.md": "2f75124669982a7c6612166c3408cf476a32829f5da42e4393f5f66761a77faf"
+      }
+    },
+    {
+      "id": "hub-resource-ownership",
+      "path": "docs/project/archive/2026-09-30-hub-resource-ownership",
+      "sourceCommit": "6071ec6617783105399fa5a7fd3aa161937545c0",
+      "sourceCommittedAt": "2026-09-30T23:53:54+08:00",
+      "registeredAt": "2026-10-12T14:13:00.884Z",
+      "taskMapping": {
+        "T1": "T1",
+        "T2": "T2",
+        "T3": "T3",
+        "T4": "T4"
+      },
+      "tasks": 4,
+      "dependsOn": [
+        "hub-identities-and-spaces",
+        "hub-hapi-access"
+      ],
+      "markdownSha256Before": {
+        "acceptance.md": "08ed9edd9533c10e3d05a4508e7d7e42de732f4972ddfd77682a0115fb2c9480",
+        "cli-contract.md": "75d932206c8fc8a0aa5d7fbaf76cf2e70bf416ef70bf13ba45d72b16dcc5fb76",
+        "execution.md": "5f44ba7ab355531c72269739cace79b9af1d08d24aaaab482e1325830737e774",
+        "plan.md": "bec8d7f55d189202e87a853582878ff35e8c7f35186a8d1817905b23d8a43f2c",
+        "requirement.md": "753cd52c25087806279cfd674733684c0606b73cb198c934316ba8ee4e6f46ef",
+        "research.md": "73efd4a6f65bfc83779408c1b1d8a4e20b39544495a58cc2cdee5ddb04ac47cf",
+        "technical.md": "b8506d9ee03c963fc80839fffb0788ef85d5763e0b357ebccbc012d2cd1f74f7",
+        "validation-matrix.md": "cbc72a6433da094cd1998d4dceea3f695eac79082f33429f79c2193557dd421b"
+      }
+    },
+    {
+      "id": "integrated-release",
+      "path": "docs/project/archive/2026-09-30-integrated-release",
+      "sourceCommit": "f1883764fd82af64f9bcabd3214d0eb9918c2aab",
+      "sourceCommittedAt": "2026-09-30T14:51:32+08:00",
+      "registeredAt": "2026-10-12T14:13:00.884Z",
+      "taskMapping": {
+        "T1": "T1",
+        "T2": "T2",
+        "T3": "T3",
+        "T4": "T4"
+      },
+      "tasks": 4,
+      "dependsOn": [
+        "unified-cli-and-deployment",
+        "execution-resource-registry",
+        "hapi-subagent-foundation",
+        "host-mcp-adapter",
+        "agent-definition",
+        "delegation-lifecycle",
+        "local-workspace-execution",
+        "task-artifact-delivery",
+        "remote-workspace-preparation",
+        "remote-result-delivery",
+        "subagent-dashboard"
+      ],
+      "markdownSha256Before": {
+        "acceptance.md": "5f9ac5ec36dec463201a2ffa526e6710d00dce1b32c48747d9c02107ffe541bb",
+        "execution.md": "123f80b3e9cc323d0cd3ffa0597a4c46283fb09d6a50ed5037deace64d396126",
+        "plan.md": "8f9aba213fb1e49eef455625a5c8d0b4694a4f9e7c8b9831cc9a6743f518000e",
+        "requirement.md": "5569d8ebc78711b9fdbf78208662baf1980faacbdbf8bd651f0a6d17b8d4b6a0",
+        "research.md": "dbabc0af1758ae0671be18eb27511f8ab55bd98084b053326a75480dd8e4054d",
+        "technical.md": "976e43efbfb654d36bb8c2bec6583b5f2cf51f106c3350e2b9419d7e83bacdef"
+      }
+    },
+    {
+      "id": "product-website",
+      "path": "docs/project/archive/2026-09-30-product-website",
+      "sourceCommit": "748ce7db5f2fd0bc9b55af826139b43b5bd8ca1b",
+      "sourceCommittedAt": "2026-09-30T15:40:31+08:00",
+      "registeredAt": "2026-10-12T14:13:00.884Z",
+      "taskMapping": {
+        "T1": "T1",
+        "T2": "T2"
+      },
+      "tasks": 2,
+      "dependsOn": [],
+      "markdownSha256Before": {
+        "acceptance.md": "b678bdf176cdb12f092183223c6657f9313b9f3ba5ff7b872e764a93a0005e39",
+        "execution.md": "58f2036555fb6938b7bd20b0c9c85bf1b448dbc27770e2e89fac3a660cc2bb0f",
+        "plan.md": "14c1be7c843c7ab6a7336b52eaf9c834878fa86428d0b5414dd8effc0e58adad",
+        "requirement.md": "b9d426f92601993ae256ebd96d799a30961f3ecde69f2ceb60472cf4d1dc0d90",
+        "technical.md": "5f22c5680f46dba6878f550945e84bc718eded84721235f7d35b813ce446d87c"
+      }
+    },
+    {
+      "id": "remote-result-delivery",
+      "path": "docs/project/archive/2026-09-30-remote-result-delivery",
+      "sourceCommit": "cdca599a1739a5babf6330af28ff5a73a2a589f0",
+      "sourceCommittedAt": "2026-09-30T03:58:59+08:00",
+      "registeredAt": "2026-10-12T14:13:00.884Z",
+      "taskMapping": {
+        "T1": "T1",
+        "T2": "T2",
+        "T3": "T3",
+        "T4": "T4",
+        "T5": "T5",
+        "T6": "T6"
+      },
+      "tasks": 6,
+      "dependsOn": [
+        "remote-workspace-preparation",
+        "local-workspace-execution",
+        "delegation-lifecycle",
+        "task-artifact-delivery"
+      ],
+      "markdownSha256Before": {
+        "acceptance.md": "4ad937aa0f488a95192ab1dbda0e392c2ab7d1b50fd75a495bee428372006991",
+        "design.md": "15cb3ab390ece6535c57f759c2c4cfb4c05bf33741d6ae09be85ded389d6de12",
+        "execution.md": "23ec7dcf89f6d2a4b5bdcfc616c157c8e6b333a9f90e7eb4b40fbba63d29632d",
+        "plan.md": "e874f1ad80f0eb198cbe7ad95c5f9af8ae36ee44d7697dfd285e4abfb93a26cd",
+        "requirement.md": "395c493587b82b75c6eaabaec00a0942b46cca712981ce17ab7a5bbf1da08cbe",
+        "research.md": "94179a8d496f29daa1d5e403ce4263b92ae5693c8e9080edeead85eeb5e8b94e",
+        "result-contract.md": "a2316fd42b89ae045b33edecb5341b3ab90602419d1c6ca0243a191a731293ce",
+        "technical.md": "45377134429b211cc00be072c0f5eb9dc56afc3a8fc6734cf0983a15ad7490b2"
+      }
+    },
+    {
+      "id": "remote-workspace-preparation",
+      "path": "docs/project/archive/2026-09-30-remote-workspace-preparation",
+      "sourceCommit": "998e14aa4a1246ae9498a916ac7c12430d24bb5e",
+      "sourceCommittedAt": "2026-09-30T01:51:34+08:00",
+      "registeredAt": "2026-10-12T14:13:00.884Z",
+      "taskMapping": {
+        "T1": "T1",
+        "T2": "T2",
+        "T3": "T3",
+        "T4": "T4",
+        "T5": "T5"
+      },
+      "tasks": 5,
+      "dependsOn": [
+        "hapi-subagent-foundation",
+        "local-workspace-execution",
+        "task-artifact-delivery"
+      ],
+      "markdownSha256Before": {
+        "acceptance.md": "42bc8558d30edf9f69c06da3afabd8790b97557fc07b2717e5f8dbe58e5a82a6",
+        "baseline-contract.md": "bd688635544623427de2a03ff5c0bc6aeaca76addd35330a7fc39d4e41a30241",
+        "design.md": "e6a12cc917b32e2dc23b13d7c20af04a6438ea1ff5bfcc4e2c26dc585637a88b",
+        "execution.md": "e606d64893bcb692a2f8e8efb3e9b8044563cb81059f59e98c66354c0dfd7adb",
+        "plan.md": "847fb6e567c520b697bb4690192eca2d8136b74f0053128f5ba2607df576b9d5",
+        "requirement.md": "bbbc4ca90b6bee92e1c65882eada8950f037e5930aca844ebc42205177e9b3a6",
+        "research.md": "7e89c35300109fe0453dc23108ef69b1b68b32443a80f0652742fbb63140d8f4",
+        "technical.md": "57a8b5aa49098fbdde6ca2c3f33fff74a60ab64a135146601f765f0302d946ed"
+      }
+    },
+    {
+      "id": "subagent-dashboard",
+      "path": "docs/project/archive/2026-09-30-subagent-dashboard",
+      "sourceCommit": "37b84348072885b0449f5da7b3db0aa1846bb24a",
+      "sourceCommittedAt": "2026-09-30T13:25:58+08:00",
+      "registeredAt": "2026-10-12T14:13:00.884Z",
+      "taskMapping": {
+        "T1": "T1",
+        "T2": "T2",
+        "T3": "T3"
+      },
+      "tasks": 3,
+      "dependsOn": [
+        "delegation-lifecycle",
+        "unified-cli-and-deployment"
+      ],
+      "markdownSha256Before": {
+        "acceptance.md": "7ac3190b1ebd2c7326b7bc8d0cd3b20db09ccb17ea79d51110728d9d7fb069b1",
+        "execution.md": "ad5b3b6d38facda8c5bca3e544311a431a98e359dd81472d21e10cdb957e90fe",
+        "plan.md": "d7c9ba33354bdf842a948c687384fc37d28c2e421ca2051dd85d321f1735b922",
+        "requirement.md": "37c79c869526c00e0103392d18caed9b5f8e00d5146bfb9baaf2eb7baeaf6633",
+        "research.md": "e44f6d91a56bb2c74989fbdbedb377735613ba246067aa56277f60b2a8dc611b",
+        "technical.md": "3da687972fdc70213db2e382fdca715ff829af97bba537489ca0d9a4ba7a1f36"
+      }
+    },
+    {
+      "id": "hub-console-onboarding",
+      "path": "docs/project/archive/2026-10-01-hub-console-onboarding",
+      "sourceCommit": "9f85353901301dd093ebc3dc8433729ee3054a81",
+      "sourceCommittedAt": "2026-10-01T06:21:01+08:00",
+      "registeredAt": "2026-10-12T14:13:00.884Z",
+      "taskMapping": {
+        "T1": "T1",
+        "T2": "T2",
+        "T3": "T3",
+        "T4": "T4",
+        "T5": "T5",
+        "T6": "T6"
+      },
+      "tasks": 6,
+      "dependsOn": [
+        "hub-resource-ownership",
+        "hub-repository-agents",
+        "hub-delegation-migration"
+      ],
+      "markdownSha256Before": {
+        "acceptance.md": "c0bb51f57ae13f0517760a07c770cfb5ca2d2c67e25eca3a4d121f78c39e4525",
+        "execution.md": "1383cd48961c79b087113672f93d795c843eccbe45fdb1f647c9cad9adf2d149",
+        "plan.md": "aa8323d4644a5ac8b1bdd48a66d9cdad2d0952b7a621acd91e6da9ccffda0849",
+        "requirement.md": "dfa07124d3454abc71b2226ebf2a31f31e1da23085b8dc30381e83ed564f0a03",
+        "technical.md": "ec91158fca4e8e80e92967c36c812ef0e323812244937e37a1069bed18c76f53"
+      }
+    },
+    {
+      "id": "hub-delegation-migration",
+      "path": "docs/project/archive/2026-10-01-hub-delegation-migration",
+      "sourceCommit": "374750b235c88c692235ebc8a25ecc49041de076",
+      "sourceCommittedAt": "2026-10-01T03:43:05+08:00",
+      "registeredAt": "2026-10-12T14:13:00.884Z",
+      "taskMapping": {
+        "T1": "T1",
+        "T2": "T2",
+        "T3": "T3",
+        "T4": "T4",
+        "T5": "T5",
+        "T6": "T6",
+        "T7": "T7"
+      },
+      "tasks": 7,
+      "dependsOn": [
+        "hub-hapi-access",
+        "hub-resource-ownership",
+        "hub-repository-agents"
+      ],
+      "markdownSha256Before": {
+        "acceptance.md": "1fae08ab9b914fe210cea005eefd0380bd6b524fc8740c98c4bf21f0c83a1832",
+        "connection-contract.md": "029982332a336fc597b2dc19ac0fa2d0d5d83dbc7910ca51e9a5ef107494e83d",
+        "delegation-contract.md": "80ecc5ee0e1a1ff6be0d8aad56c5ea288a0204e6f4260bd9dca70250e151e4fc",
+        "execution.md": "1ff880202bf2c124f73c9226749a762da831d16a8260edcf02a69c2636a7e869",
+        "migration-contract.md": "1063931049f798960af8e3fa4674d8cd5f93640f6da68116a1d0c54f65568d0f",
+        "plan.md": "bd968cd47ca8ee5213e8eb5e756ce205fa9afd7f1f03cf232dd54de978baa3d6",
+        "requirement.md": "10d3246f711a3e3ff3ec7d871157a009cc3ebd7f2f42495f444fd293002b75d4",
+        "research.md": "35894e32200625edcb01264bff913d460aff1556c889bdfc7564616803d4ee36",
+        "technical.md": "3611908ae139d845a2089eeb79f63842f4d919ad40f480ace49fe864ef11769e"
+      }
+    },
+    {
+      "id": "hub-repository-agents",
+      "path": "docs/project/archive/2026-10-01-hub-repository-agents",
+      "sourceCommit": "91bce17dd6767bd77cc7bcc498e65d1a8f87f2c1",
+      "sourceCommittedAt": "2026-10-01T00:55:15+08:00",
+      "registeredAt": "2026-10-12T14:13:00.884Z",
+      "taskMapping": {
+        "T1": "T1",
+        "T2": "T2",
+        "T3": "T3",
+        "T4": "T4"
+      },
+      "tasks": 4,
+      "dependsOn": [
+        "hub-identities-and-spaces",
+        "hub-resource-ownership"
+      ],
+      "markdownSha256Before": {
+        "acceptance.md": "98a9b9d8011cfdd08ba22931e2578da4ab24d615b2701b9805a9d5501d026883",
+        "agent-contract.md": "a0cc4c6d0c534f5b25e23c9519afdf080d50d1cef20260751159f3cf4845e26e",
+        "consumer-contract.md": "7a3d6609dc50f38daa9d4d52b6d30c453e6b1d990f4079e603f6a8e3a43d2c33",
+        "execution.md": "8c6cae22d713e62f0a2e8506a1dc42260754ddb957c03f411ba2f293636e65bc",
+        "plan.md": "0035fb67ec5f8ee10ccffd955fed0156a714d2bf174daed2e5b99affa6048c8a",
+        "repository-contract.md": "5bf5f6fd1a32fe7b22bc52e5fe3d09e0cba7c17f48283e96ed2019c1f0844e4c",
+        "requirement.md": "6658845007dd278540a5ba4e0e7aa80fc59273f8a9436e0c9776114a39fa06d8",
+        "research.md": "407f67250998e8c05dc9aa630e00be74db4131f93780f080baa9c37ae785eed5",
+        "technical.md": "603975ddbb337e5034988efa108f8220efec13919872e2066c29ca219aa0ba00"
+      }
+    },
+    {
+      "id": "hub-spaces-and-agent-configuration",
+      "path": "docs/project/archive/2026-10-01-hub-spaces-and-agent-configuration",
+      "sourceCommit": "f47f9112514fe0170b1b4c5fba7fea9e8a5ba6db",
+      "sourceCommittedAt": "2026-10-01T08:23:45+08:00",
+      "registeredAt": "2026-10-12T14:13:00.884Z",
+      "taskMapping": {
+        "T1": "T1",
+        "T2": "T2",
+        "T3": "T3",
+        "T4": "T4",
+        "T5": "T5"
+      },
+      "tasks": 5,
+      "dependsOn": [
+        "hub-identities-and-spaces",
+        "hub-hapi-access",
+        "hub-resource-ownership",
+        "hub-repository-agents",
+        "hub-delegation-migration",
+        "hub-console-onboarding"
+      ],
+      "markdownSha256Before": {
+        "acceptance.md": "eebdec76c48cd42910575de4cd5f3207a2d8c95457e13ea2609d9f0267f15291",
+        "access-design.md": "118bee6e2e4969d196e94a94a7f7f307fba22f912a9105df7ba7fab517a7d229",
+        "delivery.md": "13bf19d0c826e716f93d83b70cb7478c6a289f4a618f5932dc55b2446f09546e",
+        "execution.md": "82ee7697f4ecda21f0d6e998aea0ef2f0213c7a21c244b0ff0002c6caa4b02fb",
+        "plan.md": "88d2cd969cdcefc750ff69f8d142c91e8d51884bd308d08b0da0d66e9cf76d11",
+        "product-design.md": "8164dc4de128ed867da72fee4d6cd9e12f919ec5ed1e8d4e3d460d39f3d1f3bd",
+        "requirement.md": "b71563bf300ac7607ca3c4dc10055eaca74cad97874da5461da14ff2fd96e1b9",
+        "research.md": "d5e3c017b1f9a3647ad64a32989bf9518abc8c9fde8f18a760f0892dd7a43c87",
+        "technical.md": "9dec838397fa60d2d670a2261026b03f1edc740eac4d51cc0145c7ae6e845193"
+      }
+    },
+    {
+      "id": "npm-publication",
+      "path": "docs/project/archive/2026-10-01-npm-publication",
+      "sourceCommit": "fd81f333daaa0eaeec5384781dc38ec5c2e68b15",
+      "sourceCommittedAt": "2026-10-01T20:32:37+08:00",
+      "registeredAt": "2026-10-12T14:13:00.884Z",
+      "taskMapping": {
+        "T1": "T1",
+        "T4": "T4",
+        "T2": "T2",
+        "T3": "T3"
+      },
+      "tasks": 4,
+      "dependsOn": [],
+      "markdownSha256Before": {
+        "acceptance.md": "43b89f05b6aee770772fb1678bf8c99fd5095ee69315ceec3a1a291305d96104",
+        "execution.md": "b3befc7bef55af69ac3f19176feb2bf5e830cd1b067f8b37c8c6bc5be70b25f8",
+        "plan.md": "dee2d3bcccd8777eaa9df8c114d0a2029cca6216921abe803fb01a6d4d279921",
+        "requirement.md": "77d636a75aa7d7bdcdba41a2dca4458dc2a0d042187b65c29ef6623abcdeab29",
+        "technical.md": "2b5e628ff17303528826e3401a83c684e0152283d2708f814f6540deee4de053"
+      }
+    },
+    {
+      "id": "npm-trusted-publishing",
+      "path": "docs/project/archive/2026-10-01-npm-trusted-publishing",
+      "sourceCommit": "97cbc0044625c4986950ba7d4d6167831004344b",
+      "sourceCommittedAt": "2026-10-01T22:05:44+08:00",
+      "registeredAt": "2026-10-12T14:13:00.884Z",
+      "taskMapping": {
+        "T1": "T1",
+        "T2": "T2",
+        "T3": "T3"
+      },
+      "tasks": 3,
+      "dependsOn": [],
+      "markdownSha256Before": {
+        "acceptance.md": "08eb83fedba2d2b918e5c7c8096a6621259ced76377234f67da5cce36dd92d66",
+        "execution.md": "a7efa9fd6d1ac94dd5e3c71350473120164b1eb84325b8b6397912ce97c8c37e",
+        "plan.md": "a204b38d5c16a8231d99ecb9a6efccff169e8e31094907b3fe9253b6e7001762",
+        "requirement.md": "703876269e98967a7c14cf5d71e56d336144d35ede66c10f49797c044e91359f",
+        "technical.md": "b838391cd725e5e5935c33e7cca1fa833cd97e15b289ded6a505f737efe0f668"
+      }
+    },
+    {
+      "id": "module-slimming-audit",
+      "path": "docs/project/archive/2026-10-02-module-slimming-audit",
+      "sourceCommit": "6cb43327f3a55e227aeaed183f4c9de2ba6fecc1",
+      "sourceCommittedAt": "2026-10-02T14:51:10+08:00",
+      "registeredAt": "2026-10-12T14:13:00.884Z",
+      "taskMapping": {
+        "T1": "T1",
+        "T2": "T2",
+        "T3": "T3",
+        "T4": "T4",
+        "T5": "T5",
+        "T6": "T6",
+        "T7": "T7",
+        "T8": "T8",
+        "T9": "T9",
+        "T10": "T10",
+        "T11": "T11",
+        "T12": "T12",
+        "T14": "T14",
+        "T13": "T13"
+      },
+      "tasks": 14,
+      "dependsOn": [],
+      "markdownSha256Before": {
+        "acceptance.md": "af983eb9af771c285275489a11858aedae44681ef75c86d8e4ef0ff960d7cdda",
+        "build-review.md": "97fdf26c8d4ae5355e167fa3567eb651344a9d7c1c872e3ead981ee5e227a838",
+        "coverage.md": "3a5867c5e40bd480adc62a525edc1386845452e3b8a4a03f0fdb47a957d7fece",
+        "data-format-research.md": "8a43e7068b5bfd0161f81de3314dbe474005e250355bec3833ba8b7096db7494",
+        "execution.md": "fa3358e664e5f0c98ff8395e9cac033b15b26e9d4f7e44cfcec06fc7884532b5",
+        "plan.md": "622a41d9ada65ea647ab7d3c10b4187be9596f5358901ce0de09c189de5a39c3",
+        "requirement.md": "a43315c22c94519da024a77d1aa8e38cc013a0af87eb7ebe9f7af1bc026f66d3",
+        "research.md": "a5ef21fba767f97ad3bdcd2b71d12731878fa66fb5e6c3c6c0db4fcde4926d4b",
+        "smoke-coverage.md": "eb4a79b349d3aa5536f298860027903f299aa3a65eabce486a275771d8c96ca3",
+        "technical.md": "39a5624557b97abc704ada4d5186cfaff2c1423f86d7724ebd1c874dfebb5fc7"
+      }
+    },
+    {
+      "id": "npm-beta-publishing",
+      "path": "docs/project/archive/2026-10-02-npm-beta-publishing",
+      "sourceCommit": "b698609d0598824a1a1d898a97ce04d35c89bc0f",
+      "sourceCommittedAt": "2026-10-02T04:35:45+08:00",
+      "registeredAt": "2026-10-12T14:13:00.884Z",
+      "taskMapping": {
+        "T1": "T1",
+        "T2": "T2",
+        "T3": "T3"
+      },
+      "tasks": 3,
+      "dependsOn": [],
+      "markdownSha256Before": {
+        "acceptance.md": "a6acf08a2f6f5e6a14aa8a16740bc0b080d41d8b00d08e13f1fbeb54930e2351",
+        "execution.md": "b44d049ca053ad45ed4bf8d417c07fb63757f2299734ca43bbafbf802d2bb114",
+        "plan.md": "bbdd3ae602084bd2926ae5a494ce421d973ba545974b8eb99c1c93f395b59cfb",
+        "requirement.md": "db2bb4553d0d8036f085021a092ed9199527ac556fa7bc5bfdebbfb573135f98",
+        "technical.md": "7d945856695b9e4ef3822592968ea9e7f456535ceef67fd356ad10059f16eef0"
+      }
+    },
+    {
+      "id": "npm-patch-release",
+      "path": "docs/project/archive/2026-10-02-npm-patch-release",
+      "sourceCommit": "4ef5b00aaf1771cf1d4c3186f56183fe0766b535",
+      "sourceCommittedAt": "2026-10-02T04:15:26+08:00",
+      "registeredAt": "2026-10-12T14:13:00.884Z",
+      "taskMapping": {
+        "T1": "T1",
+        "T2": "T2",
+        "T3": "T3",
+        "T4": "T4"
+      },
+      "tasks": 4,
+      "dependsOn": [],
+      "markdownSha256Before": {
+        "acceptance.md": "e40790cb3e4bebea8c8e456a3e2762f4d958cd25dffa469f0ebf7ed7dc525799",
+        "execution.md": "a13af6348e08b470eaba5adecc0bb8b459033e95f5d234030e725f3aa7515bad",
+        "plan.md": "dad643629da03c2d18036464b8cf271b9ace37db0fcff622d64a37ff219ab199",
+        "requirement.md": "6b5030fd169a35d2f13a75f2a1fc4256630bad8020f51edae7f450e89086c828",
+        "technical.md": "9085a6ce0be28d2ac6505d97b9b918a44eef4071ae0f5ec6e42c89bf75127317"
+      }
+    },
+    {
+      "id": "website-cloudflare-pages",
+      "path": "docs/project/archive/2026-10-02-website-cloudflare-pages",
+      "sourceCommit": "0c3e3a1bd7a70a24be9e13ad4b022dc7f4504d60",
+      "sourceCommittedAt": "2026-10-02T02:55:24+08:00",
+      "registeredAt": "2026-10-12T14:13:00.884Z",
+      "taskMapping": {
+        "T1": "T1",
+        "T2": "T2",
+        "T3": "T3",
+        "T3.1": "T5",
+        "T4": "T4"
+      },
+      "tasks": 5,
+      "dependsOn": [],
+      "markdownSha256Before": {
+        "acceptance.md": "34de90c8583a20ed4e94aac8598a2f40d721d090ef8479542a57249ba8c935ac",
+        "execution.md": "98872dd2b0f98cdf51181c796525cd1dd8479a3cbde6f8c5ad571d693290bcf0",
+        "plan.md": "d650c732242f4af9941a1e42af464fd4a7c809e48c4a18a1abe653866c7e5cc5",
+        "requirement.md": "78bc4d59ee4cfa75d7027f906af750b494813e7d8c4accd4d7e879e8050a90e7",
+        "technical.md": "cce7716b7aec2860fc532dc4e16ebc9b6c213f05edd5eaab08642386a386d149"
+      }
+    },
+    {
+      "id": "website-npm-installation",
+      "path": "docs/project/archive/2026-10-02-website-npm-installation",
+      "sourceCommit": "8537ad836f032579333811725f3dd183cb6225eb",
+      "sourceCommittedAt": "2026-10-02T01:32:16+08:00",
+      "registeredAt": "2026-10-12T14:13:00.884Z",
+      "taskMapping": {
+        "T1": "T1",
+        "T2": "T2"
+      },
+      "tasks": 2,
+      "dependsOn": [],
+      "markdownSha256Before": {
+        "acceptance.md": "c1b2c89870815e57da0d0c871d813409c224b8e36446ee083e4c952483feca9a",
+        "execution.md": "a8a716971605f34d41940b37980def991090df75e05334ee690a88c2224e9b61",
+        "plan.md": "7c649fd7fbb5352a8bf62c1ef344ea80c7156429bb78e2646a96e553d7723530",
+        "requirement.md": "c0ea75a974621cd651cb5334c024239b89201f44c2b12bd86ca076afae541384",
+        "technical.md": "134960a3ebc18108f953560fa7ce7ba1bdc55db0b6a2dff4a84806dba3f75141"
+      }
+    },
+    {
+      "id": "test-backbone-slimming",
+      "path": "docs/project/archive/2026-10-03-test-backbone-slimming",
+      "sourceCommit": "afdcd81a4e062f56edab533b9874f266b70f655b",
+      "sourceCommittedAt": "2026-10-04T00:32:28+08:00",
+      "registeredAt": "2026-10-12T14:13:00.884Z",
+      "taskMapping": {
+        "T1": "T1",
+        "T2": "T2",
+        "T3": "T3",
+        "T4": "T4",
+        "T4V": "T7",
+        "T5": "T5",
+        "T6": "T6"
+      },
+      "tasks": 7,
+      "dependsOn": [],
+      "markdownSha256Before": {
+        "acceptance.md": "5f4aa210558f7fb00ea9a619d091c12a7a893a5750056ceb7410872d18701dad",
+        "execution.md": "b64f25ae1b2e0130410b3133afa3e493a176f304a266341d8a419e3c885bec38",
+        "merge-technical.md": "36a1fd34ac3995e73007a20397255ecc299e6265dd11078a11de7b852ef1f5c7",
+        "plan.md": "39e04eb0a43c1acfd8051b335b7df89eb399634f1c128d6d7a48648a1c0bf6d7",
+        "requirement.md": "ef8150049985872aab720b0cc3503ee9f164a83733e57289116b2b64ef79cd93",
+        "research.md": "5261d67aeaca635f160bb37521a8027551de3fa92b9beff3041fb01dd16e5472",
+        "technical.md": "1fe198f4a26088a0ab977af4dcba7b6c6844c4039d3b415fb4cf2bfc7526c0ab"
+      }
+    },
+    {
+      "id": "current-data-baseline",
+      "path": "docs/project/archive/2026-10-10-current-data-baseline",
+      "sourceCommit": "556ea266e5d336c579a68b5749c269b9daec5e49",
+      "sourceCommittedAt": "2026-10-10T15:17:55+08:00",
+      "registeredAt": "2026-10-12T14:13:00.884Z",
+      "taskMapping": {
+        "T1": "T1",
+        "T2": "T2"
+      },
+      "tasks": 2,
+      "dependsOn": [],
+      "markdownSha256Before": {
+        "execution.md": "5ff180b6ea39d9565c42d321675f2efbf8cb7b8301fb294d71729d2b6c528e7d",
+        "plan.md": "fab03a1fc9c4d70ed7c3cff5bc4d58f82adbaf7e9acae0a249a22a5d76c88d55",
+        "requirement.md": "c7a697785907e419a71a9ec82c98a40ef4e1e0817ddb210257d24e739328e72c",
+        "technical.md": "a2840fb74e7e92742da3bcd4725cd8a57ffc208cd5ddafc07b0d1b72e8970782"
+      }
+    },
+    {
+      "id": "hapi-session-and-shutdown",
+      "path": "docs/project/archive/2026-10-10-hapi-session-and-shutdown",
+      "sourceCommit": "cd294733955e912f735ca8bee9b5ee1e2281634a",
+      "sourceCommittedAt": "2026-10-10T17:00:03+08:00",
+      "registeredAt": "2026-10-12T14:13:00.884Z",
+      "taskMapping": {
+        "T1": "T1",
+        "T2": "T2",
+        "T3": "T3"
+      },
+      "tasks": 3,
+      "dependsOn": [],
+      "markdownSha256Before": {
+        "acceptance.md": "4983d528d5dc6b494586267a7be5f612d4dda8a1a1611e3c24d3e833d57f2022",
+        "execution.md": "927f6193cf5cf2cbebcf6cd8097176dd2da20f69308ca735d7c7d5e361d01a2a",
+        "plan.md": "4b401f6266d896e54abcfae1e256fb2d2a57d9f12d1b25706942fef6b7d4ff88",
+        "requirement.md": "0cf3c5259b5da96727aa911be6792d1bff132f33e9e6f0c0111d097925ce5c2a",
+        "technical.md": "74feebfe48b37011b50a5dda2651acbd713593b780174495597e0389a0ad16d8"
+      }
+    },
+    {
+      "id": "npm-hapi-fix-release",
+      "path": "docs/project/archive/2026-10-11-npm-hapi-fix-release",
+      "sourceCommit": "433f81ffa9632ac125fbce98ab23c9b48dccb1a0",
+      "sourceCommittedAt": "2026-10-11T23:42:54+08:00",
+      "registeredAt": "2026-10-12T14:13:00.884Z",
+      "taskMapping": {
+        "T1": "T1",
+        "T2": "T2",
+        "T3": "T3",
+        "T4": "T4",
+        "T5": "T5",
+        "T6": "T6"
+      },
+      "tasks": 6,
+      "dependsOn": [],
+      "markdownSha256Before": {
+        "acceptance.md": "6c1d55d6c11869186b122daffc6d15f4096004e2e32cb2643814061ae92cb680",
+        "execution.md": "da6643235373658b0e01de7bb528f01f16acd97d25b180d9878d9d5090bf9445",
+        "plan.md": "399bfe0e63e8144a3b1e8e36927d927c30f80d6639967843cc1c29cd4d7f886d",
+        "requirement.md": "52ab5b1f736a1dfa0ec64ed967003c9bd10143338f3e3d52d6ed5bc2cc66b2e4",
+        "technical.md": "d41b490fb432883b0d72e2684cb93df68ef9094a24b9684f2290920ec7c74176"
+      }
+    },
+    {
+      "id": "complete-uninstall",
+      "path": "docs/project/archive/2026-10-12-complete-uninstall",
+      "sourceCommit": "8620ce6f60de467d6c68e712519ba09e208b0d9d",
+      "sourceCommittedAt": "2026-10-12T17:55:17+08:00",
+      "registeredAt": "2026-10-12T14:13:00.884Z",
+      "taskMapping": {
+        "T1": "T1",
+        "T2": "T2"
+      },
+      "tasks": 2,
+      "dependsOn": [],
+      "markdownSha256Before": {
+        "acceptance.md": "e649c8bfac1b028914e198144797ed4c58a07744d747e3580582afa422049528",
+        "execution.md": "c65f349d0bed05e9a37e51d24f677db7bf35b2aece4a6bc216cf313fefa50036",
+        "plan.md": "0bbb5cb86aa5d2899ee29adeaf834c36569bb60b3cdc0ea115815cd0ee50e87f",
+        "requirement.md": "b82bd892c6f36fab03415b4e0d3e6cbcb72ff99e9bb2aa0dbab46f6c6019a26e",
+        "technical.md": "8fdc3791518f825710dcfb496a0f7d9c6fd779cd6dab78906721f5b82b1898a4"
+      }
+    },
+    {
+      "id": "hub-host-cleanup",
+      "path": "docs/project/archive/2026-10-12-hub-host-cleanup",
+      "sourceCommit": "dbd2266507635ded7b3120fa609221b4bddf9e5b",
+      "sourceCommittedAt": "2026-10-12T15:33:40+08:00",
+      "registeredAt": "2026-10-12T14:13:00.884Z",
+      "taskMapping": {
+        "T1": "T1"
+      },
+      "tasks": 1,
+      "dependsOn": [],
+      "markdownSha256Before": {
+        "acceptance.md": "5d5bb5de142c4481082595344821974dc9c7c8892b80af9a4e8288c788956e2f",
+        "execution.md": "1ba891598868d4e4315b10b5991d776f274439a1568e6aeb566321fad8072e5a",
+        "plan.md": "6e1107e715863225ffb142aa64e0a0cff22e94840f4122860538da429d8267a1",
+        "requirement.md": "a88b6a0f735c3dccfc25ce5ada3c41fbe2a04fe013ce0ed4ca7810bb6618e3aa",
+        "technical.md": "3771d0e948afebd15aeaed0c7eb4643b8149118a553c79291a55fb2134262e6b"
+      }
+    },
+    {
+      "id": "npm-uninstall-release",
+      "path": "docs/project/archive/2026-10-12-npm-uninstall-release",
+      "sourceCommit": "1d06750e0a529afcdc3923b3e124d496f8d1396e",
+      "sourceCommittedAt": "2026-10-12T20:06:04+08:00",
+      "registeredAt": "2026-10-12T14:13:00.884Z",
+      "taskMapping": {
+        "T1": "T1",
+        "T2": "T2",
+        "T3": "T3"
+      },
+      "tasks": 3,
+      "dependsOn": [],
+      "markdownSha256Before": {
+        "acceptance.md": "b782b6e1710a75600e5765125e2a1d2e952acee7051c548b867d12c58a8dad68",
+        "execution.md": "91be4fa0e0dbb1a1cf4f3807665870f54b80f992cccabe359276ab8cd1e6f9ca",
+        "plan.md": "63ef7d55e44568b96e3a89bfaf8e3832cac4d47077878b4b3b37ee6283fafc56",
+        "requirement.md": "0786115ec85453fd19663ec798723a4a89a4c87eedd644e0b6f41e8c1699e524",
+        "technical.md": "615b24e5a3e2d781037978722ae7b116633898e625ec405975234b505b27c816"
+      }
+    },
+    {
+      "id": "website-compact-session-preview",
+      "path": "docs/project/archive/2026-10-12-website-compact-session-preview",
+      "sourceCommit": "d8226b948a508c86c81dfab42a42a2a38f8d8323",
+      "sourceCommittedAt": "2026-10-12T11:48:19+08:00",
+      "registeredAt": "2026-10-12T14:13:00.884Z",
+      "taskMapping": {
+        "T1": "T1",
+        "T2": "T2"
+      },
+      "tasks": 2,
+      "dependsOn": [],
+      "markdownSha256Before": {
+        "acceptance.md": "de8f48fffb2902627da7b94d9caec5751adb936ce1191fa8fc6c681904a6a5bb",
+        "execution.md": "1d06366a3e9a18003dc56a0b47dfa2ccf55d1b4fc3ea8d73f0ae0348ab238c2c",
+        "plan.md": "de54f493e17a7410f555e77479a9473114cd36abf08ff8cf3f983425eaca0234",
+        "requirement.md": "c911534e39db274900ca808f22aec401d1f6b5fcb1cdd1d010fab40747340cf9",
+        "technical.md": "56a935c0132fcca2d3d3047eb1f960852bb260671922a39bb58057b20b9fb7e1"
+      }
+    },
+    {
+      "id": "website-content-onboarding",
+      "path": "docs/project/archive/2026-10-12-website-content-onboarding",
+      "sourceCommit": "4c81986a2b7fe65c75c8cc3ac32b3a6625e68c52",
+      "sourceCommittedAt": "2026-10-12T01:31:57+08:00",
+      "registeredAt": "2026-10-12T14:13:00.884Z",
+      "taskMapping": {
+        "T1": "T1",
+        "T4": "T4",
+        "T2": "T2",
+        "T3": "T3"
+      },
+      "tasks": 4,
+      "dependsOn": [],
+      "markdownSha256Before": {
+        "acceptance.md": "82930dfa61058b3d8e8360cfe8bfc64d4f735c40dd7e156e1a0a6860e868abe7",
+        "execution.md": "8b239b0b1f682ff36ce488808d87fee87f8aded6a0951ad109296e8e891df771",
+        "plan.md": "5017c9c86bd02ea5b1dee0586f36ab36a48d78e63d9bdf37a7564143100f3619",
+        "requirement.md": "fa9e046c95d19020f77a15f3df611cfbc6fd237a9b483d3eb85789d550f45706",
+        "technical.md": "35e66741415d19f880c9c7c3de6ddec74d21f042fe8fb61997b09518f3cce35a"
+      }
+    },
+    {
+      "id": "website-hapi-capabilities",
+      "path": "docs/project/archive/2026-10-12-website-hapi-capabilities",
+      "sourceCommit": "22584809b9c6f32abd05984529af57e3442e3f68",
+      "sourceCommittedAt": "2026-10-12T10:37:24+08:00",
+      "registeredAt": "2026-10-12T14:13:00.884Z",
+      "taskMapping": {
+        "T1": "T1",
+        "T2": "T2"
+      },
+      "tasks": 2,
+      "dependsOn": [],
+      "markdownSha256Before": {
+        "acceptance.md": "cc1b9ac1686242b5b1616c0687f409d2b46341c8b8430ca751fd07e43a556866",
+        "execution.md": "4c0f63f753065f22baf91e04061433a7d98d57a95ce3ef248e69eb4a7a44cc4d",
+        "plan.md": "cf148bb06a57da9e2fbafa6602e43702a44b76cba8f3931c63833bec527c57f7",
+        "requirement.md": "2ec9d7d33bbab8510aadda72c97212dd0c617dabf7506684d8b90c1806f37550",
+        "research.md": "652f14ce449839808841080f11d13e5af28d94769c3e872e4268f78389ed7cab",
+        "technical.md": "6f3d617f6fbbfe8120b5ca4eff6ce6c5debe98ff3be08a800a71898e9bf34b7e"
+      }
+    },
+    {
+      "id": "website-session-screenshots",
+      "path": "docs/project/archive/2026-10-12-website-session-screenshots",
+      "sourceCommit": "f7f3ed333339fbe8a9df2dfb588c0631daf5dd53",
+      "sourceCommittedAt": "2026-10-12T11:31:08+08:00",
+      "registeredAt": "2026-10-12T14:13:00.884Z",
+      "taskMapping": {
+        "T1": "T1",
+        "T2": "T2"
+      },
+      "tasks": 2,
+      "dependsOn": [],
+      "markdownSha256Before": {
+        "acceptance.md": "0a3f638616ebb71ab9fdf2c97bdc1aa8b47709afedfd9d6be240cb05a6141f4a",
+        "execution.md": "9c03fff4b88ce1b4319625e735b912677f351cb0606c4b52c41f938a9beae1e4",
+        "plan.md": "2f79f4d2ec812580d2ba3ef0e245a04b2bc7e4cb42955498a2bee3adeacc9d16",
+        "requirement.md": "f65d6d62b2ee992e37592f7caf9caa3a15b1390a06f58b552536190b33f67dc1",
+        "technical.md": "7ee12d2285f4b787be2a5b5c475ed96c5c3ec252e6a56f1030393a62108efb1b"
+      }
+    }
+  ]
+}

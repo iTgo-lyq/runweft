@@ -1,6 +1,5 @@
 # 宿主接入与子执行的 MCP 禁用
 
-> 状态：草稿
 > 更新：2026-09-29
 > 来源：[Requirement](requirement.md)、[Research](research.md)。保留前期讨论；正式实现方案在 Technical 中落实。
 

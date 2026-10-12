@@ -1,0 +1,82 @@
+{
+  "schemaVersion": 1,
+  "id": "remote-workspace-preparation",
+  "title": "远端任务启动前的工作区准备",
+  "size": "large",
+  "status": "completed",
+  "stage": "close",
+  "branch": "codex/spec-trail-adoption",
+  "dependsOn": [
+    "hapi-subagent-foundation",
+    "local-workspace-execution",
+    "task-artifact-delivery"
+  ],
+  "confirmations": {
+    "requirement": {
+      "at": "2026-10-12T14:13:00.884Z",
+      "summary": "原 requirement.md 已完成，沿用原持续授权和评审结论。本次历史勘误登记；at 为回填时间，原事件准确时间未补造。",
+      "source": "https://github.com/iTgo-lyq/runweft/tree/998e14aa4a1246ae9498a916ac7c12430d24bb5e/docs/project/archive/2026-09-30-remote-workspace-preparation/requirement.md"
+    },
+    "technical": {
+      "at": "2026-10-12T14:13:00.884Z",
+      "summary": "原 technical.md 已完成，沿用原持续授权和评审结论。本次历史勘误登记；at 为回填时间，原事件准确时间未补造。",
+      "source": "https://github.com/iTgo-lyq/runweft/tree/998e14aa4a1246ae9498a916ac7c12430d24bb5e/docs/project/archive/2026-09-30-remote-workspace-preparation/technical.md"
+    },
+    "plan": {
+      "at": "2026-10-12T14:13:00.884Z",
+      "summary": "原 plan.md 已完成，沿用原持续授权和评审结论。本次历史勘误登记；at 为回填时间，原事件准确时间未补造。",
+      "source": "https://github.com/iTgo-lyq/runweft/tree/998e14aa4a1246ae9498a916ac7c12430d24bb5e/docs/project/archive/2026-09-30-remote-workspace-preparation/plan.md"
+    }
+  },
+  "tasks": {
+    "T1": {
+      "title": "HAPI 固定基线导出",
+      "status": "done",
+      "verification": "历史交付证据见 execution.md 及原文 https://github.com/iTgo-lyq/runweft/tree/998e14aa4a1246ae9498a916ac7c12430d24bb5e/docs/project/archive/2026-09-30-remote-workspace-preparation/execution.md；本次只迁移记录，未重跑当时产品验收。"
+    },
+    "T2": {
+      "title": "目标缓存导入与已有 worktree 准备",
+      "status": "done",
+      "verification": "历史交付证据见 execution.md 及原文 https://github.com/iTgo-lyq/runweft/tree/998e14aa4a1246ae9498a916ac7c12430d24bb5e/docs/project/archive/2026-09-30-remote-workspace-preparation/execution.md；本次只迁移记录，未重跑当时产品验收。"
+    },
+    "T3": {
+      "title": "中心准备编排与诊断 CLI",
+      "status": "done",
+      "verification": "历史交付证据见 execution.md 及原文 https://github.com/iTgo-lyq/runweft/tree/998e14aa4a1246ae9498a916ac7c12430d24bb5e/docs/project/archive/2026-09-30-remote-workspace-preparation/execution.md；本次只迁移记录，未重跑当时产品验收。"
+    },
+    "T4": {
+      "title": "准备留存与显式释放",
+      "status": "done",
+      "verification": "历史交付证据见 execution.md 及原文 https://github.com/iTgo-lyq/runweft/tree/998e14aa4a1246ae9498a916ac7c12430d24bb5e/docs/project/archive/2026-09-30-remote-workspace-preparation/execution.md；本次只迁移记录，未重跑当时产品验收。"
+    },
+    "T5": {
+      "title": "实际原生准备探针与候选安装",
+      "status": "done",
+      "verification": "历史交付证据见 execution.md 及原文 https://github.com/iTgo-lyq/runweft/tree/998e14aa4a1246ae9498a916ac7c12430d24bb5e/docs/project/archive/2026-09-30-remote-workspace-preparation/execution.md；本次只迁移记录，未重跑当时产品验收。"
+    }
+  },
+  "closure": {
+    "verification": {
+      "result": "passed",
+      "at": "2026-10-12T14:13:00.884Z",
+      "summary": "依据原 acceptance.md 和 execution.md 的实际验证与 iclaude 评审记录；所有未测、延期和条件限制沿原文保留。本次历史勘误登记；at 为回填时间，原事件准确时间未补造。"
+    },
+    "acceptance": {
+      "result": "accepted",
+      "at": "2026-10-12T14:13:00.884Z",
+      "summary": "依据原归档的验收结论及用户授权的 Agent 自动验收；本次不代表用户重新验收或新增实测。本次历史勘误登记；at 为回填时间，原事件准确时间未补造。",
+      "source": "https://github.com/iTgo-lyq/runweft/tree/998e14aa4a1246ae9498a916ac7c12430d24bb5e/docs/project/archive/2026-09-30-remote-workspace-preparation/acceptance.md"
+    },
+    "specs": {
+      "result": "synced",
+      "at": "2026-10-12T14:13:00.884Z",
+      "summary": "原归档已同步的事实沿原文与 Specs 保留；本次历史迁移不改变产品行为。本次历史勘误登记；at 为回填时间，原事件准确时间未补造。"
+    },
+    "archive": {
+      "result": "done",
+      "at": "2026-10-12T14:13:00.884Z",
+      "summary": "保留原归档目录；原来源提交 998e14aa4a1246ae9498a916ac7c12430d24bb5e，提交时间 2026-09-30T01:51:34+08:00。本次历史勘误登记；at 为回填时间，原事件准确时间未补造。",
+      "path": "docs/project/archive/2026-09-30-remote-workspace-preparation"
+    }
+  }
+}

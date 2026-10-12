@@ -1,0 +1,87 @@
+{
+  "schemaVersion": 1,
+  "id": "test-backbone-slimming",
+  "title": "第二轮瘦身：核心测试与可靠验收",
+  "size": "large",
+  "status": "completed",
+  "stage": "close",
+  "branch": "codex/spec-trail-adoption",
+  "confirmations": {
+    "requirement": {
+      "at": "2026-10-12T14:13:00.884Z",
+      "summary": "原 requirement.md 已完成，沿用原持续授权和评审结论。本次历史勘误登记；at 为回填时间，原事件准确时间未补造。",
+      "source": "https://github.com/iTgo-lyq/runweft/tree/afdcd81a4e062f56edab533b9874f266b70f655b/docs/project/archive/2026-10-03-test-backbone-slimming/requirement.md"
+    },
+    "technical": {
+      "at": "2026-10-12T14:13:00.884Z",
+      "summary": "原 technical.md 已完成，沿用原持续授权和评审结论。本次历史勘误登记；at 为回填时间，原事件准确时间未补造。",
+      "source": "https://github.com/iTgo-lyq/runweft/tree/afdcd81a4e062f56edab533b9874f266b70f655b/docs/project/archive/2026-10-03-test-backbone-slimming/technical.md"
+    },
+    "plan": {
+      "at": "2026-10-12T14:13:00.884Z",
+      "summary": "原 plan.md 已完成，沿用原持续授权和评审结论。本次历史勘误登记；at 为回填时间，原事件准确时间未补造。",
+      "source": "https://github.com/iTgo-lyq/runweft/tree/afdcd81a4e062f56edab533b9874f266b70f655b/docs/project/archive/2026-10-03-test-backbone-slimming/plan.md"
+    }
+  },
+  "tasks": {
+    "T1": {
+      "title": "修复验收可靠性并前置已知失败",
+      "status": "done",
+      "verification": "历史交付证据见 execution.md 及原文 https://github.com/iTgo-lyq/runweft/tree/afdcd81a4e062f56edab533b9874f266b70f655b/docs/project/archive/2026-10-03-test-backbone-slimming/execution.md；本次只迁移记录，未重跑当时产品验收。"
+    },
+    "T2": {
+      "title": "删除浅层测试并收敛 CLI 重复覆盖",
+      "status": "done",
+      "verification": "历史交付证据见 execution.md 及原文 https://github.com/iTgo-lyq/runweft/tree/afdcd81a4e062f56edab533b9874f266b70f655b/docs/project/archive/2026-10-03-test-backbone-slimming/execution.md；本次只迁移记录，未重跑当时产品验收。"
+    },
+    "T3": {
+      "title": "合并无模型集成与浏览器验收",
+      "status": "done",
+      "verification": "历史交付证据见 execution.md 及原文 https://github.com/iTgo-lyq/runweft/tree/afdcd81a4e062f56edab533b9874f266b70f655b/docs/project/archive/2026-10-03-test-backbone-slimming/execution.md；本次只迁移记录，未重跑当时产品验收。"
+    },
+    "T4": {
+      "title": "实现原生骨干、前置检查并冻结候选",
+      "status": "done",
+      "verification": "历史交付证据见 execution.md 及原文 https://github.com/iTgo-lyq/runweft/tree/afdcd81a4e062f56edab533b9874f266b70f655b/docs/project/archive/2026-10-03-test-backbone-slimming/execution.md；本次只迁移记录，未重跑当时产品验收。"
+    },
+    "T7": {
+      "title": "验收冻结原生骨干",
+      "status": "done",
+      "verification": "历史交付证据见 execution.md 及原文 https://github.com/iTgo-lyq/runweft/tree/afdcd81a4e062f56edab533b9874f266b70f655b/docs/project/archive/2026-10-03-test-backbone-slimming/execution.md；本次只迁移记录，未重跑当时产品验收。"
+    },
+    "T5": {
+      "title": "优化 CI 触发和开发入口",
+      "status": "done",
+      "verification": "历史交付证据见 execution.md 及原文 https://github.com/iTgo-lyq/runweft/tree/afdcd81a4e062f56edab533b9874f266b70f655b/docs/project/archive/2026-10-03-test-backbone-slimming/execution.md；本次只迁移记录，未重跑当时产品验收。"
+    },
+    "T6": {
+      "title": "验收可靠性与总成本并同步事实",
+      "status": "done",
+      "verification": "历史交付证据见 execution.md 及原文 https://github.com/iTgo-lyq/runweft/tree/afdcd81a4e062f56edab533b9874f266b70f655b/docs/project/archive/2026-10-03-test-backbone-slimming/execution.md；本次只迁移记录，未重跑当时产品验收。"
+    }
+  },
+  "closure": {
+    "verification": {
+      "result": "passed",
+      "at": "2026-10-12T14:13:00.884Z",
+      "summary": "依据原 acceptance.md 和 execution.md 的实际验证与 iclaude 评审记录；所有未测、延期和条件限制沿原文保留。本次历史勘误登记；at 为回填时间，原事件准确时间未补造。"
+    },
+    "acceptance": {
+      "result": "accepted",
+      "at": "2026-10-12T14:13:00.884Z",
+      "summary": "依据原归档的验收结论及用户授权的 Agent 自动验收；本次不代表用户重新验收或新增实测。本次历史勘误登记；at 为回填时间，原事件准确时间未补造。",
+      "source": "https://github.com/iTgo-lyq/runweft/tree/afdcd81a4e062f56edab533b9874f266b70f655b/docs/project/archive/2026-10-03-test-backbone-slimming/acceptance.md"
+    },
+    "specs": {
+      "result": "synced",
+      "at": "2026-10-12T14:13:00.884Z",
+      "summary": "原归档已同步的事实沿原文与 Specs 保留；本次历史迁移不改变产品行为。本次历史勘误登记；at 为回填时间，原事件准确时间未补造。"
+    },
+    "archive": {
+      "result": "done",
+      "at": "2026-10-12T14:13:00.884Z",
+      "summary": "保留原归档目录；原来源提交 afdcd81a4e062f56edab533b9874f266b70f655b，提交时间 2026-10-04T00:32:28+08:00。本次历史勘误登记；at 为回填时间，原事件准确时间未补造。",
+      "path": "docs/project/archive/2026-10-03-test-backbone-slimming"
+    }
+  }
+}

@@ -1,7 +1,6 @@
 # 全局机器与 Runtime 注册技术方案
 
 > 来源：[Requirement](requirement.md)、[Research](research.md)
-> 状态：已确认
 > 更新：2026-09-29
 > 确认方式：沿用户逐 Change 自主落实授权；实施前由当前工作区 iclaude 对 Plan 做一次评审，主 agent 独立复核。
 

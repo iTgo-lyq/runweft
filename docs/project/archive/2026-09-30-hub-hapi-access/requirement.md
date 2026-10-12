@@ -1,13 +1,11 @@
 # HAPI 通道的身份与对象授权
 
-> 状态：已完成
-> 规模：大型
 > 前置：[身份与空间](../../archive/2026-09-30-hub-identities-and-spaces/requirement.md)
 > 更新：2026-09-30
 
 ## 目标
 
-沿 [授权契约](../../changes/hub-spaces-and-agent-configuration/access-design.md) 让 Web/CLI/MCP、原生 UI、Runner 与结果通道遵守同一对象授权，复用 HAPI 的执行和原生状态。
+沿 [授权契约](../2026-10-01-hub-spaces-and-agent-configuration/access-design.md) 让 Web/CLI/MCP、原生 UI、Runner 与结果通道遵守同一对象授权，复用 HAPI 的执行和原生状态。
 
 ## ADDED / MODIFIED
 

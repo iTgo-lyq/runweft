@@ -1,7 +1,6 @@
 # 完整发行技术方案
 
 > 来源：[Requirement](requirement.md)、[Research](research.md)
-> 状态：已确认
 > 更新：2026-09-30
 
 ## 就绪性

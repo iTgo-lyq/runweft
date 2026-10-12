@@ -1,7 +1,6 @@
 # 远端代码回收技术方案
 
 > 来源：[Requirement](requirement.md)、[Research](research.md#2026-09-30-实现前复核)
-> 状态：已确认
 > 更新：2026-09-30
 > 确认依据：用户持续授权自主落实技术细节、按顺序评审与执行；方案继续既有 worktree、checkpoint、bundle、默认权限和 HAPI 优先决策。Plan 经本 Change 唯一一次 iclaude 评审后执行。
 

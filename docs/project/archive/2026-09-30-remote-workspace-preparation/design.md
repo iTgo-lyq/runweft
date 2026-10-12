@@ -1,6 +1,5 @@
 # 远端工作区准备
 
-> 状态：草稿
 > 来源：[本 Change 需求](requirement.md)、[跨 Change 架构](../../architecture.md)
 > 按用户要求保留需求阶段的方案讨论；本文件不是已确认 Technical，也不代表已实现。
 > 已确认：主仓库继承、每个 subagent 独立 worktree、启动前完成本文件的必需准备；项目依赖由 agent 启动后安装。

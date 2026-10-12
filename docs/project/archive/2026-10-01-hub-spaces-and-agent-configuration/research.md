@@ -17,11 +17,11 @@
 | --- | --- | --- |
 | access token 可拆为基础 token 与 namespace 后缀；默认 namespace 为 default | [parseAccessToken](../../../../hapi/hub/src/utils/accessToken.ts) | namespace 的选择没有经过空间成员资格检查 |
 | token 登录校验同一基础 token，JWT 的 uid 来自服务级 ownerId；Telegram 登录也沿该 ownerId | [HAPI auth](../../../../hapi/hub/src/web/routes/auth.ts)、[ownerId](../../../../hapi/hub/src/config/ownerId.ts) | 多人共用 token 不会成为多个可区分的配置所有者；不是说 HAPI 没有任何 users 表 |
-| Runweft 读取 uid/ns，但资源服务只获得 ns | [API](../../../../src/api.ts)、[ResourceService](../../../../src/resources/service.ts) | 同 namespace 资源登记没有按实际用户/owner 区分修改权 |
-| 机器、runtime 以 namespace 限定查询；runtime 按 machine/flavor 定位 | [ResourceStore](../../../../src/resources/store.ts)、[资源规格](../../specs/resources/scope/spec.md) | 可复用中心资源库，但需要增加所有者、空间和共享授权 |
-| 全局/项目定义在客户端文件，绑定在 client.sqlite | [Agent 定义](../../../../src/agents/definitions.ts)、[绑定](../../../../src/agents/bindings.ts) | Hub 没有权威 Agent 目录；单加页面无法满足集中配置 |
+| Runweft 读取 uid/ns，但资源服务只获得 ns | [API](https://github.com/iTgo-lyq/runweft/blob/444669ea15abfdcddb64a529270142b902dfb5a8/src/api.ts)、[ResourceService](https://github.com/iTgo-lyq/runweft/blob/e67d9cae267529013e1a4a5c72fe388e3465af78/src/resources/service.ts) | 同 namespace 资源登记没有按实际用户/owner 区分修改权 |
+| 机器、runtime 以 namespace 限定查询；runtime 按 machine/flavor 定位 | [ResourceStore](https://github.com/iTgo-lyq/runweft/blob/42021d4b77c7517ce47d48d309f828f615efc137/src/resources/store.ts)、[资源规格](../../specs/resources/scope/spec.md) | 可复用中心资源库，但需要增加所有者、空间和共享授权 |
+| 全局/项目定义在客户端文件，绑定在 client.sqlite | [Agent 定义](https://github.com/iTgo-lyq/runweft/blob/4a7300c6b0683bd1a601e1eced20dd9d5396b0e3/src/agents/definitions.ts)、[绑定](https://github.com/iTgo-lyq/runweft/blob/1b052049d39ad14d234012aba97b76c84578e81a/src/agents/bindings.ts) | Hub 没有权威 Agent 目录；单加页面无法满足集中配置 |
 | workspace 绑定记录真实目录和 repositoryRoot | 历史 `src/workspaces.ts`，可用 `git show fbb440e:src/workspaces.ts` 读取；第五阶段已删除旧入口 | 不是跨 clone 的 Git 仓库身份，也没有每个用户的仓库配置 |
-| 任务路由使用 namespace 与父宿主信息，总览跨该 namespace 的父会话 | [任务 API](../../../../src/tasks/api.ts) | 父会话权限与用户/成员权限不是同一个层次；需保留原生身份并增加账户维度 |
+| 任务路由使用 namespace 与父宿主信息，总览跨该 namespace 的父会话 | [任务 API](https://github.com/iTgo-lyq/runweft/blob/bf521cf0462b95ef1a75ada1b3c16eff5d3fe0fb/src/tasks/api.ts) | 父会话权限与用户/成员权限不是同一个层次；需保留原生身份并增加账户维度 |
 | 未处理的 HTTP 路由及所有 upgrade 转发至 HAPI | [网关](../../../../src/proxy.ts) | 不能只保护 Runweft 自有页面或接口 |
 | Runner Socket 校验基础 token；终端 Socket 校验 uid/ns JWT | [Socket 认证](../../../../hapi/hub/src/socket/server.ts) | 新 Runner 凭据与长连接授权需要衔接，不能分发 HAPI 根 token 后宣称对象隔离 |
 | 原生 session 与 artifact 接口主要按 namespace 取数 | [会话](../../../../hapi/hub/src/web/routes/sessions.ts)、[附件](../../../../hapi/hub/src/web/routes/artifacts.ts) | 原生 UI/成果回收也必须遵守实际用户和对象授权 |

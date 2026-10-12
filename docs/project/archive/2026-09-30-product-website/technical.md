@@ -1,7 +1,6 @@
 # 官网技术方案
 
 > 来源：[Requirement](requirement.md)
-> 状态：已确认
 > 技术就绪性：已就绪；内容依据、平台包、Node/Bun 和 Playwright 均在当前仓库可用。
 
 ## 实现边界

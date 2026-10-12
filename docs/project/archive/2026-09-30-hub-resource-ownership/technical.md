@@ -1,6 +1,5 @@
 # 机器与 Runtime 归属技术方案
 
-> 状态：已确认
 > 来源：[需求](requirement.md)、[Research](research.md)
 > 更新：2026-09-30。主 agent 按既有授权制定工程细节；Plan 实施前完成 iclaude 评审。
 

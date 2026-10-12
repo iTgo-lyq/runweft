@@ -1,7 +1,6 @@
 # 统一 CLI 与部署技术方案
 
 > 来源：./requirement.md
-> 状态：已确认
 > 更新：2026-09-29
 > 确认依据：用户授权主 agent 落实工程细节；本方案与 Plan 合并交给 iclaude 做本 Change 唯一一次评审，采纳情况记入 execution.md。
 

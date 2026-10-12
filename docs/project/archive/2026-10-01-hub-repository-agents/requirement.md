@@ -1,7 +1,5 @@
 # 仓库关联与中心 Agent 配置
 
-> 状态：已完成
-> 规模：大型
 > 前置：[身份与空间](../../archive/2026-09-30-hub-identities-and-spaces/requirement.md)、[资源归属](../../archive/2026-09-30-hub-resource-ownership/requirement.md)
 > 更新：2026-09-30
 

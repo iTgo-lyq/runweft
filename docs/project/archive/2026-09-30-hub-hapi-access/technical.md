@@ -1,6 +1,5 @@
 # HAPI 通道授权技术方案
 
-> 状态：已确认
 > 来源：[需求](requirement.md)、[核对证据](research.md)
 > 更新：2026-09-30。主 agent 按既有授权决定工程细节；实施前进行 iclaude Plan 评审。
 

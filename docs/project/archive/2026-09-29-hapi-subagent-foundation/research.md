@@ -94,7 +94,7 @@ HAPI 的本地/远程交互模式不直接等价于本项目的同机/跨主机�
 
 ## 关联调查
 
-[远端工作区调查](../2026-09-30-remote-workspace-preparation/research.md)保存 HAPI 多机/工作树与 Multica 准备、执行和成果分工的源码证据。[代码回收实验](../../changes/remote-result-delivery/research.md)保存 Git bundle 的本地验证，避免在各 Change 复制同一份证据。
+[远端工作区调查](../2026-09-30-remote-workspace-preparation/research.md)保存 HAPI 多机/工作树与 Multica 准备、执行和成果分工的源码证据。[代码回收实验](../2026-09-30-remote-result-delivery/research.md)保存 Git bundle 的本地验证，避免在各 Change 复制同一份证据。
 
 ## 远端设计补充证据
 

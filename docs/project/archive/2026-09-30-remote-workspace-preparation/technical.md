@@ -1,7 +1,6 @@
 # 远端工作区准备技术方案
 
 > 来源：[Requirement](requirement.md)、[Research](research.md#2026-09-29-实现前复核)
-> 状态：已确认
 > 更新：2026-09-30
 > 确认依据：用户授权自主落实细节；本 Change 唯一一次 iclaude 评审已完成，主 agent 的采纳与补充验证见 [Execution](execution.md)。
 

@@ -1,7 +1,6 @@
 # 两轮瘦身合入 main
 
 > 来源：[第二轮方案](technical.md)、[第一轮验收](../2026-10-02-module-slimming-audit/acceptance.md)
-> 状态：已确认
 > 更新：2026-10-04
 
 用户已授权合入 main，既有授权覆盖工程决策与本地验收。原 Change 已归档，本文件独立记录本次合码，不改写原需求、计划或验收结果，不新建 Change。
