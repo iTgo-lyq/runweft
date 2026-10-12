@@ -22,3 +22,5 @@ T1 完成类型、根测试、Node 发布检查、构建、Linux 完整卸载和
 原run38237215063在Hub浏览器过期测试的auth请求计数失败（5!=4），未进入上传步骤、未输出上传开始或候选描述，匿名五包1.1.4均404。相同旧测试的main CI和本地单项通过，存在时序不稳定。旧测试在应用timer已运行的共享context上安装clock；[Playwright官方Clock说明](https://playwright.dev/docs/clock)要求在应用计时器调用前安装，且context内页面共同受影响。
 
 只调整验收fixture：原tab重载核对JWT不变；新的独立browser context在首次导航前安装clock，携原短JWT验证过期清理/返回Hub/零新auth申请，不影响其他Hub/native标签；原安全断言保留。typecheck及完整console单项通过，包输入与v1.1.4完全一致。推送main修正后使用release-tag=v1.1.4、source-run-id=38237215063恢复；prepare在确认未上传和版本不存在时允许从原tag重新构建。产品源码、HAPI、版本及tag不变，不覆盖npm包。
+
+恢复run的托管Runner在集成阶段磁盘耗尽，API记录上传步骤仍pending。标准托管Runner的可用SSD空间为14GB（[GitHub官方规格](https://docs.github.com/en/actions/reference/runners/github-hosted-runners)）；发布job先清除不参与Bun/Node/HAPI构建的预装Android/.NET/GHC以释放空间，每组结束记录磁盘占用。只影响一次性CI机器，原候选和用户环境不清理。日志未保存的失败不假定任何集成通过；用已保存的首轮日志与公开版本不存在的证据恢复同一tag。

@@ -22,3 +22,6 @@
 - 恢复发布：workflow_dispatch run38239746851使用main验证代码重建原v1.1.4候选；已通过基础检查/四平台构建，继续模型无关集成。包输入与原tag一致，不更改tag或重发未知上传。
 - main run38239743801的并行materialize测试在5秒内超时：fixture按HTTP到达先后分配gate，测试却按调用先后等待completion，反序到达会互相等待。改为按operationId绑定gate，主动让第二操作先到达；保留共享只读/独立结束后释放的断言并在finally排空请求。类型检查、该文件5项测试/32断言通过（273毫秒）；没有放宽超时或修改产品。原失败为259通过/1失败/1随后连接错误。
 - 修正 Commit：`npm-uninstall-release T2.2: bind concurrent fixture completion to operation IDs`
+- main run38240707933已通过：260项根测试、4887断言、42文件、75.63秒；仅测试改动按diff无需重复集成。
+- 恢复run38239746851在集成运行时被Runner磁盘耗尽中断；check annotation明确为No space left on device，step17仍in_progress、上传step19为pending，最终日志未保存。保留API原始annotation，不把集成声称为通过。公开五包仍须确认不存在再恢复。发布job启动时删除仅该一次性托管机器上的预装Android/.NET/GHC，保留实际构建工具、源码和候选；每组结束记录df。该磁盘空间问题不涉及Actions artifact额度或本机软件。
+- 修正 Commit：`npm-uninstall-release T2.3: reserve hosted runner disk space for release validation`

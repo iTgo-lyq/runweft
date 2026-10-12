@@ -36,6 +36,11 @@ jobs:
       release: ${{ steps.prepared.outputs.release || steps.published.outputs.release }}
       publish: ${{ steps.prepared.outputs.publish }}
     steps:
+      - name: Free hosted runner space for four-platform packages and integration fixtures
+        run: |
+          df -h /
+          sudo rm -rf -- /usr/local/lib/android /usr/share/dotnet /opt/ghc
+          df -h /
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           submodules: true
@@ -100,6 +105,7 @@ jobs:
         run: |
           for group in access storage web service-package; do
             bun scripts/smoke-integration.ts "$group" .dev-smoke/release-source/dist/packages/runweft-linux-x64/bin/runweft || exit $?
+            df -h .
           done
       - name: Verify five package OIDC bindings
         if: steps.prepared.outputs.build == 'true' && steps.prepared.outputs.publish == 'true'
