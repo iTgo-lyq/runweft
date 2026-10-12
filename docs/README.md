@@ -1,5 +1,7 @@
 # 项目文档
 
+[一键完整卸载](project/archive/2026-10-12-complete-uninstall/acceptance.md)已完成源码实现与自动验收：根级 uninstall 默认预览，--yes 停止选定 home 的全部受管服务/登记会话并删除程序、接入、数据和备份，保留其他软件、模型凭据、原生历史及源项目。260 项根测试和 Linux x64 真实 npm/独立包闭环通过；尚未发布，公共 1.1.3 没有此命令。
+
 [官网会话介绍布局](project/archive/2026-10-12-website-compact-session-preview/acceptance.md)已更新：[截图预览](https://runweft.pages.dev/#session-screenshots)融入会话介绍块，桌面与手机都采用小尺寸双图并排，去掉说明与来源标注。iclaude 重写该块文案；三页六宽度、完整原图访问及线上十文件检查通过。
 
 [官网原生执行与 HAPI 能力说明](project/archive/2026-10-12-website-hapi-capabilities/acceptance.md)已上线：[首页新增内容](https://runweft.pages.dev/#native-experience)、[会话与审批指南](https://runweft.pages.dev/guide.html#native-session)。文案由 iclaude 完成，说明原生配置、会话历史、浏览器审批/文件及手机访问条件；保留首屏、样式和 npm 1.1.3。

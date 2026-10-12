@@ -1,6 +1,6 @@
 # CLI 安装与命令承载
 
-Runweft 提供一个 `runweft` 命令，包含本机部署配置、Hub 连接、HAPI 服务管理、认证、诊断、[MCP 安装](../mcp/spec.md)和全局[机器](../../resources/machines/spec.md)/[Runtime](../../resources/runtimes/spec.md)登记，以及中心仓库关联和 [Agent 定义](../../agents/definition/spec.md)的创建、个人选择与目标检查。[任务命令](../../delegation/interface/spec.md)提供本机共享/独立 worktree 协作、收尾修复与显式清理。`runweft hapi …` 调用配套的原生 HAPI，保留参数、终端交互、退出码与信号；覆盖同一托管 Hub/Runner 的操作提示改用统一启停命令。
+Runweft 提供一个 `runweft` 命令，包含本机部署配置、完整卸载、Hub 连接、HAPI 服务管理、认证、诊断、[MCP 安装](../mcp/spec.md)和全局[机器](../../resources/machines/spec.md)/[Runtime](../../resources/runtimes/spec.md)登记，以及中心仓库关联和 [Agent 定义](../../agents/definition/spec.md)的创建、个人选择与目标检查。[任务命令](../../delegation/interface/spec.md)提供本机共享/独立 worktree 协作、收尾修复与显式清理。`runweft hapi …` 调用配套的原生 HAPI，保留参数、终端交互、退出码与信号；覆盖同一托管 Hub/Runner 的操作提示改用统一启停命令。
 
 ## 安装包
 
@@ -14,6 +14,16 @@ Runweft 提供一个 `runweft` 命令，包含本机部署配置、Hub 连接、
 - 主包和平台包同时附带[产品 Skill](../skill/spec.md)，官网统一提供 npm 安装命令，从 npm 包读取 Skill，无独立下载；安装到宿主由用户授权的 Agent 操作，不自动更改全局配置。
 - 打包使用独立暂存，成功后替换旧交付；索引与校验文件绑定源码、配套 HAPI、程序和 tarball，见[发行产物](../../release/distribution/spec.md)。
 - npm 卸载删除程序，保留 Runweft 数据根。包升级不搬迁用户数据，运行中的服务与已安装程序分别报告版本，按角色重启生效。
+
+## 完整卸载
+
+根级 `uninstall` 默认只预览，`--yes` 执行完整删除，`--dry-run` 始终预览；全局 `--home` 与 `--json` 位于子命令前。范围为当前安装与选定本机 Runweft 数据根，不扫描其他账号、数据根或远端 Hub，不清理全局 npm 缓存。源码已实现并通过 Linux x64 隔离自动验收，公共 npm 1.1.3 尚不包含此命令，见[验收](../../../archive/2026-10-12-complete-uninstall/acceptance.md)。
+
+支持可确认归属的 npm 全局包与完整独立平台包。预检安装、路径、所有权、权限、原生接入、Skill、进程与 Git 元数据；拒绝源码/项目依赖、未知包、危险数据根、未知内容、同程序其他 home 占用、无法验证的进程和被用户改写的任务 Git 引用。预览不停止进程、不打开业务库、不写文件或备份。
+
+执行先停止该 home 的 Hub、全部连接 Runner、当前及恢复记录中的登记会话和本 home 的 MCP 服务；检查残留后，用无持久备份的配置编辑移除自身 MCP/hook，清理已确认的 Skill 与确切受管 worktree/refs，再删除程序和整个数据根（含配置、连接凭据、数据库、日志、缓存、工作区副本及备份）。保留其他软件配置、模型凭据、原生历史、独立 HAPI、用户源项目、用户分支和其他工作树；子符号链接只移除链接。卸载不得在将被停止的受管祖先进程内运行。
+
+npm 程序删除禁用生命周期脚本、忽略 npm_config 环境污染并核对入口/主包/平台程序已消失。失败非零，程序删除失败保留数据并可重试；程序已删而数据删除失败时报告准确剩余路径，不提示调用已删除 CLI。停止或删除已完成的部分不制造虚假恢复。
 
 ## 命令约定
 

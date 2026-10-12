@@ -13,7 +13,7 @@
 | 符号链接及 Git 删除边界 | 根测试只移除数据链接，不触碰目标；正常清理确切 checkout/注册/refs，保留源文件、未提交文件、用户分支与其他 refs；另一 worktree 检出任务分支时拒绝 |
 | 独立包、重试与失败 | 完整平台目录/PATH 链接真实自删除；先制造 npm 失败，确认数据/程序保留后重试成功；重装后原 home/接入已不存在仍可卸载；readonly prefix、损坏状态与未知占用拒绝 |
 
-`bun run typecheck`、`bun run build`、260 项根测试和 8 组真实安装专项全部通过。实现/证据指纹与首次失败记录见 [verification.json](verification.json) 和 [Execution](execution.md)。T1 为 `2cd0436`；T2 的提交标题记录在 Execution，归档后独立提交 Specs。
+`bun run typecheck`、`bun run build`、260 项根测试和 8 组真实安装专项全部通过。实现/证据指纹与首次失败记录见 [verification.json](verification.json) 和 [Execution](execution.md)。T1 为 `2cd0436`，T2 为 `4bfa1ee`；归档后独立提交 Specs。
 
 真实卸载平台为 Linux x64。会话使用登记到真实 HAPI 的测试进程，未运行 Codex/Claude 模型，不代替原生模型协作或物理远端测试。Mac/arm64 本次未实测，Mac ps 适配仅有官方实现依据。实际用户环境没有运行完整卸载；独立 HAPI 未动，新建测试服务、安装和数据已清除。
 

@@ -51,6 +51,8 @@ paths 列出实际绝对路径：
 
 正常成果清理按 result release → workspace remove → artifact prune/remove 显式执行，未交付候选受保护。server.artifacts 配置托管中心限制，远端客户端用 artifact limits 查询实际策略；传输流式转发，代理需支持相应体积和长流，不另加固定总传输时限。
 
+用户显式销毁本机环境时使用[完整卸载](../installation/cli/spec.md#完整卸载)：选定 home 的配置、连接、数据库、日志、缓存、工作区副本和全部备份均删除，不留新备份。停止全部连接的受管会话/Runner 及 Hub 后核对占用；未知状态或其他 home 使用当前程序时拒绝。受管 Git 元数据按记录验证并删除确切工作树注册和引用，保留源项目、用户分支和其他工作树，不全局 prune。数据根之外的其他软件/原生模型数据和远端 Hub 不清理；普通 npm 卸载保留 home。
+
 ## 当前数据格式
 
 首次部署的数据结构基线为Runweft源码`afdcd81a4e062f56edab533b9874f266b70f655b`：中心库schema19、本机client库schema1、配置schemaVersion1，以及该提交的连接文件、Task/Round定义。工程版本号不代替结构识别；基线之前的测试格式不提供迁移。
