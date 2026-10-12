@@ -3,7 +3,7 @@ import { createHash } from 'node:crypto';
 import { appendFile, lstat, mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { packageNames, registry, releaseChannel } from '../scripts/npm-publish.mjs';
+import { compareReleaseVersions, packageNames, registry, releaseChannel } from '../scripts/npm-publish.mjs';
 
 const siteFiles = {
   'index.html': 'text/html', 'guide.html': 'text/html', 'manual.html': 'text/html',
@@ -17,10 +17,30 @@ const noDownloads = html => assert(!/<a\b[^>]*\bdownload(?:\s|=|>)/i.test(html)
   && !/(?:href|src)=["'][^"']*(?:\/downloads\/|\.(?:tgz|tar\.gz|zip|sha256)(?:["'?#]))/i.test(html), '官网不能提供包下载。');
 
 export function siteEligibility(env, version) {
+  if (env.RELEASE_VERSION) {
+    assert.equal(env.GITHUB_EVENT_NAME, 'workflow_dispatch');
+    assert.equal(env.GITHUB_REF, 'refs/heads/main', '发行接续只能部署 main。');
+    assert.equal(version, env.RELEASE_VERSION, 'main 版本已变化；不要用旧发行覆盖新官网。');
+  }
   if (releaseChannel(version) === 'latest') return true;
   assert(['push', 'workflow_dispatch'].includes(env.GITHUB_EVENT_NAME) && env.GITHUB_REF_TYPE === 'branch'
     && env.GITHUB_REF_NAME?.startsWith('codex/'), 'Beta 官网只允许开发分支跳过；main 和 PR 必须使用稳定版本。');
   return false;
+}
+
+export async function publicationReady(release, { allowPending = false, fetchImpl = fetch } = {}) {
+  const pending = [];
+  await Promise.all(packageNames.map(async name => {
+    const response = await request(`${registry}-/package/${name}/dist-tags`, { headers: { 'cache-control': 'no-cache' } }, fetchImpl);
+    assert([200, 404].includes(response.status), `${name} dist-tags HTTP ${response.status}`);
+    const tags = response.status === 404 ? {} : await response.json();
+    if (tags.latest !== release.version) {
+      if (tags.latest) assert(compareReleaseVersions(tags.latest, release.version) < 0, '公开 latest 已领先本次官网；从最新 main 处理。');
+      pending.push(name);
+    }
+  }));
+  if (pending.length) assert(allowPending, 'npm 尚未晋级；仅恢复已晋级版本的官网。');
+  return { ready: pending.length === 0, pending };
 }
 
 export function deploymentTarget(env) {
@@ -189,6 +209,13 @@ async function main() {
     }
     case 'check': {
       const site = await validateSite(directory);
+      const publication = await publicationReady(site.release, { allowPending: env.GITHUB_EVENT_NAME === 'push' && !env.RELEASE_VERSION });
+      await outputs({ ready: publication.ready });
+      if (!publication.ready) {
+        await save('check', { success: true, deployed: false, waitingFor: 'npm-promotion', ...site, ...publication });
+        await summary(`静态检查通过；npm ${site.release.version} 尚未晋级，官网等待发布。`);
+        break;
+      }
       const packages = await checkNpmRelease(site.release);
       await save('check', { success: true, sourceRevision: env.GITHUB_SHA, ...site, packages });
       await summary(`官网检查通过：npm ${site.release.version} 五包公开、tarball 可访问；${site.files.length} 个静态文件，${site.bytes} bytes。`);
@@ -208,6 +235,7 @@ async function main() {
         break;
       }
       await assertCurrentProduction(env);
+      if (env.RELEASE_VERSION) assert.equal((await validateSite(directory)).release.version, env.RELEASE_VERSION);
       const project = await ensurePagesProject({ accountId: env.CLOUDFLARE_ACCOUNT_ID, apiToken: env.CLOUDFLARE_API_TOKEN, projectName: env.CLOUDFLARE_PAGES_PROJECT || 'runweft' });
       await validateSite(directory);
       const toolDirectory = join(env.RUNNER_TEMP, 'runweft-pages-tools');
@@ -228,11 +256,14 @@ async function main() {
         verification: 'pending' });
       await summary(`Pages 已上传 ${prepared.mode}：[${deployment.href}](${deployment.href})，正在校验在线内容。`);
       const result = await verifyDeployment(target);
-      await save('deployment', { ...result, branch: prepared.branch, sourceRevision: env.GITHUB_SHA });
+      let production;
+      if (prepared.mode === 'production') production = await verifyDeployment({ ...target, url: `https://${prepared.subdomain}/` });
+      await save('deployment', { ...result, production, branch: prepared.branch, sourceRevision: env.GITHUB_SHA });
       await summary(`**已部署并验证 ${result.mode}**：[${result.url}](${result.url})，npm ${result.version}，分支 ${prepared.branch}。`);
       console.log(`Pages ${result.mode} 在线校验通过：${result.url}`);
       break;
     }
+    case 'current': await assertCurrentProduction(env); break;
     default: throw new Error('用法：node website/publish.mjs eligibility|check|prepare|verify');
   }
 }

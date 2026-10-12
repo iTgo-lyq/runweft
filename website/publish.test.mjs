@@ -5,7 +5,7 @@ import { spawnSync } from 'node:child_process';
 import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { buildSite } from './build.mjs';
-import { assertCurrentProduction, checkNpmRelease, siteEligibility, deploymentTarget, ensurePagesProject, validateSite, verifyDeployment } from './publish.mjs';
+import { assertCurrentProduction, checkNpmRelease, publicationReady, siteEligibility, deploymentTarget, ensurePagesProject, validateSite, verifyDeployment } from './publish.mjs';
 import { packageNames, registry } from '../scripts/npm-publish.mjs';
 
 await mkdir('.dev-smoke', { recursive: true });
@@ -39,6 +39,20 @@ test('production/preview only for allowed branch push or manual; PR/tags/other r
     assert.deepEqual(deploymentTarget({ ...env, ...change }), { mode: 'check' });
   }
   assert.throws(() => deploymentTarget({ ...env, GITHUB_REF_NAME: 'codex/x;echo-token' }), /字符/);
+});
+
+test('unpromoted ordinary pushes wait; release follow-up and stale versions fail closed', async () => {
+  const fetchImpl = async () => json({ latest: '1.0.0', beta: site.release.version });
+  const waiting = await publicationReady(site.release, { allowPending: true, fetchImpl });
+  assert.equal(waiting.ready, false); assert.equal(waiting.pending.length, 5);
+  await assert.rejects(publicationReady(site.release, { fetchImpl }), /尚未晋级/);
+  assert.equal((await publicationReady(site.release, { fetchImpl: async () => json({ latest: site.release.version }) })).ready, true);
+  await assert.rejects(publicationReady(site.release, { allowPending: true, fetchImpl: async () => json({ latest: '9.0.0' }) }), /领先/);
+  await assert.rejects(publicationReady(site.release, { allowPending: true, fetchImpl: async () => json({}, 403) }), /HTTP 403/);
+  const dispatch = { ...env, GITHUB_EVENT_NAME: 'workflow_dispatch', GITHUB_REF: 'refs/heads/main', RELEASE_VERSION: site.release.version };
+  assert.equal(siteEligibility(dispatch, site.release.version), true);
+  assert.throws(() => siteEligibility(dispatch, '9.0.0'), /main 版本已变化/);
+  assert.throws(() => siteEligibility({ ...dispatch, GITHUB_REF: 'refs/heads/codex/test' }, site.release.version), /只能部署 main/);
 });
 
 test('real build has exactly static files and same npm version; no package archives', async () => {
@@ -212,6 +226,39 @@ test('wrong deployment, Access redirect, wrong MIME/content and propagation fail
   await assert.rejects(verifyDeployment(online, { fetchImpl: async () => json({}) }), /MIME/);
   await assert.rejects(verifyDeployment(online, { fetchImpl: async url => new Response('wrong', { headers: (await serveFixture(url)).headers }) }), /内容/);
   await assert.rejects(verifyDeployment(online, { fetchImpl: async () => json({}, 404), pause: async () => {}, attempts: 2 }), /HTTP 404/);
+});
+
+test('production CLI requires the formal domain after the unique URL passes', async () => {
+  const working = join(temporary, 'production-verification');
+  const evidence = join(working, '.dev-smoke/website-pages');
+  await mkdir(evidence, { recursive: true });
+  await buildSite({ projectDirectory, outputDirectory: join(working, 'dist/website') });
+  await writeFile(join(evidence, 'prepare.json'), JSON.stringify({ mode: 'production', branch: 'main', subdomain: project.subdomain }));
+  const preload = join(working, 'pages-fixture.mjs');
+  await writeFile(preload, `import { appendFileSync, readFileSync } from 'node:fs';
+globalThis.fetch = async input => {
+  const url = new URL(input);
+  appendFileSync('requests.jsonl', JSON.stringify(url.href) + '\\n');
+  const path = url.pathname.slice(1), extension = path.split('.').at(-1);
+  const mime = {html:'text/html',css:'text/css',js:'text/javascript',json:'application/json',svg:'image/svg+xml',webp:'image/webp'}[extension];
+  const bytes = url.hostname === '${project.subdomain}' && process.env.FAIL_PRODUCTION === '1'
+    ? 'wrong production version' : readFileSync('dist/website/' + path);
+  return new Response(bytes, {headers:{'content-type':mime}});
+};\n`);
+  for (const fail of ['1', '0']) {
+    await writeFile(join(working, 'requests.jsonl'), '');
+    const child = spawnSync(process.execPath, ['--import', preload, resolve(import.meta.dirname, 'publish.mjs'), 'verify'], {
+      cwd: working, env: { ...process.env, PAGES_DEPLOYMENT_URL: online.url, PAGES_ENVIRONMENT: 'production', FAIL_PRODUCTION: fail }, encoding: 'utf8',
+    });
+    const receipt = JSON.parse(await readFile(join(evidence, 'deployment.json'), 'utf8'));
+    const requests = (await readFile(join(working, 'requests.jsonl'), 'utf8')).trim().split('\n').map(JSON.parse);
+    assert.equal(requests.filter(url => new URL(url).hostname === new URL(online.url).hostname).length, 10);
+    assert(requests.some(url => new URL(url).hostname === project.subdomain));
+    assert.equal(child.status, fail === '1' ? 1 : 0, child.stderr);
+    assert.equal(receipt.success, fail === '0');
+    if (fail === '1') { assert.match(child.stderr, /内容/); assert.equal(receipt.uploaded, true); }
+    else assert.equal(receipt.production.success, true);
+  }
 });
 
 test('only a Beta development branch skips the site; main, PR, tags and invalid versions fail', async () => {

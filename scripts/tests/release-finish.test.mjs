@@ -1,0 +1,149 @@
+import assert from 'node:assert/strict';
+import { test } from 'node:test';
+import { readFileSync } from 'node:fs';
+import { parse } from 'yaml';
+import { collectReleaseEvidence, dispatchWebsite, jobTiming, websiteRunName } from '../release-finish.mjs';
+import { packageNames } from '../npm-publish.mjs';
+
+const env = { GITHUB_REPOSITORY: 'owner/repo', GH_TOKEN: 'fixture-token', GITHUB_RUN_ID: '10', GITHUB_RUN_ATTEMPT: '2' };
+const version = '1.2.0', hapi = { revision: 'b'.repeat(40), version: '0.30.7', protocolVersion: 1 };
+const release = { product: 'hub-console-v1', version, source: { revision: 'a'.repeat(40), dirty: false }, hapi,
+    latestBefore: Object.fromEntries(packageNames.map(name => [name, '1.1.0'])), packages: packageNames.map(name => ({
+        name, version, path: name, tarball: `tarballs/${name}-${version}.tgz`, sha512: 'a'.repeat(86) + '==',
+        binaries: { 'bin/runweft': 'c'.repeat(64), 'bin/hapi': 'd'.repeat(64) }, manifest: {
+            name, version, repository: { type: 'git', url: 'git+https://github.com/iTgo-lyq/runweft.git' },
+            ...(name === 'runweft' ? { optionalDependencies: Object.fromEntries(packageNames.filter(item => item !== name).map(item => [item, version])) }
+                : { runweft: { hapi } }),
+        },
+    })) };
+const run = { id: 20, path: '.github/workflows/website-pages.yml', event: 'workflow_dispatch', head_branch: 'main',
+    display_title: websiteRunName(version, '10', '2'), status: 'completed', conclusion: 'success', run_attempt: 1 };
+
+test('website dispatch binds the returned run and waits for actual completion', async () => {
+    const calls = [], records = []; let reads = 0;
+    const result = await dispatchWebsite(release, env, { wait: async () => {}, record: value => records.push(value), request: async (url, options) => {
+        calls.push({ url, options });
+        if (options.method === 'POST') {
+            assert.deepEqual(JSON.parse(options.body), { ref: 'main', inputs: { 'release-version': version, 'release-run-id': '10', 'release-attempt': '2' } });
+            return Response.json({ workflow_run_id: 20 });
+        }
+        reads++; return Response.json(reads === 1 ? { ...run, status: 'in_progress', conclusion: null } : run);
+    } });
+    assert.equal(result.status, 'success'); assert.equal(reads, 2);
+    assert.equal(records[0].status, 'pending'); assert.equal(records.at(-1).status, 'success');
+    assert(calls.slice(1).every(call => call.url.endsWith('/actions/runs/20')));
+    assert.equal(calls[0].options.headers['X-GitHub-Api-Version'], '2026-03-10');
+});
+
+test('unknown dispatch, mismatched run, failure and timeout never resend or report success', async () => {
+    for (const scenario of ['unknown', 'wrong-branch', 'wrong-title', 'failure', 'cancelled', 'timeout']) {
+        let posts = 0, clock = 0; const records = [];
+        await assert.rejects(dispatchWebsite(release, env, { now: () => clock, timeoutMs: 10,
+            wait: async ms => { clock += ms; }, record: item => records.push(item), request: async (_, options) => {
+                if (options.method === 'POST') {
+                    posts++;
+                    if (scenario === 'unknown') throw new Error('private request detail');
+                    return Response.json({ workflow_run_id: 20 });
+                }
+                return Response.json({ ...run, ...(scenario === 'wrong-branch' ? { head_branch: 'stale' } : {}),
+                    ...(scenario === 'wrong-title' ? { display_title: 'another release' } : {}),
+                    ...(scenario === 'timeout' ? { status: 'in_progress', conclusion: null } : {}),
+                    ...(['failure', 'cancelled'].includes(scenario) ? { conclusion: scenario } : {}) });
+            } }));
+        assert.equal(posts, 1); assert(!records.some(item => item.status === 'success'));
+    }
+    assert.throws(() => websiteRunName('1.2.0-beta.1', '10', '2'));
+});
+
+test('summary retains original attempts and derives actual queue/runtime without inventing unknown times', async () => {
+    const started = '2026-10-12T10:00:02Z', completed = '2026-10-12T10:00:05Z';
+    const job = { id: 1, name: 'beta', status: 'completed', conclusion: 'success', created_at: '2026-10-12T10:00:00Z',
+        started_at: started, completed_at: completed, labels: ['ubuntu-24.04'] };
+    assert.equal(jobTiming(job, 1).queuedMs, 2000); assert.equal(jobTiming(job, 1).runningMs, 3000);
+    const result = await collectReleaseEvidence({ ...env, WEBSITE_RUN_ID: '20' }, {
+        request: async url => {
+            if (url.endsWith('/actions/runs/10')) return Response.json({ id: 10, run_attempt: 2, path: '.github/workflows/npm-publish.yml' });
+            if (url.endsWith('/actions/runs/20')) return Response.json({ id: 20, run_attempt: 1, path: run.path });
+            const id = url.includes('/runs/20/') ? 3 : url.includes('/attempts/2/') ? 2 : 1;
+            return Response.json({ total_count: 1, jobs: [{ ...job, id, ...(id === 2 ? { name: 'summary', status: 'in_progress', completed_at: null } : {}) }] });
+        }, readLog: async () => 'unrelated log\nRUNWEFT_PUBLIC_READ={"name":"runweft:tarball","attempt":2,"elapsedMs":5,"success":true}\n',
+    });
+    assert.equal(result.runs.length, 2); assert.equal(result.runs[0].jobs.length, 2);
+    assert.equal(result.runnerMs['ubuntu-24.04'], 6000);
+    assert.deepEqual(result.unknownJobTimes, [2]); assert.equal(result.records.length, 2);
+    assert.equal(jobTiming({ ...job, created_at: undefined }, 1).queuedMs, null);
+});
+
+test('workflow follow-up has scoped permissions, complete prerequisites and production verification', () => {
+    const publish = parse(readFileSync('.github/workflows/npm-publish.yml', 'utf8'));
+    const site = parse(readFileSync('.github/workflows/website-pages.yml', 'utf8'));
+    assert.deepEqual(publish.jobs.website.needs, ['beta', 'promote']);
+    assert.equal(publish.jobs.website.permissions['actions'], 'write');
+    assert.equal(publish.jobs.website.permissions['id-token'], undefined);
+    assert.equal(publish.jobs.summary.if, 'always()');
+    assert.equal(publish.jobs.summary.permissions.actions, 'read');
+    assert(publish.jobs.summary.needs.includes('website'));
+    assert.match(site['run-name'], /release-version.*release-run-id.*release-attempt/);
+    assert.match(site.jobs.website.steps.find(step => step.id === 'prepare').if, /publication.outputs.ready/);
+    assert(site.jobs.website.steps.some(step => step.run === 'node website/publish.mjs current'));
+    assert(site.jobs.website.steps.some(step => step.run?.includes('node website/verify-live.mjs')));
+});
+
+test('summary skips intentionally skipped jobs and marks unavailable started-job logs as incomplete', async () => {
+    let reads = 0, waits = 0;
+    const options = {
+        request: async url => Response.json(url.endsWith('/actions/runs/10')
+            ? { id: 10, run_attempt: 1, path: '.github/workflows/npm-publish.yml' }
+            : { total_count: 2, jobs: [{ id: 1, name: 'integration', status: 'completed', conclusion: 'skipped' },
+                { id: 2, name: 'beta', status: 'completed', conclusion: 'success', started_at: '2026-10-12T10:00:00Z' }] }),
+        readLog: async () => { reads++; assert.equal(404, 200); }, wait: async () => { waits++; },
+    };
+    const result = await collectReleaseEvidence(env, options);
+    assert.equal(reads, 3); assert.equal(waits, 2);
+    assert.equal(result.missingLogs.length, 1); assert.equal(result.missingLogs[0].jobId, 2);
+    const recovered = await collectReleaseEvidence(env, { ...options, readLog: async () => {
+        reads++; if (reads === 4) assert.equal(404, 200); return 'RUNWEFT_PUBLIC_READ={"success":true}';
+    } });
+    assert.deepEqual(recovered.missingLogs, []); assert.equal(recovered.records.length, 1);
+});
+
+test('failed-only reruns do not count retained jobs with new GitHub IDs twice', async () => {
+    let logs = 0;
+    const result = await collectReleaseEvidence(env, {
+        request: async url => {
+            if (url.endsWith('/actions/runs/10')) return Response.json({ id: 10, run_attempt: 2, path: '.github/workflows/npm-publish.yml' });
+            const replay = url.includes('/attempts/2/');
+            return Response.json({ total_count: 1, jobs: [{ id: replay ? 2 : 1, name: 'beta', labels: ['linux'],
+                status: 'completed', conclusion: 'success', created_at: replay ? '2026-10-12T10:10:00Z' : '2026-10-12T10:00:00Z',
+                started_at: '2026-10-12T10:00:01Z', completed_at: '2026-10-12T10:00:04Z' }] });
+        }, readLog: async () => { logs++; return ''; },
+    });
+    assert.equal(result.runnerMs.linux, 3000); assert.equal(logs, 1);
+    assert.equal(result.runs[0].jobs[1].reusedFromJobId, 1);
+    assert.deepEqual(result.unknownJobTimes, []);
+});
+
+test('summary includes failed website runs from every release attempt before a successful retry', async () => {
+    const logIds = [];
+    const result = await collectReleaseEvidence({ ...env, WEBSITE_RUN_ID: '22' }, {
+        request: async url => {
+            const [, id, attempt] = url.match(/\/runs\/(\d+)(?:\/attempts\/(\d+))?/);
+            if (!attempt) return Response.json({ id: Number(id), run_attempt: id === '10' ? 2 : 1,
+                path: id === '10' ? '.github/workflows/npm-publish.yml' : run.path,
+                status: 'completed', conclusion: id === '21' ? 'failure' : 'success' });
+            return Response.json({ total_count: 1, jobs: [{ id: Number(id) * 10 + Number(attempt),
+                name: 'website', status: 'completed', conclusion: id === '21' ? 'failure' : 'success', labels: ['linux'],
+                created_at: `2026-10-12T10:0${attempt}:00Z`, started_at: `2026-10-12T10:0${attempt}:01Z`,
+                completed_at: `2026-10-12T10:0${attempt}:04Z` }] });
+        }, readLog: async (_, id) => {
+            logIds.push(id);
+            if (id === 101 || id === 102) return 'RUNWEFT_RELEASE_WEBSITE=' + JSON.stringify({ runId: id === 101 ? 21 : 22 });
+            return 'RUNWEFT_CI_EVIDENCE={"success":' + (id === 221) + '}';
+        },
+    });
+    assert.deepEqual(result.runs.map(item => item.id).sort(), [10, 21, 22]);
+    assert.equal(result.runs.find(item => item.id === 21).conclusion, 'failure');
+    assert.equal(result.runnerMs.linux, 12_000);
+    assert.deepEqual(logIds.sort(), [101, 102, 211, 221]);
+    assert.equal(result.records.length, 4);
+});

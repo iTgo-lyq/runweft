@@ -27,18 +27,19 @@ node website/serve.mjs
 
 ## Cloudflare Pages 自动部署
 
-`.github/workflows/website-pages.yml` 使用 GitHub Actions 构建和发布；只运行 Node 24 网站工具，不构建 HAPI 或调用 npm 发布。
+`.github/workflows/website-pages.yml` 使用 GitHub Actions 构建和发布；Node 24 构建与部署，上传后安装固定 Bun 依赖及 Chromium 做在线浏览器检查，不构建 HAPI 或调用 npm 发布。
 
 | 触发 | 行为 |
 | --- | --- |
-| main 的官网相关推送 | 检查通过后部署生产；拒绝重跑过时 main 提交 |
-| codex/** 的官网相关推送 | 检查通过后部署分支预览 |
+| main 的官网相关推送 | 已晋级时部署生产，未晋级时静态检查后等待；拒绝重跑过时 main 提交 |
+| codex/** 的官网相关推送 | 已晋级时部署分支预览，未晋级时静态检查后等待 |
 | pull_request 的官网相关变更 | 聚焦测试、构建和公共 npm 检查，不上传 |
 | workflow_dispatch | 所选 main/codex 分支按同一规则部署；tag/其他分支只检查 |
+| 稳定 npm 晋级接续 | 自动 dispatch main，核对预期版本和来源 run/attempt，发布任务等待官网实际完成 |
 
 仅规范稳定版本运行表中的构建/公开 npm/部署步骤。codex/** 的 push 或 dispatch 遇到 Beta 根版本时执行聚焦检查并写 summary，跳过构建和准备/上传；main 或 PR 遇到 Beta 版本直接失败，避免生产更新被静默跳过。真实 builder 仍只接受稳定版本，不生成 Beta 产品站点。
 
-相关路径为 website/**、package.json、docs/usage.md、scripts/npm-publish.mjs 和该工作流。默认分支 main 已包含产品与工作流，生产和 codex 预览推送均已实测；main手动入口已真实通过；PR入口尚未实测。
+相关路径为 website/**、package.json、docs/usage.md、scripts/npm-publish.mjs 和该工作流。既有生产/codex 预览推送及 main 手动入口已实测；新增 npm 自动接续和整条新流水线留待下次授权发行验证，PR 入口尚未实测。
 
 在[仓库 Actions Secrets](https://github.com/iTgo-lyq/runweft/settings/secrets/actions)的 **Repository secrets** 保存，不需要 Environment secrets：
 
@@ -49,9 +50,9 @@ Pages 项目默认 `runweft`；已有专用项目可在同一设置的 Variables
 
 无凭证的开发推送仍完成检查，summary 明确标为“未部署”并提示缺失名称；生产和手动部署缺凭证会失败。Token 仅进入 Pages 准备步骤与官方上传 action，Wrangler 4.146.0 在 runner 临时目录的独立 npm 工程安装，不写入根工程或上传目录。
 
-上传前验证静态文件白名单、npm 元数据、五包latest已晋级到官网版本、完整性字段/精确平台依赖及公开tarball HEAD；此检查不代替各平台真实安装验收。npm 版本尚未公开时停止；发布完成后从最新 main 手动运行官网工作流。不要重跑旧生产提交。
+上传前验证静态文件白名单、npm 元数据、五包 latest 已晋级到官网版本、完整性字段/精确平台依赖及公开 tarball HEAD；此检查不代替各平台真实安装验收。普通 push 未晋级时只等待；发布接续、PR 与手动部署要求已晋级，否则失败。稳定 npm 晋级后自动触发最新 main，版本不符或 main 推进时拒绝旧运行。官网失败只检查/恢复官网，不重发 npm；未知 dispatch 先检查 Actions，不盲目再次触发。
 
-上传后仅使用 action 返回的唯一部署 URL，确认 preview/production 分类；在 HTTP 校验前保存已上传 URL 与环境回执，成功后更新 success。跟随同一项目域内的 HTML 规范化重定向，在约三分钟重试窗口内等待传播并核对全部十个文件的字节摘要与 MIME；单次网络请求最多三十秒。Access 保护、错误页面或版本不一致均失败。不使用Actions artifact；脱敏部署JSON、十文件摘要与部署URL保存在任务日志/summary，验收时按对应commit本地重建静态文件并核对。
+上传后先核对 action 返回的唯一 URL 和 preview/production 分类；生产部署还须核对正式域名。在 HTTP 校验前保存已上传回执，全部通过后更新 success。每个地址在约三分钟窗口内等待传播并核对十文件摘要与 MIME，单次请求最多三十秒；Access、错误页面或版本不一致均失败。随后用 Playwright 验证三页 1440/390px 的版本、布局与可见图片。不使用 Actions artifact；部署回执、浏览器证据及十文件摘要写入日志，npm 发布摘要收集全部关联官网 run（含失败重跑）。
 
 上传结果未知或在线检查失败时，先检查 Cloudflare 控制台和该唯一 URL，核对当前run日志中的摘要，避免盲目重发；修正后从最新提交运行。无需修改既有 npm 的标签发布规则。
 
@@ -63,7 +64,7 @@ HTML/CSS/JS 提供对应 MIME type 和 UTF-8，SVG 使用 image/svg+xml，两张
 
 ## 自动验收
 
-部署检查使用 Node 内置测试，测试与 CI 都不需要 Bun 依赖：
+部署逻辑夹具使用 Node 内置测试，无需 Bun 依赖；在线浏览器阶段需要根工程的 Playwright：
 
 ```sh
 node --test ./website/publish.test.mjs
@@ -93,7 +94,7 @@ node website/verify.mjs --browser-only
 
 已有兼容浏览器可用 RUNWEFT_SITE_CHROMIUM 指定可执行路径。验收覆盖三个页面、320–1440px、首屏定义/主入口、首页到指南路径、两页接入及首项任务提示一致性、复制成功/拒绝与焦点、菜单、FAQ、MCP/runtime 切换、无 JS、reduced motion 和子路径全部本地链接。
 
-安装命令及 Skill 目录命令从实际页面 DOM 获取。安装使用独立 HOME、npm prefix/userconfig/globalconfig/cache，清除继承的 npm 配置与认证环境变量，PATH 仅含本次安装、Node/npm 和系统工具。失败 npm 夹具确认不继续运行旧程序；公共 registry 实际安装核对入口归属、版本和五个 Skill 文档。不改用户 MCP/Skill，不启动模型。该检查不代表 Mac/arm64 实机运行。
+安装命令及 Skill 目录命令从实际页面 DOM 获取。安装使用独立 HOME、npm prefix/userconfig/globalconfig/cache，清除继承的 npm 配置与认证环境变量，PATH 仅含本次安装、Node/npm 和系统工具。失败 npm 夹具确认不继续运行旧程序；公共 registry 实际安装核对入口归属、精确版本、README 和五个 Skill 文件字节。稳定发布的 Linux x64 job 传入原 descriptor，另核对 Runweft/HAPI 两程序摘要。不改用户 MCP/Skill，不启动模型。该检查不代表 Mac/arm64 实机运行。
 
 本次服务和浏览器在结束时关闭；证据与截图、专用安装留在 `.dev-smoke/website-*/`，不提交。发行组装的根夹具同时验证 npm 元数据和旧下载目录拒绝，离线程序与 Git bundle 仍单独保留。
 

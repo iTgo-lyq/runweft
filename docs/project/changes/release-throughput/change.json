@@ -38,6 +38,12 @@
     },
     "T3": {
       "title": "官网接续与发布证据自动收尾",
+      "status": "done",
+      "verification": "57 项 Node、actionlint、workflow/diff 通过；既有官网十文件及桌面/手机三页通过，历史两 run 全 attempt 汇总复核；未发版部署",
+      "commitTitle": "release-throughput T3: chain website verification and collect release evidence"
+    },
+    "T4": {
+      "title": "修正独立评审发现的公共读取契约",
       "status": "todo"
     }
   },

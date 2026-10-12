@@ -65,7 +65,7 @@
 
 部署后自动验证唯一 URL、正式域名文件 hash/MIME 和三页桌面/手机浏览器。既有 DOM 安装、包内 README/Skill 检查放入 Linux x64 验收并绑定精确版本。只整理摘要的提交不触发产品发布；官网触发范围按实际构建输入判断，不排除真正影响网页的 docs/usage.md。
 
-阶段状态、版本、source/control revision、各平台包与程序 hash、验证 job/attempt、重试次数和耗时写入日志与 summary。通过 Actions API 读取发布及关联官网各 attempt 的 job created/started/completed 时间与 runner 标签，分别计算排队时间和实际运行秒数；缺失或仍在运行的字段标记未知，不推断计费额度。汇总 job 自身尚未完成的时长明确排除。生成可检查的本地验收记录草稿，agent 复核后同步 Specs/归档；CI 不自动提交或推送仓库。已经由平台 job 完成的五包匿名下载校验直接引用其证据，不在全部完成后额外下载一轮。
+阶段状态、版本、source/control revision、各平台包与程序 hash、验证 job/attempt、重试次数和耗时写入日志与 summary。通过 Actions API 读取发布各 attempt，以及当前输出和全部 RELEASE_WEBSITE 回执关联的官网 run，保留失败重跑证据。按 job created/started/completed 时间与 runner 标签计算排队时间和实际运行秒数；缺失或仍在运行的字段标记未知，不推断计费额度。GitHub 在只重跑失败任务时为保留的成功 job 分配新 ID，却保留原执行时间；以原名称、时间、结果及 runner 标签识别这类继承，保留关联但不重复计时/读取日志。汇总 job 自身尚未完成的时长明确排除。跳过的 job 无需日志，其他已运行 job 的日志缺失会保留部分证据并明确失败。生成可检查的本地验收记录草稿，agent 复核后同步 Specs/归档；CI 不自动提交或推送仓库。已经由平台 job 完成的五包匿名下载校验直接引用其证据，不在全部完成后额外下载一轮。
 
 ## 预期与取舍
 
