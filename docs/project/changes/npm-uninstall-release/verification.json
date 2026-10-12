@@ -793,6 +793,7 @@
   "protectedEnvironment": {
     "defaultRunweftHomeAbsent": true,
     "globalRunweftAbsent": true,
+    "dedicatedDomInstallationRemoved": true,
     "independentHapi": [
       {
         "pid": 2713294,
@@ -860,5 +861,541 @@
     }
   ],
   "automaticAcceptanceAuthorized": true,
-  "scope": "Hosted four-platform installation and complete uninstall, real HAPI Hub/two Runners and registered control-session substitutes. No new native model collaboration or physical cross-machine/WAN validation."
+  "scope": "Hosted four-platform installation and complete uninstall, real HAPI Hub/two Runners and registered control-session substitutes. No new native model collaboration or physical cross-machine/WAN validation.",
+  "publicNpm": {
+    "success": true,
+    "version": "1.1.4",
+    "source": {
+      "revision": "3f873788b11926d2e51c9ccf9f3f661dc239ab6a",
+      "dirty": false
+    },
+    "hapi": {
+      "revision": "8f774b9413fd483bc163cc06425d7646f10a7c92",
+      "version": "0.30.7",
+      "protocolVersion": 1
+    },
+    "packages": [
+      {
+        "name": "runweft-darwin-arm64",
+        "version": "1.1.4",
+        "tags": {
+          "latest": "1.1.4",
+          "beta": "1.1.4"
+        },
+        "integrity": "sha512-SJPlz7jsux2E8KTdFwZz99wB2PcROrfCqiP6+k5fDkevBFgb7Hm2WH5IzAGgwiBgJfTdIZhArMH6SK3PH96j2w==",
+        "binaries": {
+          "bin/runweft": "1d2d3820a8c2bc04741ae3d918e3d6c067702240043008fb7e8657fdbd75bfbd",
+          "bin/hapi": "1f1f6e723d1fbebcb4122c3fe4984b730c638ce665d713b72357ea8bf2345ed9"
+        }
+      },
+      {
+        "name": "runweft-darwin-x64",
+        "version": "1.1.4",
+        "tags": {
+          "latest": "1.1.4",
+          "beta": "1.1.4"
+        },
+        "integrity": "sha512-x4WGcgxmGDDylMqzkGcvkjrwS635QSuthBLhO11Q5Mp+6eRkiqzsvI/f33C57p70ddQszZhh/LcApSCH52JDAg==",
+        "binaries": {
+          "bin/runweft": "3ab4e8deb1f7e474ffde603e755929cc47fc4c2072a209f62905d3f18ee5f7d8",
+          "bin/hapi": "01b2ed4050780d7f4a19f63f9766822d266991cc1b3f1d6df963dbde0b91546c"
+        }
+      },
+      {
+        "name": "runweft-linux-arm64",
+        "version": "1.1.4",
+        "tags": {
+          "latest": "1.1.4",
+          "beta": "1.1.4"
+        },
+        "integrity": "sha512-oLG8efgVXwc4C3gX8GsO+TyajrSUy5M5QfjPZXlmN7eeVzZi2bPm5ndahpJkg6KE2XT20oUEeKn0qLjzd4YFYw==",
+        "binaries": {
+          "bin/runweft": "6e67b348bc9eb4605f28f5ac899936b1bce7146238b802f24e97a85a1ae831bc",
+          "bin/hapi": "44b7cc3768ecf4bace7ef5b91e9e5c2aa94a2350ac73147a92d6741488bcf51f"
+        }
+      },
+      {
+        "name": "runweft-linux-x64",
+        "version": "1.1.4",
+        "tags": {
+          "latest": "1.1.4",
+          "beta": "1.1.4"
+        },
+        "integrity": "sha512-AykSr+APVt/9QyZHISOe1RyOSZkjMA9IUciEhysrmaKxX2TNCzXG4AbNIHIOCXVYxERMd2oU7pekXj90vBeeCQ==",
+        "binaries": {
+          "bin/runweft": "e9b01c1c70d1fda1b0dbd565e233c383ba3a07abf864c7870dd35f703214727d",
+          "bin/hapi": "269d3f183b7bdcb17839bd688769d3c6a88e56a1d2f605c6f791b83bbb7dc16e"
+        }
+      },
+      {
+        "name": "runweft",
+        "version": "1.1.4",
+        "tags": {
+          "latest": "1.1.4",
+          "beta": "1.1.4"
+        },
+        "integrity": "sha512-63CH6FYg3my5g6cb9sYM+M57N83fJBJb5Oqm1HTmXiJoF4PBIDeD1hJF7noOlCdvbek+bemFH2aXI1aNfOZQCw=="
+      }
+    ],
+    "downloads": [
+      {
+        "name": "runweft-darwin-arm64",
+        "bytes": 102310518,
+        "integrity": "sha512-SJPlz7jsux2E8KTdFwZz99wB2PcROrfCqiP6+k5fDkevBFgb7Hm2WH5IzAGgwiBgJfTdIZhArMH6SK3PH96j2w==",
+        "success": true
+      },
+      {
+        "name": "runweft-darwin-x64",
+        "bytes": 106168456,
+        "integrity": "sha512-x4WGcgxmGDDylMqzkGcvkjrwS635QSuthBLhO11Q5Mp+6eRkiqzsvI/f33C57p70ddQszZhh/LcApSCH52JDAg==",
+        "success": true
+      },
+      {
+        "name": "runweft-linux-arm64",
+        "bytes": 134054096,
+        "integrity": "sha512-oLG8efgVXwc4C3gX8GsO+TyajrSUy5M5QfjPZXlmN7eeVzZi2bPm5ndahpJkg6KE2XT20oUEeKn0qLjzd4YFYw==",
+        "success": true
+      },
+      {
+        "name": "runweft-linux-x64",
+        "bytes": 134832220,
+        "integrity": "sha512-AykSr+APVt/9QyZHISOe1RyOSZkjMA9IUciEhysrmaKxX2TNCzXG4AbNIHIOCXVYxERMd2oU7pekXj90vBeeCQ==",
+        "success": true
+      },
+      {
+        "name": "runweft",
+        "bytes": 19972,
+        "integrity": "sha512-63CH6FYg3my5g6cb9sYM+M57N83fJBJb5Oqm1HTmXiJoF4PBIDeD1hJF7noOlCdvbek+bemFH2aXI1aNfOZQCw==",
+        "success": true
+      }
+    ]
+  },
+  "productionDeployment": {
+    "run": 38245448709,
+    "url": "https://github.com/iTgo-lyq/runweft/actions/runs/38245448709",
+    "sourceRevision": "2f17401e0956129c4fd42c6d76cefbe523e3340c",
+    "job": 114798047386,
+    "conclusion": "success",
+    "records": {
+      "check.json": {
+        "success": true,
+        "sourceRevision": "2f17401e0956129c4fd42c6d76cefbe523e3340c",
+        "release": {
+          "version": "1.1.4",
+          "installation": "npm",
+          "package": "runweft",
+          "registry": "https://registry.npmjs.org/"
+        },
+        "files": [
+          {
+            "name": "assets/hapi-code.webp",
+            "bytes": 113894,
+            "sha256": "a0db1e9f1fb79d04668aeff99ec32d824a8c8dee265644fb41d07f2e1428a7ff"
+          },
+          {
+            "name": "assets/hapi-session.webp",
+            "bytes": 72756,
+            "sha256": "960fad5c099256392cf540623c58df81b78ee60762e45acb40166e3f644b80d3"
+          },
+          {
+            "name": "assets/icons.svg",
+            "bytes": 1598,
+            "sha256": "d708610fe6b75591b214722352dd8dc33671bab46d8f38c21cf154552f3762fa"
+          },
+          {
+            "name": "assets/mark.svg",
+            "bytes": 297,
+            "sha256": "af2367afb3fed6d7b5bb615cf508e4defcb300975f2e575f75db4e50cb2d4168"
+          },
+          {
+            "name": "assets/site.js",
+            "bytes": 4268,
+            "sha256": "ed35037638f804971bf2c292c2e446664936edcbb99c5489e0f6e961da83cebc"
+          },
+          {
+            "name": "assets/style.css",
+            "bytes": 32349,
+            "sha256": "a2b5141dd633d07221a3a06fa3e43773b02d04f1be33a8bd5bdd99e301bdd3af"
+          },
+          {
+            "name": "guide.html",
+            "bytes": 23006,
+            "sha256": "73fd013d7e6c1be8c16ef2e113b74809fd51546de41f57865dca1fc0069a5c9b"
+          },
+          {
+            "name": "index.html",
+            "bytes": 23053,
+            "sha256": "768b01758370fd5a415a248567715c4a1cdd2d4ff9b8b59136fe540491b235b4"
+          },
+          {
+            "name": "manual.html",
+            "bytes": 26445,
+            "sha256": "c27dabf3f275296213db28a962fdd602ebc7740dfa9ec5dd1146b0adc6dec172"
+          },
+          {
+            "name": "release.json",
+            "bytes": 119,
+            "sha256": "87565cf860a1e371f057371caf74fd381ba5b922f1e808a9e588ee153a8aee18"
+          }
+        ],
+        "bytes": 297785,
+        "packages": [
+          {
+            "name": "runweft-linux-x64",
+            "version": "1.1.4",
+            "integrity": "sha512-AykSr+APVt/9QyZHISOe1RyOSZkjMA9IUciEhysrmaKxX2TNCzXG4AbNIHIOCXVYxERMd2oU7pekXj90vBeeCQ=="
+          },
+          {
+            "name": "runweft-linux-arm64",
+            "version": "1.1.4",
+            "integrity": "sha512-oLG8efgVXwc4C3gX8GsO+TyajrSUy5M5QfjPZXlmN7eeVzZi2bPm5ndahpJkg6KE2XT20oUEeKn0qLjzd4YFYw=="
+          },
+          {
+            "name": "runweft-darwin-x64",
+            "version": "1.1.4",
+            "integrity": "sha512-x4WGcgxmGDDylMqzkGcvkjrwS635QSuthBLhO11Q5Mp+6eRkiqzsvI/f33C57p70ddQszZhh/LcApSCH52JDAg=="
+          },
+          {
+            "name": "runweft-darwin-arm64",
+            "version": "1.1.4",
+            "integrity": "sha512-SJPlz7jsux2E8KTdFwZz99wB2PcROrfCqiP6+k5fDkevBFgb7Hm2WH5IzAGgwiBgJfTdIZhArMH6SK3PH96j2w=="
+          },
+          {
+            "name": "runweft",
+            "version": "1.1.4",
+            "integrity": "sha512-63CH6FYg3my5g6cb9sYM+M57N83fJBJb5Oqm1HTmXiJoF4PBIDeD1hJF7noOlCdvbek+bemFH2aXI1aNfOZQCw=="
+          }
+        ]
+      },
+      "deployment.json": {
+        "success": true,
+        "url": "https://6c712b0f.runweft.pages.dev/",
+        "mode": "production",
+        "version": "1.1.4",
+        "files": [
+          {
+            "name": "assets/hapi-code.webp",
+            "bytes": 113894,
+            "sha256": "a0db1e9f1fb79d04668aeff99ec32d824a8c8dee265644fb41d07f2e1428a7ff"
+          },
+          {
+            "name": "assets/hapi-session.webp",
+            "bytes": 72756,
+            "sha256": "960fad5c099256392cf540623c58df81b78ee60762e45acb40166e3f644b80d3"
+          },
+          {
+            "name": "assets/icons.svg",
+            "bytes": 1598,
+            "sha256": "d708610fe6b75591b214722352dd8dc33671bab46d8f38c21cf154552f3762fa"
+          },
+          {
+            "name": "assets/mark.svg",
+            "bytes": 297,
+            "sha256": "af2367afb3fed6d7b5bb615cf508e4defcb300975f2e575f75db4e50cb2d4168"
+          },
+          {
+            "name": "assets/site.js",
+            "bytes": 4268,
+            "sha256": "ed35037638f804971bf2c292c2e446664936edcbb99c5489e0f6e961da83cebc"
+          },
+          {
+            "name": "assets/style.css",
+            "bytes": 32349,
+            "sha256": "a2b5141dd633d07221a3a06fa3e43773b02d04f1be33a8bd5bdd99e301bdd3af"
+          },
+          {
+            "name": "guide.html",
+            "bytes": 23006,
+            "sha256": "73fd013d7e6c1be8c16ef2e113b74809fd51546de41f57865dca1fc0069a5c9b"
+          },
+          {
+            "name": "index.html",
+            "bytes": 23053,
+            "sha256": "768b01758370fd5a415a248567715c4a1cdd2d4ff9b8b59136fe540491b235b4"
+          },
+          {
+            "name": "manual.html",
+            "bytes": 26445,
+            "sha256": "c27dabf3f275296213db28a962fdd602ebc7740dfa9ec5dd1146b0adc6dec172"
+          },
+          {
+            "name": "release.json",
+            "bytes": 119,
+            "sha256": "87565cf860a1e371f057371caf74fd381ba5b922f1e808a9e588ee153a8aee18"
+          }
+        ],
+        "branch": "main",
+        "sourceRevision": "2f17401e0956129c4fd42c6d76cefbe523e3340c"
+      },
+      "eligibility.json": {
+        "version": "1.1.4",
+        "build": true,
+        "sourceRevision": "2f17401e0956129c4fd42c6d76cefbe523e3340c"
+      },
+      "prepare.json": {
+        "deployed": false,
+        "mode": "production",
+        "branch": "main",
+        "project": "runweft",
+        "subdomain": "runweft.pages.dev",
+        "created": false
+      }
+    },
+    "logSha256": "2d715e9c550a74944ef437a336427d26f7837bf64c405f0e82927fd9b4f3e838"
+  },
+  "websitePublic": {
+    "success": true,
+    "url": "https://runweft.pages.dev/",
+    "mode": "production",
+    "version": "1.1.4",
+    "files": [
+      {
+        "name": "assets/hapi-code.webp",
+        "bytes": 113894,
+        "sha256": "a0db1e9f1fb79d04668aeff99ec32d824a8c8dee265644fb41d07f2e1428a7ff"
+      },
+      {
+        "name": "assets/hapi-session.webp",
+        "bytes": 72756,
+        "sha256": "960fad5c099256392cf540623c58df81b78ee60762e45acb40166e3f644b80d3"
+      },
+      {
+        "name": "assets/icons.svg",
+        "bytes": 1598,
+        "sha256": "d708610fe6b75591b214722352dd8dc33671bab46d8f38c21cf154552f3762fa"
+      },
+      {
+        "name": "assets/mark.svg",
+        "bytes": 297,
+        "sha256": "af2367afb3fed6d7b5bb615cf508e4defcb300975f2e575f75db4e50cb2d4168"
+      },
+      {
+        "name": "assets/site.js",
+        "bytes": 4268,
+        "sha256": "ed35037638f804971bf2c292c2e446664936edcbb99c5489e0f6e961da83cebc"
+      },
+      {
+        "name": "assets/style.css",
+        "bytes": 32349,
+        "sha256": "a2b5141dd633d07221a3a06fa3e43773b02d04f1be33a8bd5bdd99e301bdd3af"
+      },
+      {
+        "name": "guide.html",
+        "bytes": 23006,
+        "sha256": "73fd013d7e6c1be8c16ef2e113b74809fd51546de41f57865dca1fc0069a5c9b"
+      },
+      {
+        "name": "index.html",
+        "bytes": 23053,
+        "sha256": "768b01758370fd5a415a248567715c4a1cdd2d4ff9b8b59136fe540491b235b4"
+      },
+      {
+        "name": "manual.html",
+        "bytes": 26445,
+        "sha256": "c27dabf3f275296213db28a962fdd602ebc7740dfa9ec5dd1146b0adc6dec172"
+      },
+      {
+        "name": "release.json",
+        "bytes": 119,
+        "sha256": "87565cf860a1e371f057371caf74fd381ba5b922f1e808a9e588ee153a8aee18"
+      }
+    ],
+    "pages": [
+      {
+        "path": "index.html",
+        "status": 200,
+        "version": "1.1.4",
+        "completeUninstallShown": true
+      },
+      {
+        "path": "guide.html",
+        "status": 200,
+        "version": "1.1.4",
+        "completeUninstallShown": true
+      },
+      {
+        "path": "manual.html",
+        "status": 200,
+        "version": "1.1.4",
+        "completeUninstallShown": true
+      }
+    ],
+    "browserErrors": []
+  },
+  "websiteDom": {
+    "root": "/home/tiger/workspace/runweft/.dev-smoke/website-cBbaEr",
+    "scope": "browser-and-npm-install",
+    "success": true,
+    "checks": [
+      "Static website has npm metadata and contains no downloads, archives or checksums",
+      "Local / remote diagram is interactive and explicitly illustrative",
+      "Agent prompt and npm commands copy correctly; clipboard denial selects the command with accessible feedback",
+      "Home, guide and manual have no page overflow at 1440 / 1280 / 1024 / 768 / 390 / 320px",
+      "Two HAPI screenshots decode at every viewport and retain original image links",
+      "Product definition and primary action are visible before scrolling on desktop and mobile",
+      "Home-to-guide path preserves the setup prompt and copies a separate first task",
+      "Mobile menu, Escape focus and guide client/runtime switches",
+      "Relative deployment: 27 local links and anchors",
+      "Both original WebP images open by keyboard without JavaScript",
+      "Reduced motion and the same npm installation / Skill location commands without JavaScript",
+      "A failed npm install stops the DOM command before running any existing Runweft",
+      "Installing the exact DOM npm command in a dedicated prefix from the public registry",
+      "DOM npm install and Skill location succeed; the installed binary belongs to the isolated prefix and all Skill references exist",
+      "Preview root and method boundaries hold"
+    ],
+    "layouts": [
+      {
+        "route": "index.html",
+        "width": 1440,
+        "client": 1440,
+        "scroll": 1440
+      },
+      {
+        "route": "guide.html",
+        "width": 1440,
+        "client": 1440,
+        "scroll": 1440
+      },
+      {
+        "route": "manual.html",
+        "width": 1440,
+        "client": 1440,
+        "scroll": 1440
+      },
+      {
+        "route": "index.html",
+        "width": 1280,
+        "client": 1280,
+        "scroll": 1280
+      },
+      {
+        "route": "guide.html",
+        "width": 1280,
+        "client": 1280,
+        "scroll": 1280
+      },
+      {
+        "route": "manual.html",
+        "width": 1280,
+        "client": 1280,
+        "scroll": 1280
+      },
+      {
+        "route": "index.html",
+        "width": 1024,
+        "client": 1024,
+        "scroll": 1024
+      },
+      {
+        "route": "guide.html",
+        "width": 1024,
+        "client": 1024,
+        "scroll": 1024
+      },
+      {
+        "route": "manual.html",
+        "width": 1024,
+        "client": 1024,
+        "scroll": 1024
+      },
+      {
+        "route": "index.html",
+        "width": 768,
+        "client": 768,
+        "scroll": 768
+      },
+      {
+        "route": "guide.html",
+        "width": 768,
+        "client": 768,
+        "scroll": 768
+      },
+      {
+        "route": "manual.html",
+        "width": 768,
+        "client": 768,
+        "scroll": 768
+      },
+      {
+        "route": "index.html",
+        "width": 390,
+        "client": 390,
+        "scroll": 390
+      },
+      {
+        "route": "guide.html",
+        "width": 390,
+        "client": 390,
+        "scroll": 390
+      },
+      {
+        "route": "manual.html",
+        "width": 390,
+        "client": 390,
+        "scroll": 390
+      },
+      {
+        "route": "index.html",
+        "width": 320,
+        "client": 320,
+        "scroll": 320
+      },
+      {
+        "route": "guide.html",
+        "width": 320,
+        "client": 320,
+        "scroll": 320
+      },
+      {
+        "route": "manual.html",
+        "width": 320,
+        "client": 320,
+        "scroll": 320
+      },
+      {
+        "route": "/sub/",
+        "width": 390,
+        "client": 390,
+        "scroll": 390
+      },
+      {
+        "route": "/sub/guide.html",
+        "width": 390,
+        "client": 390,
+        "scroll": 390
+      },
+      {
+        "route": "/sub/manual.html",
+        "width": 390,
+        "client": 390,
+        "scroll": 390
+      },
+      {
+        "route": "no-js guide",
+        "width": 390,
+        "client": 390,
+        "scroll": 390
+      }
+    ],
+    "pageErrors": [],
+    "networkErrors": [],
+    "staticBytes": 297785,
+    "browser": "153.0.8010.12",
+    "install": {
+      "version": "1.1.4",
+      "commandSource": "rendered DOM",
+      "prefix": "/home/tiger/workspace/runweft/.dev-smoke/website-cBbaEr/install-home/npm-global",
+      "binary": "/home/tiger/workspace/runweft/.dev-smoke/website-cBbaEr/install-home/npm-global/bin/runweft",
+      "launcherSha256": "da26b07a6c8329052771df2af3e46dbee33d5a110ddc836c88bcbe336d5d6051",
+      "skillDirectory": "/home/tiger/workspace/runweft/.dev-smoke/website-cBbaEr/install-home/npm-global/lib/node_modules/runweft/skills/runweft"
+    }
+  },
+  "acceptanceCompleted": true,
+  "finalDocumentChecks": {
+    "markdownFiles": 14,
+    "localLinks": 236,
+    "missing": 0,
+    "packageInputsMatchOriginalTag": true,
+    "diffCheck": true
+  }
 }

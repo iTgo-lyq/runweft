@@ -1,6 +1,8 @@
 # 项目文档
 
-[一键完整卸载](project/archive/2026-10-12-complete-uninstall/acceptance.md)已完成源码实现与自动验收：根级 uninstall 默认预览，--yes 停止选定 home 的全部受管服务/登记会话并删除程序、接入、数据和备份，保留其他软件、模型凭据、原生历史及源项目。260 项根测试和 Linux x64 真实 npm/独立包闭环通过；尚未发布，公共 1.1.3 没有此命令。
+[Runweft 1.1.4 发布验收](project/archive/2026-10-12-npm-uninstall-release/acceptance.md)已完成：全部代码合入 main，五包先beta、四平台实际公共安装与完整卸载通过后晋级latest，匿名五包摘要和Linux程序/Skill核对通过。[正式官网](https://runweft.pages.dev/)同步1.1.4；十文件摘要/MIME及三页浏览器通过。发布、安装与官网不依赖Actions artifact；失败及恢复证据见同一归档。
+
+[一键完整卸载](project/archive/2026-10-12-complete-uninstall/acceptance.md)已完成源码实现与自动验收：根级 uninstall 默认预览，--yes 停止选定 home 的全部受管服务/登记会话并删除程序、接入、数据和备份，保留其他软件、模型凭据、原生历史及源项目。260 项根测试和 Linux x64 真实 npm/独立包闭环通过；已随公共 1.1.4 发布，并追加四平台验收。
 
 [官网会话介绍布局](project/archive/2026-10-12-website-compact-session-preview/acceptance.md)已更新：[截图预览](https://runweft.pages.dev/#session-screenshots)融入会话介绍块，桌面与手机都采用小尺寸双图并排，去掉说明与来源标注。iclaude 重写该块文案；三页六宽度、完整原图访问及线上十文件检查通过。
 
@@ -8,9 +10,9 @@
 
 [官网内容更新](project/archive/2026-10-12-website-content-onboarding/acceptance.md)已上线：[首页](https://runweft.pages.dev/)与[上手指南](https://runweft.pages.dev/guide.html)的改写文案由 iclaude 完成，接入和重开后的首项委派分开说明。既有样式与 npm 1.1.3 保留，三页浏览器、八文件摘要及 main/Pages CI 通过。
 
-当前Runweft 1.1.3已由不可变v1.1.3源码通过beta上传、四平台公共npm安装验收和OIDC latest晋级；五包匿名下载/摘要、Linux x64 DOM安装及Skill核对通过，固定HAPI 8f774b94包含已验收的[Claude长路径与Runner退出修复](project/archive/2026-10-10-hapi-session-and-shutdown/acceptance.md)。发布/核心/官网均不依赖Actions artifact。main CI、生产官网1.1.3部署与正式域名八文件/三页验收通过，1.1.2 beta未晋级，修正Mac校验的1.1.3为正式版本；来源和范围见[发布验收](project/archive/2026-10-11-npm-hapi-fix-release/acceptance.md)。
+此前Runweft 1.1.3已由不可变v1.1.3源码通过beta上传、四平台公共npm安装验收和OIDC latest晋级；五包匿名下载/摘要、Linux x64 DOM安装及Skill核对通过，固定HAPI 8f774b94包含已验收的[Claude长路径与Runner退出修复](project/archive/2026-10-10-hapi-session-and-shutdown/acceptance.md)。发布/核心/官网均不依赖Actions artifact。main CI、生产官网1.1.3部署与正式域名八文件/三页验收通过，1.1.2 beta未晋级，修正Mac校验的1.1.3为当时正式版本；来源和范围见[发布验收](project/archive/2026-10-11-npm-hapi-fix-release/acceptance.md)。
 
-Runweft 1.1.3 已发布；产品已完成 Hub 集中配置七阶段、完整后台/Skill与同候选集成发行。安装、配置、部署与数据维护见[使用说明](usage.md)，源码构建和验证见[开发说明](development.md)。
+Runweft 1.1.4 已发布；产品已完成 Hub 集中配置七阶段、完整后台/Skill与同候选集成发行。安装、配置、部署与数据维护见[使用说明](usage.md)，源码构建和验证见[开发说明](development.md)。
 
 [当前数据基线与本机测试环境清理](project/archive/2026-10-10-current-data-baseline/execution.md)已完成。用户确认截至2026-10-10尚未在其他机器部署，数据库和本地配置以当前源码结构为首次部署基线，历史测试格式迁移不作为发行前提。本机16个历史测试目录已删除；原始临时现场不再保留，已跟踪的验收说明和脱敏摘要、源码及正式交付保留。
 

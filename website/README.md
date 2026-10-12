@@ -23,7 +23,7 @@ node website/serve.mjs
 
 版本读取 package.json，安装成功后才运行版本检查。release.json 只保存 version、installation=npm、package=runweft 和公开 registry，不记录程序源码候选。构建全部成功后才原子替换旧网站；错误保留之前的输出，清理暂存。
 
-参考页读取 docs/usage.md，在末尾“离线完整交付（工程参考）”附录之前截取并转义；官网不展示离线安装命令。使用说明和 Skill 源码改变后，下次程序发行须重新冻结包输入。当前源码 Skill 已随 npm 1.1.3 发布并通过匿名安装核对；网站接入对话明确全程使用 npm。已公开 1.1.0 和历史离线整包保留原样。
+参考页读取 docs/usage.md，在末尾“离线完整交付（工程参考）”附录之前截取并转义；官网不展示离线安装命令。使用说明和 Skill 源码改变后，下次程序发行须重新冻结包输入。当前源码 Skill 已随 npm 1.1.4 发布并通过匿名安装核对；网站接入对话用 npm 安装和升级，完整删除使用 runweft uninstall（默认预览，--yes 执行）。已公开 1.1.0 和历史离线整包保留原样。
 
 ## Cloudflare Pages 自动部署
 
@@ -104,3 +104,5 @@ node website/verify.mjs --browser-only
 两个上游文件实际为 946×2048 WebP，本站保持字节不变，以 `assets/hapi-session.webp`、`assets/hapi-code.webp` 和正确 MIME 提供。会话介绍、短图注与替代文本由 iclaude 编写。来源保存在本节开发记录，官网不显示来源与版本免责声明。
 
 两图合并进 HAPI 会话介绍块，始终并排；800px 及以下文案在上、预览在下。预览最大 180×240px，窄屏等比例缩小，CSS 裁切突出主要内容；普通链接仍打开完整原图。懒加载并标注固有尺寸，无 JavaScript 时仍可用键盘打开原图。`publish.mjs` 只明确放行两张 WebP，更新图片须同步白名单、来源与浏览器验证。
+
+1.1.4 已通过[生产 CI](https://github.com/iTgo-lyq/runweft/actions/runs/38245448709)，固定 URL 为 [6c712b0f.runweft.pages.dev](https://6c712b0f.runweft.pages.dev/)，297,785字节。唯一URL/正式域名十文件摘要与三页浏览器、匿名DOM安装/Skill核对通过；[本次发行验收](../docs/project/archive/2026-10-12-npm-uninstall-release/acceptance.md)记录四平台完整卸载与实际范围。

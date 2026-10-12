@@ -31,3 +31,10 @@
 - 原run的attempt2只重跑Linux arm64与依赖的晋级：arm实际公共安装和8组完整卸载通过，晋级进行中；其余平台/Beta的虚拟结果job引用首attempt原输出，记录实际执行job与复用结果job，不误报为重新上传或重复验收。
 - 最终：run38241538144 attempt2整体success，五包latest/beta=1.1.4。四平台各8组完整卸载、原安装/服务/信号/数据保留全部通过，实际两程序hash逐平台匹配冻结descriptor；匿名Linux程序/Skill/README通过。公开包没有重发，Actions artifacts=0；原始失败及实际/复用job已写入verification.json。本机另对五包做并行匿名全文下载复核，完成后追加T3最终摘要。
 - Commit：`npm-uninstall-release T2: confirm beta, four-platform uninstall and latest publication`
+
+## T3 官网部署、同步 Specs 与归档
+
+- 生产Pages run38245448709由main 2f17401e0956129c4fd42c6d76cefbe523e3340c部署，固定URL为https://6c712b0f.runweft.pages.dev/；297785字节、10文件，唯一URL/正式域名摘要与MIME一致。正式域名三页两宽度浏览器、本地三页六宽度/原图/27链接/复制/匿名DOM安装通过。
+- 同步：README/开发与官网说明、安装/Skill/发行/验收/官网Specs更新到公开1.1.4；准确区分本地浏览器与正式域名范围，不改旧归档。五包匿名全文下载全部SHA-512匹配原descriptor，证据合入verification.json。
+- 验收：按既有自动验收授权完成，需求逐项见acceptance.md；不新增人工门禁。最后检查文档结构/链接、packageInputs/tag、main/工作区；归档提交与此任务提交一次推送，避免旧SHA覆盖生产官网。
+- Commit：`npm-uninstall-release T3: verify production site and published installation guidance`
