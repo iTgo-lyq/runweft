@@ -396,7 +396,7 @@
 ### V03 旧业务 smoke 与附属探针
 
 - `scripts/dashboard-browser.ts`（审计基线文件，现已退役）
-- [scripts/remote-task-probe.ts](../../../../scripts/remote-task-probe.ts)
+- [scripts/remote-task-probe.ts](https://github.com/iTgo-lyq/runweft/blob/e85ef3af1b9fed9cc9ac00bcd764d3954bb283da/scripts/remote-task-probe.ts)
 - [scripts/smoke-agents.ts](https://github.com/iTgo-lyq/runweft/blob/b3287e7b066dc7410d1dc392a4b4a0563a54438a/scripts/smoke-agents.ts)
 - [scripts/smoke-artifact-mcp.ts](https://github.com/iTgo-lyq/runweft/blob/431d2e9ad16a1b7c9368bb03da0647b960a4888b/scripts/smoke-artifact-mcp.ts)
 - [scripts/smoke-collaboration.ts](../../../../scripts/smoke-collaboration.ts)

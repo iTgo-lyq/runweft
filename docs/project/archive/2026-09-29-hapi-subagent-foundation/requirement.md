@@ -9,7 +9,7 @@
 - **目标：** Runweft 能通过 HAPI 稳定关联一次执行、投递输入、读取原生结果并控制恢复。
 - **范围：** 验证已有 HAPI 执行事实，封装上层调用和兼容性诊断；不承担 Codex/Claude Code runtime 重写或主动改造，也不承载委派与远端 Git 全部实现。
 - **现状：** 配套编译版本已通过两种 runtime 的执行、控制与续接验收，启动和输入丢回执不会自动重复执行；逐项证据见 [Execution](execution.md#t4-配套构建与整体验收)。宿主 MCP 和业务委派仍由后续 Change 实现。
-- **项目入口：** 完整能力分工、依赖图和待讨论模块见[跨 Change 架构](../../architecture.md)。
+- **项目入口：** 完整能力分工、依赖图和待讨论模块见[跨 Change 架构](https://github.com/iTgo-lyq/runweft/blob/e85ef3af1b9fed9cc9ac00bcd764d3954bb283da/docs/project/architecture.md)。
 
 ## Change 依赖
 

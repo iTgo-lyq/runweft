@@ -8,7 +8,7 @@
 
 交付用户能够安装、配置并诊断的一套 Runweft 基础入口。HAPI 保持独立源码和执行职责；本 Change 负责安装布局、命令承载、兼容版本选择、服务配置及主体授权，不实现任务调度或 Git 交付。
 
-方案讨论见 [Design](design.md)，项目边界见[架构](../../architecture.md)。当前实现进度和验证证据见 [Execution](execution.md)，完整安装交付仍以本 Change 验收为准。
+方案讨论见 [Design](design.md)，项目边界见[架构](https://github.com/iTgo-lyq/runweft/blob/e85ef3af1b9fed9cc9ac00bcd764d3954bb283da/docs/project/architecture.md)。当前实现进度和验证证据见 [Execution](execution.md)，完整安装交付仍以本 Change 验收为准。
 
 ## Change 依赖
 

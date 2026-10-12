@@ -4,13 +4,15 @@
   "title": "清理冗余规划文档与失效验收辅助",
   "size": "small",
   "status": "active",
-  "stage": "requirement",
+  "stage": "execution",
   "branch": "codex/redundancy-cleanup",
   "confirmations": {},
   "tasks": {
     "T1": {
       "title": "修正归档中的历史文件引用",
-      "status": "todo"
+      "status": "done",
+      "verification": "十处历史链接逐字核对仅目标变化，固定Git blob均存在；归档状态无差异；工作流41个Change及diff检查通过",
+      "commitTitle": "redundancy-cleanup T1: pin historical references before deleting sources"
     },
     "T2": {
       "title": "删除冗余内容并收敛当前文档入口",
