@@ -22,6 +22,6 @@ CI 候选源码为干净 fe6017e531f06c0c01980d362b8b5b32bc6fde71。四平台真
 
 本次完成绑定与真实授权，未上传新版本、创建发布标签或合入 main。当前 main 尚无工作流，手动入口将来合入后可用；标签入口已配置。仓库仍为私有，因此无自动 npm provenance。
 
-正式上传与部分发布失败路径通过聚焦模拟验证，下一次新版本上传尚未执行。新 CI 候选不继承原程序 hash 的模型/Web/实机验收；现有公共 1.1.0 证据仍见[首次 npm 发布](../2026-10-01-npm-publication/acceptance.md)和[发行验收范围](../../specs/release/acceptance/spec.md)。
+正式上传与部分发布失败路径通过聚焦模拟验证，下一次新版本上传尚未执行。新 CI 候选不继承原程序 hash 的模型/Web/实机验收；现有公共 1.1.0 证据仍见[首次 npm 发布](../2026-10-01-npm-publication/acceptance.md)和[发行验收范围](https://github.com/iTgo-lyq/runweft/blob/d7bc66b9ffd7c4c07fbb940280424b11feffc58a/docs/project/specs/release/acceptance/spec.md)。
 
 Specs 已同步 release/distribution 和 release/acceptance；Plan 逐任务提交，完整 Change 归档。

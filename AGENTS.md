@@ -33,7 +33,7 @@ node scripts/check-workflow.mjs
 git diff --check
 ```
 
-根测试显式运行 `./test`，不执行 HAPI 全套测试；Node 测试单独运行。集成与模型验收按[发行验收](docs/project/specs/release/acceptance/spec.md)选择，失败先诊断、定向续验，不自动整组重试。
+根测试显式运行 `./test`，不执行 HAPI 全套测试；Node 测试单独运行。集成与模型验收按[发行验收](docs/release.md#验收矩阵)选择，失败先诊断、定向续验，不自动整组重试。
 
 ## 验证边界与按需入口
 

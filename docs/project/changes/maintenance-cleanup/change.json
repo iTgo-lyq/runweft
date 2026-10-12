@@ -16,7 +16,9 @@
     },
     "T2": {
       "title": "按能力合并规格并减少重复引用",
-      "status": "todo"
+      "status": "done",
+      "verification": "50份Specs合为18份；308文档847本地链接有效；5归档8链接固定且正文逐字复原；独有契约与首次部署锚点保留；43Changes及diff检查通过",
+      "commitTitle": "maintenance-cleanup T2: consolidate capability specs and release guidance"
     },
     "T3": {
       "title": "清空临时现场并完成验收",

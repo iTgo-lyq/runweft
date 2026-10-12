@@ -17,7 +17,7 @@
 
 ## 边界与依据
 
-- [发行产物](../../specs/release/distribution/spec.md)、[安装](../../specs/installation/cli/spec.md)、[MCP](../../specs/installation/mcp/spec.md)和 [使用说明](../../../usage.md)为内容来源；1.0.0 未公开发布 npm，不提供不可用的公共 npm 安装命令。
+- [发行产物](https://github.com/iTgo-lyq/runweft/blob/d7bc66b9ffd7c4c07fbb940280424b11feffc58a/docs/project/specs/release/distribution/spec.md)、[安装](https://github.com/iTgo-lyq/runweft/blob/d7bc66b9ffd7c4c07fbb940280424b11feffc58a/docs/project/specs/installation/cli/spec.md)、[MCP](https://github.com/iTgo-lyq/runweft/blob/d7bc66b9ffd7c4c07fbb940280424b11feffc58a/docs/project/specs/installation/mcp/spec.md)和 [使用说明](../../../usage.md)为内容来源；1.0.0 未公开发布 npm，不提供不可用的公共 npm 安装命令。
 - 页面提供本次已构建平台包；Mac 未签名/实机待用户验证、Linux arm64 当前仿真、物理跨机未实测的范围明确可见，不做虚假背书。
 - 不增加账号、模型执行、数据采集或付费流程。没有新域名/公开发布指令，交付可部署静态目录和本地预览，不上传任何产物到外部服务。
 
