@@ -1,0 +1,864 @@
+{
+  "version": "1.1.4",
+  "source": {
+    "revision": "3f873788b11926d2e51c9ccf9f3f661dc239ab6a",
+    "dirty": false
+  },
+  "hapi": {
+    "revision": "8f774b9413fd483bc163cc06425d7646f10a7c92",
+    "version": "0.30.7",
+    "protocolVersion": 1
+  },
+  "tag": {
+    "name": "v1.1.4",
+    "immutableRevision": "3f873788b11926d2e51c9ccf9f3f661dc239ab6a"
+  },
+  "mergedOriginalCommits": [
+    "dbd2266507635ded7b3120fa609221b4bddf9e5b",
+    "2cd043699ccda6566b9163adc5eacabb77ee949e",
+    "4bfa1ee4a97b6696fb92a0aa0fb6a76d9c1cd419",
+    "8620ce6f60de467d6c68e712519ba09e208b0d9d"
+  ],
+  "local": {
+    "typecheck": true,
+    "build": true,
+    "rootTests": {
+      "passed": 260,
+      "failed": 0,
+      "assertions": 4889,
+      "files": 42,
+      "seconds": 67.33
+    },
+    "nodeTests": 43,
+    "completeUninstall": {
+      "platform": "linux",
+      "architecture": "x64",
+      "version": "1.1.4",
+      "source": {
+        "revision": "8620ce6f60de467d6c68e712519ba09e208b0d9d",
+        "dirty": true
+      },
+      "scope": "verified candidate tarballs, dedicated npm prefix/HOME, real HAPI Hub and two Runners, control-session substitutes; no model clients",
+      "fixtureManifestChange": "main optionalDependencies only; platform tarball unchanged",
+      "checks": [
+        "real npm global installation resolves the verified candidate and its unchanged platform tarball",
+        "cold preview is byte-for-byte read-only, including existing MCP backups",
+        "a tampered control port is refused before stopping either Runner",
+        "read-only prefix and active preview leave the Hub, both connections and detached sessions alive",
+        "real control APIs stop current and recovered session substitutes, both Runners and Hub; npm failure retains data and program",
+        "retry self-uninstalls npm candidate despite dry-run env, deletes data and all backups/Skills, and preserves native config, credentials, projects and other software",
+        "reinstalled candidate can repeat uninstall with its prior data and integrations already absent",
+        "real complete platform package self-uninstalls its generated-config-only home and matching PATH symlink"
+      ],
+      "success": true,
+      "binaries": {
+        "runweft": "6b3979247b36df693a47d7dd38c307eacae252ad642a1b59f31adb6a09d4b63e",
+        "hapi": "d72a2ddada75ea806a3abedd9d443602352eac44477eac38d9e1bd52b75467be"
+      }
+    },
+    "websiteBrowserOnlyEvidence": ".dev-smoke/website-YcMDWP/evidence.json"
+  },
+  "review": {
+    "provider": "iclaude",
+    "session": "fec14f86-2218-41af-9ebf-8cb16b3d689b",
+    "success": true,
+    "scope": "Plan review and website maintenance wording"
+  },
+  "publication": {
+    "run": 38241538144,
+    "url": "https://github.com/iTgo-lyq/runweft/actions/runs/38241538144",
+    "controlRevision": "b3bdde2777e105bf928ee631fb5d56093129856c",
+    "conclusion": "success",
+    "beta": {
+      "job": 114785075269,
+      "finalResultJob": 114795424816,
+      "attempt": 1,
+      "logSha256": "0d07c2cf50cc53a8e806c5c8e4072dcc36e479cf6f90551497d8e87399c0b777",
+      "integration": [
+        {
+          "group": "access",
+          "success": true,
+          "binaries": {
+            "runweft": {
+              "path": "/home/runner/work/runweft/runweft/.dev-smoke/release-source/dist/packages/runweft-linux-x64/bin/runweft",
+              "sha256": "e9b01c1c70d1fda1b0dbd565e233c383ba3a07abf864c7870dd35f703214727d"
+            },
+            "hapi": {
+              "path": "/home/runner/work/runweft/runweft/.dev-smoke/release-source/dist/packages/runweft-linux-x64/bin/hapi",
+              "sha256": "269d3f183b7bdcb17839bd688769d3c6a88e56a1d2f605c6f791b83bbb7dc16e"
+            }
+          },
+          "cases": [
+            {
+              "script": "smoke-hub-access.ts",
+              "startedAt": "2026-10-12T11:21:28.639Z",
+              "elapsedMs": 7936,
+              "exitCode": 0
+            },
+            {
+              "script": "smoke-hub-realtime.ts",
+              "startedAt": "2026-10-12T11:21:36.575Z",
+              "elapsedMs": 62407,
+              "exitCode": 0
+            },
+            {
+              "script": "smoke-hub-resources.ts",
+              "startedAt": "2026-10-12T11:22:38.982Z",
+              "elapsedMs": 66234,
+              "exitCode": 0
+            },
+            {
+              "script": "smoke-hub-configuration.ts",
+              "startedAt": "2026-10-12T11:23:45.217Z",
+              "elapsedMs": 16411,
+              "exitCode": 0
+            }
+          ]
+        },
+        {
+          "group": "web",
+          "success": true,
+          "binaries": {
+            "runweft": {
+              "path": "/home/runner/work/runweft/runweft/.dev-smoke/release-source/dist/packages/runweft-linux-x64/bin/runweft",
+              "sha256": "e9b01c1c70d1fda1b0dbd565e233c383ba3a07abf864c7870dd35f703214727d"
+            },
+            "hapi": {
+              "path": "/home/runner/work/runweft/runweft/.dev-smoke/release-source/dist/packages/runweft-linux-x64/bin/hapi",
+              "sha256": "269d3f183b7bdcb17839bd688769d3c6a88e56a1d2f605c6f791b83bbb7dc16e"
+            }
+          },
+          "cases": [
+            {
+              "script": "smoke-hub.ts",
+              "startedAt": "2026-10-12T11:27:28.744Z",
+              "elapsedMs": 5802,
+              "exitCode": 0
+            },
+            {
+              "script": "smoke-hub-connect.ts",
+              "startedAt": "2026-10-12T11:27:34.546Z",
+              "elapsedMs": 4506,
+              "exitCode": 0
+            },
+            {
+              "script": "smoke-hub-console.ts",
+              "startedAt": "2026-10-12T11:27:39.052Z",
+              "elapsedMs": 19139,
+              "exitCode": 0
+            }
+          ]
+        },
+        {
+          "group": "storage",
+          "success": true,
+          "binaries": {
+            "runweft": {
+              "path": "/home/runner/work/runweft/runweft/.dev-smoke/release-source/dist/packages/runweft-linux-x64/bin/runweft",
+              "sha256": "e9b01c1c70d1fda1b0dbd565e233c383ba3a07abf864c7870dd35f703214727d"
+            },
+            "hapi": {
+              "path": "/home/runner/work/runweft/runweft/.dev-smoke/release-source/dist/packages/runweft-linux-x64/bin/hapi",
+              "sha256": "269d3f183b7bdcb17839bd688769d3c6a88e56a1d2f605c6f791b83bbb7dc16e"
+            }
+          },
+          "cases": [
+            {
+              "script": "smoke-artifacts.ts",
+              "startedAt": "2026-10-12T11:24:02.252Z",
+              "elapsedMs": 22667,
+              "exitCode": 0
+            },
+            {
+              "script": "smoke-inputs.ts",
+              "startedAt": "2026-10-12T11:24:24.919Z",
+              "elapsedMs": 11122,
+              "exitCode": 0
+            },
+            {
+              "script": "smoke-outputs.ts",
+              "startedAt": "2026-10-12T11:24:36.041Z",
+              "elapsedMs": 11068,
+              "exitCode": 0
+            },
+            {
+              "script": "smoke-artifact-prune.ts",
+              "startedAt": "2026-10-12T11:24:47.109Z",
+              "elapsedMs": 8553,
+              "exitCode": 0
+            },
+            {
+              "script": "smoke-repository-export.ts",
+              "startedAt": "2026-10-12T11:24:55.662Z",
+              "elapsedMs": 9040,
+              "exitCode": 0
+            },
+            {
+              "script": "smoke-repository-import.ts",
+              "startedAt": "2026-10-12T11:25:04.702Z",
+              "elapsedMs": 13646,
+              "exitCode": 0
+            },
+            {
+              "script": "smoke-result-export.ts",
+              "startedAt": "2026-10-12T11:25:18.348Z",
+              "elapsedMs": 19092,
+              "exitCode": 0
+            },
+            {
+              "script": "smoke-result-export.ts",
+              "startedAt": "2026-10-12T11:25:37.440Z",
+              "elapsedMs": 31910,
+              "exitCode": 0
+            },
+            {
+              "script": "smoke-workspace-preparation.ts",
+              "startedAt": "2026-10-12T11:26:09.350Z",
+              "elapsedMs": 54204,
+              "exitCode": 0
+            },
+            {
+              "script": "smoke-hub-delegation-native.ts",
+              "startedAt": "2026-10-12T11:27:03.554Z",
+              "elapsedMs": 15792,
+              "exitCode": 0
+            },
+            {
+              "script": "smoke-hub-delegation-preparation.ts",
+              "startedAt": "2026-10-12T11:27:19.346Z",
+              "elapsedMs": 8368,
+              "exitCode": 0
+            }
+          ]
+        },
+        {
+          "group": "service-package",
+          "success": true,
+          "binaries": {
+            "runweft": {
+              "path": "/home/runner/work/runweft/runweft/.dev-smoke/release-source/dist/packages/runweft-linux-x64/bin/runweft",
+              "sha256": "e9b01c1c70d1fda1b0dbd565e233c383ba3a07abf864c7870dd35f703214727d"
+            },
+            "hapi": {
+              "path": "/home/runner/work/runweft/runweft/.dev-smoke/release-source/dist/packages/runweft-linux-x64/bin/hapi",
+              "sha256": "269d3f183b7bdcb17839bd688769d3c6a88e56a1d2f605c6f791b83bbb7dc16e"
+            }
+          },
+          "cases": [
+            {
+              "script": "smoke-service.mjs",
+              "startedAt": "2026-10-12T11:27:58.811Z",
+              "elapsedMs": 16253,
+              "exitCode": 0
+            },
+            {
+              "script": "smoke-hub-service.ts",
+              "startedAt": "2026-10-12T11:28:15.064Z",
+              "elapsedMs": 21350,
+              "exitCode": 0
+            },
+            {
+              "script": "verify-packages.mjs",
+              "startedAt": "2026-10-12T11:28:36.414Z",
+              "elapsedMs": 33426,
+              "exitCode": 0
+            },
+            {
+              "script": "smoke-install.mjs",
+              "startedAt": "2026-10-12T11:29:09.840Z",
+              "elapsedMs": 28050,
+              "exitCode": 0
+            }
+          ]
+        }
+      ]
+    },
+    "install": [
+      {
+        "job": 114795424713,
+        "finalResultJob": 114795424713,
+        "attempt": 2,
+        "name": "install / install (ubuntu-24.04-arm, linux-arm64)",
+        "conclusion": "success",
+        "logSha256": "ca537fa7de1c59c7e83445acf07f44864e46887d57c31ad0ac1b88a630f71539",
+        "platform": "linux",
+        "architecture": "arm64",
+        "installation": {
+          "source": {
+            "revision": "3f873788b11926d2e51c9ccf9f3f661dc239ab6a",
+            "dirty": false
+          },
+          "binaries": {
+            "runweft": "6e67b348bc9eb4605f28f5ac899936b1bce7146238b802f24e97a85a1ae831bc",
+            "hapi": "44b7cc3768ecf4bace7ef5b91e9e5c2aa94a2350ac73147a92d6741488bcf51f"
+          },
+          "checks": [
+            "npm registry metadata and platform optional dependency installation",
+            "installed task commands and side-effect-free MCP catalog without Bun or source checkout on PATH",
+            "installed CLI services and signals with no Bun or source checkout on PATH",
+            "same-version npm reinstall preserves dedicated service data and exact paired binaries",
+            "missing platform dependency has an actionable diagnostic",
+            "npm uninstall removes executable and preserves service data"
+          ]
+        },
+        "completeUninstall": {
+          "source": {
+            "revision": "3f873788b11926d2e51c9ccf9f3f661dc239ab6a",
+            "dirty": false
+          },
+          "scope": "verified candidate tarballs, dedicated npm prefix/HOME, real HAPI Hub and two Runners, control-session substitutes; no model clients",
+          "fixtureManifestChange": "main optionalDependencies only; platform tarball unchanged",
+          "binaries": {
+            "runweft": "6e67b348bc9eb4605f28f5ac899936b1bce7146238b802f24e97a85a1ae831bc",
+            "hapi": "44b7cc3768ecf4bace7ef5b91e9e5c2aa94a2350ac73147a92d6741488bcf51f"
+          },
+          "checks": [
+            "real npm global installation resolves the verified candidate and its unchanged platform tarball",
+            "cold preview is byte-for-byte read-only, including existing MCP backups",
+            "a tampered control port is refused before stopping either Runner",
+            "read-only prefix and active preview leave the Hub, both connections and detached sessions alive",
+            "real control APIs stop current and recovered session substitutes, both Runners and Hub; npm failure retains data and program",
+            "retry self-uninstalls npm candidate despite dry-run env, deletes data and all backups/Skills, and preserves native config, credentials, projects and other software",
+            "reinstalled candidate can repeat uninstall with its prior data and integrations already absent",
+            "real complete platform package self-uninstalls its generated-config-only home and matching PATH symlink"
+          ],
+          "success": true
+        }
+      },
+      {
+        "job": 114793589570,
+        "finalResultJob": 114795425982,
+        "attempt": 1,
+        "name": "install / install (macos-15, darwin-arm64)",
+        "conclusion": "success",
+        "logSha256": "186659c163a536f46c6d0a63979d1b02db0078edd6597d5c8f148002fbba8a24",
+        "platform": "darwin",
+        "architecture": "arm64",
+        "installation": {
+          "source": {
+            "revision": "3f873788b11926d2e51c9ccf9f3f661dc239ab6a",
+            "dirty": false
+          },
+          "binaries": {
+            "runweft": "1d2d3820a8c2bc04741ae3d918e3d6c067702240043008fb7e8657fdbd75bfbd",
+            "hapi": "1f1f6e723d1fbebcb4122c3fe4984b730c638ce665d713b72357ea8bf2345ed9"
+          },
+          "checks": [
+            "npm registry metadata and platform optional dependency installation",
+            "installed task commands and side-effect-free MCP catalog without Bun or source checkout on PATH",
+            "installed CLI services and signals with no Bun or source checkout on PATH",
+            "same-version npm reinstall preserves dedicated service data and exact paired binaries",
+            "missing platform dependency has an actionable diagnostic",
+            "npm uninstall removes executable and preserves service data"
+          ]
+        },
+        "completeUninstall": {
+          "source": {
+            "revision": "3f873788b11926d2e51c9ccf9f3f661dc239ab6a",
+            "dirty": false
+          },
+          "scope": "verified candidate tarballs, dedicated npm prefix/HOME, real HAPI Hub and two Runners, control-session substitutes; no model clients",
+          "fixtureManifestChange": "main optionalDependencies only; platform tarball unchanged",
+          "binaries": {
+            "runweft": "1d2d3820a8c2bc04741ae3d918e3d6c067702240043008fb7e8657fdbd75bfbd",
+            "hapi": "1f1f6e723d1fbebcb4122c3fe4984b730c638ce665d713b72357ea8bf2345ed9"
+          },
+          "checks": [
+            "real npm global installation resolves the verified candidate and its unchanged platform tarball",
+            "cold preview is byte-for-byte read-only, including existing MCP backups",
+            "a tampered control port is refused before stopping either Runner",
+            "read-only prefix and active preview leave the Hub, both connections and detached sessions alive",
+            "real control APIs stop current and recovered session substitutes, both Runners and Hub; npm failure retains data and program",
+            "retry self-uninstalls npm candidate despite dry-run env, deletes data and all backups/Skills, and preserves native config, credentials, projects and other software",
+            "reinstalled candidate can repeat uninstall with its prior data and integrations already absent",
+            "real complete platform package self-uninstalls its generated-config-only home and matching PATH symlink"
+          ],
+          "success": true
+        }
+      },
+      {
+        "job": 114793589498,
+        "finalResultJob": 114795426323,
+        "attempt": 1,
+        "name": "install / install (ubuntu-24.04, linux-x64)",
+        "conclusion": "success",
+        "logSha256": "f93cf43e4d4b67d0fed36f54d97e2d7df67803e4706da7a3018f848118fd7567",
+        "platform": "linux",
+        "architecture": "x64",
+        "installation": {
+          "source": {
+            "revision": "3f873788b11926d2e51c9ccf9f3f661dc239ab6a",
+            "dirty": false
+          },
+          "binaries": {
+            "runweft": "e9b01c1c70d1fda1b0dbd565e233c383ba3a07abf864c7870dd35f703214727d",
+            "hapi": "269d3f183b7bdcb17839bd688769d3c6a88e56a1d2f605c6f791b83bbb7dc16e"
+          },
+          "checks": [
+            "npm registry metadata and platform optional dependency installation",
+            "installed task commands and side-effect-free MCP catalog without Bun or source checkout on PATH",
+            "installed CLI services and signals with no Bun or source checkout on PATH",
+            "same-version npm reinstall preserves dedicated service data and exact paired binaries",
+            "missing platform dependency has an actionable diagnostic",
+            "npm uninstall removes executable and preserves service data"
+          ]
+        },
+        "completeUninstall": {
+          "source": {
+            "revision": "3f873788b11926d2e51c9ccf9f3f661dc239ab6a",
+            "dirty": false
+          },
+          "scope": "verified candidate tarballs, dedicated npm prefix/HOME, real HAPI Hub and two Runners, control-session substitutes; no model clients",
+          "fixtureManifestChange": "main optionalDependencies only; platform tarball unchanged",
+          "binaries": {
+            "runweft": "e9b01c1c70d1fda1b0dbd565e233c383ba3a07abf864c7870dd35f703214727d",
+            "hapi": "269d3f183b7bdcb17839bd688769d3c6a88e56a1d2f605c6f791b83bbb7dc16e"
+          },
+          "checks": [
+            "real npm global installation resolves the verified candidate and its unchanged platform tarball",
+            "cold preview is byte-for-byte read-only, including existing MCP backups",
+            "a tampered control port is refused before stopping either Runner",
+            "read-only prefix and active preview leave the Hub, both connections and detached sessions alive",
+            "real control APIs stop current and recovered session substitutes, both Runners and Hub; npm failure retains data and program",
+            "retry self-uninstalls npm candidate despite dry-run env, deletes data and all backups/Skills, and preserves native config, credentials, projects and other software",
+            "reinstalled candidate can repeat uninstall with its prior data and integrations already absent",
+            "real complete platform package self-uninstalls its generated-config-only home and matching PATH symlink"
+          ],
+          "success": true
+        }
+      },
+      {
+        "job": 114793589478,
+        "finalResultJob": 114795426793,
+        "attempt": 1,
+        "name": "install / install (macos-15-intel, darwin-x64)",
+        "conclusion": "success",
+        "logSha256": "5855014c05e8959b76c05c7cebd91fe50059b256b3ffa18f7da9a8dc092b52c8",
+        "platform": "darwin",
+        "architecture": "x64",
+        "installation": {
+          "source": {
+            "revision": "3f873788b11926d2e51c9ccf9f3f661dc239ab6a",
+            "dirty": false
+          },
+          "binaries": {
+            "runweft": "3ab4e8deb1f7e474ffde603e755929cc47fc4c2072a209f62905d3f18ee5f7d8",
+            "hapi": "01b2ed4050780d7f4a19f63f9766822d266991cc1b3f1d6df963dbde0b91546c"
+          },
+          "checks": [
+            "npm registry metadata and platform optional dependency installation",
+            "installed task commands and side-effect-free MCP catalog without Bun or source checkout on PATH",
+            "installed CLI services and signals with no Bun or source checkout on PATH",
+            "same-version npm reinstall preserves dedicated service data and exact paired binaries",
+            "missing platform dependency has an actionable diagnostic",
+            "npm uninstall removes executable and preserves service data"
+          ]
+        },
+        "completeUninstall": {
+          "source": {
+            "revision": "3f873788b11926d2e51c9ccf9f3f661dc239ab6a",
+            "dirty": false
+          },
+          "scope": "verified candidate tarballs, dedicated npm prefix/HOME, real HAPI Hub and two Runners, control-session substitutes; no model clients",
+          "fixtureManifestChange": "main optionalDependencies only; platform tarball unchanged",
+          "binaries": {
+            "runweft": "3ab4e8deb1f7e474ffde603e755929cc47fc4c2072a209f62905d3f18ee5f7d8",
+            "hapi": "01b2ed4050780d7f4a19f63f9766822d266991cc1b3f1d6df963dbde0b91546c"
+          },
+          "checks": [
+            "real npm global installation resolves the verified candidate and its unchanged platform tarball",
+            "cold preview is byte-for-byte read-only, including existing MCP backups",
+            "a tampered control port is refused before stopping either Runner",
+            "read-only prefix and active preview leave the Hub, both connections and detached sessions alive",
+            "real control APIs stop current and recovered session substitutes, both Runners and Hub; npm failure retains data and program",
+            "retry self-uninstalls npm candidate despite dry-run env, deletes data and all backups/Skills, and preserves native config, credentials, projects and other software",
+            "reinstalled candidate can repeat uninstall with its prior data and integrations already absent",
+            "real complete platform package self-uninstalls its generated-config-only home and matching PATH symlink"
+          ],
+          "success": true
+        }
+      }
+    ],
+    "promote": {
+      "job": 114795875870,
+      "conclusion": "success"
+    },
+    "artifacts": 0
+  },
+  "promotion": {
+    "version": "1.1.4",
+    "source": {
+      "revision": "3f873788b11926d2e51c9ccf9f3f661dc239ab6a",
+      "dirty": false
+    },
+    "channel": "latest",
+    "promoted": true,
+    "success": true,
+    "distTags": {
+      "runweft-linux-x64": {
+        "latest": "1.1.4",
+        "beta": "1.1.4"
+      },
+      "runweft-linux-arm64": {
+        "latest": "1.1.4",
+        "beta": "1.1.4"
+      },
+      "runweft-darwin-x64": {
+        "latest": "1.1.4",
+        "beta": "1.1.4"
+      },
+      "runweft-darwin-arm64": {
+        "latest": "1.1.4",
+        "beta": "1.1.4"
+      },
+      "runweft": {
+        "latest": "1.1.4",
+        "beta": "1.1.4"
+      }
+    }
+  },
+  "packages": [
+    {
+      "name": "runweft-darwin-arm64",
+      "version": "1.1.4",
+      "path": "runweft-darwin-arm64",
+      "tarball": "tarballs/runweft-darwin-arm64-1.1.4.tgz",
+      "sha512": "SJPlz7jsux2E8KTdFwZz99wB2PcROrfCqiP6+k5fDkevBFgb7Hm2WH5IzAGgwiBgJfTdIZhArMH6SK3PH96j2w==",
+      "binaries": {
+        "bin/runweft": "1d2d3820a8c2bc04741ae3d918e3d6c067702240043008fb7e8657fdbd75bfbd",
+        "bin/hapi": "1f1f6e723d1fbebcb4122c3fe4984b730c638ce665d713b72357ea8bf2345ed9"
+      },
+      "manifest": {
+        "name": "runweft-darwin-arm64",
+        "version": "1.1.4",
+        "description": "Runweft and HAPI executables for darwin-arm64",
+        "repository": {
+          "type": "git",
+          "url": "git+https://github.com/iTgo-lyq/runweft.git"
+        },
+        "os": [
+          "darwin"
+        ],
+        "cpu": [
+          "arm64"
+        ],
+        "files": [
+          "bin",
+          "skills",
+          "README.md",
+          "HAPI-LICENSE",
+          "HAPI-NOTICE",
+          "tool-licenses",
+          "TUNWG-LICENSE",
+          "SOURCES.txt",
+          "hapi-source.tar.gz"
+        ],
+        "engines": {
+          "node": ">=20"
+        },
+        "runweft": {
+          "hapi": {
+            "revision": "8f774b9413fd483bc163cc06425d7646f10a7c92",
+            "version": "0.30.7",
+            "protocolVersion": 1
+          }
+        }
+      }
+    },
+    {
+      "name": "runweft-darwin-x64",
+      "version": "1.1.4",
+      "path": "runweft-darwin-x64",
+      "tarball": "tarballs/runweft-darwin-x64-1.1.4.tgz",
+      "sha512": "x4WGcgxmGDDylMqzkGcvkjrwS635QSuthBLhO11Q5Mp+6eRkiqzsvI/f33C57p70ddQszZhh/LcApSCH52JDAg==",
+      "binaries": {
+        "bin/runweft": "3ab4e8deb1f7e474ffde603e755929cc47fc4c2072a209f62905d3f18ee5f7d8",
+        "bin/hapi": "01b2ed4050780d7f4a19f63f9766822d266991cc1b3f1d6df963dbde0b91546c"
+      },
+      "manifest": {
+        "name": "runweft-darwin-x64",
+        "version": "1.1.4",
+        "description": "Runweft and HAPI executables for darwin-x64",
+        "repository": {
+          "type": "git",
+          "url": "git+https://github.com/iTgo-lyq/runweft.git"
+        },
+        "os": [
+          "darwin"
+        ],
+        "cpu": [
+          "x64"
+        ],
+        "files": [
+          "bin",
+          "skills",
+          "README.md",
+          "HAPI-LICENSE",
+          "HAPI-NOTICE",
+          "tool-licenses",
+          "TUNWG-LICENSE",
+          "SOURCES.txt",
+          "hapi-source.tar.gz"
+        ],
+        "engines": {
+          "node": ">=20"
+        },
+        "runweft": {
+          "hapi": {
+            "revision": "8f774b9413fd483bc163cc06425d7646f10a7c92",
+            "version": "0.30.7",
+            "protocolVersion": 1
+          }
+        }
+      }
+    },
+    {
+      "name": "runweft-linux-arm64",
+      "version": "1.1.4",
+      "path": "runweft-linux-arm64",
+      "tarball": "tarballs/runweft-linux-arm64-1.1.4.tgz",
+      "sha512": "oLG8efgVXwc4C3gX8GsO+TyajrSUy5M5QfjPZXlmN7eeVzZi2bPm5ndahpJkg6KE2XT20oUEeKn0qLjzd4YFYw==",
+      "binaries": {
+        "bin/runweft": "6e67b348bc9eb4605f28f5ac899936b1bce7146238b802f24e97a85a1ae831bc",
+        "bin/hapi": "44b7cc3768ecf4bace7ef5b91e9e5c2aa94a2350ac73147a92d6741488bcf51f"
+      },
+      "manifest": {
+        "name": "runweft-linux-arm64",
+        "version": "1.1.4",
+        "description": "Runweft and HAPI executables for linux-arm64",
+        "repository": {
+          "type": "git",
+          "url": "git+https://github.com/iTgo-lyq/runweft.git"
+        },
+        "os": [
+          "linux"
+        ],
+        "cpu": [
+          "arm64"
+        ],
+        "libc": [
+          "glibc"
+        ],
+        "files": [
+          "bin",
+          "skills",
+          "README.md",
+          "HAPI-LICENSE",
+          "HAPI-NOTICE",
+          "tool-licenses",
+          "TUNWG-LICENSE",
+          "SOURCES.txt",
+          "hapi-source.tar.gz"
+        ],
+        "engines": {
+          "node": ">=20"
+        },
+        "runweft": {
+          "hapi": {
+            "revision": "8f774b9413fd483bc163cc06425d7646f10a7c92",
+            "version": "0.30.7",
+            "protocolVersion": 1
+          }
+        }
+      }
+    },
+    {
+      "name": "runweft-linux-x64",
+      "version": "1.1.4",
+      "path": "runweft-linux-x64",
+      "tarball": "tarballs/runweft-linux-x64-1.1.4.tgz",
+      "sha512": "AykSr+APVt/9QyZHISOe1RyOSZkjMA9IUciEhysrmaKxX2TNCzXG4AbNIHIOCXVYxERMd2oU7pekXj90vBeeCQ==",
+      "binaries": {
+        "bin/runweft": "e9b01c1c70d1fda1b0dbd565e233c383ba3a07abf864c7870dd35f703214727d",
+        "bin/hapi": "269d3f183b7bdcb17839bd688769d3c6a88e56a1d2f605c6f791b83bbb7dc16e"
+      },
+      "manifest": {
+        "name": "runweft-linux-x64",
+        "version": "1.1.4",
+        "description": "Runweft and HAPI executables for linux-x64",
+        "repository": {
+          "type": "git",
+          "url": "git+https://github.com/iTgo-lyq/runweft.git"
+        },
+        "os": [
+          "linux"
+        ],
+        "cpu": [
+          "x64"
+        ],
+        "libc": [
+          "glibc"
+        ],
+        "files": [
+          "bin",
+          "skills",
+          "README.md",
+          "HAPI-LICENSE",
+          "HAPI-NOTICE",
+          "tool-licenses",
+          "TUNWG-LICENSE",
+          "SOURCES.txt",
+          "hapi-source.tar.gz"
+        ],
+        "engines": {
+          "node": ">=20"
+        },
+        "runweft": {
+          "hapi": {
+            "revision": "8f774b9413fd483bc163cc06425d7646f10a7c92",
+            "version": "0.30.7",
+            "protocolVersion": 1
+          }
+        }
+      }
+    },
+    {
+      "name": "runweft",
+      "version": "1.1.4",
+      "path": "runweft",
+      "tarball": "tarballs/runweft-1.1.4.tgz",
+      "sha512": "63CH6FYg3my5g6cb9sYM+M57N83fJBJb5Oqm1HTmXiJoF4PBIDeD1hJF7noOlCdvbek+bemFH2aXI1aNfOZQCw==",
+      "manifest": {
+        "name": "runweft",
+        "version": "1.1.4",
+        "repository": {
+          "type": "git",
+          "url": "git+https://github.com/iTgo-lyq/runweft.git"
+        },
+        "description": "One CLI for HAPI execution and Runweft collaboration",
+        "bin": {
+          "runweft": "bin/runweft.cjs"
+        },
+        "files": [
+          "bin",
+          "skills",
+          "README.md"
+        ],
+        "engines": {
+          "node": ">=20"
+        },
+        "optionalDependencies": {
+          "runweft-darwin-arm64": "1.1.4",
+          "runweft-darwin-x64": "1.1.4",
+          "runweft-linux-arm64": "1.1.4",
+          "runweft-linux-x64": "1.1.4"
+        }
+      }
+    }
+  ],
+  "anonymousInstall": {
+    "success": true,
+    "version": "1.1.4",
+    "source": "3f873788b11926d2e51c9ccf9f3f661dc239ab6a",
+    "commandSource": "rendered DOM",
+    "publicRegistry": true,
+    "binaries": {
+      "runweft": {
+        "sha256": "e9b01c1c70d1fda1b0dbd565e233c383ba3a07abf864c7870dd35f703214727d"
+      },
+      "hapi": {
+        "sha256": "269d3f183b7bdcb17839bd688769d3c6a88e56a1d2f605c6f791b83bbb7dc16e"
+      }
+    },
+    "skill": [
+      {
+        "file": "SKILL.md",
+        "sha256": "a68d9ce8585ac4e5ec7ece1e0cfa80fbb890466f11ca7968357f60b8013f2bb0"
+      },
+      {
+        "file": "agents/openai.yaml",
+        "sha256": "901c92d7ca662560669e26cca49f34b5f96bd34522086aa47a8efbfa176e1178"
+      },
+      {
+        "file": "references/configuration.md",
+        "sha256": "07c10e3f3d2425496d937bb0b07afe2626416d07fdd677fdcc51d6d0fdff87b1"
+      },
+      {
+        "file": "references/delegation.md",
+        "sha256": "32a74e354c5f64f36f9b3ba753d2ebc9be6ce73aa02c1a35952f2f1d3aed092a"
+      },
+      {
+        "file": "references/maintenance.md",
+        "sha256": "b91cf3418f79da3ad75f92588ff466d4cb6748803ebca159370b2740395e2717"
+      },
+      {
+        "file": "references/onboarding.md",
+        "sha256": "4c8da002df6eaa386602456c6b28d21b777cff955ec3040b77e3a66540119590"
+      }
+    ],
+    "readmeMatchesFrozenSource": true,
+    "readmeSha256": "3921cc801a95fc84b4e23d231689720b51d775e96dd4742eea9488ea30fe7c6c",
+    "websiteEvidence": ".dev-smoke/website-cBbaEr/evidence.json"
+  },
+  "protectedEnvironment": {
+    "defaultRunweftHomeAbsent": true,
+    "globalRunweftAbsent": true,
+    "independentHapi": [
+      {
+        "pid": 2713294,
+        "unchangedProcess": true
+      },
+      {
+        "pid": 2713304,
+        "unchangedProcess": true
+      }
+    ]
+  },
+  "mainChecks": {
+    "run": 38241523109,
+    "sourceRevision": "b3bdde2777e105bf928ee631fb5d56093129856c",
+    "conclusion": "success",
+    "rootTests": {
+      "passed": 260,
+      "failed": 0,
+      "assertions": 4889,
+      "files": 42,
+      "seconds": 76.76
+    },
+    "logSha256": "440897b672d0cd2419fdbbf0b7a460127c69b985f8c3b384842c3936fee106e3"
+  },
+  "failures": [
+    {
+      "run": 38237215063,
+      "scope": "web console expiry auth counter",
+      "message": "5 != 4",
+      "beforeUpload": true,
+      "fixed": "isolated clock context installed before navigation",
+      "logSha256": "7b919e292b5e6bb031f8f780516b8b8fe6e0ffd4a958c8a82782cd18184d400c"
+    },
+    {
+      "run": 38239743801,
+      "scope": "parallel materialization test",
+      "message": "arrival-order gates mismatched caller-order completion",
+      "fixed": "bind gates to operationId and force reverse arrival",
+      "logSha256": "8575f7fc7c02e7191c100817830fefdf0987e346145e0edcd3c0e151783b9af7"
+    },
+    {
+      "run": 38239746851,
+      "scope": "hosted runner disk",
+      "message": "No space left on device",
+      "logsSaved": false,
+      "uploadStepStatus": "pending",
+      "fixed": "free only unused hosted Android/.NET/GHC; 14GB to 31GB",
+      "annotationSha256": "92da5984a01bfe99133339863f3ada05469f7cf7678b15f60f73f5f64489606e"
+    },
+    {
+      "run": 38241538144,
+      "attempt": 1,
+      "job": 114793589461,
+      "scope": "Linux arm64 tarball download",
+      "httpStatus": 404,
+      "laterExactDownload": {
+        "success": true,
+        "name": "runweft-linux-arm64",
+        "version": "1.1.4",
+        "bytes": 134054096,
+        "integrity": "sha512-oLG8efgVXwc4C3gX8GsO+TyajrSUy5M5QfjPZXlmN7eeVzZi2bPm5ndahpJkg6KE2XT20oUEeKn0qLjzd4YFYw=="
+      },
+      "fixed": "rerun failed jobs only, without package upload",
+      "logSha256": "25bed5a120aecb9dc47f95f763fcbde0988d9f3d9c6e6656431c52380846a2af"
+    }
+  ],
+  "automaticAcceptanceAuthorized": true,
+  "scope": "Hosted four-platform installation and complete uninstall, real HAPI Hub/two Runners and registered control-session substitutes. No new native model collaboration or physical cross-machine/WAN validation."
+}

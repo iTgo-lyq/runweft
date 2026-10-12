@@ -25,3 +25,9 @@
 - main run38240707933已通过：260项根测试、4887断言、42文件、75.63秒；仅测试改动按diff无需重复集成。
 - 恢复run38239746851在集成运行时被Runner磁盘耗尽中断；check annotation明确为No space left on device，step17仍in_progress、上传step19为pending，最终日志未保存。保留API原始annotation，不把集成声称为通过。公开五包仍须确认不存在再恢复。发布job启动时删除仅该一次性托管机器上的预装Android/.NET/GHC，保留实际构建工具、源码和候选；每组结束记录df。该磁盘空间问题不涉及Actions artifact额度或本机软件。
 - 修正 Commit：`npm-uninstall-release T2.3: reserve hosted runner disk space for release validation`
+- 磁盘准备修正后的main run38241523109通过（260项根测试/4889断言/76.76秒）；新发布run38241538144由b3bdde2777e105bf928ee631fb5d56093129856c控制，已通过基础检查与四平台构建。当前继续全部集成，尚不声称上传成功。
+- run38241538144首attempt：四组集成、五包beta上传通过；释放空间实测14GB→31GB，全部集成结束仍18GB。Linux x64与两个Mac实际公共安装/8组完整卸载全部成功；Linux arm64在download阶段读取原tarball返回404，未执行安装。随后同URL实际GET 200、134054096字节、SHA-512逐字匹配原候选，说明首次临时不可下载；只rerun failed jobs，复用原beta输出/原包，未重新上传。
+- Linux x64匿名官网DOM安装通过：1.1.4实际程序/HAPI匹配原候选；主/平台两份六个Skill文件和README逐字匹配原tag，三页六宽度/两图/27链接/复制/失败安装边界通过；现场website-cBbaEr只在专用prefix，真实用户环境不改。
+- 原run的attempt2只重跑Linux arm64与依赖的晋级：arm实际公共安装和8组完整卸载通过，晋级进行中；其余平台/Beta的虚拟结果job引用首attempt原输出，记录实际执行job与复用结果job，不误报为重新上传或重复验收。
+- 最终：run38241538144 attempt2整体success，五包latest/beta=1.1.4。四平台各8组完整卸载、原安装/服务/信号/数据保留全部通过，实际两程序hash逐平台匹配冻结descriptor；匿名Linux程序/Skill/README通过。公开包没有重发，Actions artifacts=0；原始失败及实际/复用job已写入verification.json。本机另对五包做并行匿名全文下载复核，完成后追加T3最终摘要。
+- Commit：`npm-uninstall-release T2: confirm beta, four-platform uninstall and latest publication`
