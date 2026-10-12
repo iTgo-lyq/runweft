@@ -22,7 +22,9 @@
     },
     "T3": {
       "title": "清空临时现场并完成验收",
-      "status": "todo"
+      "status": "done",
+      "verification": "确认无临时目录进程占用，删除588文件和14链接约3.18GiB；.dev-smoke不存在；最终847本地链接、43Changes、diff通过；复用T1已通过的工程验证",
+      "commitTitle": "maintenance-cleanup T3: clear temporary evidence and record verification"
     }
   },
   "closure": {}
