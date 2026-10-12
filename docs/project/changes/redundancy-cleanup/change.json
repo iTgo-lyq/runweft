@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "id": "redundancy-cleanup",
+  "title": "清理冗余规划文档与失效验收辅助",
+  "size": "small",
+  "status": "active",
+  "stage": "requirement",
+  "branch": "codex/redundancy-cleanup",
+  "confirmations": {},
+  "tasks": {
+    "T1": {
+      "title": "修正归档中的历史文件引用",
+      "status": "todo"
+    },
+    "T2": {
+      "title": "删除冗余内容并收敛当前文档入口",
+      "status": "todo"
+    }
+  },
+  "closure": {}
+}
