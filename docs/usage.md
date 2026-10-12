@@ -317,7 +317,18 @@ paths 显示准确目录：`server/` 是本机托管 Hub 数据；`connections/<
 
 升级没有自升级命令：用 `npm install -g runweft@<目标版本> --registry=https://registry.npmjs.org/ --include=optional` 安装目标版本，确认成功后检查 `--version` 并显式 mcp install 更新入口。Skill 从更新后的 npm 包中读取，比对后备份旧目录再替换。先安全结束任务，按原角色重启 Hub 或 Runner，再核对版本/status/doctor/握手和低风险真实调用，只有完整当前 schema19 库可重开；遇到不匹配格式按上面的独立目录方式处理，不执行数据迁移。
 
-卸载先 mcp uninstall，停止本机受管服务，再执行 `npm uninstall -g runweft`，移除未改写的产品 Skill。数据、模型凭据、原生会话、其他 MCP/Skill 保留。当前附件和成果的留存操作使用显式 release/prune/remove 命令。
+完整卸载已在新源码中提供，尚未发版；公共 npm 1.1.3 没有此命令。默认数据根可直接使用 `runweft uninstall` 预览、`runweft uninstall --yes` 执行；指定数据根时，`--home` 必须写在子命令前：
+
+```sh
+runweft --home <目录> uninstall
+runweft --home <目录> uninstall --yes
+```
+
+第一条只预览，第二条执行完整卸载，不留备份；加 `--dry-run` 时始终只预览。
+
+执行时会停止该 home 的 Hub、全部连接的 Runner 和已登记会话（含恢复记录）。随后删除该数据根下的全部配置、连接凭据、数据库、日志、缓存、备份和任务工作区副本，并移除当前程序、自身 MCP/hook 和已确认的 Skill。其他软件配置、模型凭据、原生会话、用户源项目和其他工作树都会保留。支持 npm 全局包和独立平台包。以下情况会报错并停止：程序为源码运行或归属不明、数据根含未知内容、其他 home 仍在使用当前程序、会话未退出、受管 Git 引用已被改写。
+
+只删程序、保留数据：`npm uninstall -g runweft`。先结束任务和受管服务，再用 `mcp uninstall` 移除接入、删除未改写的产品 Skill；`mcp uninstall` 仍会创建备份。当前附件和成果的留存操作使用显式 release/prune/remove 命令。
 
 完整本地验收由 Agent 自动执行。Mac 双架构构建不代替实机；Linux arm64 QEMU CLI 检查不代替完整原生协作；同机多 Runner 不等于物理跨机。实际版本的证据以发行记录为准。
 

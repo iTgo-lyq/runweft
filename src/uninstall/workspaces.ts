@@ -53,7 +53,8 @@ export function inspectWorkspaces(connections: string[], home: string): Workspac
             const trees = git(repository, ['worktree', 'list', '--porcelain', '-z']);
             const registered = trees.includes(`worktree ${checkout}\0`);
             for (const tree of trees.split('\0\0')) {
-                if (tree.includes(`branch ${branch}\0`) && !tree.startsWith(`worktree ${checkout}\0`)) invalid(checkout);
+                const fields = tree.split('\0');
+                if (fields.includes(`branch ${branch}`) && fields[0] !== `worktree ${checkout}`) invalid(checkout);
             }
             if (existsSync(checkout) && (!registered || git(checkout, ['symbolic-ref', 'HEAD']) !== branch)) invalid(checkout);
             checkWritableDirectory(commonDir);

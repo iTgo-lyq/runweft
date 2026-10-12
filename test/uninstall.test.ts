@@ -104,7 +104,11 @@ test('worktree removal cleans exact managed refs and registration while keeping 
     const record={version:1,environmentId:id,checkout,branch:`hapi-task/${id}`,source:{repositoryRoot:repository,commonDir,baseCommit:head},results:{}};
     put(join(checkout,'..','workspace.json'), {...record, branch:'main'});
     expect(f.error(f.run(['uninstall','--yes']))).toBe('uninstall_workspace_unknown');expect(git('rev-parse','main')).toBe(head);
-    put(join(checkout,'..','workspace.json'),record);atomicWrite(join(repository,'uncommitted.txt'),'KEEP_UNCOMMITTED');
+    put(join(checkout,'..','workspace.json'),record);
+    const otherCheckout=join(f.root,'other-checkout');git('worktree','add','--force',otherCheckout,`hapi-task/${id}`);
+    expect(f.error(f.run(['uninstall','--yes']))).toBe('uninstall_workspace_unknown');expect(existsSync(join(otherCheckout,'source.txt'))).toBe(true);
+    git('worktree','remove','--force',otherCheckout);
+    atomicWrite(join(repository,'uncommitted.txt'),'KEEP_UNCOMMITTED');
     expect(f.run(['uninstall','--yes']).status).toBe(0);expect(readFileSync(join(repository,'source.txt'),'utf8')).toBe('KEEP');
     expect(readFileSync(join(repository,'uncommitted.txt'),'utf8')).toBe('KEEP_UNCOMMITTED');
     expect(git('for-each-ref','--format=%(refname)')).toBe('refs/hapi/results/user-result\nrefs/heads/main\nrefs/heads/user-branch');

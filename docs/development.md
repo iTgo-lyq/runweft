@@ -32,7 +32,10 @@ node --test ./scripts/tests/*.test.mjs ./website/publish.test.mjs
 | `bun run test:integration storage [CLI]` | 附件流式传输/留存、Git准备/回收、远端权限与并发重查；不调用模型 |
 | `bun run test:integration web [CLI]` | 真实浏览器连接、配置CAS、任务、审批/文件、身份撤销、迟到响应；任务执行为明确夹具 |
 | `bun run test:integration service-package [CLI]` | 默认服务、Runner生命周期、候选完整性、专用registry安装/卸载；须先构建发行包 |
+| `bun run test:uninstall [证据文件]` | 隔离 npm prefix/HOME 中安装当前编译程序，验证 Hub、双连接 Runner、会话控制、预览、完整删除、失败重试与独立包；不调用模型 |
 | `bun scripts/smoke-hapi-session-and-shutdown.ts [CLI]` | 真实Runner退出码/状态/锁/端口、无ACK/停服/失败启动/重启及Claude长cwd两轮；会调用模型，须已有授权和专用认证 |
+
+完整卸载专项需先 `bun run build`，并具备 `bun run package` 生成的当前平台包与主包目录（`dist/packages/`）；脚本只复制包模板到专用现场，再换入当前编译程序、Skill 和使用说明，不覆盖原交付。会话使用登记到真实 HAPI 控制接口的测试进程，验证停止流程，不代替原生模型协作。默认脱敏证据为 `.dev-smoke/complete-uninstall/npm-evidence.json`；自建服务、安装和数据在结束时清除。
 
 模型验收使用安装后的候选和专用认证副本，已有授权才运行：
 

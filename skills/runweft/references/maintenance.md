@@ -40,7 +40,11 @@ runweft mcp check --client <codex或claude>
 
 按原角色启动：本机 Hub `start`，独立执行机 `runner start`，前台公开服务由原进程管理器执行 `serve --public`。核对 `--version/status/doctor/mcp check`，再做一次低风险真实调用。只执行用户指定范围，不更新在线其他实例。
 
-卸载：先 `mcp uninstall --client <宿主>`，核对其他 MCP/hooks 保留；再停止本机受管服务。确认入口属于当前 npm prefix 后执行 `npm uninstall -g runweft`；仅移除未被用户改写的产品 Skill。用户明确提供的既有离线安装按其原受管目录处理，不让 npm 接管或删除未知入口。不要删除数据、原生会话、模型凭据或其他 Skill。
+完整卸载：先用 `--version` 和 `uninstall --help` 核对实际版本支持；公共 npm 1.1.3 尚无此命令。用户已明确要求完整卸载即视为授权：先用 `runweft --home <目录> uninstall` 预览，核对数据根和删除范围；与要求一致就直接执行 `runweft --home <目录> uninstall --yes`，不再次确认。范围不符或命令报错时停止，并如实说明。npm 卸载失败时数据仍在，可重试；程序已删而数据未删时，按错误给出的准确路径处理。
+
+完整卸载无备份地移除该 home 的全部数据、当前程序、自身 MCP/hook 和已确认的 Skill，保留其他软件配置、模型凭据、原生会话和用户项目。默认 home 可省略 `--home <目录>`；`--dry-run` 始终只预览。不要在受管会话内执行完整卸载，使用独立终端。
+
+只删程序、保留数据：先结束任务、停止相关 Runner/Hub，用 `mcp uninstall --client <宿主>` 移除接入并核对其他 MCP/hooks 保留；确认当前 npm prefix 后执行 `npm uninstall -g runweft`，仅移除未改写的产品 Skill。此处 `mcp uninstall` 仍生成备份。既有可信独立平台包按其受管目录处理，不删除未知入口。
 
 `mcp backups` 列非秘密摘要；`mcp restore <备份ID>` 恢复操作前完整快照，会拒绝覆盖后续修改，不强行绕过。MCP 修改位置：Codex `${CODEX_HOME:-$HOME/.codex}/config.toml`；Claude 默认 `$HOME/.claude.json` 和 `$HOME/.claude/settings.json`，设置 CLAUDE_CONFIG_DIR 后两者均在该目录。不要手工复制完整配置给模型。
 

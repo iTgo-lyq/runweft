@@ -16,7 +16,7 @@ function ps(args: string[]) {
 function info(pid: number): ProcessInfo | null {
     if (!Number.isInteger(pid) || pid <= 0) throw new RunweftError('uninstall_process_unknown', '服务记录中的 PID 无效。');
     const command = ps(['-p', String(pid), '-ww', '-o', 'command=']);
-    const state = ps(['-p', String(pid), '-o', 'stat=']);
+    const state = ps(['-p', String(pid), '-o', 'state=']);
     if (state.startsWith('Z')) return null;
     if (!command || !state) {
         try { process.kill(pid, 0); } catch (error) { if ((error as NodeJS.ErrnoException).code === 'ESRCH') return null; }
@@ -34,7 +34,7 @@ function hapiHome(pid: number): string | undefined {
         try { return readFileSync(`/proc/${pid}/environ`, 'utf8').split('\0').find(value => value.startsWith('HAPI_HOME='))?.slice(10); }
         catch { return undefined; }
     }
-    return ps(['eww', '-p', String(pid), '-o', 'command=']).match(/(?:^| )HAPI_HOME=(.*?)(?= [A-Za-z_][A-Za-z0-9_]*=|$)/)?.[1];
+    return ps(['-Eww', '-p', String(pid), '-o', 'command=']).match(/(?:^| )HAPI_HOME=(.*?)(?= [A-Za-z_][A-Za-z0-9_]*=|$)/)?.[1];
 }
 async function request(url: string, body?: object) {
     try {

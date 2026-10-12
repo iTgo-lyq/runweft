@@ -15,6 +15,7 @@
     "test": "bun test ./test",
     "test:execution": "bun scripts/smoke-execution.ts",
     "test:install": "node scripts/smoke-install.mjs",
+    "test:uninstall": "node scripts/smoke-uninstall.mjs",
     "test:packages": "node scripts/verify-packages.mjs",
     "test:arm64": "node scripts/smoke-arm64.mjs",
     "release:assemble": "node scripts/assemble-release.mjs",
