@@ -4,7 +4,7 @@ Runweft 提供明确 Hub、独立身份/空间、中心配置、完整资源后�
 
 ## 包与安装
 
-五个同版本 npm 包为 `runweft`、`runweft-darwin-arm64`、`runweft-darwin-x64`、`runweft-linux-arm64` 和 `runweft-linux-x64`。主包固定四个平台可选依赖，生成 manifest 不含 `private: true`；源码工程保持 private。五包1.1.3已先上传beta，四平台从公共npm安装验收后以OIDC晋级，全部latest/beta=1.1.3；来源、公开摘要与匿名安装见[1.1.3发布验收](../../../archive/2026-10-11-npm-hapi-fix-release/acceptance.md)。本地打包命令仍不执行公开发布、push 或创建 PR。
+五个同版本 npm 包为 `runweft`、`runweft-darwin-arm64`、`runweft-darwin-x64`、`runweft-linux-arm64` 和 `runweft-linux-x64`。主包固定四个平台可选依赖，生成 manifest 不含 `private: true`；源码工程保持 private。五包1.1.4已先上传beta，四平台从公共npm安装并完整卸载验收后以OIDC晋级，全部latest/beta=1.1.4；来源、公开摘要与匿名安装见[1.1.4发布验收](../../../archive/2026-10-12-npm-uninstall-release/acceptance.md)。本地打包命令仍不执行公开发布、push 或创建 PR。
 
 平台包包含相邻的 Runweft/HAPI 可执行程序、使用说明、产品 Skill、HAPI 许可证、NOTICE、配套工具许可、匹配源码归档及来源说明；匹配源码保留固定 Git revision 的全部源码、许可与当前平台的两份构建工具压缩包，省略其他平台的八份工具压缩包。SOURCES.txt 说明归档范围、当前平台重建步骤和完整 Git 来源；生成 manifest 的 repository 指向 Runweft 仓库。直接解包并保留其目录布局即可运行，无需全局 Bun、Node 或另装 HAPI；npm 主入口需要 Node.js 20+ 和可解析所有平台依赖的 registry，见 [CLI 安装](../../installation/cli/spec.md)。Mac 程序未签名、未公证。
 
@@ -18,7 +18,7 @@ HAPI 固定版本和协议见[执行兼容](../../execution/compatibility/spec.m
 
 包验证检查集合、版本、平台/架构、程序执行位、许可、匹配源码文件集和每个 Git blob、README、Skill 和 hash。`test:packages` 直接运行本机平台的默认 Hub/相邻 HAPI 服务；`test:install` 通过专用 registry 验证安装/重装/卸载、数据和原生 MCP 配置保留，不公开发布。模型与网页验收记录实际安装平台程序及相邻 HAPI 的 realpath/hash，不用源码 gateway 替代默认服务。
 
-普通CI共用一次checkout/依赖/工具，核心保留实际Codex配置检查；按真实Git差异选择access/storage/web/本机service，未知路径、新分支或缺少base保守全选；已有base的Git差异读取失败则报错。tag/手动候选完整执行根/Node/四组无模型验证和四平台安装，不按diff跳过；当前main核心/集成和1.1.3正式四平台流程已远端通过，结果见[验收范围](../acceptance/spec.md)。
+普通CI共用一次checkout/依赖/工具，核心保留实际Codex配置检查；按真实Git差异选择access/storage/web/本机service，未知路径、新分支或缺少base保守全选；已有base的Git差异读取失败则报错。tag/手动候选完整执行根/Node/四组无模型验证和四平台安装及完整卸载，不按diff跳过；当前main核心与1.1.4完整发布流程已远端通过，结果见[验收范围](../acceptance/spec.md)。发布构建job先移除未用的预装Android/.NET/GHC，为四平台候选和验收现场释放磁盘空间，各组结束记录剩余空间。
 
 正式候选必须 `source.dirty=false`。冻结后按 `scripts/fixtures/release-inputs.mjs` 的固定包输入检查已跟踪与未跟踪变化；源码、Skill、包内使用说明、package/lock/HAPI及指定构建脚本变化即重建。仅验收脚本和未打入包的项目记录变化可保留同候选，程序源码归档仍取索引revision，后续验收提交独立记录。
 
@@ -28,17 +28,17 @@ HAPI 固定版本和协议见[执行兼容](../../execution/compatibility/spec.m
 
 ## npm 可信发布
 
-五包绑定GitHub仓库 `iTgo-lyq/runweft` 的 `npm-publish.yml`，environment留空，同时允许npm publish与Allow npm dist-tag。托管runner使用Node24/npm11.21.0、id-token:write及npm audience `npm:registry.npmjs.org`，不保存长期npm token；OIDC token不打印或持久化。私有仓库支持发布，当前无自动provenance。上传和标签权限均已由1.1.3真实写入验证。
+五包绑定GitHub仓库 `iTgo-lyq/runweft` 的 `npm-publish.yml`，environment留空，同时允许npm publish与Allow npm dist-tag。托管runner使用Node24/npm11.21.0、id-token:write及npm audience `npm:registry.npmjs.org`，不保存长期npm token；OIDC token不打印或持久化。私有仓库支持发布，当前无自动provenance。上传和标签权限均已由1.1.4真实写入验证。
 
 版本入口接受规范不可变tag：稳定 `vX.Y.Z`、预发行 `vX.Y.Z-beta.N`，整数无前导零且N非负，源码版本必须匹配。main/codex普通推送不发布npm；手动release-tag留空只预演，main显式输入已有tag可恢复原源码。当前控制提交运行检查，独立checkout原tag及固定HAPI构建一次；固定packageInputs与tag必须一致。
 
 基础检查、四平台构建/包内容及Linux四组无模型集成通过后，同一构建job以--tag=beta依次上传四平台和主包；主包等待四平台公开确认。上传前输出原候选描述，绑定tag/source、HAPI、完整manifest、五包SHA-512和程序SHA-256，并记录latestBefore。已有beta不得倒退，上传期间latest须保持基线。beta是公开渠道，精确版本可以安装，失败不能覆盖同版本。
 
-Linux x64/arm64、macOS x64/arm64四个托管job重新读取五包公共元数据，下载主包与本平台tarball并核验SHA-512，从公共npm安装精确版本到专用prefix/cache；核对Runweft/HAPI程序SHA-256，验证MCP目录、无Bun服务与信号、重装、缺依赖诊断、卸载保留。四job整体success才允许晋级；稳定版本复查五包后先更新平台latest、最后主包latest，X.Y.Z-beta.N保持beta。部分晋级可幂等续跑，不倒退或改动外部推进的标签。
+Linux x64/arm64、macOS x64/arm64四个托管job重新读取五包公共元数据，下载主包与本平台tarball并核验SHA-512，从公共npm安装精确版本到专用prefix/cache；核对Runweft/HAPI程序SHA-256，验证MCP目录、无Bun服务与信号、重装、缺依赖诊断、npm卸载保留。每个job还用原平台tarball验证8组完整卸载：Hub/双连接Runner/登记会话停止、预览与拒绝、删除失败保留及重试、Skill/MCP/数据/备份删除和其他配置/凭据/项目保留、独立包/PATH链接自删除。控制程序在第一次安装前另存整包，测试PATH不含模型客户端；会话为登记到真实HAPI的控制测试进程。四job整体success才允许晋级；稳定版本复查五包后先更新平台latest、最后主包latest，X.Y.Z-beta.N保持beta。部分晋级可幂等续跑，不倒退或改动外部推进的标签。
 
 工作流串行且不中途取消。安装或晋级失败只重跑失败job，复用原成功beta输出与npm原包。beta job失败但五包全部公开时，从原attempt日志取原候选描述并校验，不重新打包；修正后工作流可从main填写release-tag和原source-run-id恢复。部分公开、未知上传、无法取得原日志直接停止，使用新版本处理；仅无公开版本且此前未开始上传可重建。旧artifact发布run38041451856不再重跑。
 
-发布、安装、普通CI和官网均不上传或下载Actions artifact；候选描述与脱敏验收保存在任务日志/summary，最终摘要写入仓库归档。公开候选1.1.3绑定源码 `dab91e089c63a64a4d275a81b7b793354d86200b` 与HAPI `8f774b9413fd483bc163cc06425d7646f10a7c92`；原离线1.1.0交付保留，不继承其他候选的模型组合证据。
+发布、安装、普通CI和官网均不上传或下载Actions artifact；候选描述与脱敏验收保存在任务日志/summary，最终摘要写入仓库归档。公开候选1.1.4绑定源码 `3f873788b11926d2e51c9ccf9f3f661dc239ab6a` 与HAPI `8f774b9413fd483bc163cc06425d7646f10a7c92`；原离线1.1.0交付保留，不继承其他候选的模型组合证据。
 
 ## 升级与保留
 

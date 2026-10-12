@@ -12,7 +12,7 @@ Runweft 官网是独立静态站点，不与业务看板或 HAPI 服务混用。
 
 所有支持的平台使用同一条固定版本 npm 命令，注明 Node.js 20+、npm、任务所需 Git 与原生工具。npm 自动选择 macOS arm64/x64、glibc Linux arm64/x64 平台依赖，随包提供 HAPI 和 Skill。安装成功后才检查版本；失败不继续运行已有程序。PATH 说明以 npm 全局 prefix 的 bin 为准。
 
-官网不提供平台包、独立 Skill、校验文件或 Markdown 下载，无平台切换解包命令和下载目录。Agent 对话明确程序安装、升级和卸载使用 npm；Skill 从 npm 全局包目录读取，再按授权接入宿主，已有内容先备份和确认。
+官网不提供平台包、独立 Skill、校验文件或 Markdown 下载，无平台切换解包命令和下载目录。Agent 对话用 npm 安装和升级，完整删除使用 runweft uninstall（先预览，确认范围后 --yes）；Skill 从 npm 全局包目录读取，再按授权接入宿主，已有内容先备份和确认。
 
 ## 静态交付
 
@@ -28,7 +28,7 @@ website/serve.mjs 提供 loopback GET/HEAD 预览，只能读取站点目录。�
 
 website-pages.yml 复用规范版本识别，稳定版本使用托管 runner 构建、检查公共 npm 版本并上传 Direct Upload 项目；main 的官网相关推送部署 production，codex 分支部署 preview，action 返回环境须与请求模式匹配。生产部署先确认 run 的 SHA 为 main 当前提交，拒绝旧提交覆盖官网。仅 codex/** push/dispatch 的 Beta 在聚焦检查后明确跳过构建、准备/上传与静态产物；main 或 PR 的 Beta 版本失败，真实构建器仍只接受稳定版本。Beta 跳过仅有本地夹具证据，尚未真实触发。
 
-[正式官网](https://runweft.pages.dev/)安装版本为 npm 1.1.3；[main Pages CI](https://github.com/iTgo-lyq/runweft/actions/runs/38200982170)已发布紧凑会话介绍。固定构建为 [620db692.runweft.pages.dev](https://620db692.runweft.pages.dev/)，静态输出 296,166 字节；唯一 URL 与正式域名十文件摘要/MIME、三页浏览器、首页六宽度与两图解码通过，见[本轮验收](../../../archive/2026-10-12-website-compact-session-preview/acceptance.md)。原图溯源见[截图引入记录](../../../archive/2026-10-12-website-session-screenshots/acceptance.md)；此前内容和原生能力验收保存在对应归档。
+[正式官网](https://runweft.pages.dev/)安装版本为 npm 1.1.4；[main Pages CI](https://github.com/iTgo-lyq/runweft/actions/runs/38245448709)已发布对应版本和完整卸载维护说明，保留紧凑会话介绍。固定构建为 [6c712b0f.runweft.pages.dev](https://6c712b0f.runweft.pages.dev/)，静态输出 297,785 字节；唯一 URL 与正式域名十文件摘要/MIME、正式域名三页两宽度浏览器、本地三页六宽度/两图解码及匿名DOM安装通过，见[本轮验收](../../../archive/2026-10-12-npm-uninstall-release/acceptance.md)。原图溯源见[截图引入记录](../../../archive/2026-10-12-website-session-screenshots/acceptance.md)；此前内容和原生能力验收保存在对应归档。
 
 准备步骤和官方上传 action 使用 Repository secrets 的 CLOUDFLARE_ACCOUNT_ID/CLOUDFLARE_API_TOKEN；凭证不写入静态站点或验收 JSON。主包/四平台包的公开版本、SHA-512 字段、精确可选依赖和 tarball HEAD 均通过；五包latest必须与站点版本一致，不下载程序、不调用npm发布。静态输出为十文件白名单，拒绝链接、隐藏文件、归档和未知文件。
 

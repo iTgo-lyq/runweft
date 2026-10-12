@@ -8,9 +8,9 @@
 
 接入使用真实 begin/complete 加密确认，不要求向模型发送 token；MCP 安装保留其他原生配置。无仓库 Runweft YAML、旧 root 认证或离线委派路径。固定 Git 基线、未提交内容不随基线传输、主 Agent 决定合入和保留 worktree 的边界明确。
 
-首页和指南给出相同 npm 安装命令。指南提供从 `$(npm root -g)/runweft/skills/runweft` 定位完整 Skill 的命令，说明 npm prefix/PATH、宿主 Skill 备份与 MCP 的独立接入；维护使用 npm 安装目标版本和 npm uninstall。
+首页和指南给出相同 npm 安装命令。指南提供从 `$(npm root -g)/runweft/skills/runweft` 定位完整 Skill 的命令，说明 npm prefix/PATH、宿主 Skill 备份与 MCP 的独立接入；维护用 npm 安装目标版本；完整删除使用 runweft uninstall（默认预览，--yes执行），npm uninstall仅删除程序并保留数据。
 
-`manual.html` 转义展示当前使用说明的 npm 参考部分，省略末尾离线工程附录；无 Markdown 下载。参考页不执行命令或 HTML。参考导读说明适用人群和页内搜索，接入提示指向上手指南。技术参考正文保留已发布 1.1.3 使用说明；公开包的文档/Skill 已有匿名 DOM 安装和冻结源码证据，历史 1.1.0 保留原样。
+`manual.html` 转义展示当前使用说明的 npm 参考部分，省略末尾离线工程附录；无 Markdown 下载。参考页不执行命令或 HTML。参考导读说明适用人群和页内搜索，接入提示指向上手指南。技术参考正文展示已发布 1.1.4 使用说明；公开包的文档/Skill 已有匿名 DOM 安装和冻结源码证据，历史 1.1.0 保留原样。
 
 本地配置、数据位置、MCP 备份、模型登录、服务版本、排错和清理入口有具体说明。指南中的未知任务/runtime ID 和示例域名需要使用者替换，网站不自行执行这些命令或修改用户配置。
 
@@ -18,4 +18,4 @@
 
 源文件与部署方式见[官网说明](../../../../../website/README.md)，对应产品行为仍以[安装](../../installation/cli/spec.md)、[MCP 安装](../../installation/mcp/spec.md)、[资源](../../resources/scope/spec.md)、[委派](../../delegation/interface/spec.md)和[部署](../../deployment/spec.md)为准。
 
-三页、两页提示/复制、五步路径、原生会话入口和 27 个站内链接/锚点通过本地自动验收；正式域名三页及文件摘要与验收版本一致，见[本轮验收](../../../archive/2026-10-12-website-session-screenshots/acceptance.md)。
+三页、两页提示/复制、五步路径、原生会话入口和 27 个站内链接/锚点通过本地自动验收；正式域名三页及文件摘要与验收版本一致，见[本轮验收](../../../archive/2026-10-12-npm-uninstall-release/acceptance.md)。
