@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "id": "redundancy-cleanup",
+  "title": "清理冗余规划文档与失效验收辅助",
+  "size": "small",
+  "status": "completed",
+  "stage": "close",
+  "branch": "codex/redundancy-cleanup",
+  "confirmations": {},
+  "tasks": {
+    "T1": {
+      "title": "修正归档中的历史文件引用",
+      "status": "done",
+      "verification": "十处历史链接逐字核对仅目标变化，固定Git blob均存在；归档状态无差异；工作流41个Change及diff检查通过",
+      "commitTitle": "redundancy-cleanup T1: pin historical references before deleting sources"
+    },
+    "T2": {
+      "title": "删除冗余内容并收敛当前文档入口",
+      "status": "done",
+      "verification": "四文件删除及长期原则/入口/Spec精简核对完成；typecheck和260项根测试通过；207处本地链接/历史目标/工作流/diff检查通过，受保护输入无差异",
+      "commitTitle": "redundancy-cleanup T2: remove obsolete plans and unused remote probe"
+    }
+  },
+  "closure": {
+    "verification": {
+      "result": "passed",
+      "at": "2026-10-12T16:59:00.632Z",
+      "summary": "Plan由新subagent只读评审通过，主Agent完成全差异与需求自查；typecheck、260项根测试、引用/固定目标、受保护输入、工作流及diff检查通过"
+    },
+    "acceptance": {
+      "result": "accepted",
+      "at": "2026-10-12T16:59:00.709Z",
+      "summary": "Agent自验收通过：四指定文件删除、长期原则和入口维护、精简文档保留现行规则，十处历史链接仅改固定目标；本地验证通过且受保护范围不变",
+      "source": "用户本轮明确清理范围，AGENTS.md授权自动本地验收及SpecTrail small自验收规则"
+    },
+    "specs": {
+      "result": "synced",
+      "at": "2026-10-12T16:59:00.782Z",
+      "summary": "仅整理release/acceptance现行验证入口、主链、证据复用、发布门禁及实测边界；历史候选流水由既有归档提供，无产品契约变化"
+    },
+    "archive": {
+      "result": "done",
+      "at": "2026-10-12T16:59:00.858Z",
+      "summary": "small自验收、Specs整理和证据核对完成，归档清理Change；保留原归档/HAPI/原型，原归档仅做用户授权的历史链接维护",
+      "path": "docs/project/archive/2026-10-13-redundancy-cleanup"
+    }
+  }
+}
