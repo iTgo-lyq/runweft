@@ -18,4 +18,4 @@
 
 源文件与部署方式见[官网说明](../../../../../website/README.md)，对应产品行为仍以[安装](../../installation/cli/spec.md)、[MCP 安装](../../installation/mcp/spec.md)、[资源](../../resources/scope/spec.md)、[委派](../../delegation/interface/spec.md)和[部署](../../deployment/spec.md)为准。
 
-三页、两页提示/复制、五步路径、原生会话入口和 25 个站内链接/锚点已通过本地自动验收，六宽度首屏与增补前相同；正式域名三页及文件摘要与验收版本一致，见[本轮验收](../../../archive/2026-10-12-website-hapi-capabilities/acceptance.md)。
+三页、两页提示/复制、五步路径、原生会话入口和 27 个站内链接/锚点通过本地自动验收；正式域名三页及文件摘要与验收版本一致，见[本轮验收](../../../archive/2026-10-12-website-session-screenshots/acceptance.md)。

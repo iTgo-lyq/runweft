@@ -7,3 +7,9 @@
 - 验证：15 项网站发布测试、1 项构建测试（11 个断言）、构建、三页六宽度 Playwright、27 个链接/锚点、无 JS/键盘原图、子路径与首屏几何基线通过。未重复 npm 安装；1.1.3 冻结源码输入检查通过。人工审看桌面、手机及两张上游原图。
 - 偏差：最初自制图未提交/发布；专用服务和凭据已清理。改用原图后的本地复制曾停滞，停止该次检查、重新复制同字节资源后，完整构建和验收成功。发布验证不依赖该临时环境。
 - Commit：`website-session-screenshots T1: show official HAPI session and code screenshots`
+
+## T2 部署验收与归档
+
+- 结果：main Pages 已发布官方截图；唯一 URL 与正式域名十文件和三页浏览器核对通过。当前 Specs、官网入口与验收记录已同步。
+- 验证：源码核心 CI 与 Pages CI 成功，来源与静态摘要一致，图片成功解码。正式域名代理首轮超时后直接连接通过；未将超时推断为成功。
+- Commit：`website-session-screenshots T2: verify official screenshots and archive website update`

@@ -6,6 +6,8 @@ Runweft 官网是独立静态站点，不与业务看板或 HAPI 服务混用。
 
 首页 `#native-experience` 解释 HAPI 驱动原生 Codex/Claude 的执行方式：采用执行机器已有的登录、项目指令、Skill 和其他 MCP，权限沿原生规则，会话和目录跨轮保留。HAPI 会话网页提供消息/工具历史、待审批处理及在线会话文件和 Git 暂存/未暂存差异；新增入口链接到指南的具体步骤。手机使用浏览器，须能访问 Hub 并选择本人身份/空间；不承诺全部 HAPI 客户端或功能已接通。
 
+首页 `#session-screenshots` 使用 HAPI 官网会话记录和代码查看原图，图注与来源链接说明上游示意属性。两图以真实 WebP 格式提供，原字节不变、946×2048，显示宽度上限 320px，桌面并排、窄屏单列；懒加载且标注固有尺寸，键盘和无 JavaScript 均可查看原图。新增文案由 iclaude 编写。
+
 ## npm 安装
 
 所有支持的平台使用同一条固定版本 npm 命令，注明 Node.js 20+、npm、任务所需 Git 与原生工具。npm 自动选择 macOS arm64/x64、glibc Linux arm64/x64 平台依赖，随包提供 HAPI 和 Skill。安装成功后才检查版本；失败不继续运行已有程序。PATH 说明以 npm 全局 prefix 的 bin 为准。
@@ -26,14 +28,14 @@ website/serve.mjs 提供 loopback GET/HEAD 预览，只能读取站点目录。�
 
 website-pages.yml 复用规范版本识别，稳定版本使用托管 runner 构建、检查公共 npm 版本并上传 Direct Upload 项目；main 的官网相关推送部署 production，codex 分支部署 preview，action 返回环境须与请求模式匹配。生产部署先确认 run 的 SHA 为 main 当前提交，拒绝旧提交覆盖官网。仅 codex/** push/dispatch 的 Beta 在聚焦检查后明确跳过构建、准备/上传与静态产物；main 或 PR 的 Beta 版本失败，真实构建器仍只接受稳定版本。Beta 跳过仅有本地夹具证据，尚未真实触发。
 
-[正式官网](https://runweft.pages.dev/)安装版本为 npm 1.1.3；[main Pages CI](https://github.com/iTgo-lyq/runweft/actions/runs/38196238787)已发布原生执行与 HAPI 能力说明。固定构建为[1cde674a.runweft.pages.dev](https://1cde674a.runweft.pages.dev/)，静态输出 107,487 字节；唯一 URL 与正式域名八文件摘要/MIME、三页浏览器和新增指南入口均通过，见[本轮验收](../../../archive/2026-10-12-website-hapi-capabilities/acceptance.md)。此前[内容重写验收](../../../archive/2026-10-12-website-content-onboarding/acceptance.md)与[codex 分支预览](https://codex-cli-foundation.runweft.pages.dev/)记录继续保留。
+[正式官网](https://runweft.pages.dev/)安装版本为 npm 1.1.3；[main Pages CI](https://github.com/iTgo-lyq/runweft/actions/runs/38199746816)已发布 HAPI 官方截图。固定构建为 [cdc18d20.runweft.pages.dev](https://cdc18d20.runweft.pages.dev/)，静态输出 296,682 字节；唯一 URL 与正式域名十文件摘要/MIME、三页浏览器和两图解码通过，见[本轮验收](../../../archive/2026-10-12-website-session-screenshots/acceptance.md)。此前[内容重写](../../../archive/2026-10-12-website-content-onboarding/acceptance.md)与[原生能力说明](../../../archive/2026-10-12-website-hapi-capabilities/acceptance.md)验收继续保留。
 
-准备步骤和官方上传 action 使用 Repository secrets 的 CLOUDFLARE_ACCOUNT_ID/CLOUDFLARE_API_TOKEN；凭证不写入静态站点或验收 JSON。主包/四平台包的公开版本、SHA-512 字段、精确可选依赖和 tarball HEAD 均通过；五包latest必须与站点版本一致，不下载程序、不调用npm发布。静态输出为八文件白名单，拒绝链接、隐藏文件、归档和未知文件。
+准备步骤和官方上传 action 使用 Repository secrets 的 CLOUDFLARE_ACCOUNT_ID/CLOUDFLARE_API_TOKEN；凭证不写入静态站点或验收 JSON。主包/四平台包的公开版本、SHA-512 字段、精确可选依赖和 tarball HEAD 均通过；五包latest必须与站点版本一致，不下载程序、不调用npm发布。静态输出为十文件白名单，拒绝链接、隐藏文件、归档和未知文件。
 
-校验前保存唯一 URL 与实际环境回执，在约三分钟窗口内重试暂时不可达请求，错误只记录有限网络错误码。在线验证跟随项目域内 HTML 重定向，核对三个页面、release.json、四个资源的 MIME 与 SHA-256；固定构建验收使用唯一 URL。
+校验前保存唯一 URL 与实际环境回执，在约三分钟窗口内重试暂时不可达请求，错误只记录有限网络错误码。在线验证跟随项目域内 HTML 重定向，核对三个页面、release.json、六个资源的 MIME 与 SHA-256；固定构建验收使用唯一 URL。
 
 部署脚本的路由、未公开 npm/错误依赖、Pages 权限/已有配置拒绝、缺凭证与失败回执通过15项聚焦测试。PR 只检查，手动入口按分支路由；main手动入口已真实通过；PR入口未实测。
 
-官网使用Cloudflare Direct Upload，不依赖Actions artifact；脱敏部署回执、八文件摘要与URL保存在日志/summary及仓库验收记录，静态输出按对应提交重建核对。
+官网使用Cloudflare Direct Upload，不依赖Actions artifact；脱敏部署回执、十文件摘要与URL保存在日志/summary及仓库验收记录，静态输出按对应提交重建核对。
 
 官网内容改动可使用 `website/verify.mjs --browser-only` 验证三页、首屏入口、两页提示一致性及既有交互；证据明确标注跳过 npm 安装。默认模式仍从实际 DOM 取命令，在独立环境执行公共 npm 安装。
