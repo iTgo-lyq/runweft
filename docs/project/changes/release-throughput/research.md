@@ -89,3 +89,7 @@ npm latest 预计在第 23–25 分钟可用。若上传/传播缩至 4–6 分�
 ## 恢复基线核对
 
 2026-10-13 在独立 worktree 将分支 rebase 到 main e85ef3a，核对原分支 0e1fd6e 与重排后的 708c99b 文件树完全一致，保留完整 SpecTrail 归档与本 Change。原基线 1d06750 至 main 的发布/官网实现未变，仅普通 checks 工作流增加 SpecTrail 校验；原方案的实现依据仍有效，尚无新的性能样本。
+
+## 恢复后的 Plan 评审
+
+2026-10-13 iclaude 只读评审会话 6693cb28-4542-499d-98c7-8648750ed7cb 提出两项阻塞：预发行恢复时四组门禁未闭合、排队及 runner 使用时间缺少采集路径。主 Agent 复核采纳：Technical 增加五模式表，所有渠道已有候选恢复都重新执行三组公共集成并核对原上传前证据；Plan T2 增加预发行两种恢复入口测试，T3 通过 Actions job 时间/标签统计排队和运行时长，缺失明确标为未知。原始输出保存在 .dev-smoke/release-throughput/plan-review.json；评审没有执行产品代码或真实发布。

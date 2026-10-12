@@ -4,13 +4,23 @@
   "title": "缩短正常发布与失败恢复时间",
   "size": "medium",
   "status": "active",
-  "stage": "technical",
+  "stage": "execution",
   "branch": "codex/release-throughput",
   "confirmations": {
     "requirement": {
       "at": "2026-10-12T17:38:12.692Z",
       "summary": "在原完整提速范围及验收边界内恢复，保留不可变候选和所有门禁，实际性能留待授权发行测量",
       "source": "用户 2026-10-13：建立独立 worktree 继续推进 codex/release-throughput；本分支 AGENTS.md 的既有工程决策与自动本地验收授权"
+    },
+    "technical": {
+      "at": "2026-10-12T17:46:34.893Z",
+      "summary": "已复核 iclaude Plan 评审并落实预发行恢复门禁和 job 时间统计两项阻塞，按五模式表实施",
+      "source": "用户明确恢复推进；本分支 AGENTS.md 授权主 Agent 制定工程方案并落实一次 iclaude Plan 评审"
+    },
+    "plan": {
+      "at": "2026-10-12T17:46:34.969Z",
+      "summary": "按 T1 读取恢复、T2 完整门禁并行、T3 官网接续和证据串行交付，各项含定向验证",
+      "source": "用户明确恢复推进；本分支 AGENTS.md 既有 Plan 工程决策和自动本地验收授权"
     }
   },
   "tasks": {

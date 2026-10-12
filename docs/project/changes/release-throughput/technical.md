@@ -1,7 +1,7 @@
 # 发布并行与自动接续方案
 
 > 来源：./requirement.md
-> 更新：2026-10-12
+> 更新：2026-10-13
 
 ## 推荐流程
 
@@ -26,11 +26,19 @@
 
 ## 并行及候选一致性
 
-三组集成分别使用独立 GitHub Linux runner；每组内保持现有脚本顺序。checkout 包含 HAPI 子模块，按组安装 Chromium、Codex/Claude 发现工具及 frozen 依赖，不运行模型。调用现有 downloader，核对完整 descriptor、主包/本平台 tarball SHA-512，解包并用 assertCandidateBinaries 核对两程序 SHA-256，再将实际路径传给 smoke-integration。
+稳定发布及所有已有候选恢复的三组集成分别使用独立 GitHub Linux runner；每组内保持现有脚本顺序。checkout 包含 HAPI 子模块，按组安装 Chromium、Codex/Claude 发现工具及 frozen 依赖，不运行模型。调用现有 downloader，核对完整 descriptor、主包/本平台 tarball SHA-512，解包并用 assertCandidateBinaries 核对两程序 SHA-256，再将实际路径传给 smoke-integration。
 
 所有 job 使用同一 release descriptor，控制源码使用同一工作流提交。不在验收 job 重建程序，也不从源码 dist 回退。复用脚本依赖不代表复用不同候选的验收结果。候选与回执仍走 npm、job output 和日志。
 
-稳定版 promote 的工作流依赖及脚本断言同时要求 beta、三组 integration 和四平台 install 成功；任何必需检查失败、取消、跳过都禁止晋级。预发行要求原 beta job 的四组成功及四平台 install 成功，新 integration job 的预期跳过不代替四组结果。预检不执行上传/安装/晋级。不同模式用固定条件表达并逐分支测试。
+工作流和脚本同时断言以下模式；任何必需检查失败、取消或跳过都不放行。恢复时完整五包及原上传日志证明上传前检查已经执行，重新执行三组公共候选集成，不把本轮 build=false 当作已验证。
+
+| 模式 | 上传前检查 | 公共候选集成 | 四平台安装 | 结果 |
+| --- | --- | --- | --- | --- |
+| 预检 | 核心、构建、四组 | 跳过 | 跳过 | 不上传/晋级 |
+| 预发行构建 | 核心、构建、四组 | 预期跳过 | 必须成功 | 保留 beta |
+| 预发行恢复 | 核对原候选及上传前检查证据 | 三组必须成功 | 必须成功 | 保留 beta |
+| 稳定构建 | 核心、构建、service-package | 三组必须成功 | 必须成功 | 晋级 latest |
+| 稳定恢复 | 核对原候选及上传前检查证据 | 三组必须成功 | 必须成功 | 晋级 latest |
 
 构建、service-package 和上传保留在同一个名为 beta 的 job；原日志恢复依赖此名字，不能顺手改名。只有 beta 和 promote 获得 npm OIDC 权限；集成和安装 job 不获得发布权限。记录原 descriptor 的控制提交和当前验证提交，恢复时不改写原候选身份。
 
@@ -43,7 +51,7 @@
 
 ## 失败恢复
 
-beta 完成后集成失败，可以只重跑失败 job，已经成功的四平台安装结果由 GitHub 保留。恢复已有五包时从原日志取得 descriptor、核对公共包，不重新构建上传；新的 integration 门禁必须仍然执行，不能沿用“beta 已存在就表示完整集成已通过”的旧假设。
+预发行恢复涵盖重跑全部 job 和 main 加 source-run-id 两种入口，均不重建、不重传，并重新运行三组公共候选集成。beta 完成后集成失败，可以只重跑失败 job，已经成功的四平台安装结果由 GitHub 保留。恢复已有五包时从原日志取得 descriptor、核对公共包，不重新构建上传；新的 integration 门禁必须仍然执行，不能沿用“beta 已存在就表示完整集成已通过”的旧假设。
 
 修改验证代码后仍使用现有 main + release-tag/source-run-id 入口。仅直接重跑原 run 不会加载新验证代码。prepare 已有 packageInputs 与 tag 一致的检查继续保留；main 已改变产品源码/schema 时不能借此恢复旧 tag。部分上传或结果未知继续按当前规则停止，不能以“优化”增加盲目重发。
 
@@ -51,13 +59,13 @@ beta 完成后集成失败，可以只重跑失败 job，已经成功的四平�
 
 稳定版本 promote 成功后，由一个仅有 contents:read/actions:write 的接续 job 通过 workflow_dispatch 触发现有 website-pages.yml，ref 固定 main，传入预期版本和关联发布 run/attempt。使用仓库 GITHUB_TOKEN，不添加长期 PAT；Cloudflare secrets 继续只由官网 job 使用。独立官网修改的 push/PR/手动入口保留，部署并发组继续使用 main。
 
-触发成功只表示已创建请求。通过传入的唯一关联字段（写入 run-name）定位实际官网 run，等待其完成并在发布 summary 链接实际 run id；等待有截止时间。未取得完成结果时明确显示“npm 已发布，官网状态待确认”，不重发 npm，也不把整体验收标为通过。官网失败只恢复官网流程。
+使用 GitHub REST 2026-03-10 版本；dispatch 成功返回实际 workflow_run_id，直接绑定该 run，复核 workflow/main/关联字段（写入 run-name），等待其完成并在发布 summary 链接该 run；等待有截止时间。触发成功只表示已创建请求。未取得完成结果时明确显示“npm 已发布，官网状态待确认”，不重发 npm，也不把整体验收标为通过。官网失败只恢复官网流程。
 
 普通版本 push 遇到 package.json 版本尚未 latest 时，静态检查继续，生产部署标记“等待发布”；不触发上传。正式 dispatch 使用实际 main SHA；源码版本必须等于传入的已晋级版本，部署前继续核对 main 没有推进。main 已指向更高版本时明确报告需基于当前发布状态处理，不能用旧任务覆盖新网站，也不能把发布未完成标为成功。普通官网修改可独立部署的前提仍是 main 版本已经晋级。
 
 部署后自动验证唯一 URL、正式域名文件 hash/MIME 和三页桌面/手机浏览器。既有 DOM 安装、包内 README/Skill 检查放入 Linux x64 验收并绑定精确版本。只整理摘要的提交不触发产品发布；官网触发范围按实际构建输入判断，不排除真正影响网页的 docs/usage.md。
 
-阶段状态、版本、source/control revision、各平台包与程序 hash、验证 job/attempt、重试次数和耗时写入日志与 summary。生成可检查的本地验收记录草稿，agent 复核后同步 Specs/归档；CI 不自动提交或推送仓库。已经由平台 job 完成的五包匿名下载校验直接引用其证据，不在全部完成后额外下载一轮。
+阶段状态、版本、source/control revision、各平台包与程序 hash、验证 job/attempt、重试次数和耗时写入日志与 summary。通过 Actions API 读取发布及关联官网各 attempt 的 job created/started/completed 时间与 runner 标签，分别计算排队时间和实际运行秒数；缺失或仍在运行的字段标记未知，不推断计费额度。汇总 job 自身尚未完成的时长明确排除。生成可检查的本地验收记录草稿，agent 复核后同步 Specs/归档；CI 不自动提交或推送仓库。已经由平台 job 完成的五包匿名下载校验直接引用其证据，不在全部完成后额外下载一轮。
 
 ## 预期与取舍
 
@@ -76,4 +84,4 @@ beta 完成后集成失败，可以只重跑失败 job，已经成功的四平�
 3. 接续官网与摘要生成；验证未晋级、预发行、main 推进、独立官网变更、dispatch 关联/等待失败、生产域名验证失败等分支。
 4. 执行 typecheck、根/Node 检查、actionlint 和专用环境集成/浏览器验收。真实收益在下一次已授权的版本发布中测量，不为测速度重发 1.1.4 或额外发布无产品变更的版本。
 
-当前仅为方案，没有性能实测，也未修改 Specs。
+本方案已恢复推进；尚无本次真实发行的性能实测，Specs 仅在交付验收后同步。

@@ -41,3 +41,5 @@
 - [GitHub 可复用工作流](https://docs.github.com/en/actions/how-tos/reuse-automations/reuse-workflows)（2026-10-12）：调用方上下文会影响 tag 与 main 部署；评审后选择复用现有 main dispatch 入口。
 - [GITHUB_TOKEN 触发规则](https://docs.github.com/en/actions/concepts/security/github_token)（2026-10-12）：允许以仓库 token 触发 workflow_dispatch，无需增加长期 PAT。
 - [GitHub 重跑规则](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/re-run-workflows-and-jobs)（2026-10-12）：失败 job 可单独重跑；仍使用原事件 SHA/ref，更新验证脚本后的恢复继续走现有 main 手动入口。
+
+- [GitHub workflow dispatch REST](https://docs.github.com/en/rest/actions/workflows#create-a-workflow-dispatch-event)（2026-10-13）：2026-03-10 API 成功返回 workflow_run_id 和 URL，可直接关联官网 run；后续仍需查询真实完成结果。重跑仍沿用原事件 SHA/ref，不加载后续验证代码。
