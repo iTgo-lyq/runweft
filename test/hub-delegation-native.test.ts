@@ -25,7 +25,7 @@ async function fixture() {
     const taskId = randomUUID(), roundId = randomUUID();
     h.access.bind({ kind: 'task', id: taskId, ownerId: b.ownerId, spaceId: sid, machineId: target.machineId });
     const calls: { method: string; path: string; ns: string; body?: any }[] = [], receipts = new Map<string, any>(), artifacts = new Map<string, any>();
-    const key = randomBytes(32); let gate: (() => Promise<void>) | undefined, check = (_mode: string) => {};
+    const key = randomBytes(32); let gate: ((operationId: string) => Promise<void>) | undefined, check = (_mode: string) => {};
     const server = Bun.serve({ hostname: '127.0.0.1', port: 0, async fetch(request) {
         const url = new URL(request.url);
         if (url.pathname === '/api/auth') {
@@ -48,7 +48,7 @@ async function fixture() {
             return Response.json(artifact?.namespace === ns ? { artifact } : { error: 'missing' }, { status: artifact?.namespace === ns ? 200 : 404 });
         }
         if (url.pathname.endsWith('/artifacts')) {
-            await gate?.(); const value = body as any;
+            const value = body as any; await gate?.(value.operationId);
             return Response.json({ operation: { request: value, status: 'succeeded', files: [], retention: 'retained' } });
         }
         if (url.pathname.startsWith('/api/sessions/')) {
@@ -72,7 +72,7 @@ async function fixture() {
         return { id, requestId, artifact, reservation: reserved.reservation, name: filename, size: 5, sha256: request.sha256 };
     }
     return { ...h, identityA: h.a, identityB: h.b, a, b, sid, target, source, runtime, taskId, roundId, client, calls, file, machine, tokenA,
-        gate(fn?: () => Promise<void>) { gate = fn; }, policy(fn: typeof check) { check = fn; } };
+        gate(fn?: (operationId: string) => Promise<void>) { gate = fn; }, policy(fn: typeof check) { check = fn; } };
 }
 
 test('private bridge scopes machines, fixes target/runtime and allocates one owned session for one request', async () => {
@@ -117,15 +117,27 @@ test('membership removal permanently clears transfer grants, including after the
 
 test('parallel materializations share read authority until their own native completion, without write permission', async () => {
     const h = await fixture(), file = h.file(), first = deferred(), second = deferred();
-    let n = 0; h.gate(() => ++n === 1 ? first.promise : second.promise);
+    const oneId = randomUUID(), twoId = randomUUID(), oneEntered = deferred(), twoEntered = deferred();
+    h.gate(operationId => {
+        if (operationId === oneId) { oneEntered.resolve(); return first.promise; }
+        if (operationId === twoId) { twoEntered.resolve(); return second.promise; }
+        throw new Error('Unexpected materialization operation');
+    });
     const materialize = (operationId: string) => h.client.request(`/api/machines/${h.target.machineId}/artifacts`, write({ action: 'materialize', operationId,
         files: [{ artifactId: file.id, name: file.name, size: file.size, sha256: file.sha256 }] }));
-    const one = materialize(randomUUID()), two = materialize(randomUUID());
-    for (let i = 0; n < 2 && i < 100; i++) await Bun.sleep(5);
-    expect(n).toBe(2); expect(h.access.can(h.machine, 'artifact', file.id)).toBe(true);
-    expect(h.access.can(h.machine, 'artifact', file.id, 'write')).toBe(false);
-    first.resolve(); await one; expect(h.access.can(h.machine, 'artifact', file.id)).toBe(true);
-    second.resolve(); await two; expect(h.access.can(h.machine, 'artifact', file.id)).toBe(false);
+    // The second operation arrives first; completion must stay bound to its own ID.
+    const two = materialize(twoId); await twoEntered.promise;
+    const one = materialize(oneId);
+    try {
+        await oneEntered.promise;
+        expect(h.access.can(h.machine, 'artifact', file.id)).toBe(true);
+        expect(h.access.can(h.machine, 'artifact', file.id, 'write')).toBe(false);
+        first.resolve(); await one; expect(h.access.can(h.machine, 'artifact', file.id)).toBe(true);
+        second.resolve(); await two; expect(h.access.can(h.machine, 'artifact', file.id)).toBe(false);
+    } finally {
+        first.resolve(); second.resolve();
+        await Promise.allSettled([one, two]);
+    }
 });
 
 test('Runner publication maps to caller namespace, can be recovered by request and releases only its output grants', async () => {
