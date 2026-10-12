@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { createHash } from 'node:crypto';
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { createServer } from 'node:http';
 import { join, resolve } from 'node:path';
 import { parse } from 'yaml';
 import { assertDescriptor, downloadJobLog, downloadRelease, promoteRelease, readReleaseLog, recoveryMode, verifyPublicRelease } from '../npm-release.mjs';
@@ -128,7 +129,7 @@ test('registry visibility retries only reads; corrupted download refuses install
         read: async entry => { reads++; return missing ? null : publicManifest(entry); },
         pause: async () => { pauses++; missing = false; },
     });
-    assert.equal(reads, 10); assert.equal(pauses, 1);
+    assert.equal(reads, 10); assert.equal(pauses, 5);
     const directory = mkdtempSync(resolve('.dev-smoke/public-candidate-test-'));
     const downloads = [];
     try {
@@ -162,4 +163,74 @@ test('workflow topology requires all four platforms and has no artifact dependen
         ['darwin-arm64', 'darwin-x64', 'linux-arm64', 'linux-x64']);
     assert.equal(install.permissions['id-token'], undefined);
     assert.equal(install.jobs.install['continue-on-error'], undefined);
+});
+
+test('HTTP candidate reads retry propagation, throttling and interrupted bodies within one budget', async () => {
+    const release = descriptor(), hits = new Map(), records = [], waits = [];
+    let clock = 0;
+    const server = createServer((req, res) => {
+        const path = req.url, count = (hits.get(path) ?? 0) + 1; hits.set(path, count);
+        const entry = release.packages.find(entry => path.startsWith('/' + entry.name + '/'));
+        if (!path.includes('/-/')) {
+            if (entry.name === 'runweft' && count === 1) { res.writeHead(404); res.end(); }
+            else { res.setHeader('content-type', 'application/json'); res.end(JSON.stringify(publicManifest(entry))); }
+        } else if (count === 1) { res.writeHead(429, { 'retry-after': '3' }); res.end(); }
+        else if (count === 2) {
+            res.writeHead(200, { 'content-length': bytes.length }); res.write(bytes.subarray(0, 2));
+            setImmediate(() => res.destroy());
+        } else res.end(bytes);
+    });
+    await new Promise(done => server.listen(0, '127.0.0.1', done));
+    const directory = mkdtempSync(resolve('.dev-smoke/public-retry-'));
+    try {
+        await downloadRelease(release, directory, { platform: 'linux-x64', now: () => clock,
+            pause: async ms => { waits.push(ms); clock += ms; }, record: item => records.push(item),
+            request: (url, options) => fetch('http://127.0.0.1:' + server.address().port + new URL(url).pathname, options) });
+        assert(waits.includes(3000));
+        assert.equal(records.filter(item => item.success).length, 7);
+        for (const entry of release.packages.filter(entry => ['runweft', 'runweft-linux-x64'].includes(entry.name))) {
+            assert.deepEqual(readFileSync(join(directory, entry.tarball)), bytes);
+            assert.equal(existsSync(join(directory, entry.tarball + '.partial')), false);
+        }
+    } finally { server.closeAllConnections(); await new Promise(done => server.close(done)); rmSync(directory, { recursive: true, force: true }); }
+});
+
+test('candidate errors and one shared deadline cannot leave a partial archive or an installation index', async () => {
+    const release = descriptor();
+    for (const scenario of ['auth', 'gone', 'hash', 'url', 'retry-after', 'shared-budget', 'body-timeout']) {
+        const directory = mkdtempSync(resolve('.dev-smoke/public-refusal-'));
+        let clock = 0, reads = 0, downloads = 0;
+        const options = { platform: 'linux-x64', timeoutMs: 5000, now: () => clock,
+            pause: async ms => { clock += ms; },
+            read: async entry => {
+                reads++;
+                if (scenario === 'shared-budget' && reads <= 5) return null;
+                const value = publicManifest(entry);
+                if (scenario === 'url') value.dist.tarball = 'https://example.invalid/' + entry.name;
+                return value;
+            }, request: async (_, { signal }) => {
+                downloads++;
+                if (scenario === 'auth') return new Response(null, { status: 403 });
+                if (scenario === 'gone') return new Response(null, { status: 410 });
+                if (scenario === 'retry-after') return new Response(null, { status: 429, headers: { 'retry-after': '6' } });
+                if (scenario === 'shared-budget') return new Response(null, { status: 404 });
+                if (scenario === 'body-timeout') return new Response(new ReadableStream({
+                    start(controller) { controller.enqueue(bytes.subarray(0, 2)); signal.addEventListener('abort', () => controller.error(signal.reason)); },
+                }));
+                return new Response('corrupt');
+            } };
+        if (scenario === 'body-timeout') { options.timeoutMs = 25; delete options.now; }
+        // Keep the event loop alive while the actual AbortSignal interrupts a never-ending body.
+        const keepAlive = setInterval(() => {}, 1000);
+        try {
+            await assert.rejects(downloadRelease(release, directory, options), /HTTP 403|HTTP 410|tarball differs|public npm|budget exhausted/);
+            if (['auth', 'gone', 'hash', 'retry-after', 'body-timeout'].includes(scenario)) assert.equal(downloads, 1);
+            if (scenario === 'url') assert.equal(downloads, 0);
+            assert.equal(existsSync(join(directory, 'index.json')), false);
+            for (const entry of release.packages) {
+                assert.equal(existsSync(join(directory, entry.tarball)), false);
+                assert.equal(existsSync(join(directory, entry.tarball + '.partial')), false);
+            }
+        } finally { clearInterval(keepAlive); rmSync(directory, { recursive: true, force: true }); }
+    }
 });

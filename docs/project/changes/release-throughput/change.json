@@ -26,7 +26,9 @@
   "tasks": {
     "T1": {
       "title": "公共候选读取可在总预算内恢复",
-      "status": "todo"
+      "status": "done",
+      "verification": "28 项发布 Node 测试通过，HTTP 传播/限流/中断/总预算和错误拒绝及临时文件清理覆盖；workflow、diff 通过",
+      "commitTitle": "release-throughput T1: bound public candidate reads and recover transient downloads"
     },
     "T2": {
       "title": "稳定候选并行验收且完整门禁后才晋级",

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { appendFileSync, createWriteStream, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { appendFileSync, createWriteStream, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
@@ -9,6 +9,8 @@ import { pipeline } from 'node:stream/promises';
 import { assertFrozenCandidate } from './fixtures/release-inputs.mjs';
 import { checkManifest, compareReleaseVersions, distTags, metadata, npmPublishArgs, packageNames,
     publishCandidate, registry, releaseChannel, validateCandidate } from './npm-publish.mjs';
+
+import { publicReadBudget, publicReadError, publicResponse } from './npm-read.mjs';
 
 const delay = () => new Promise(resolve => setTimeout(resolve, 5000));
 const descriptorMarker = 'RUNWEFT_RELEASE_DESCRIPTOR=';
@@ -79,23 +81,26 @@ export function recoveryMode(published, prior, sourceRevision, version) {
     return 'existing';
 }
 
-export async function verifyPublicRelease(release, { read = metadata, pause = delay, timeoutMs = 3 * 60_000 } = {}) {
+export async function verifyPublicRelease(release, { read, request = fetch, pause, timeoutMs = 180_000,
+    budget = publicReadBudget({ timeoutMs, pause }) } = {}) {
     assertDescriptor(release);
-    const result = new Map(), deadline = Date.now() + timeoutMs;
-    while (result.size !== 5) {
-        for (const entry of release.packages) if (!result.has(entry.name)) {
-            const manifest = await read(entry);
-            if (manifest) { checkManifest(entry, manifest); result.set(entry.name, manifest); }
-        }
-        if (result.size === 5) break;
-        assert(Date.now() < deadline, 'Public npm versions still pending; retry verification, never reupload.');
-        await pause();
-    }
-    return result;
+    const entries = await Promise.all(release.packages.map(entry => budget(entry.name + ':metadata', async signal => {
+        const manifest = read ? await read(entry, { signal })
+            : await (await publicResponse(request, registry + entry.name + '/' + entry.version, signal)).json();
+        if (!manifest) throw publicReadError(404);
+        checkManifest(entry, manifest);
+        return [entry.name, manifest];
+    })));
+    return new Map(entries);
 }
 
-export async function downloadRelease(release, directory, { read = metadata, request = fetch, platform = process.platform + '-' + process.arch } = {}) {
-    const manifests = await verifyPublicRelease(release, { read });
+export async function downloadRelease(release, directory, { read, request = fetch,
+    platform = process.platform + '-' + process.arch, timeoutMs = 600_000, pause, now,
+    record = () => {} } = {}) {
+    assertDescriptor(release);
+    assert(release.packages.some(entry => entry.name === 'runweft-' + platform), 'Unsupported candidate platform');
+    const budget = publicReadBudget({ timeoutMs, pause, now, record });
+    const manifests = await verifyPublicRelease(release, { read, request, budget });
     mkdirSync(join(directory, 'tarballs'), { recursive: true });
     for (const entry of release.packages) {
         mkdirSync(join(directory, entry.path), { recursive: true });
@@ -103,12 +108,17 @@ export async function downloadRelease(release, directory, { read = metadata, req
         if (!['runweft', 'runweft-' + platform].includes(entry.name)) continue;
         const url = new URL(manifests.get(entry.name).dist.tarball);
         assert(url.href.startsWith(registry + entry.name + '/-/') && !url.username && !url.password, 'Tarball must be served by public npm');
-        const response = await request(url, { signal: AbortSignal.timeout(10 * 60_000) });
-        assert.equal(response.status, 200, entry.name + ': tarball HTTP ' + response.status);
-        const hash = createHash('sha512');
-        await pipeline(response.body, new Transform({ transform(chunk, _, done) { hash.update(chunk); done(null, chunk); } }),
-            createWriteStream(join(directory, entry.tarball)));
-        assert.equal(hash.digest('base64'), entry.sha512, entry.name + ': downloaded tarball differs');
+        const destination = join(directory, entry.tarball), temporary = destination + '.partial';
+        await budget(entry.name + ':tarball', async signal => {
+            try {
+                const response = await publicResponse(request, url, signal);
+                const hash = createHash('sha512');
+                await pipeline(response.body, new Transform({ transform(chunk, _, done) { hash.update(chunk); done(null, chunk); } }),
+                    createWriteStream(temporary), { signal });
+                assert.equal(hash.digest('base64'), entry.sha512, entry.name + ': downloaded tarball differs');
+                renameSync(temporary, destination);
+            } finally { rmSync(temporary, { force: true }); }
+        });
     }
     writeFileSync(join(directory, 'index.json'), JSON.stringify(release));
     return directory;
@@ -130,7 +140,7 @@ export async function promoteRelease(release, { installationResult, read = metad
         return current;
     }
     // Inspect all five packages before the first mutation; main advances only after every platform.
-    for (const entry of entries) await inspect(entry);
+    await Promise.all(entries.map(inspect));
     const finalTags = {};
     for (const entry of entries) {
         const current = await inspect(entry);
@@ -241,11 +251,11 @@ async function beta(env) {
     const { index, entries } = validateCandidate(join(source, 'dist/packages'), source);
     assert.equal(index.source.revision, env.SOURCE_REVISION, 'Candidate source differs from selected tag');
     const latestBefore = {};
-    for (const entry of entries) {
+    await Promise.all(entries.map(async entry => {
         const current = await distTags(entry);
         if (current.beta) assert(compareReleaseVersions(current.beta, index.version) <= 0, entry.name + ': never regress beta');
         latestBefore[entry.name] = current.latest ?? null;
-    }
+    }));
     const release = assertDescriptor({ ...index, controlRevision: env.GITHUB_SHA, runId: env.GITHUB_RUN_ID, latestBefore,
         packages: index.packages.map(entry => ({ ...entry, manifest: entries.find(p => p.name === entry.name).manifest })) });
     console.log(descriptorMarker + JSON.stringify(release));
@@ -277,7 +287,7 @@ async function main() {
         case 'beta': await beta(process.env); break;
         case 'download': {
             const release = JSON.parse(process.env.RELEASE_DESCRIPTOR);
-            const directory = await downloadRelease(release, resolve('.dev-smoke/npm-release/packages'));
+            const directory = await downloadRelease(release, resolve('.dev-smoke/npm-release/packages'), { record: item => report('PUBLIC_READ', item) });
             output({ directory }); break;
         }
         case 'promote': {

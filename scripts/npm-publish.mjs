@@ -114,11 +114,10 @@ export async function publishCandidate(index, entries, { metadata, tags, upload,
     async function waitFor(entriesToWait) {
         const deadline = Date.now() + timeoutMs;
         while (true) {
-            const pending = [];
-            for (const entry of entriesToWait) {
-                if (recordFor(entry)?.status === 'confirmed') continue;
-                if (!await confirm(entry)) pending.push(entry);
-            }
+            const pending = (await Promise.all(entriesToWait.map(async entry => {
+                if (recordFor(entry)?.status === 'confirmed') return null;
+                return await confirm(entry) ? null : entry;
+            }))).filter(Boolean);
             if (!pending.length) return;
             assert(Date.now() < deadline, `npm processing pending for ${pending.map(p => p.name).join(', ')}; rerun failed jobs with this candidate and receipt`);
             await pause();
@@ -126,11 +125,11 @@ export async function publishCandidate(index, entries, { metadata, tags, upload,
     }
     try {
         const before = {};
-        for (const entry of entries) {
+        await Promise.all(entries.map(async entry => {
             const current = await tags(entry);
             assertReleaseForward(index.version, current, entry.name);
             before[entry.name] = current.latest ?? null;
-        }
+        }));
         if (!state.latestBefore) {
             assert.equal(state.packages.length, 0, 'Receipt missing latest baseline; inspect original run');
             state.latestBefore = before;
@@ -139,11 +138,11 @@ export async function publishCandidate(index, entries, { metadata, tags, upload,
         }
         save(state);
         // Check every existing version before the first upload, including the main package.
-        for (const entry of entries) {
-            if (await confirm(entry)) continue;
+        await Promise.all(entries.map(async entry => {
+            if (await confirm(entry)) return;
             assert.notEqual(recordFor(entry)?.status, 'uploading', `${entry.name}: upload outcome unknown; inspect npm before retry`);
             assert.notEqual(recordFor(entry)?.status, 'confirmed', `${entry.name}: confirmed version is now missing; inspect npm`);
-        }
+        }));
         for (const entry of entries) {
             if (entry.name === 'runweft') {
                 await waitFor(entries.filter(p => p.name !== 'runweft'));
@@ -162,14 +161,14 @@ export async function publishCandidate(index, entries, { metadata, tags, upload,
         while (true) {
             const after = {};
             state.distTags = after;
-            for (const entry of entries) {
+            await Promise.all(entries.map(async entry => {
                 const current = await tags(entry);
                 after[entry.name] = current;
                 if (channel === 'beta') assert.equal(current.latest ?? null, state.latestBefore[entry.name],
                     `${entry.name}: latest changed during Beta publication; inspect npm dist-tags, no automatic repair`);
                 if (current[channel] != null) assert(compareReleaseVersions(current[channel], index.version) <= 0,
                     `${entry.name}: ${channel} advanced beyond this candidate; inspect npm dist-tags`);
-            }
+            }));
             save(state);
             if (entries.every(entry => after[entry.name][channel] === index.version)) break;
             assert(Date.now() < deadline, `${channel} dist-tags pending; inspect npm dist-tags and rerun failed jobs with this receipt`);
