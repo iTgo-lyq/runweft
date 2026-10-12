@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 1,
+  "id": "maintenance-cleanup",
+  "title": "收敛规格与验证工具并清空临时现场",
+  "size": "small",
+  "status": "completed",
+  "stage": "close",
+  "branch": "codex/redundancy-cleanup",
+  "confirmations": {},
+  "tasks": {
+    "T1": {
+      "title": "收敛工程验证与历史发行工具",
+      "status": "done",
+      "verification": "类型/构建通过；根测试257、Node42、服务7组、存储11脚本、资源10组、官网14组通过；917本地链接有效，7历史目标固定；无产品模型或公开发布",
+      "commitTitle": "maintenance-cleanup T1: consolidate smoke coverage and retire historical tooling"
+    },
+    "T2": {
+      "title": "按能力合并规格并减少重复引用",
+      "status": "done",
+      "verification": "50份Specs合为18份；308文档847本地链接有效；5归档8链接固定且正文逐字复原；独有契约与首次部署锚点保留；43Changes及diff检查通过",
+      "commitTitle": "maintenance-cleanup T2: consolidate capability specs and release guidance"
+    },
+    "T3": {
+      "title": "清空临时现场并完成验收",
+      "status": "done",
+      "verification": "确认无临时目录进程占用，删除588文件和14链接约3.18GiB；.dev-smoke不存在；最终847本地链接、43Changes、diff通过；复用T1已通过的工程验证",
+      "commitTitle": "maintenance-cleanup T3: clear temporary evidence and record verification"
+    }
+  },
+  "closure": {
+    "verification": {
+      "result": "passed",
+      "at": "2026-10-12T18:11:47.749Z",
+      "summary": "一次iclaude综合方案审查及主Agent全量差异复核；类型/构建、257根测试、42Node测试、服务/存储/资源/官网定向验收通过；18份Specs独有契约核对、847链接及43Changes通过；临时目录全部清除，无新增模型或公开发布证据"
+    },
+    "acceptance": {
+      "result": "accepted",
+      "at": "2026-10-12T18:11:47.826Z",
+      "summary": "Agent自验收通过：删除项有调用与替代覆盖依据，iclaude问题已处理；18份Specs保持当前独有契约和有效引用，源码/HAPI/原型/Skill未改；基础及定向验收通过，.dev-smoke不存在，无未解决验收项",
+      "source": "small自验收直接归档规则；用户授权大胆清理与自动本地验收"
+    },
+    "specs": {
+      "result": "synced",
+      "at": "2026-10-12T18:11:47.907Z",
+      "summary": "现有50份Specs按能力收敛为18份，保留核心契约与首次部署基线；验收操作归docs/release，删除冗余转述与历史数字，修正当前引用并固定8历史目标，无运行时行为变化"
+    },
+    "archive": {
+      "result": "done",
+      "at": "2026-10-12T18:11:47.982Z",
+      "summary": "工程工具与规格收敛、临时现场清理均已逐任务验证提交推送；完成Agent自验收与Specs同步，完整证据随Change归档",
+      "path": "docs/project/archive/2026-10-13-maintenance-cleanup"
+    }
+  }
+}
