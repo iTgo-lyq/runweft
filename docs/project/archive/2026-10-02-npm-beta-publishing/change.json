@@ -63,5 +63,8 @@
       "summary": "保留原归档目录；原来源提交 b698609d0598824a1a1d898a97ce04d35c89bc0f，提交时间 2026-10-02T04:35:45+08:00。本次历史勘误登记；at 为回填时间，原事件准确时间未补造。",
       "path": "docs/project/archive/2026-10-02-npm-beta-publishing"
     }
-  }
+  },
+  "dependsOn": [
+    "npm-patch-release"
+  ]
 }

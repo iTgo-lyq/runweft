@@ -1,4 +1,4 @@
-// Fictional data only. Each space has independent state; reload/reset discards it.
+// Fictional data only. Space configuration is local; machines/runtimes are global. Reload/reset discards all state.
 const stamp = '2026-10-12T08:30:00.000Z';
 const clone = value => structuredClone(value);
 const permissions = { manage: true, associate: true, govern: true, use: true, share: true };
@@ -18,18 +18,22 @@ function seed() {
 export function createDemo() {
   let serial = 10;
   const state = { user: { userId: 'demo-user', name: '林舟' }, spaces: [{ id: 'space-1', name: '产品协作' }, { id: 'space-2', name: '个人实验' }], spaceId: 'space-1', scenario: 'normal', signedIn: true };
+  const initial = seed();
+  const resources = { machines: initial.machines, runtimes: initial.runtimes };
   const stores = new Map();
   const members = new Map();
   const invitations = new Map();
-  function store() { if (!stores.has(state.spaceId)) stores.set(state.spaceId, state.spaceId === 'space-1' ? seed() : { machines: [], runtimes: [], agents: [], repositories: [], checkouts: [], selections: [], tasks: [] }); return stores.get(state.spaceId); }
+  function store() { if (!stores.has(state.spaceId)) stores.set(state.spaceId, { ...(state.spaceId === 'space-1' ? initial : { agents: [], repositories: [], checkouts: [], selections: [], tasks: [] }), ...resources }); return stores.get(state.spaceId); }
   function getMembers() { if (!members.has(state.spaceId)) members.set(state.spaceId, [{ userId: 'demo-user', name: state.user.name, role: 'owner' }, { userId: 'demo-member', name: '陈雨', role: 'member' }]); return members.get(state.spaceId); }
   function getInvitations() { if (!invitations.has(state.spaceId)) invitations.set(state.spaceId, []); return invitations.get(state.spaceId); }
   function derive() {
     const s = store();
-    for (const m of s.machines) m.connection = state.scenario === 'offline' || m.credential === 'revoked' ? 'offline' : 'online';
+    for (const m of s.machines) { m.connection = state.scenario === 'offline' || m.credential === 'revoked' ? 'offline' : 'online'; m.blockedInSpace = !!m.blockedSpaceIds?.includes(state.spaceId); }
     for (const r of s.runtimes) {
+      r.blockedInSpace = !!r.blockedSpaceIds?.includes(state.spaceId);
+      r.shared = r.shareSpaceIds.includes(state.spaceId);
       const m = s.machines.find(m => m.id === r.machineId);
-      const eligible = !!(r.registered && !r.blockedInSpace && m?.registered && !m.blockedInSpace && m.connection === 'online');
+      const eligible = !!(r.registered && !r.blockedInSpace && m?.registered && !m.blockedInSpace && m.connection === 'online' && m.spaceIds.includes(state.spaceId));
       r.eligibility = { eligible, ...(eligible ? {} : { reason: { message: '执行目标当前不可用', hint: '核对机器在线、登记与空间停用状态。' } }) }; r.permissions.use = eligible;
     }
     for (const a of s.agents) a.permissions.invoke = a.registered && !a.blocked;
@@ -67,7 +71,9 @@ export function createDemo() {
     }
     if (parts[0] === 'resources' && parts[1] === 'spaces') {
       const item = s[parts[4] === 'machine' ? 'machines' : 'runtimes'].find(x => x.id === parts[5]);
-      if (!item) throw new Error('演示资源不存在。'); item.blockedInSpace = method === 'PUT'; return {};
+      if (!item) throw new Error('演示资源不存在。');
+      item.blockedSpaceIds = (item.blockedSpaceIds ?? []).filter(id => id !== parts[2]);
+      if (method === 'PUT') item.blockedSpaceIds.push(parts[2]); return {};
     }
     const key = parts[0] === 'resources' ? parts[1] : parts[0], index = parts[0] === 'resources' ? 2 : 1;
     if (!['machines', 'runtimes', 'agents', 'repositories', 'checkouts'].includes(key)) throw new Error(`未实现的演示操作：${method} ${u.pathname}`);
@@ -89,7 +95,13 @@ export function createDemo() {
     if (action === 'credential') { if (method === 'DELETE') item.credential = 'revoked'; return { credential: { status: item.credential, id: 'demo-credential' } }; }
     if (action === 'discover') return { tools: [{ flavor: 'codex', found: true }, { flavor: 'claude', found: true }], source: '演示数据' };
     if (action === 'check') return { runtime: { toolFound: true, version: item.version } };
-    if (action === 'spaces') { const field = key === 'machines' ? 'spaceIds' : 'shareSpaceIds', space = parts[index + 2]; item[field] = item[field].filter(x => x !== space); if (method === 'PUT') item[field].push(space); if (key === 'runtimes') item.shared = item[field].includes(state.spaceId); return {}; }
+    if (action === 'spaces') {
+      const field = key === 'machines' ? 'spaceIds' : 'shareSpaceIds', space = parts[index + 2];
+      if (key === 'runtimes' && method === 'PUT' && !s.machines.find(m => m.id === item.machineId)?.spaceIds.includes(space)) throw new Error('先把执行机器关联到目标空间，再共享 Runtime。');
+      item[field] = item[field].filter(x => x !== space); if (method === 'PUT') item[field].push(space);
+      if (key === 'machines' && method === 'DELETE') for (const runtime of s.runtimes.filter(r => r.machineId === item.id)) runtime.shareSpaceIds = runtime.shareSpaceIds.filter(id => id !== space);
+      return {};
+    }
     if (action === 'access') { item.accessMode = body.mode; item.memberIds = clone(body.memberIds); return {}; }
     if (action === 'versions') return { versions: clone(item.versions) };
     if (action === 'block') { item.blocked = method === 'PUT'; return {}; }

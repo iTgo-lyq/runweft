@@ -9,7 +9,9 @@
   "dependsOn": [
     "hub-resource-ownership",
     "hub-repository-agents",
-    "hub-delegation-migration"
+    "hub-delegation-migration",
+    "hub-identities-and-spaces",
+    "hub-hapi-access"
   ],
   "confirmations": {
     "requirement": {

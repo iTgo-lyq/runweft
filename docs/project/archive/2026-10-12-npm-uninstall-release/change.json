@@ -63,5 +63,8 @@
       "summary": "保留原归档目录；原来源提交 1d06750e0a529afcdc3923b3e124d496f8d1396e，提交时间 2026-10-12T20:06:04+08:00。本次历史勘误登记；at 为回填时间，原事件准确时间未补造。",
       "path": "docs/project/archive/2026-10-12-npm-uninstall-release"
     }
-  }
+  },
+  "dependsOn": [
+    "complete-uninstall"
+  ]
 }

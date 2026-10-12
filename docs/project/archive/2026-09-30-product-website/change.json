@@ -58,5 +58,8 @@
       "summary": "保留原归档目录；原来源提交 748ce7db5f2fd0bc9b55af826139b43b5bd8ca1b，提交时间 2026-09-30T15:40:31+08:00。本次历史勘误登记；at 为回填时间，原事件准确时间未补造。",
       "path": "docs/project/archive/2026-09-30-product-website"
     }
-  }
+  },
+  "dependsOn": [
+    "integrated-release"
+  ]
 }

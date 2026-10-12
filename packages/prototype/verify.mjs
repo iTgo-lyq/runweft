@@ -23,7 +23,8 @@ const origin = `http://127.0.0.1:${server.address().port}`;
 let browser;
 const receipt = [];
 try {
-  browser = await chromium.launch({ chromiumSandbox: true, ...(process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE ? { executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE } : {}) });
+  browser = await chromium.launch({ // GitHub's Ubuntu runner restricts unprivileged user namespaces.
+    chromiumSandbox: process.env.CI !== 'true', ...(process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE ? { executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE } : {}) });
   for (const entry of manifest.entries) for (const device of entry.devices) {
     const page = await browser.newPage({ viewport: devices[device] }), errors = [], requests = [];
     page.on('pageerror', e => errors.push(e.message));
@@ -45,7 +46,10 @@ try {
     });
     assert.equal(handshake?.status, 'ready'); assert.equal(handshake?.version, 'local-preview');
     assert(await frame.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), `${entry.id}/${device} horizontal overflow`);
-    if (screenshots) await page.locator('iframe').screenshot({ path: join(root, 'dist', entry.id, `${device}.png`), animations: 'disabled' });
+    if (screenshots) {
+      if (device === 'mobile' && entry.id !== 'identity') await f.locator('.space-content').scrollIntoViewIfNeeded();
+      await page.locator('iframe').screenshot({ path: join(root, 'dist', entry.id, `${device}.png`), animations: 'disabled' });
+    }
     const button = label => f.getByRole('button', { name: label, exact: true });
     const open = label => f.locator('summary').filter({ hasText: new RegExp('^' + label + '$') }).first().click();
     const confirm = () => f.locator('#confirm-dialog').getByRole('button', { name: '确认', exact: true }).click();
@@ -66,6 +70,23 @@ try {
       await open('修改机器名称'); await f.getByLabel('机器名称', { exact: true }).fill('新工作站'); await button('保存机器名称').click(); await f.getByRole('heading', { name: '新工作站', exact: true }).waitFor();
       await button('探测原生工具').click(); assert.match(await f.locator('.inspection-output').innerText(), /codex/);
       await button('取消机器登记').click(); await confirm(); await button('恢复机器登记').click(); await button('取消机器登记').waitFor();
+      await open('空间关联'); await button('关联到 · 个人实验').click();
+      await f.getByRole('button', { name: '撤回关联 · 个人实验', exact: true, includeHidden: true }).waitFor({ state: 'attached' });
+      await f.locator('#console-navigation').getByRole('button', { name: 'Runtime', exact: true }).click();
+      await open('管理 Runtime 分享'); await button('共享到 · 个人实验').click(); await confirm(); await f.getByRole('button', { name: '撤回共享 · 个人实验', exact: true, includeHidden: true }).waitFor({ state: 'attached' });
+      await f.locator('#spaces').getByRole('button', { name: '个人实验', exact: true }).click();
+      await f.locator('.facts').getByText('已共享', { exact: true }).waitFor();
+      await f.locator('#console-navigation').getByRole('button', { name: '机器', exact: true }).click();
+      await button('在空间停用').click(); await confirm(); await button('解除空间停用').waitFor();
+      await f.locator('#spaces').getByRole('button', { name: '产品协作', exact: true }).click();
+      await button('在空间停用').waitFor();
+      await f.locator('#spaces').getByRole('button', { name: '个人实验', exact: true }).click();
+      await button('解除空间停用').click(); await confirm(); await button('在空间停用').waitFor();
+      await open('空间关联'); await button('撤回关联 · 个人实验').click(); await confirm(); await f.getByRole('button', { name: '关联到 · 个人实验', exact: true, includeHidden: true }).waitFor({ state: 'attached' });
+      await f.locator('#console-navigation').getByRole('button', { name: 'Runtime', exact: true }).click();
+      await f.locator('.facts').getByText('私有', { exact: true }).waitFor();
+      await f.locator('.facts').getByText('执行目标当前不可用', { exact: true }).waitFor();
+
     } else if (entry.id === 'runtimes') {
       await open('登记 Runtime'); await f.getByLabel('原生工具', { exact: true }).selectOption('claude'); await f.getByLabel('Runtime 名称（可选）', { exact: true }).fill('演示 Claude'); await button('登记 Runtime').click(); await f.getByRole('heading', { name: '演示 Claude', exact: true }).waitFor();
       await button('检查 Runtime').first().click(); assert.match(await f.locator('#notice').innerText(), /工具发现：是/);

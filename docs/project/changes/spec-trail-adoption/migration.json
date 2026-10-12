@@ -360,14 +360,17 @@
         "T2": "T2"
       },
       "tasks": 2,
-      "dependsOn": [],
+      "dependsOn": [
+        "integrated-release"
+      ],
       "markdownSha256Before": {
         "acceptance.md": "b678bdf176cdb12f092183223c6657f9313b9f3ba5ff7b872e764a93a0005e39",
         "execution.md": "58f2036555fb6938b7bd20b0c9c85bf1b448dbc27770e2e89fac3a660cc2bb0f",
         "plan.md": "14c1be7c843c7ab6a7336b52eaf9c834878fa86428d0b5414dd8effc0e58adad",
         "requirement.md": "b9d426f92601993ae256ebd96d799a30961f3ecde69f2ceb60472cf4d1dc0d90",
         "technical.md": "5f22c5680f46dba6878f550945e84bc718eded84721235f7d35b813ce446d87c"
-      }
+      },
+      "dependencyEvidence": "原 Plan T1：依赖既有 1.0.0 发行产物；对应 integrated-release。"
     },
     {
       "id": "remote-result-delivery",
@@ -474,7 +477,9 @@
       "dependsOn": [
         "hub-resource-ownership",
         "hub-repository-agents",
-        "hub-delegation-migration"
+        "hub-delegation-migration",
+        "hub-identities-and-spaces",
+        "hub-hapi-access"
       ],
       "markdownSha256Before": {
         "acceptance.md": "c0bb51f57ae13f0517760a07c770cfb5ca2d2c67e25eca3a4d121f78c39e4525",
@@ -482,7 +487,8 @@
         "plan.md": "aa8323d4644a5ac8b1bdd48a66d9cdad2d0952b7a621acd91e6da9ccffda0849",
         "requirement.md": "dfa07124d3454abc71b2226ebf2a31f31e1da23085b8dc30381e83ed564f0a03",
         "technical.md": "ec91158fca4e8e80e92967c36c812ef0e323812244937e37a1069bed18c76f53"
-      }
+      },
+      "dependencyEvidence": "原 Plan T1：依赖已归档前五阶段；补齐身份空间、HAPI 授权两项（此前只有后三项）。"
     },
     {
       "id": "hub-delegation-migration",
@@ -672,14 +678,17 @@
         "T3": "T3"
       },
       "tasks": 3,
-      "dependsOn": [],
+      "dependsOn": [
+        "npm-patch-release"
+      ],
       "markdownSha256Before": {
         "acceptance.md": "a6acf08a2f6f5e6a14aa8a16740bc0b080d41d8b00d08e13f1fbeb54930e2351",
         "execution.md": "b44d049ca053ad45ed4bf8d417c07fb63757f2299734ca43bbafbf802d2bb114",
         "plan.md": "bbdd3ae602084bd2926ae5a494ce421d973ba545974b8eb99c1c93f395b59cfb",
         "requirement.md": "db2bb4553d0d8036f085021a092ed9199527ac556fa7bc5bfdebbfb573135f98",
         "technical.md": "7d945856695b9e4ef3822592968ea9e7f456535ceef67fd356ad10059f16eef0"
-      }
+      },
+      "dependencyEvidence": "原 Plan T1：1.1.1 Change 已关闭；对应 npm-patch-release。"
     },
     {
       "id": "npm-patch-release",
@@ -888,14 +897,17 @@
         "T3": "T3"
       },
       "tasks": 3,
-      "dependsOn": [],
+      "dependsOn": [
+        "complete-uninstall"
+      ],
       "markdownSha256Before": {
         "acceptance.md": "b782b6e1710a75600e5765125e2a1d2e952acee7051c548b867d12c58a8dad68",
         "execution.md": "91be4fa0e0dbb1a1cf4f3807665870f54b80f992cccabe359276ab8cd1e6f9ca",
         "plan.md": "63ef7d55e44568b96e3a89bfaf8e3832cac4d47077878b4b3b37ee6283fafc56",
         "requirement.md": "0786115ec85453fd19663ec798723a4a89a4c87eedd644e0b6f41e8c1699e524",
         "technical.md": "615b24e5a3e2d781037978722ae7b116633898e625ec405975234b505b27c816"
-      }
+      },
+      "dependencyEvidence": "原 Plan T1：依赖已归档 complete-uninstall。"
     },
     {
       "id": "website-compact-session-preview",

@@ -3,3 +3,4 @@ dist/
 .cache/
 *.log
 *.map
+r2.env

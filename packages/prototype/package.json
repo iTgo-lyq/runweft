@@ -4,8 +4,11 @@
   "type": "module",
   "scripts": {
     "build": "bun build.mjs",
-    "test": "node verify.mjs",
+    "test": "node --test publish-r2.test.mjs && node verify.mjs",
     "screenshots": "node verify.mjs --screenshots"
   },
-  "devDependencies": { "playwright": "1.61.0" }
+  "devDependencies": {
+    "playwright": "1.61.0",
+    "@aws-sdk/client-s3": "3.1149.0"
+  }
 }
