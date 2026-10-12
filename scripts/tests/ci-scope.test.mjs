@@ -6,7 +6,7 @@ import { spawnSync } from 'node:child_process';
 import { integrationGroups } from '../ci-scope.mjs';
 
 test('ordinary changes select affected integration; unknown product and build paths cannot skip it', () => {
-    assert.deepEqual(integrationGroups(['test/tasks.test.ts', 'docs/development.md', 'scripts/tests/npm-publish.test.mjs']), []);
+    assert.deepEqual(integrationGroups(['test/tasks.test.ts', 'docs/release.md', 'scripts/tests/npm-publish.test.mjs']), []);
     assert.deepEqual(integrationGroups(['src/hub/native-page.ts']), ['web']);
     assert.deepEqual(integrationGroups(['packages/prototype/src/app.js', '.githooks/pre-commit', 'scripts/check-workflow.mjs']), []);
     assert.deepEqual(integrationGroups(['packages/prototype/src/app.js', 'src/hub/tasks-page.ts']), ['web']);

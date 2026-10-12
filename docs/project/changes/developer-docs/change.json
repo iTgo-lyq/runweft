@@ -16,7 +16,9 @@
     },
     "T2": {
       "title": "集中开发必读并精简文档职责",
-      "status": "todo"
+      "status": "done",
+      "verification": "集中开发必读、31→9行README和发行操作说明完成；两个旧锚点修复，157处链接/锚点与42项工作流通过；既有2项CI选择测试通过，包输入/usage/HAPI/原型/发布配置不变",
+      "commitTitle": "developer-docs T2: consolidate required reading and release procedures"
     }
   },
   "closure": {}

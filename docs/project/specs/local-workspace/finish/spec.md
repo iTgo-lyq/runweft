@@ -10,7 +10,7 @@ Git 收尾失败保留原生结果、报告与目录，返回 workspace attentio
 
 ## 保留与清理
 
-默认无限期保留 worktree、任务分支、依赖、原生历史和成果引用，无自动 TTL 清理。`paths` 与 `doctor` 的本机目录信息见[数据归属](../../deployment/spec.md#数据归属)。
+默认无限期保留 worktree、任务分支、依赖、原生历史和成果引用，无自动 TTL 清理。`paths` 与 `doctor` 的本机目录信息见[数据归属](../../deployment/spec.md#持久数据)。
 
 CLI `task workspace remove <id>` 是显式操作者入口，MCP 只查询留存状态。中心在同一事务内确认全部轮次结束并标记 deleting，与追加轮次互斥；删除中/已删除环境拒绝新 send。机器侧检查归属、停止证据、挂起操作、成果引用、预期 HEAD 及干净状态。
 

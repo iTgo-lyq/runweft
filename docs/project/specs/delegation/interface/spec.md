@@ -30,7 +30,7 @@ spawn/next 可传 inputs[{artifactId,name?}] 和 outputs[{name,relativePath}]，
 
 列表默认当前发起机器和 cwd，包含 MCP 来源；`--all` 列本人当前空间。show 默认最新接受轮次，可指定 `--round` 与报告 `--offset/--limit`；wait 支持 `--timeout/--after-revision`。send 默认下一轮，`--steer --round` 才追加本轮。interrupt 和 permission 必须指定轮次；permission 还需原生请求 ID，可附 `--answers`。
 
-CLI 使用当前连接已登记 machine.json 作为来源，不伪装原生父会话；未登记时明确提示先 enroll。MCP 只能操作自己的父会话任务，CLI 可操作本人当前空间内既有任务。完整示例见[使用说明](../../../../usage.md#本机任务)。
+CLI 使用当前连接已登记 machine.json 作为来源，不伪装原生父会话；未登记时明确提示先 enroll。MCP 只能操作自己的父会话任务，CLI 可操作本人当前空间内既有任务。完整示例见[使用说明](../../../../usage.md#委派等待与续接)。
 
 spawn/send 支持可重复 --input/--output；`task artifacts show/retry/collect/release` 提供历史版本、传输恢复、补收及显式留存释放。清理仍是 CLI 操作者入口，不新增 MCP 删除工具。
 
