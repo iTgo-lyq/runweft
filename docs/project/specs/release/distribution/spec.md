@@ -24,8 +24,6 @@ HAPI 固定版本和协议见[执行兼容](../../execution/compatibility/spec.m
 
 当前独立官网仅包含页面、资源与 npm 元数据，无包或 Skill 下载副本；历史离线整包内的网站不覆盖，见[官网安装](../../website/product/spec.md)。
 
-`release:assemble` 核对冻结候选及包 hash，校验网站版本等于候选、installation=npm、package=runweft 和公开 registry，拒绝旧下载/源码字段及 downloads 目录；网页来源不绑定程序提交。它接收经过筛选的验收说明/证据索引，拒绝覆盖已有交付。离线Git bundle恢复原Runweft revision及HAPI子模块，重建不依赖远端Git，依赖与构建工具下载仍需网络；普通源码tar包含对应文件，不伪造Git身份。
-
 ## npm 可信发布
 
 五包绑定GitHub仓库 `iTgo-lyq/runweft` 的 `npm-publish.yml`，environment留空，同时允许npm publish与Allow npm dist-tag。托管runner使用Node24/npm11.21.0、id-token:write及npm audience `npm:registry.npmjs.org`，不保存长期npm token；OIDC token不打印或持久化。私有仓库支持发布，当前无自动provenance。上传和标签权限均已由1.1.4真实写入验证。

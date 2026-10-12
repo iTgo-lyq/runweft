@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { packageNames, isRelease, publishCandidate, checkManifest, releaseChannel, compareReleaseVersions, assertReleaseForward, npmPublishArgs } from '../npm-publish.mjs';
+import { packageNames, publishCandidate, checkManifest, releaseChannel, compareReleaseVersions, assertReleaseForward, npmPublishArgs } from '../npm-publish.mjs';
 import { checkNpmTrust } from '../check-npm-trust.mjs';
 
 const index = { version: '1.2.0', source: { revision: 'a'.repeat(40) } };
@@ -11,16 +11,6 @@ const publish = options => publishCandidate(index, entries, {
     tags: async entry => ({ latest: await options.metadata(entry) ? index.version : '1.1.0' }), ...options,
 });
 
-
-test('only a push of the matching stable version tag can publish', () => {
-    const tag = { GITHUB_EVENT_NAME: 'push', GITHUB_REF_TYPE: 'tag', GITHUB_REF_NAME: 'v1.2.0' };
-    assert.equal(isRelease(tag, index.version), 'latest');
-    assert.equal(isRelease({ ...tag, GITHUB_EVENT_NAME: 'workflow_dispatch' }, index.version), null);
-    assert.equal(isRelease({ ...tag, GITHUB_REF_TYPE: 'branch' }, index.version), null);
-    assert.equal(isRelease({}, index.version), null);
-    assert.throws(() => isRelease({ ...tag, GITHUB_REF_NAME: 'v1.2.1' }, index.version), /match package/);
-    assert.throws(() => isRelease({ ...tag, GITHUB_REF_NAME: 'v1.2.0-beta' }, index.version), /canonical integers/);
-});
 
 test('a conflicting main version stops before any platform upload', async () => {
     const uploads = [];
@@ -116,17 +106,12 @@ test('an OIDC rejection reports only the package and status, never a response to
     assert.equal(calls, 2);
 });
 
-test('canonical Beta tags publish beta; branch and manual events never publish', () => {
-    const version = '1.2.0-beta.1', tag = { GITHUB_EVENT_NAME: 'push', GITHUB_REF_TYPE: 'tag', GITHUB_REF_NAME: 'v' + version };
-    assert.equal(isRelease(tag, version), 'beta');
-    assert.equal(isRelease({ ...tag, GITHUB_EVENT_NAME: 'workflow_dispatch' }, version), null);
-    assert.equal(isRelease({ ...tag, GITHUB_REF_TYPE: 'branch' }, version), null);
-    assert.throws(() => isRelease(tag, '1.2.0-beta.2'), /match package/);
-    for (const bad of ['1.2.0-beta', '1.2.0-beta.-1', '1.2.0-beta.01', '01.2.0', '1.2.0-rc.1', '1.2.0-alpha.1', '1.2.0+build', '1.2.0-beta.1.extra']) {
-        assert.throws(() => isRelease({ ...tag, GITHUB_REF_NAME: 'v' + bad }, bad), /canonical integers/);
-    }
-    assert.throws(() => isRelease({ ...tag, GITHUB_REF_NAME: 'x' + version }, version), /match package/);
+test('release channels reject noncanonical stable and Beta versions', () => {
+    assert.equal(releaseChannel('1.2.0'), 'latest');
     assert.equal(releaseChannel('0.0.0-beta.0'), 'beta');
+    for (const bad of ['1.2.0-beta', '1.2.0-beta.-1', '1.2.0-beta.01', '01.2.0', '1.2.0-rc.1', '1.2.0-alpha.1', '1.2.0+build', '1.2.0-beta.1.extra']) {
+        assert.throws(() => releaseChannel(bad), /canonical integers/);
+    }
 });
 
 test('version ordering compares numeric Beta sequences and stable precedence', () => {

@@ -7,7 +7,7 @@ import { atomicWrite, hubOrigin } from '../src/config';
 import { freePort } from '../src/services';
 import { createResourceGateway } from '../src/hub/resources/gateway';
 import { HubResourceClient } from '../src/hub/resources/client';
-import { verifyMcpInstallation } from './smoke-mcp-install.mjs';
+import { verifyMcpInstallation } from './fixtures/mcp-install.mjs';
 import { probeMcpProtocol } from './fixtures/mcp-protocol';
 import { HubStore } from '../src/hub/store';
 

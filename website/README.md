@@ -23,7 +23,7 @@ node website/serve.mjs
 
 版本读取 package.json，安装成功后才运行版本检查。release.json 只保存 version、installation=npm、package=runweft 和公开 registry，不记录程序源码候选。构建全部成功后才原子替换旧网站；错误保留之前的输出，清理暂存。
 
-参考页读取 docs/usage.md，在末尾“离线完整交付（工程参考）”附录之前截取并转义；官网不展示离线安装命令。使用说明和 Skill 源码改变后，下次程序发行须重新冻结包输入。当前源码 Skill 已随 npm 1.1.4 发布并通过匿名安装核对；网站接入对话用 npm 安装和升级，完整删除使用 runweft uninstall（默认预览，--yes 执行）。已公开 1.1.0 和历史离线整包保留原样。
+参考页读取并转义完整 docs/usage.md；使用说明只维护当前产品操作。使用说明和 Skill 源码改变后，下次程序发行须重新冻结包输入。当前源码 Skill 已随 npm 1.1.4 发布并通过匿名安装核对；网站接入对话用 npm 安装和升级，完整删除使用 runweft uninstall（默认预览，--yes 执行）。已公开 1.1.0 和历史离线整包保留原样。
 
 ## Cloudflare Pages 自动部署
 
@@ -95,7 +95,7 @@ node website/verify.mjs --browser-only
 
 安装命令及 Skill 目录命令从实际页面 DOM 获取。安装使用独立 HOME、npm prefix/userconfig/globalconfig/cache，清除继承的 npm 配置与认证环境变量，PATH 仅含本次安装、Node/npm 和系统工具。失败 npm 夹具确认不继续运行旧程序；公共 registry 实际安装核对入口归属、版本和五个 Skill 文档。不改用户 MCP/Skill，不启动模型。该检查不代表 Mac/arm64 实机运行。
 
-本次服务和浏览器在结束时关闭；证据与截图、专用安装留在 `.dev-smoke/website-*/`，不提交。发行组装的根夹具同时验证 npm 元数据和旧下载目录拒绝，离线程序与 Git bundle 仍单独保留。
+本次服务和浏览器在结束时关闭；证据与截图、专用安装留在 `.dev-smoke/website-*/`，不提交。历史离线交付仍单独保留。
 
 ## HAPI 官方截图
 

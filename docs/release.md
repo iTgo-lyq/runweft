@@ -34,7 +34,7 @@ bun run test:native <已安装CLI> N3 <前次evidence.json>
 bun run test:native <已安装CLI> all <前次evidence.json>
 ```
 
-HAPI/native 映射或 workspace 契约变化时选 `expanded`；HAPI 执行层变化另查 `test:execution` 及专项入口。Linux arm64 基本命令可用 `RUNWEFT_SMOKE_QEMU=<qemu-aarch64-static> RUNWEFT_SMOKE_SYSROOT=<aarch64-linux-gnu目录> bun run test:arm64`，不代表实机原生协作。
+HAPI/native 映射或 workspace 契约变化时选 `expanded`；HAPI 执行层变化另查 `test:execution` 及专项入口。Linux arm64 安装由发行 CI 的原生 arm64 runner 验证。
 
 ## npm 发布与恢复
 
@@ -50,13 +50,3 @@ gh workflow run npm-publish.yml --repo iTgo-lyq/runweft --ref main \
 手动 `release-tag` 留空只预演。恢复必须取得原候选描述并核对来源及摘要；部分公开、日志不可取得或上传结果未知时停止，不盲目重发。beta 是公开渠道，已公开版本不能覆盖。
 
 缺少标签权限时，逐包检查 npm 的 `/package/<包名>/access` Trusted publishing：仓库 `iTgo-lyq/runweft`、文件 `npm-publish.yml`、environment 留空，同时允许 `npm publish` 与 `Allow npm dist-tag`。权限修复后只重跑 promote。npm 发布完成后，从最新分支运行官网工作流；不用旧生产提交回退网站。
-
-## 可选离线组装
-
-先按官网说明生成同版本 `dist/website/`，准备经筛选的验收说明及无秘密证据索引；索引包含 `version`、`sourceRevision`、`success=true`：
-
-```sh
-bun run release:assemble dist/packages dist/website <验收说明.md> <脱敏证据索引.json>
-```
-
-输出 `dist/runweft-<版本>-release/`、`.tar.gz` 及 `.sha256`。已有输出拒绝覆盖，先明确备份旧生成物；组装不会公开发布或修改在线部署。原始候选、固定 Git bundle 与组装范围见发行规格，历史交付保持原样。

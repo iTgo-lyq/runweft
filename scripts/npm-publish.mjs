@@ -37,13 +37,6 @@ export function assertReleaseForward(version, tags, name) {
     }
 }
 
-export function isRelease(env, version) {
-    if (env.GITHUB_EVENT_NAME !== 'push' || env.GITHUB_REF_TYPE !== 'tag') return null;
-    const channel = releaseChannel(env.GITHUB_REF_NAME?.slice(1));
-    assert.equal(env.GITHUB_REF_NAME, `v${version}`, 'Release tag must match package version');
-    return channel;
-}
-
 export function npmPublishArgs(entry, { dryRun, userConfig, globalConfig, cache, channel = releaseChannel(entry.version) }) {
     const args = ['publish', entry.tarball, '--registry=' + registry, '--access=public',
         '--tag=' + channel, '--ignore-scripts', '--json', '--loglevel=error',

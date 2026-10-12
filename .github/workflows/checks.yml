@@ -35,7 +35,7 @@ jobs:
           bun-version: '1.4.2'
       - run: bun install --frozen-lockfile
       - name: Validate SpecTrail workflow and Change records
-        run: node scripts/check-workflow.mjs
+        run: node scripts/check-workflow.mjs && node scripts/check-docs.mjs
       - run: bun install --frozen-lockfile
         working-directory: hapi
       - name: Install Codex for the real native configuration tests
@@ -75,7 +75,7 @@ jobs:
           import { spawnSync } from 'node:child_process';
           for (const group of JSON.parse(process.env.CI_GROUPS)) {
             const commands = group === 'service'
-              ? [['node', 'scripts/smoke-service.mjs', 'dist/runweft'], ['bun', 'scripts/smoke-hub-service.ts', 'dist/runweft']]
+              ? [['node', 'scripts/smoke-service.mjs', 'dist/runweft']]
               : [['bun', 'scripts/smoke-integration.ts', group, 'dist/runweft']];
             for (const [command, ...args] of commands) {
               const result = spawnSync(command, args, { stdio: 'inherit' });

@@ -346,7 +346,7 @@
 ### T07 构建发行与官网根测试
 
 - [test/npm-publish.test.js](https://github.com/iTgo-lyq/runweft/blob/fe6017e531f06c0c01980d362b8b5b32bc6fde71/test/npm-publish.test.js)
-- [test/release-assembly.test.ts](../../../../test/release-assembly.test.ts)
+- [test/release-assembly.test.ts](https://github.com/iTgo-lyq/runweft/blob/d7bc66b9ffd7c4c07fbb940280424b11feffc58a/test/release-assembly.test.ts)
 - [test/release-inputs.test.ts](../../../../test/release-inputs.test.ts)
 - [test/website-build.test.ts](../../../../test/website-build.test.ts)
 
@@ -376,7 +376,7 @@
 - [scripts/smoke-hub-native-mcp.ts](https://github.com/iTgo-lyq/runweft/blob/431d2e9ad16a1b7c9368bb03da0647b960a4888b/scripts/smoke-hub-native-mcp.ts)
 - [scripts/smoke-hub-realtime.ts](../../../../scripts/smoke-hub-realtime.ts)
 - [scripts/smoke-hub-resources.ts](../../../../scripts/smoke-hub-resources.ts)
-- [scripts/smoke-hub-service.ts](../../../../scripts/smoke-hub-service.ts)
+- [scripts/smoke-hub-service.ts](https://github.com/iTgo-lyq/runweft/blob/d7bc66b9ffd7c4c07fbb940280424b11feffc58a/scripts/smoke-hub-service.ts)
 - [scripts/smoke-hub-upgrade.mjs](https://github.com/iTgo-lyq/runweft/blob/7eaa27efc0a4a239c96ea07c9774353145b23e89/scripts/smoke-hub-upgrade.mjs)
 - [scripts/smoke-hub.ts](../../../../scripts/smoke-hub.ts)
 
@@ -415,14 +415,14 @@
 - `scripts/smoke-upgrade.ts`（审计基线文件，现已退役）
 - [scripts/smoke-workspace-preparation.ts](../../../../scripts/smoke-workspace-preparation.ts)
 - [scripts/smoke-worktree-tasks.ts](https://github.com/iTgo-lyq/runweft/blob/431d2e9ad16a1b7c9368bb03da0647b960a4888b/scripts/smoke-worktree-tasks.ts)
-- [scripts/task-results-probe.ts](../../../../scripts/task-results-probe.ts)
+- [scripts/task-results-probe.ts](https://github.com/iTgo-lyq/runweft/blob/d7bc66b9ffd7c4c07fbb940280424b11feffc58a/scripts/task-results-probe.ts)
 
 ### V04 安装与平台包验收
 
-- [scripts/smoke-arm64.mjs](../../../../scripts/smoke-arm64.mjs)
+- [scripts/smoke-arm64.mjs](https://github.com/iTgo-lyq/runweft/blob/d7bc66b9ffd7c4c07fbb940280424b11feffc58a/scripts/smoke-arm64.mjs)
 - [scripts/smoke-artifact-package.mjs](https://github.com/iTgo-lyq/runweft/blob/431d2e9ad16a1b7c9368bb03da0647b960a4888b/scripts/smoke-artifact-package.mjs)
 - [scripts/smoke-install.mjs](../../../../scripts/smoke-install.mjs)
-- [scripts/smoke-mcp-install.mjs](../../../../scripts/smoke-mcp-install.mjs)
+- [scripts/smoke-mcp-install.mjs](https://github.com/iTgo-lyq/runweft/blob/d7bc66b9ffd7c4c07fbb940280424b11feffc58a/scripts/smoke-mcp-install.mjs)
 - [scripts/smoke-remote-package.ts](../../../../scripts/smoke-remote-package.ts)
 - [scripts/smoke-service.mjs](../../../../scripts/smoke-service.mjs)
 - [scripts/smoke-worktree-package.mjs](../../../../scripts/smoke-worktree-package.mjs)
@@ -444,7 +444,7 @@
 
 ### B01 构建、HAPI 固定与整包组装
 
-- [scripts/assemble-release.mjs](../../../../scripts/assemble-release.mjs)
+- [scripts/assemble-release.mjs](https://github.com/iTgo-lyq/runweft/blob/d7bc66b9ffd7c4c07fbb940280424b11feffc58a/scripts/assemble-release.mjs)
 - [scripts/build-hapi.ts](../../../../scripts/build-hapi.ts)
 - [scripts/build.ts](../../../../scripts/build.ts)
 - [scripts/hapi-source.ts](../../../../scripts/hapi-source.ts)
@@ -548,7 +548,7 @@
 - [scripts/fixtures/task-capture-receipt.ts](https://github.com/iTgo-lyq/runweft/blob/431d2e9ad16a1b7c9368bb03da0647b960a4888b/scripts/fixtures/task-capture-receipt.ts)
 - [scripts/fixtures/task-smoke.ts](../../../../scripts/fixtures/task-smoke.ts)
 - [scripts/fixtures/worktree-task-smoke.ts](https://github.com/iTgo-lyq/runweft/blob/431d2e9ad16a1b7c9368bb03da0647b960a4888b/scripts/fixtures/worktree-task-smoke.ts)
-- [scripts/smoke-mcp-install.d.mts](../../../../scripts/smoke-mcp-install.d.mts)
+- [scripts/smoke-mcp-install.d.mts](https://github.com/iTgo-lyq/runweft/blob/d7bc66b9ffd7c4c07fbb940280424b11feffc58a/scripts/smoke-mcp-install.d.mts)
 
 ### R01 Bun测试清理入口
 

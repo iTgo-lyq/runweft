@@ -9,7 +9,7 @@ export async function buildSite({ projectDirectory = repository, outputDirectory
   const { version } = JSON.parse(await readFile(join(projectDirectory, 'package.json'), 'utf8'));
   if (!/^\d+\.\d+\.\d+$/.test(version)) throw new Error('官网 npm 安装版本无效。');
   const release = { version, installation: 'npm', package: 'runweft', registry: 'https://registry.npmjs.org/' };
-  const manual = (await readFile(join(projectDirectory, 'docs/usage.md'), 'utf8')).split('\n## 离线完整交付（工程参考）\n')[0];
+  const manual = await readFile(join(projectDirectory, 'docs/usage.md'), 'utf8');
   const replacements = {
     VERSION: version,
     NPM_INSTALL: escape(`npm install -g runweft@${version} --registry=${release.registry} --include=optional &&\nrunweft --version`),

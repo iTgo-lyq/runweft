@@ -28,6 +28,7 @@ bun run typecheck
 bun run test
 bun run build
 node --test ./scripts/tests/*.test.mjs ./website/publish.test.mjs
+node scripts/check-docs.mjs
 node scripts/check-workflow.mjs
 git diff --check
 ```

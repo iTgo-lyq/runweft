@@ -4,13 +4,15 @@
   "title": "收敛规格与验证工具并清空临时现场",
   "size": "small",
   "status": "active",
-  "stage": "requirement",
+  "stage": "execution",
   "branch": "codex/redundancy-cleanup",
   "confirmations": {},
   "tasks": {
     "T1": {
       "title": "收敛工程验证与历史发行工具",
-      "status": "todo"
+      "status": "done",
+      "verification": "类型/构建通过；根测试257、Node42、服务7组、存储11脚本、资源10组、官网14组通过；917本地链接有效，7历史目标固定；无产品模型或公开发布",
+      "commitTitle": "maintenance-cleanup T1: consolidate smoke coverage and retire historical tooling"
     },
     "T2": {
       "title": "按能力合并规格并减少重复引用",

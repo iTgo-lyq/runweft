@@ -330,24 +330,4 @@ runweft --home <目录> uninstall --yes
 
 只删程序、保留数据：`npm uninstall -g runweft`。先结束任务和受管服务，再用 `mcp uninstall` 移除接入、删除未改写的产品 Skill；`mcp uninstall` 仍会创建备份。当前附件和成果的留存操作使用显式 release/prune/remove 命令。
 
-完整本地验收由 Agent 自动执行。Mac 双架构构建不代替实机；Linux arm64 QEMU CLI 检查不代替完整原生协作；同机多 Runner 不等于物理跨机。实际版本的证据以发行记录为准。
-
-## 离线完整交付（工程参考）
-
-本节仅用于用户明确提供的历史 1.1.0 可信离线完整交付目录，不表示本次提供 1.1.4 离线整包。官网不提供安装包下载，常规安装和升级使用 npm，完整卸载使用 runweft uninstall。历史整包和独立 Skill 归档仍可用于工程验证，不代表当前官网内容。
-
-从可信发行目录取得 `index.json`、`SHA256SUMS`、`tarballs/`。校验后解包，保持整包，不单独移动 Runweft：
-
-```sh
-shasum -a 256 -c SHA256SUMS &&
-runweft_platform=darwin-arm64 &&
-runweft_version=1.1.0 &&
-runweft_install="$HOME/.local/share/runweft/$runweft_version-$runweft_platform" &&
-mkdir -p "$runweft_install" "$HOME/.local/bin" &&
-tar -xzf "tarballs/runweft-$runweft_platform-$runweft_version.tgz" -C "$runweft_install" --strip-components=1 &&
-ln -sfn "$runweft_install/bin/runweft" "$HOME/.local/bin/runweft" &&
-export PATH="$HOME/.local/bin:$PATH" &&
-runweft --version
-```
-
-先检查安装目录/链接归属；未知已有文件不能覆盖。Linux 可用 `sha256sum -c SHA256SUMS`，平台名为 `linux-x64` 或 `linux-arm64`，Intel Mac 为 `darwin-x64`。把 `~/.local/bin` 加入新终端的 PATH。Mac 产物未签名、公证；核对来源后按系统安全提示允许，交叉构建不代表实机运行。
+完整本地验收由 Agent 自动执行。平台构建、安装检查不代替完整原生协作；同机多 Runner 不等于物理跨机。实际版本的证据以发行记录为准。
