@@ -16,3 +16,9 @@ T1 完成类型、根测试、Node 发布检查、构建、Linux 完整卸载和
 ## iclaude 评审落实
 
 会话 fec14f86-2218-41af-9ebf-8cb16b3d689b 成功，主 agent 采纳包来源、控制副本时序、去模型客户端依赖、Mac系统工具PATH、同install job门禁与日志证据意见。Codex采用直接构造已知注册，不另实现假原生客户端。未采纳延后main的建议：用户明确要求合入且官网check逐包要求latest已晋级，提前main推送不会发布未晋级页面；原 npm-publish promote 也实际传入 needs.install.result。main与tag正常原子推送保证恢复入口已经含新矩阵；npm晋级后从最新main触发生产官网。
+
+## 首次 CI 门禁失败与恢复
+
+原run38237215063在Hub浏览器过期测试的auth请求计数失败（5!=4），未进入上传步骤、未输出上传开始或候选描述，匿名五包1.1.4均404。相同旧测试的main CI和本地单项通过，存在时序不稳定。旧测试在应用timer已运行的共享context上安装clock；[Playwright官方Clock说明](https://playwright.dev/docs/clock)要求在应用计时器调用前安装，且context内页面共同受影响。
+
+只调整验收fixture：原tab重载核对JWT不变；新的独立browser context在首次导航前安装clock，携原短JWT验证过期清理/返回Hub/零新auth申请，不影响其他Hub/native标签；原安全断言保留。typecheck及完整console单项通过，包输入与v1.1.4完全一致。推送main修正后使用release-tag=v1.1.4、source-run-id=38237215063恢复；prepare在确认未上传和版本不存在时允许从原tag重新构建。产品源码、HAPI、版本及tag不变，不覆盖npm包。

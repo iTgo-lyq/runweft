@@ -20,7 +20,7 @@ export async function consoleTasks(options: { origin: string; home: string; root
     const tasks = new TaskStore(statePath, { db: access.db, ownsScope: () => true, accepted: task => {
         access.bind({ kind: 'task', id: task.id, ownerId: task.hub!.ownerId, spaceId: task.hub!.spaceId, machineId: task.target.machineId });
     } });
-    const scopes = new DelegationScopes(access), sockets: Socket[] = [], nativePages: Page[] = [];
+    const scopes = new DelegationScopes(access), sockets: Socket[] = [], nativePages: Page[] = [], clockContexts: BrowserContext[] = [];
     const heartbeats: ReturnType<typeof setInterval>[] = [];
     const urls: string[] = [], authBodies: string[] = [], errors: string[] = [];
     const authByPage = new Map<Page, number>();
@@ -291,14 +291,20 @@ export async function consoleTasks(options: { origin: string; home: string; root
         await page.reload(); await ready(page);
         check('served console clear lifecycle ignores late authorized success and failure even with uncancelled HTTP; cleared view/navigation never revive');
         const beforeReloadJwt = await native.evaluate(() => sessionStorage.getItem('runweft.native.access'));
-        await native.clock.install(); await native.reload(); await native.getByText('OWNER_CONSOLE_HISTORY_NATIVE_MESSAGE', { exact: true }).waitFor();
+        await native.reload(); await native.getByText('OWNER_CONSOLE_HISTORY_NATIVE_MESSAGE', { exact: true }).waitFor();
         assert((await native.evaluate(() => sessionStorage.getItem('runweft.native.access'))) === beforeReloadJwt, 'Reload must preserve JWT lifetime');
-        // Playwright's clock advances the whole context, including other native/Hub tabs.
-        const authCountBeforeExpiry = authByPage.get(native) ?? 0;
-        await native.clock.fastForward(16 * 60_000); await native.waitForURL(/\/hub#native-expired/);
-        assert.match(await native.locator('#notice').innerText(), /限时身份/);
-        assert(await native.evaluate(() => sessionStorage.getItem('runweft.native.access') === null), 'Expired native credential must clear');
-        assert.equal(authByPage.get(native) ?? 0, authCountBeforeExpiry);
+        // Install before application timers exist; the clock affects an entire browser context.
+        const clockContext = await context.browser()!.newContext(); clockContexts.push(clockContext);
+        const expiring = await clockContext.newPage(); observe(expiring); await expiring.clock.install();
+        await expiring.goto(origin + '/hub'); await ready(expiring);
+        await expiring.evaluate(token => sessionStorage.setItem('runweft.native.access', token!), beforeReloadJwt);
+        await expiring.goto(native.url()); await expiring.getByText('OWNER_CONSOLE_HISTORY_NATIVE_MESSAGE', { exact: true }).waitFor();
+        assert.equal(await expiring.evaluate(() => sessionStorage.getItem('runweft.native.access')), beforeReloadJwt);
+        const authCountBeforeExpiry = authByPage.get(expiring) ?? 0;
+        await expiring.clock.fastForward(16 * 60_000); await expiring.waitForURL(/\/hub#native-expired/);
+        assert.match(await expiring.locator('#notice').innerText(), /限时身份/);
+        assert(await expiring.evaluate(() => sessionStorage.getItem('runweft.native.access') === null), 'Expired native credential must clear');
+        assert.equal(authByPage.get(expiring) ?? 0, authCountBeforeExpiry);
         assert(await page.locator('#workspace').isVisible());
 
         assert(urls.every(url => !new URL(url).searchParams.has('token'))); assert.deepEqual(errors, []);
@@ -317,6 +323,6 @@ export async function consoleTasks(options: { origin: string; home: string; root
     } finally {
         for (const timer of heartbeats) clearInterval(timer);
         context.off('page', observe);
-        await closeSmoke([() => access.close(), () => tasks.close(), ...sockets.map(socket => () => socket.disconnect()), ...nativePages.map(tab => () => tab.close())]);
+        await closeSmoke([() => access.close(), () => tasks.close(), ...sockets.map(socket => () => socket.disconnect()), ...nativePages.map(tab => () => tab.close()), ...clockContexts.map(clock => () => clock.close())]);
     }
 }
