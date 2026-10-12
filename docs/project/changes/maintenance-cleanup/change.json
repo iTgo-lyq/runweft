@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "id": "maintenance-cleanup",
+  "title": "收敛规格与验证工具并清空临时现场",
+  "size": "small",
+  "status": "active",
+  "stage": "requirement",
+  "branch": "codex/redundancy-cleanup",
+  "confirmations": {},
+  "tasks": {
+    "T1": {
+      "title": "收敛工程验证与历史发行工具",
+      "status": "todo"
+    },
+    "T2": {
+      "title": "按能力合并规格并减少重复引用",
+      "status": "todo"
+    },
+    "T3": {
+      "title": "清空临时现场并完成验收",
+      "status": "todo"
+    }
+  },
+  "closure": {}
+}
