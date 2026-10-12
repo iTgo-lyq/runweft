@@ -32,7 +32,9 @@
     },
     "T2": {
       "title": "独立 Hub 交互原型",
-      "status": "todo"
+      "status": "done",
+      "verification": "独立包构建和静态检查；Playwright 24组不透明iframe三设备关键交互、Enter提交、失败恢复、ready握手、无存储/外网/浏览器错误通过。",
+      "commitTitle": "spec-trail-adoption T2: extract standalone Hub prototypes"
     },
     "T3": {
       "title": "固定版本发布与工作台引用",

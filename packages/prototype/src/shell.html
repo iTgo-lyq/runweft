@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>资源与协作 · Runweft Hub</title><!-- STYLE --></head>
+<body data-entry="__ENTRY__">
+<a class="skip" href="#main">跳到主内容</a>
+<header><a class="brand" href="#tasks">Runweft <span>Hub</span></a><span id="host"></span><button id="logout" class="secondary" hidden>退出此浏览器</button></header>
+<main id="main"><section class="demo-toolbar" aria-label="演示场景"><strong>交互原型</strong><label>场景 <select id="demo-scenario" aria-label="场景"><option value="normal">正常</option><option value="empty">空数据</option><option value="offline">机器离线</option><option value="error">加载失败</option></select></label><button id="demo-reset" class="secondary">重置演示</button><span>虚构数据 · 刷新即重置</span></section>
+<div class="heading"><p class="eyebrow">RUNWEFT / 协作工作台</p><h1 id="headline">从你的身份开始</h1><p id="intro">无需注册。保存你的身份 token，下次凭它回到自己的空间。</p></div>
+<p id="notice" role="status" aria-live="polite" hidden></p>
+<section id="connect-request" class="panel" aria-label="确认本机连接" hidden>
+  <h2>连接你的 Agent 工作环境</h2><p id="connect-details"></p><p>核对码：<strong id="connect-code"></strong></p>
+  <p id="connect-identity" class="muted"></p><p id="connect-status" role="status"></p>
+  <button id="confirm-connection" hidden>确认连接此身份与空间</button>
+  <p class="hint">只确认自己刚发起的请求，并核对 Hub 地址、机器名称和代码。身份凭据会加密交给该环境，由 CLI 直接保存，不需要发送到对话中。此连接共用你的身份 token；需要撤销设备时，请更换 token 并更新其他设备。</p>
+</section>
+<section id="entry" class="entry" aria-label="接入 Hub">
+  <form id="create-identity" class="panel"><h2>创建新身份</h2><p class="muted">第一次使用这个 Hub，从这里开始。</p><label>显示名称<input id="new-name" required maxlength="80" autocomplete="nickname" placeholder="你希望如何被称呼"></label><button type="submit">领取身份 token</button><p class="hint">这会创建一个独立身份和初始空间，不会继承其他身份的配置。</p></form>
+  <form id="import-identity" class="panel"><h2>使用已有 token</h2><p class="muted">换了设备或关闭过浏览器，使用保存的 token。</p><label>身份 token<input id="import-token" type="password" required autocomplete="off" spellcheck="false" placeholder="输入 demo 体验导入"></label><button type="submit" class="secondary">进入原身份</button><p class="hint">没有 token 副本时无法找回原身份。重新领取会创建另一个身份。</p></form>
+</section>
+<div id="workspace" class="workspace" hidden>
+  <aside>
+    <section class="identity-card" aria-label="当前身份"><span class="eyebrow">当前身份</span><h2 id="identity-name"></h2><code id="identity-id"></code><div class="actions"><button id="backup-token" class="secondary">备份 token</button><button id="rotate-token" class="quiet">更换 token</button></div><details><summary>修改显示名称</summary><form id="rename-identity"><label>新的显示名称<input id="identity-name-input" maxlength="80" required></label><button type="submit" class="secondary">保存名称</button></form></details></section>
+    <section class="space-navigation" aria-label="我的空间"><h2>我的空间</h2><nav id="spaces" aria-label="选择空间"></nav><details><summary>创建协作空间</summary><form id="create-space"><label>空间名称<input id="new-space-name" maxlength="80" required></label><button type="submit" class="secondary">创建空间</button></form></details><details><summary>接受空间邀请</summary><form id="accept-invitation"><label>邀请 token<input id="invitation-token" type="password" required autocomplete="off" spellcheck="false" placeholder="输入 demo 体验加入"></label><button type="submit" class="secondary">加入空间</button></form></details></section>
+  </aside>
+  <section class="space-content" aria-label="空间详情">
+    <div class="section-heading"><div><p class="eyebrow" id="space-role"></p><h2 id="space-name"></h2><code id="space-id"></code></div><button id="refresh" class="secondary">刷新</button></div>
+    <details class="onboarding"><summary>让 Agent 帮我接入此 Hub</summary><p>复制以下说明交给 Codex 或 Claude Code。身份 token 只在本页面领取或导入，不要发送给模型。</p><pre id="agent-onboarding" tabindex="0"></pre></details>
+    <nav id="console-navigation" aria-label="资源导航"></nav>
+    <div id="console-content" aria-live="polite"></div>
+    <div id="members-panel" hidden>
+    <form id="rename-space" class="inline" hidden><label>空间名称<input id="space-name-input" maxlength="80" required></label><button type="submit" class="secondary">保存</button></form>
+    <section class="members-section"><h3>空间成员 <span id="member-count"></span></h3><div class="table-wrap"><table><thead><tr><th scope="col">成员</th><th scope="col">角色</th><th scope="col">操作</th></tr></thead><tbody id="members"></tbody></table></div></section>
+    <section id="invitation-manager" hidden><h3>邀请成员</h3><form id="create-invitation" class="inline"><label>加入后的角色<select id="invitation-role"><option value="member">成员</option><option value="admin">管理员</option></select></label><button type="submit">生成邀请</button></form><p class="hint">邀请仅能加入当前空间，24 小时内由一人使用。成员身份不授予他人私有资源的编辑权。</p><div id="invitations"></div></section>
+    <div class="leave"><button id="leave-space" class="quiet">退出这个空间</button><p class="hint">最后一位所有者需要先指定另一位所有者。</p></div>
+    </div>
+  </section>
+</div>
+<footer>交互原型 · 全部内容为虚构示例，刷新后重置。请勿输入真实凭据。</footer>
+</main>
+<dialog id="secret-dialog" aria-labelledby="secret-title"><h2 id="secret-title"></h2><p id="secret-description"></p><pre id="secret-value" tabindex="0"></pre><div class="actions"><button id="copy-secret">复制</button><button id="download-secret" class="secondary">下载备份</button><button id="apply-rotation" hidden>应用新 token</button><button id="close-secret" class="quiet">关闭</button></div><p id="secret-status" role="status" aria-live="polite"></p></dialog>
+<dialog id="confirm-dialog" aria-labelledby="confirm-title"><h2 id="confirm-title">确认操作</h2><p id="confirm-description"></p><form method="dialog" class="actions"><button value="yes">确认</button><button value="no" class="secondary">取消</button></form></dialog>
+<!-- SCRIPT --></body></html>

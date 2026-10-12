@@ -1,0 +1,93 @@
+{
+  "schemaVersion": 1,
+  "entries": [
+    {
+      "id": "identity",
+      "title": "身份与空间",
+      "sourcePath": "packages/prototype/src/app.js",
+      "kind": "page",
+      "devices": [
+        "pc-web",
+        "ipad",
+        "mobile"
+      ]
+    },
+    {
+      "id": "tasks",
+      "title": "任务与轮次详情",
+      "sourcePath": "packages/prototype/src/ui/tasks-page.js",
+      "kind": "page",
+      "devices": [
+        "pc-web",
+        "ipad",
+        "mobile"
+      ]
+    },
+    {
+      "id": "machines",
+      "title": "机器管理",
+      "sourcePath": "packages/prototype/src/ui/resources-page.js",
+      "kind": "page",
+      "devices": [
+        "pc-web",
+        "ipad",
+        "mobile"
+      ]
+    },
+    {
+      "id": "runtimes",
+      "title": "Runtime 管理",
+      "sourcePath": "packages/prototype/src/ui/resources-page.js",
+      "kind": "page",
+      "devices": [
+        "pc-web",
+        "ipad",
+        "mobile"
+      ]
+    },
+    {
+      "id": "agents",
+      "title": "Agent 定义与分享",
+      "sourcePath": "packages/prototype/src/ui/agents-page.js",
+      "kind": "page",
+      "devices": [
+        "pc-web",
+        "ipad",
+        "mobile"
+      ]
+    },
+    {
+      "id": "repositories",
+      "title": "仓库与 checkout",
+      "sourcePath": "packages/prototype/src/ui/repositories-page.js",
+      "kind": "page",
+      "devices": [
+        "pc-web",
+        "ipad",
+        "mobile"
+      ]
+    },
+    {
+      "id": "selections",
+      "title": "我的选择与配置解析",
+      "sourcePath": "packages/prototype/src/ui/selections-page.js",
+      "kind": "page",
+      "devices": [
+        "pc-web",
+        "ipad",
+        "mobile"
+      ]
+    },
+    {
+      "id": "members",
+      "title": "成员与邀请",
+      "sourcePath": "packages/prototype/src/app.js",
+      "kind": "page",
+      "devices": [
+        "pc-web",
+        "ipad",
+        "mobile"
+      ]
+    }
+  ]
+}

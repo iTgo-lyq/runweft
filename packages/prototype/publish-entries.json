@@ -1,0 +1,34 @@
+[
+  {
+    "id": "identity",
+    "entryPath": "identity/index.html"
+  },
+  {
+    "id": "tasks",
+    "entryPath": "tasks/index.html"
+  },
+  {
+    "id": "machines",
+    "entryPath": "machines/index.html"
+  },
+  {
+    "id": "runtimes",
+    "entryPath": "runtimes/index.html"
+  },
+  {
+    "id": "agents",
+    "entryPath": "agents/index.html"
+  },
+  {
+    "id": "repositories",
+    "entryPath": "repositories/index.html"
+  },
+  {
+    "id": "selections",
+    "entryPath": "selections/index.html"
+  },
+  {
+    "id": "members",
+    "entryPath": "members/index.html"
+  }
+]

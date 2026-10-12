@@ -2,5 +2,13 @@
   "schemaVersion": 1,
   "protectedBranches": [
     "main"
-  ]
+  ],
+  "openfolioUrl": null,
+  "prototype": {
+    "status": "enabled",
+    "packagePath": "packages/prototype",
+    "hosting": {
+      "provider": "custom"
+    }
+  }
 }
