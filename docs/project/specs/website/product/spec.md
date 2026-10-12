@@ -6,7 +6,7 @@ Runweft 官网是独立静态站点，不与业务看板或 HAPI 服务混用。
 
 首页 `#native-experience` 解释 HAPI 驱动原生 Codex/Claude 的执行方式：采用执行机器已有的登录、项目指令、Skill 和其他 MCP，权限沿原生规则，会话和目录跨轮保留。HAPI 会话网页提供消息/工具历史、待审批处理及在线会话文件和 Git 暂存/未暂存差异；新增入口链接到指南的具体步骤。手机使用浏览器，须能访问 Hub 并选择本人身份/空间；不承诺全部 HAPI 客户端或功能已接通。
 
-首页 `#session-screenshots` 使用 HAPI 官网会话记录和代码查看原图，图注与来源链接说明上游示意属性。两图以真实 WebP 格式提供，原字节不变、946×2048，显示宽度上限 320px，桌面并排、窄屏单列；懒加载且标注固有尺寸，键盘和无 JavaScript 均可查看原图。新增文案由 iclaude 编写。
+首页 `#session-screenshots` 将会话/文件预览融入 HAPI 会话介绍块，不显示截图来源或版本免责声明。桌面文案在左、双图在右，800px 及以下文案在上，双图始终并排。预览最大 180×240px，窄屏等比例缩小；CSS 裁切展示主要内容，普通链接打开完整 946×2048 WebP 原图，字节保持不变。图片懒加载并标注固有尺寸，键盘焦点可见，无 JavaScript 可用。该块的短文案、图注与替代文本由 iclaude 编写。
 
 ## npm 安装
 
@@ -28,7 +28,7 @@ website/serve.mjs 提供 loopback GET/HEAD 预览，只能读取站点目录。�
 
 website-pages.yml 复用规范版本识别，稳定版本使用托管 runner 构建、检查公共 npm 版本并上传 Direct Upload 项目；main 的官网相关推送部署 production，codex 分支部署 preview，action 返回环境须与请求模式匹配。生产部署先确认 run 的 SHA 为 main 当前提交，拒绝旧提交覆盖官网。仅 codex/** push/dispatch 的 Beta 在聚焦检查后明确跳过构建、准备/上传与静态产物；main 或 PR 的 Beta 版本失败，真实构建器仍只接受稳定版本。Beta 跳过仅有本地夹具证据，尚未真实触发。
 
-[正式官网](https://runweft.pages.dev/)安装版本为 npm 1.1.3；[main Pages CI](https://github.com/iTgo-lyq/runweft/actions/runs/38199746816)已发布 HAPI 官方截图。固定构建为 [cdc18d20.runweft.pages.dev](https://cdc18d20.runweft.pages.dev/)，静态输出 296,682 字节；唯一 URL 与正式域名十文件摘要/MIME、三页浏览器和两图解码通过，见[本轮验收](../../../archive/2026-10-12-website-session-screenshots/acceptance.md)。此前[内容重写](../../../archive/2026-10-12-website-content-onboarding/acceptance.md)与[原生能力说明](../../../archive/2026-10-12-website-hapi-capabilities/acceptance.md)验收继续保留。
+[正式官网](https://runweft.pages.dev/)安装版本为 npm 1.1.3；[main Pages CI](https://github.com/iTgo-lyq/runweft/actions/runs/38200982170)已发布紧凑会话介绍。固定构建为 [620db692.runweft.pages.dev](https://620db692.runweft.pages.dev/)，静态输出 296,166 字节；唯一 URL 与正式域名十文件摘要/MIME、三页浏览器、首页六宽度与两图解码通过，见[本轮验收](../../../archive/2026-10-12-website-compact-session-preview/acceptance.md)。原图溯源见[截图引入记录](../../../archive/2026-10-12-website-session-screenshots/acceptance.md)；此前内容和原生能力验收保存在对应归档。
 
 准备步骤和官方上传 action 使用 Repository secrets 的 CLOUDFLARE_ACCOUNT_ID/CLOUDFLARE_API_TOKEN；凭证不写入静态站点或验收 JSON。主包/四平台包的公开版本、SHA-512 字段、精确可选依赖和 tarball HEAD 均通过；五包latest必须与站点版本一致，不下载程序、不调用npm发布。静态输出为十文件白名单，拒绝链接、隐藏文件、归档和未知文件。
 

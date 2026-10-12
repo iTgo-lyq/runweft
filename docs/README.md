@@ -1,6 +1,6 @@
 # 项目文档
 
-[HAPI 官方截图](project/archive/2026-10-12-website-session-screenshots/acceptance.md)已加入[官网](https://runweft.pages.dev/#session-screenshots)：会话记录与代码查看两张原图，标注官方来源；图注由 iclaude 编写。桌面/手机、原图访问及十文件线上检查通过。
+[官网会话介绍布局](project/archive/2026-10-12-website-compact-session-preview/acceptance.md)已更新：[截图预览](https://runweft.pages.dev/#session-screenshots)融入会话介绍块，桌面与手机都采用小尺寸双图并排，去掉说明与来源标注。iclaude 重写该块文案；三页六宽度、完整原图访问及线上十文件检查通过。
 
 [官网原生执行与 HAPI 能力说明](project/archive/2026-10-12-website-hapi-capabilities/acceptance.md)已上线：[首页新增内容](https://runweft.pages.dev/#native-experience)、[会话与审批指南](https://runweft.pages.dev/guide.html#native-session)。文案由 iclaude 完成，说明原生配置、会话历史、浏览器审批/文件及手机访问条件；保留首屏、样式和 npm 1.1.3。
 
