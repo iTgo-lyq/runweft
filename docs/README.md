@@ -1,5 +1,7 @@
 # 项目文档
 
+[发布流程提速](project/changes/release-throughput/requirement.md)暂缓实施（2026-10-12 用户要求）：已保存[调研与耗时预算](project/changes/release-throughput/research.md)、[方案草稿](project/changes/release-throughput/technical.md)及 iclaude 评审结论；尚未修改发布实现，恢复需用户明确提出。
+
 [Runweft 1.1.4 发布验收](project/archive/2026-10-12-npm-uninstall-release/acceptance.md)已完成：全部代码合入 main，五包先beta、四平台实际公共安装与完整卸载通过后晋级latest，匿名五包摘要和Linux程序/Skill核对通过。[正式官网](https://runweft.pages.dev/)同步1.1.4；十文件摘要/MIME及三页浏览器通过。发布、安装与官网不依赖Actions artifact；失败及恢复证据见同一归档。
 
 [一键完整卸载](project/archive/2026-10-12-complete-uninstall/acceptance.md)已完成源码实现与自动验收：根级 uninstall 默认预览，--yes 停止选定 home 的全部受管服务/登记会话并删除程序、接入、数据和备份，保留其他软件、模型凭据、原生历史及源项目。260 项根测试和 Linux x64 真实 npm/独立包闭环通过；已随公共 1.1.4 发布，并追加四平台验收。
