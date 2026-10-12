@@ -3,8 +3,8 @@
   "id": "spec-trail-adoption",
   "title": "SpecTrail 工作流、历史 Change 与交互原型接入",
   "size": "large",
-  "status": "active",
-  "stage": "execution",
+  "status": "completed",
+  "stage": "close",
   "branch": "codex/spec-trail-adoption",
   "confirmations": {
     "requirement": {
@@ -49,7 +49,30 @@
       "commitTitle": "spec-trail-adoption T4: verify delivery and preserve paused planning"
     }
   },
-  "closure": {},
+  "closure": {
+    "verification": {
+      "result": "passed",
+      "at": "2026-10-12T14:47:31.479Z",
+      "summary": "独立subagent全量差异评审与真实发布复核通过，R4/R5已关闭；40项契约/历史证据、24视口、32公开对象、8ready、源码CI与暂停分支字节核验通过，证据见acceptance/execution/review。"
+    },
+    "acceptance": {
+      "result": "accepted",
+      "at": "2026-10-12T14:47:31.561Z",
+      "summary": "依据用户明确授权由Agent自动验收，主agent逐项验收通过；并非用户人工测试。实际范围与R2生命周期未核验限制见acceptance.md。",
+      "source": "当前会话AGENTS.md：用户已要求除远端协作外由agent自动完成验收，不将本地功能、安装、配置或看板转交用户手工测试；本次用户要求替换工作流、迁移历史并发布原型。"
+    },
+    "specs": {
+      "result": "not_needed",
+      "at": "2026-10-12T14:47:31.669Z",
+      "summary": "本次只变更开发工作流、历史流程记录和独立原型，不改变Runweft/HAPI产品能力；src、根依赖、HAPI和Specs与基线一致。长期开发规则已同步AGENTS、development和原型文档。"
+    },
+    "archive": {
+      "result": "done",
+      "at": "2026-10-12T14:47:43.797Z",
+      "summary": "完成SpecTrail替换、39历史Change/163任务迁移、8入口原型及R2固定发布；独立评审与授权自动验收通过，暂停计划在专属分支保留；R2生命周期配置403限制如实记录。",
+      "path": "docs/project/archive/2026-10-12-spec-trail-adoption"
+    }
+  },
   "previews": [
     {
       "id": "agents",
