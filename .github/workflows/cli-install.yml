@@ -25,7 +25,7 @@ jobs:
           - runner: macos-15-intel
             platform: darwin-x64
     runs-on: ${{ matrix.runner }}
-    timeout-minutes: 25
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -47,6 +47,10 @@ jobs:
           CANDIDATE_DIRECTORY: ${{ steps.candidate.outputs.directory }}
           RUNWEFT_SMOKE_PUBLIC_REGISTRY: '1'
         run: node scripts/smoke-install.mjs "$CANDIDATE_DIRECTORY"
+      - name: Verify complete uninstall and preservation on the exact public candidate
+        env:
+          CANDIDATE_DIRECTORY: ${{ steps.candidate.outputs.directory }}
+        run: node scripts/smoke-uninstall.mjs "$CANDIDATE_DIRECTORY" .dev-smoke/uninstall-ci/evidence.json
       - name: Keep sanitized installation evidence in logs
         if: always()
         run: node scripts/report-evidence.mjs

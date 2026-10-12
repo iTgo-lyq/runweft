@@ -40,7 +40,7 @@ runweft mcp check --client <codex或claude>
 
 按原角色启动：本机 Hub `start`，独立执行机 `runner start`，前台公开服务由原进程管理器执行 `serve --public`。核对 `--version/status/doctor/mcp check`，再做一次低风险真实调用。只执行用户指定范围，不更新在线其他实例。
 
-完整卸载：先用 `--version` 和 `uninstall --help` 核对实际版本支持；公共 npm 1.1.3 尚无此命令。用户已明确要求完整卸载即视为授权：先用 `runweft --home <目录> uninstall` 预览，核对数据根和删除范围；与要求一致就直接执行 `runweft --home <目录> uninstall --yes`，不再次确认。范围不符或命令报错时停止，并如实说明。npm 卸载失败时数据仍在，可重试；程序已删而数据未删时，按错误给出的准确路径处理。
+完整卸载：先用 `--version` 和 `uninstall --help` 核对实际版本支持；1.1.4 起支持完整卸载。用户已明确要求完整卸载即视为授权：先用 `runweft --home <目录> uninstall` 预览，核对数据根和删除范围；与要求一致就直接执行 `runweft --home <目录> uninstall --yes`，不再次确认。范围不符或命令报错时停止，并如实说明。npm 卸载失败时数据仍在，可重试；程序已删而数据未删时，按错误给出的准确路径处理。
 
 完整卸载无备份地移除该 home 的全部数据、当前程序、自身 MCP/hook 和已确认的 Skill，保留其他软件配置、模型凭据、原生会话和用户项目。默认 home 可省略 `--home <目录>`；`--dry-run` 始终只预览。不要在受管会话内执行完整卸载，使用独立终端。
 

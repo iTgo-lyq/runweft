@@ -1,13 +1,15 @@
 import assert from 'node:assert/strict';
-import { chmodSync, copyFileSync, cpSync, existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { chmodSync, cpSync, existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { spawn, spawnSync } from 'node:child_process';
 import { createHash, randomUUID } from 'node:crypto';
 import { createServer } from 'node:net';
 import { createRequire } from 'node:module';
 
-// Installs only local candidate files into a dedicated global prefix. No model calls or user config.
-const output = resolve(process.argv[2] ?? '.dev-smoke/complete-uninstall/npm-evidence.json');
+// Uses verified candidate tarballs; only the fixture main package dependency points to a local file.
+const packageRoot = resolve(process.argv[2] ?? 'dist/packages');
+const index = JSON.parse(readFileSync(join(packageRoot, 'index.json'), 'utf8'));
+const output = resolve(process.argv[3] ?? '.dev-smoke/complete-uninstall/npm-evidence.json');
 mkdirSync(dirname(output), { recursive: true });
 const root = mkdtempSync(resolve('.dev-smoke/uninstall-npm-'));
 const prefix = join(root, 'prefix'), user = join(root, 'user'), home = join(user, '.runweft'), otherHome = join(root, 'other-home');
@@ -15,10 +17,19 @@ const env = Object.fromEntries(Object.entries(process.env).filter(([key]) => !/^
 Object.assign(env, { HOME: user, CODEX_HOME: join(user, '.codex'), CLAUDE_CONFIG_DIR: join(user, '.claude'),
     NPM_CONFIG_USERCONFIG: join(root, 'npmrc'), NPM_CONFIG_GLOBALCONFIG: join(root, 'npmrc-global'), NPM_CONFIG_CACHE: join(root, 'npm-cache'), NPM_CONFIG_UPDATE_NOTIFIER: 'false' });
 for (const path of [user, env.CODEX_HOME, env.CLAUDE_CONFIG_DIR]) mkdirSync(path, { recursive: true });
+const tools = join(root, 'tools'); mkdirSync(tools);
+const npm = spawnSync('/usr/bin/which', ['npm'], { encoding: 'utf8' }).stdout.trim();
+assert(npm, 'npm must be available');
+symlinkSync(process.execPath, join(tools, 'node')); symlinkSync(realpathSync(npm), join(tools, 'npm'));
+env.PATH = `${tools}:/usr/bin:/bin:/usr/sbin:/sbin`;
+for (const name of ['ps', 'tar', 'git', 'npm', ...(process.platform === 'darwin' ? ['lsof'] : [])])
+    assert.equal(spawnSync('/usr/bin/which', [name], { env, encoding: 'utf8' }).status, 0, `${name} must be available`);
 writeFileSync(env.NPM_CONFIG_USERCONFIG, ''); writeFileSync(env.NPM_CONFIG_GLOBALCONFIG, '');
-const cli = join(prefix, 'bin', 'runweft'), sourceCli = resolve('dist/runweft'), sourceHapi = resolve('dist/hapi');
+const cli = join(prefix, 'bin', 'runweft'), sourceCli = join(root, 'control', 'bin', 'runweft'), sourceHapi = join(root, 'control', 'bin', 'hapi');
 const secrets = [], runnerStates = [], children = [];
-const evidence = { platform: process.platform, architecture: process.arch, scope: 'local candidate, dedicated npm prefix/HOME, real HAPI Hub and two Runners, control-session substitutes; no models', checks: [], success: false };
+const evidence = { platform: process.platform, architecture: process.arch, version: index.version, source: index.source,
+    scope: 'verified candidate tarballs, dedicated npm prefix/HOME, real HAPI Hub and two Runners, control-session substitutes; no model clients',
+    fixtureManifestChange: 'main optionalDependencies only; platform tarball unchanged', checks: [], success: false };
 function check(name) { evidence.checks.push(name); console.log(`PASS ${name}`); }
 function command(executable, args, overrides = {}) {
     const result = spawnSync(executable, args, { cwd: root, env, encoding: 'utf8', timeout: 65_000, ...overrides });
@@ -77,23 +88,29 @@ function connect(url, identity) {
 }
 try {
     const platformName = `runweft-${process.platform}-${process.arch}`, stage = join(root, 'stage'), nativeStage = join(stage, platformName), mainStage = join(stage, 'runweft');
-    cpSync(resolve('dist/packages', platformName), nativeStage, { recursive: true });
-    cpSync(resolve('dist/packages/runweft'), mainStage, { recursive: true });
-    copyFileSync(sourceCli, join(nativeStage, 'bin', 'runweft'));
-    cpSync(resolve('skills/runweft'), join(nativeStage, 'skills/runweft'), { recursive: true });
-    cpSync(resolve('skills/runweft'), join(mainStage, 'skills/runweft'), { recursive: true });
-    copyFileSync(resolve('docs/usage.md'), join(mainStage, 'README.md')); copyFileSync(resolve('docs/usage.md'), join(nativeStage, 'README.md'));
-    const packed = JSON.parse(command('npm', ['pack', '--json', '--ignore-scripts', '--pack-destination', stage], { cwd: nativeStage }))[0].filename;
+    const platformEntry = index.packages.find(entry => entry.name === platformName), mainEntry = index.packages.find(entry => entry.name === 'runweft');
+    assert(platformEntry && mainEntry, 'Candidate must contain the main and current platform package');
+    for (const [entry, directory] of [[platformEntry, nativeStage], [mainEntry, mainStage]]) {
+        const tarball = join(packageRoot, entry.tarball);
+        assert.equal(createHash('sha512').update(readFileSync(tarball)).digest('base64'), entry.sha512, `${entry.name} tarball differs`);
+        mkdirSync(directory, { recursive: true });
+        command('tar', ['-xzf', tarball, '--strip-components=1', '-C', directory]);
+    }
+    cpSync(nativeStage, join(root, 'control'), { recursive: true });
     const mainManifest = JSON.parse(readFileSync(join(mainStage, 'package.json'), 'utf8'));
-    mainManifest.optionalDependencies = { [platformName]: `file:${join(stage, packed)}` };
+    assert.equal(mainManifest.version, index.version);
+    mainManifest.optionalDependencies = { [platformName]: `file:${join(packageRoot, platformEntry.tarball)}` };
     put(join(mainStage, 'package.json'), mainManifest);
     const mainPacked = JSON.parse(command('npm', ['pack', '--json', '--ignore-scripts', '--pack-destination', stage], { cwd: mainStage }))[0].filename;
     command('npm', ['install', '--global', '--prefix', prefix, join(stage, mainPacked), '--ignore-scripts', '--no-audit', '--no-fund', '--offline']);
     const require = createRequire(join(prefix, 'lib', 'node_modules', 'runweft', 'package.json'));
     const nativeRoot = dirname(require.resolve(`${platformName}/package.json`));
-    evidence.binary = createHash('sha256').update(readFileSync(join(nativeRoot, 'bin/runweft'))).digest('hex');
-    assert.equal(evidence.binary, createHash('sha256').update(readFileSync(sourceCli)).digest('hex'));
-    check('real npm global installation resolves the local compiled candidate and its platform dependency');
+    evidence.binaries = Object.fromEntries(['runweft', 'hapi'].map(name => {
+        const hash = createHash('sha256').update(readFileSync(join(nativeRoot, 'bin', name))).digest('hex');
+        assert.equal(hash, platformEntry.binaries[`bin/${name}`], `${name} binary differs`); return [name, hash];
+    }));
+    assert.equal(command(cli, ['--version']), index.version);
+    check('real npm global installation resolves the verified candidate and its unchanged platform tarball');
 
     const keepFiles = [join(user, '.codex', 'auth.json'), join(user, '.codex', 'sessions', 'native.jsonl'), join(user, '.claude', '.credentials.json'),
         join(user, '.claude', 'projects', 'native.jsonl'), join(user, 'project', 'uncommitted.txt'), join(user, '.hapi', 'settings.json'),
@@ -105,8 +122,10 @@ try {
     const claudeOriginal = { other: 'keep-setting', mcpServers: { keep: { command: 'keep-command' } } };
     const settingsOriginal = { model: 'keep-model', hooks: { PreToolUse: [{ matcher: 'Bash', hooks: [{ type: 'command', command: 'other-hook' }] }] } };
     put(join(env.CLAUDE_CONFIG_DIR, '.claude.json'), claudeOriginal); put(join(env.CLAUDE_CONFIG_DIR, 'settings.json'), settingsOriginal);
-    run(['init']); run(['mcp', 'install', '--client', 'all']);
-    for (const directory of [join(user, '.agents', 'skills', 'runweft'), join(user, '.codex', 'skills', 'runweft'), join(user, '.claude', 'skills', 'runweft')]) cpSync(resolve('skills/runweft'), directory, { recursive: true });
+    run(['init']); run(['mcp', 'install', '--client', 'claude']);
+    put(join(env.CODEX_HOME, 'config.toml'), codexOriginal + '\n[mcp_servers.runweft]\ncommand=' + JSON.stringify(join(nativeRoot, 'bin', 'runweft'))
+        + '\nargs=' + JSON.stringify(['--home', home, 'mcp', 'serve', '--client', 'codex']) + '\n[mcp_servers.runweft.env]\nRUNWEFT_MCP_MANAGED="1"\n');
+    for (const directory of [join(user, '.agents', 'skills', 'runweft'), join(user, '.codex', 'skills', 'runweft'), join(user, '.claude', 'skills', 'runweft')]) cpSync(join(nativeStage, 'skills/runweft'), directory, { recursive: true });
     const cold = snapshot(home), configs = snapshot(env.CODEX_HOME);
     assert.equal(run(['uninstall']).applied, false); assert.equal(run(['uninstall', '--yes', '--dry-run']).applied, false);
     assert.deepEqual(snapshot(home), cold); assert.deepEqual(snapshot(env.CODEX_HOME), configs);
