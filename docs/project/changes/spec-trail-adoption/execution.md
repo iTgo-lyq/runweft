@@ -27,3 +27,7 @@ R2 适配器沿用 open-folio 固定提交的条件写入、重复版本字节�
 独立交付评审的 R4/R5 已修正：补齐原 Plan 的明确跨 Change 前置，并让原型机器/Runtime 在空间间共享同一内存资源、分别计算关联/分享/停用。历史修正仍属于本次用户明确授权的迁移，不更改原验证结论或时间。真实发布使用后续干净源码检查点，登记完成后补充实际版本与摘要。
 
 R5 补充链路在三设备全部通过：机器关联第二空间、共享 Runtime、切换空间读取、空间停用相互隔离、撤回关联同时撤回分享。全套仍为 24 组页面/设备流程，原始日志 `prototype-cross-space.log`。
+
+实际发布从干净且已推送的 `58882d25872fe1779982b4b629cba1cd8120f835` 构建。固定版本 `2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06`，产物摘要 `sha256:167353c25a15f8d77d4bff846bc1e95746959596b7c561524177d5c1953b6332`；8 个 HTML、24 张 PNG，共 2,411,204 字节。使用已有本机 R2 配置注入凭据，未修改凭据或桶设置；所有 32 对象条件写入并匿名逐字节/MIME 核对通过。成功结果经官方 register 同时写入清单和 Change previews。
+
+官方 `validate --browser` 对 8 入口通过；额外从真实公开地址以 allow-scripts iframe 检查 8 项 ready 握手，返回版本均与 artifact 一致，Agent 和仓库在托管页实际创建通过，未出现浏览器错误。回执在 `.dev-smoke/spec-trail-adoption/hosted-receipt.json`；截图已目视核对桌面任务和移动 Agent 主体。源码提交的远端 [Development checks](https://github.com/iTgo-lyq/runweft/actions/runs/38264541468) core/prototype 均成功。生命周期配置仍因 403 无法读取，未声称托管版本具有已验证的永久保留策略。

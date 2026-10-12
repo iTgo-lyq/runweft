@@ -10,7 +10,28 @@
         "pc-web",
         "ipad",
         "mobile"
-      ]
+      ],
+      "artifact": {
+        "type": "hosted",
+        "version": "2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06",
+        "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06/identity/index.html",
+        "sourceCommit": "58882d25872fe1779982b4b629cba1cd8120f835",
+        "digest": "sha256:167353c25a15f8d77d4bff846bc1e95746959596b7c561524177d5c1953b6332",
+        "thumbnails": [
+          {
+            "device": "pc-web",
+            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06/identity/pc-web.png"
+          },
+          {
+            "device": "ipad",
+            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06/identity/ipad.png"
+          },
+          {
+            "device": "mobile",
+            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06/identity/mobile.png"
+          }
+        ]
+      }
     },
     {
       "id": "tasks",
@@ -21,7 +42,28 @@
         "pc-web",
         "ipad",
         "mobile"
-      ]
+      ],
+      "artifact": {
+        "type": "hosted",
+        "version": "2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06",
+        "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06/tasks/index.html",
+        "sourceCommit": "58882d25872fe1779982b4b629cba1cd8120f835",
+        "digest": "sha256:167353c25a15f8d77d4bff846bc1e95746959596b7c561524177d5c1953b6332",
+        "thumbnails": [
+          {
+            "device": "pc-web",
+            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06/tasks/pc-web.png"
+          },
+          {
+            "device": "ipad",
+            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06/tasks/ipad.png"
+          },
+          {
+            "device": "mobile",
+            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06/tasks/mobile.png"
+          }
+        ]
+      }
     },
     {
       "id": "machines",
@@ -32,7 +74,28 @@
         "pc-web",
         "ipad",
         "mobile"
-      ]
+      ],
+      "artifact": {
+        "type": "hosted",
+        "version": "2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06",
+        "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06/machines/index.html",
+        "sourceCommit": "58882d25872fe1779982b4b629cba1cd8120f835",
+        "digest": "sha256:167353c25a15f8d77d4bff846bc1e95746959596b7c561524177d5c1953b6332",
+        "thumbnails": [
+          {
+            "device": "pc-web",
+            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06/machines/pc-web.png"
+          },
+          {
+            "device": "ipad",
+            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06/machines/ipad.png"
+          },
+          {
+            "device": "mobile",
+            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06/machines/mobile.png"
+          }
+        ]
+      }
     },
     {
       "id": "runtimes",
@@ -43,7 +106,28 @@
         "pc-web",
         "ipad",
         "mobile"
-      ]
+      ],
+      "artifact": {
+        "type": "hosted",
+        "version": "2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06",
+        "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06/runtimes/index.html",
+        "sourceCommit": "58882d25872fe1779982b4b629cba1cd8120f835",
+        "digest": "sha256:167353c25a15f8d77d4bff846bc1e95746959596b7c561524177d5c1953b6332",
+        "thumbnails": [
+          {
+            "device": "pc-web",
+            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06/runtimes/pc-web.png"
+          },
+          {
+            "device": "ipad",
+            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06/runtimes/ipad.png"
+          },
+          {
+            "device": "mobile",
+            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06/runtimes/mobile.png"
+          }
+        ]
+      }
     },
     {
       "id": "agents",
@@ -54,7 +138,28 @@
         "pc-web",
         "ipad",
         "mobile"
-      ]
+      ],
+      "artifact": {
+        "type": "hosted",
+        "version": "2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06",
+        "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06/agents/index.html",
+        "sourceCommit": "58882d25872fe1779982b4b629cba1cd8120f835",
+        "digest": "sha256:167353c25a15f8d77d4bff846bc1e95746959596b7c561524177d5c1953b6332",
+        "thumbnails": [
+          {
+            "device": "pc-web",
+            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06/agents/pc-web.png"
+          },
+          {
+            "device": "ipad",
+            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06/agents/ipad.png"
+          },
+          {
+            "device": "mobile",
+            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06/agents/mobile.png"
+          }
+        ]
+      }
     },
     {
       "id": "repositories",
@@ -65,7 +170,28 @@
         "pc-web",
         "ipad",
         "mobile"
-      ]
+      ],
+      "artifact": {
+        "type": "hosted",
+        "version": "2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06",
+        "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06/repositories/index.html",
+        "sourceCommit": "58882d25872fe1779982b4b629cba1cd8120f835",
+        "digest": "sha256:167353c25a15f8d77d4bff846bc1e95746959596b7c561524177d5c1953b6332",
+        "thumbnails": [
+          {
+            "device": "pc-web",
+            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06/repositories/pc-web.png"
+          },
+          {
+            "device": "ipad",
+            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06/repositories/ipad.png"
+          },
+          {
+            "device": "mobile",
+            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06/repositories/mobile.png"
+          }
+        ]
+      }
     },
     {
       "id": "selections",
@@ -76,7 +202,28 @@
         "pc-web",
         "ipad",
         "mobile"
-      ]
+      ],
+      "artifact": {
+        "type": "hosted",
+        "version": "2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06",
+        "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06/selections/index.html",
+        "sourceCommit": "58882d25872fe1779982b4b629cba1cd8120f835",
+        "digest": "sha256:167353c25a15f8d77d4bff846bc1e95746959596b7c561524177d5c1953b6332",
+        "thumbnails": [
+          {
+            "device": "pc-web",
+            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06/selections/pc-web.png"
+          },
+          {
+            "device": "ipad",
+            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06/selections/ipad.png"
+          },
+          {
+            "device": "mobile",
+            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06/selections/mobile.png"
+          }
+        ]
+      }
     },
     {
       "id": "members",
@@ -87,7 +234,28 @@
         "pc-web",
         "ipad",
         "mobile"
-      ]
+      ],
+      "artifact": {
+        "type": "hosted",
+        "version": "2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06",
+        "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06/members/index.html",
+        "sourceCommit": "58882d25872fe1779982b4b629cba1cd8120f835",
+        "digest": "sha256:167353c25a15f8d77d4bff846bc1e95746959596b7c561524177d5c1953b6332",
+        "thumbnails": [
+          {
+            "device": "pc-web",
+            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06/members/pc-web.png"
+          },
+          {
+            "device": "ipad",
+            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06/members/ipad.png"
+          },
+          {
+            "device": "mobile",
+            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06/members/mobile.png"
+          }
+        ]
+      }
     }
   ]
 }
