@@ -1,6 +1,8 @@
 # 项目文档
 
-[发布流程提速](project/changes/release-throughput/requirement.md)暂缓实施（2026-10-12 用户要求）：已保存[调研与耗时预算](project/changes/release-throughput/research.md)、[方案草稿](project/changes/release-throughput/technical.md)及 iclaude 评审结论；尚未修改发布实现，恢复需用户明确提出。
+开发流程已接入 [SpecTrail](../.agents/skills/spec-trail/SKILL.md)。[独立 Hub 交互原型](../packages/prototype/README.md)包含 8 个入口和三设备视图，工作台读取 `workflow.json`、Change 状态与固定原型清单。
+
+[发布流程提速](https://github.com/iTgo-lyq/runweft/tree/codex/release-throughput/docs/project/changes/release-throughput)保存在独立规划分支，继续按 2026-10-12 用户要求暂缓实施。调研、方案草稿和评审结论完整保留；恢复需用户明确提出。
 
 [Runweft 1.1.4 发布验收](project/archive/2026-10-12-npm-uninstall-release/acceptance.md)已完成：全部代码合入 main，五包先beta、四平台实际公共安装与完整卸载通过后晋级latest，匿名五包摘要和Linux程序/Skill核对通过。[正式官网](https://runweft.pages.dev/)同步1.1.4；十文件摘要/MIME及三页浏览器通过。发布、安装与官网不依赖Actions artifact；失败及恢复证据见同一归档。
 

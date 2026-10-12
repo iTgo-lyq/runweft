@@ -44,7 +44,9 @@
     },
     "T4": {
       "title": "整体验收与规划分支整理",
-      "status": "todo"
+      "status": "done",
+      "verification": "独立全量交付评审及发布复核通过，R4/R5关闭；源码CI成功，40项契约通过；暂停分支b8290de已推送且4文件SHA一致；验收对应与Specs无需变更依据已记录，待按关闭顺序归档。",
+      "commitTitle": "spec-trail-adoption T4: verify delivery and preserve paused planning"
     }
   },
   "closure": {},

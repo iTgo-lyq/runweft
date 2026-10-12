@@ -150,3 +150,7 @@ gh workflow run npm-publish.yml --repo iTgo-lyq/runweft --ref main -f release-ta
 新 clone 在仓库根目录运行 `git config --local core.hooksPath .githooks` 启用共享提交入口；同仓库 worktree 共用该 Git 配置。hook 调用当前工作区的 SpecTrail 校验器，只读取本次真实暂存内容。`node .agents/skills/spec-trail/setup/scripts/check-setup.mjs .` 只检查准备条件，实际 hook 仍需提交验证。`node scripts/check-workflow.mjs` 检查完整 Workflow、Change、任务顺序和依赖图，CI 同样执行。
 
 main 是守护分支，GitHub 当前未配置服务端分支保护。Change 在 `codex/<id>` 分支推进；本地提交后及时推送。主干不保留尚未归档 Change，暂停工作保存在其专属分支，不因工作流迁移恢复执行。
+
+独立原型源码和发布步骤见 [packages/prototype](../packages/prototype/README.md)。包使用自己的依赖锁，`bun run --cwd packages/prototype build` 构建，`bun run --cwd packages/prototype test` 自动验收。托管使用 Cloudflare R2 固定版本，当前清单保存公开页面和设备截图地址；原型不会触发 npm 或官网发布。
+
+工作台使用具备仓库读取权限的个人 GitHub 连接自动发现 SpecTrail 仓库。Changes 按已推送分支聚合，当前原型总览读取默认分支；本次引用进入 main 后才更新总览。暂停的 [release-throughput](https://github.com/iTgo-lyq/runweft/tree/codex/release-throughput/docs/project/changes/release-throughput) 保留在同名规划分支；恢复时先同步最新守护分支，并保留暂停目录，直到用户明确恢复。
