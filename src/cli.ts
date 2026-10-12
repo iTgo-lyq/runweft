@@ -11,6 +11,7 @@ import { addTaskCommands } from './tasks/commands';
 import { addPreparationCommands } from './remote/commands';
 import { addArtifactCommands } from './artifacts/commands';
 import { addHubCommands, addHubResourceCommands } from './hub/resources/commands';
+import { addUninstallCommand } from './uninstall';
 
 import { addRepositoryCommands } from './hub/repositories/commands';
 import { HubClient } from './hub/client';
@@ -84,6 +85,7 @@ export function createProgram() {
     addPreparationCommands(workspace, program, context, output, () => new HubPreparationClient(connection(), process.cwd()));
     addServiceCommands(program, context, output);
     addMcpCommands(program, context, output);
+    addUninstallCommand(program, output);
     addHubResourceCommands(program, connection, () => context().home, output);
     addHubCommands(program, output);
     addRepositoryCommands(program, output, connection);

@@ -69,6 +69,20 @@ function ownedHook(value: any): boolean {
     return value?.type === 'command' && Array.isArray(value.args) && value.args.at(-2) === 'mcp' && value.args.at(-1) === 'hook'
         && value.args.includes('--home');
 }
+type RemovalScope = { executables: string[] };
+function inRemovalScope(c: ResolvedConfig, value: any, scope?: RemovalScope): boolean {
+    if (!scope) return true;
+    const args = value?.args;
+    const index = Array.isArray(args) ? args.indexOf('--home') : -1;
+    const home = index >= 0 && typeof args[index + 1] === 'string' ? args[index + 1] : undefined;
+    const resolved = home && resolve(home.startsWith('~/') ? join(c.env.HOME || homedir(), home.slice(2)) : home);
+    if (resolved === c.home) return true;
+    let command = value?.command;
+    try { if (typeof command === 'string' && existsSync(command)) command = realpathSync(command); } catch { /* Keep the original command for matching. */ }
+    if (scope.executables.includes(command)) throw new RunweftError('uninstall_mcp_other_home', '此安装的 MCP 或 hook 使用了另一个数据目录，未修改配置。',
+        `先核对${home ? ` ${home}` : '该注册的 --home'}，再从其数据目录执行卸载。`);
+    return false;
+}
 function withoutServer(value: JsonObject) {
     const copy = structuredClone(value);
     if (copy.mcp_servers) {
@@ -78,12 +92,20 @@ function withoutServer(value: JsonObject) {
     return copy;
 }
 
-function codexChange(c: ResolvedConfig, install: boolean, launch: string[]): ConfigChange[] {
+function codexChange(c: ResolvedConfig, install: boolean, launch: string[], scope?: RemovalScope): ConfigChange[] {
     const path = target(clientFiles(c, 'codex')[0]);
     const before = read(path), config = parse(before, path, true);
     const current = object(config.mcp_servers, path).runweft;
     if (install && current && !managed(current)) throw new RunweftError('mcp_name_conflict', 'Codex 已有非 Runweft 管理的 runweft MCP 条目。', `先在 ${path} 重命名该条目，再安装。`);
     if ((!install && !managed(current)) || (install && isDeepStrictEqual(current, entry(c, 'codex', launch)))) return [];
+    if (!install && !inRemovalScope(c, current, scope)) return [];
+    if (!install) {
+        const after = replaceCodexMcp(before!, '', false);
+        if (!isDeepStrictEqual(withoutServer(config), withoutServer(parse(after, path, true)))) {
+            throw new RunweftError('codex_config_unexpected_change', '移除 MCP 会影响其他 Codex 配置，未修改文件。', `检查 ${path}`);
+        }
+        return [{ path, before, after }];
+    }
     const codex = Bun.which('codex', { PATH: c.env.PATH });
     if (!codex) throw new RunweftError('codex_missing', '需要 Codex 原生命令来编辑 TOML 配置。', '安装 Codex 并确认 codex 在 PATH 中。');
     const staging = join(dataPaths(c).temporary, `mcp-${randomUUID()}`);
@@ -110,7 +132,7 @@ function codexChange(c: ResolvedConfig, install: boolean, launch: string[]): Con
     } finally { rmSync(staging, { recursive: true, force: true }); }
 }
 
-function claudeChanges(c: ResolvedConfig, install: boolean, launch: string[]): ConfigChange[] {
+function claudeChanges(c: ResolvedConfig, install: boolean, launch: string[], scope?: RemovalScope): ConfigChange[] {
     const [mcpPath, settingsPath] = clientFiles(c, 'claude').map(target);
     const mcpBefore = read(mcpPath), settingsBefore = read(settingsPath);
     const mcp = parse(mcpBefore, mcpPath), settings = parse(settingsBefore, settingsPath);
@@ -118,14 +140,14 @@ function claudeChanges(c: ResolvedConfig, install: boolean, launch: string[]): C
     const servers = object(mcp.mcpServers, mcpPath);
     if (install && servers.runweft && !managed(servers.runweft)) throw new RunweftError('mcp_name_conflict', 'Claude Code 已有非 Runweft 管理的 runweft MCP 条目。', `先在 ${mcpPath} 重命名该条目，再安装。`);
     if (install) mcp.mcpServers = { ...servers, runweft: { type: 'stdio', ...entry(c, 'claude', launch) } };
-    else if (managed(servers.runweft)) { delete servers.runweft; if (!Object.keys(servers).length) delete mcp.mcpServers; }
+    else if (managed(servers.runweft) && inRemovalScope(c, servers.runweft, scope)) { delete servers.runweft; if (!Object.keys(servers).length) delete mcp.mcpServers; }
     const hooks = object(settings.hooks, settingsPath);
     if (hooks.PreToolUse !== undefined && !Array.isArray(hooks.PreToolUse)) throw new RunweftError('host_config_invalid', 'Claude PreToolUse 必须是数组。', `检查 ${settingsPath}`);
     const previous: JsonObject[] = hooks.PreToolUse ?? [];
     const next = previous.flatMap(rule => {
         object(rule, settingsPath);
         if (rule.matcher !== matcher || !Array.isArray(rule.hooks)) return [rule];
-        const others = rule.hooks.filter((hook: unknown) => !ownedHook(hook));
+        const others = rule.hooks.filter((hook: unknown) => !ownedHook(hook) || !inRemovalScope(c, hook, scope));
         return others.length ? [{ ...rule, hooks: others }] : [];
     });
     if (install) next.push({ matcher, hooks: [{ type: 'command', command: launch[0], args: [...launch.slice(1), '--home', c.home, 'mcp', 'hook'] }] });
@@ -141,14 +163,14 @@ const backupDirectory = (c: ResolvedConfig) => join(c.home, 'backups', 'mcp');
 function writeContent(path: string, content: string | null) { if (content === null) { if (existsSync(path)) unlinkSync(path); } else atomicWrite(path, content); }
 
 /** All candidates are prepared before writing; a failed multi-file edit rolls back only our own writes. */
-export function applyConfigChanges(c: ResolvedConfig, operation: string, candidates: ConfigChange[], write = writeContent) {
+export function applyConfigChanges(c: ResolvedConfig, operation: string, candidates: ConfigChange[], write = writeContent, backup = true) {
     const changes = candidates.filter(change => change.before !== change.after);
     if (!changes.length) return { changed: false, files: [] as string[], backupId: null, backupPath: null };
     for (const change of changes) {
         if (read(change.path) !== change.before) throw new RunweftError('host_config_changed', '配置在准备期间被其他进程修改，已停止操作。', `重新检查 ${change.path} 后再运行命令。`);
     }
-    const id = randomUUID(), path = join(backupDirectory(c), `${id}.json`);
-    atomicWrite(path, JSON.stringify({ id, createdAt: new Date().toISOString(), operation, changes }, null, 2));
+    const id = backup ? randomUUID() : null, path = id ? join(backupDirectory(c), `${id}.json`) : null;
+    if (path) atomicWrite(path, JSON.stringify({ id, createdAt: new Date().toISOString(), operation, changes }, null, 2));
     const written: ConfigChange[] = [];
     try {
         for (const change of changes) {
@@ -164,15 +186,19 @@ export function applyConfigChanges(c: ResolvedConfig, operation: string, candida
             } catch { unresolved.push(change.path); }
         }
         throw new RunweftError('mcp_config_write_failed', unresolved.length ? '配置写入失败；部分文件有后续修改或无法回退，已保留现场。' : '配置写入失败；本次已写入的文件均已回退。',
-            `备份：${path}${unresolved.length ? `\n需检查：${unresolved.join('、')}` : ''}`);
+            `${path ? `备份：${path}` : '完整卸载未生成磁盘备份；修复配置写入问题后重试。'}${unresolved.length ? `\n需检查：${unresolved.join('、')}` : ''}`);
     }
     return { changed: true, files: changes.map(change => change.path), backupId: id, backupPath: path };
 }
 
 export function configureMcp(c: ResolvedConfig, install: boolean, selection?: string, launch = selfCommand([])) {
     const clients = selectedClients(c, selection);
-    const changes = clients.flatMap(client => client === 'codex' ? codexChange(c, install, launch) : claudeChanges(c, install, launch));
+    const changes = prepareMcpChanges(c, install, clients, launch);
     return { clients, ...applyConfigChanges(c, install ? 'install' : 'uninstall', changes) };
+}
+
+export function prepareMcpChanges(c: ResolvedConfig, install: boolean, clients: HostClient[] = ['codex', 'claude'], launch = selfCommand([]), scope?: RemovalScope) {
+    return clients.flatMap(client => client === 'codex' ? codexChange(c, install, launch, scope) : claudeChanges(c, install, launch, scope));
 }
 
 export function listMcpBackups(c: ResolvedConfig) {
