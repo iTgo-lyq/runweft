@@ -32,7 +32,9 @@
     },
     "T2": {
       "title": "稳定候选并行验收且完整门禁后才晋级",
-      "status": "todo"
+      "status": "done",
+      "verification": "46 项发布/官网 Node 测试、actionlint、workflow/diff；原公共 1.1.4 两包与配对程序验证、access/storage/web 及网页 DOM 精确安装通过；新四平台 CI 留待授权发行",
+      "commitTitle": "release-throughput T2: parallelize immutable candidate validation with complete promotion gates"
     },
     "T3": {
       "title": "官网接续与发布证据自动收尾",

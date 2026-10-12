@@ -11,6 +11,7 @@ import { checkManifest, compareReleaseVersions, distTags, metadata, npmPublishAr
     publishCandidate, registry, releaseChannel, validateCandidate } from './npm-publish.mjs';
 
 import { publicReadBudget, publicReadError, publicResponse } from './npm-read.mjs';
+import { assertCandidateBinaries } from './fixtures/installed-binaries.mjs';
 
 const delay = () => new Promise(resolve => setTimeout(resolve, 5000));
 const descriptorMarker = 'RUNWEFT_RELEASE_DESCRIPTOR=';
@@ -78,7 +79,31 @@ export function recoveryMode(published, prior, sourceRevision, version) {
     assert(prior.release, 'Five versions already exist; supply source-run-id with the original release descriptor. Never reconstruct a candidate from registry metadata.');
     assert.equal(prior.release.source.revision, sourceRevision, 'Source run belongs to a different tag commit');
     assert.equal(prior.release.version, version, 'Source run version differs');
+    assert.equal(prior.prepublicationVerified, true, 'Original upload must have successful prepublication integration evidence');
     return 'existing';
+}
+
+export function releaseChecks(version, publishing, mode) {
+    assert(['build', 'existing'].includes(mode), 'Unknown release mode');
+    const stable = releaseChannel(version) === 'latest';
+    return { publicIntegration: publishing && (stable || mode === 'existing'),
+        groups: publishing && stable ? ['service-package'] : ['access', 'storage', 'web', 'service-package'],
+        siteInstall: publishing && stable };
+}
+
+export function unpackRelease(release, directory, platform = process.platform + '-' + process.arch) {
+    assertDescriptor(release);
+    const entry = release.packages.find(entry => entry.name === 'runweft-' + platform);
+    assert(entry, 'Unsupported candidate platform');
+    const tarball = join(directory, entry.tarball), destination = join(directory, entry.path);
+    assert.equal(createHash('sha512').update(readFileSync(tarball)).digest('base64'), entry.sha512, 'Candidate archive changed before extraction');
+    mkdirSync(destination, { recursive: true });
+    command('tar', ['-xzf', tarball, '--strip-components=1', '-C', destination]);
+    assert.deepEqual(JSON.parse(readFileSync(join(destination, 'package.json'))), entry.manifest);
+    const binary = join(destination, 'bin/runweft');
+    const binaries = assertCandidateBinaries(binary, Object.fromEntries(['runweft', 'hapi'].map(name =>
+        [name, { sha256: entry.binaries['bin/' + name] }])));
+    return { binary, binaries };
 }
 
 export async function verifyPublicRelease(release, { read, request = fetch, pause, timeoutMs = 180_000,
@@ -124,9 +149,14 @@ export async function downloadRelease(release, directory, { read, request = fetc
     return directory;
 }
 
-export async function promoteRelease(release, { installationResult, read = metadata, tags = distTags, setTag,
+export async function promoteRelease(release, { installationResult, betaResult, integrationResult, validationMode,
+    read = metadata, tags = distTags, setTag,
     pause = delay, timeoutMs = 3 * 60_000 }) {
     assert.equal(installationResult, 'success', 'All four native installation jobs must succeed before promotion');
+    assert.equal(betaResult, 'success', 'Beta prepublication checks must succeed');
+    assert(['public', 'inline'].includes(validationMode), 'Missing release validation mode');
+    if (releaseChannel(release.version) === 'latest') assert.equal(validationMode, 'public', 'Stable releases require public candidate integration');
+    assert.equal(integrationResult, validationMode === 'public' ? 'success' : 'skipped', 'Required candidate integration did not succeed');
     await verifyPublicRelease(release, { read, pause, timeoutMs });
     if (releaseChannel(release.version) === 'beta') return { version: release.version, channel: 'beta', promoted: false, success: true };
     const entries = packageNames.map(name => release.packages.find(p => p.name === name));
@@ -176,21 +206,26 @@ export async function downloadJobLog(repository, jobId, { token = process.env.GH
     return download.text();
 }
 
-async function previousRunLog(env) {
+export async function previousRunLog(env, { query = path => JSON.parse(command('gh', ['api', path])),
+    readLog = downloadJobLog } = {}) {
     const id = env.SOURCE_RUN_ID || env.GITHUB_RUN_ID;
     assert.match(id ?? '', /^\d+$/);
     assert.match(env.GITHUB_REPOSITORY ?? '', /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/);
     const base = 'repos/' + env.GITHUB_REPOSITORY + '/actions/runs/' + id;
-    const info = JSON.parse(command('gh', ['api', base]));
+    const info = await query(base);
     assert.equal(info.path, '.github/workflows/npm-publish.yml', 'Source run must use npm-publish.yml in this repository');
     const attempts = id === env.GITHUB_RUN_ID ? Number(env.GITHUB_RUN_ATTEMPT) - 1 : info.run_attempt;
-    let log = '';
+    let log = '', prepublicationVerified = false;
     for (let attempt = 1; attempt <= attempts; attempt++) {
-        const jobs = JSON.parse(command('gh', ['api', base + '/attempts/' + attempt + '/jobs?per_page=100'])).jobs;
-        for (const job of jobs.filter(job => job.name === 'beta')) log += await downloadJobLog(
-            env.GITHUB_REPOSITORY, job.id, { token: env.GH_TOKEN }) + '\n';
+        const jobs = (await query(base + '/attempts/' + attempt + '/jobs?per_page=100')).jobs;
+        for (const job of jobs.filter(job => job.name === 'beta')) {
+            const part = await readLog(env.GITHUB_REPOSITORY, job.id, { token: env.GH_TOKEN });
+            if (readReleaseLog(part).uploadStarted && job.steps?.some(step =>
+                step.name === 'Check every model-free integration group on the frozen candidate' && step.conclusion === 'success')) prepublicationVerified = true;
+            log += part + '\n';
+        }
     }
-    return readReleaseLog(log);
+    return { ...readReleaseLog(log), prepublicationVerified };
 }
 
 async function prepare(env) {
@@ -213,12 +248,15 @@ async function prepare(env) {
     if (publishing && (env.SOURCE_RUN_ID || Number(env.GITHUB_RUN_ATTEMPT) > 1)) prior = await previousRunLog(env);
     const manifests = publishing ? await Promise.all(packageNames.map(name => metadata({ name, version: pkg.version }))) : Array(5).fill(null);
     const mode = recoveryMode(manifests, prior, revision, pkg.version);
+    const checks = releaseChecks(pkg.version, publishing, mode);
     if (mode === 'existing') {
         assert.deepEqual(prior.release.hapi, pkg.hapi);
         await verifyPublicRelease(prior.release);
         console.log(descriptorMarker + JSON.stringify(prior.release));
     }
     output({ 'source-ref': revision, publish: publishing, build: mode === 'build',
+        'public-integration': checks.publicIntegration, 'integration-groups': checks.groups.join(' '),
+        'validation-mode': checks.publicIntegration ? 'public' : 'inline', 'site-install': checks.siteInstall,
         release: mode === 'existing' ? JSON.stringify(prior.release) : '' });
     report('RELEASE_PLAN', { tag: env.RELEASE_TAG || null, sourceRevision: revision, controlRevision: env.GITHUB_SHA, mode, publishing });
 }
@@ -290,10 +328,18 @@ async function main() {
             const directory = await downloadRelease(release, resolve('.dev-smoke/npm-release/packages'), { record: item => report('PUBLIC_READ', item) });
             output({ directory }); break;
         }
+        case 'unpack': {
+            const release = JSON.parse(process.env.RELEASE_DESCRIPTOR);
+            const result = unpackRelease(release, resolve(process.env.CANDIDATE_DIRECTORY));
+            output({ binary: result.binary }); report('INTEGRATION_CANDIDATE', { ...result, version: release.version,
+                source: release.source, controlRevision: process.env.GITHUB_SHA }); break;
+        }
         case 'promote': {
             const release = JSON.parse(process.env.RELEASE_DESCRIPTOR);
             const npm = npmRunner();
-            report('PROMOTION', await promoteRelease(release, { installationResult: process.env.INSTALL_RESULT, setTag: npm.setTag }));
+            report('PROMOTION', await promoteRelease(release, { installationResult: process.env.INSTALL_RESULT,
+                betaResult: process.env.BETA_RESULT, integrationResult: process.env.INTEGRATION_RESULT,
+                validationMode: process.env.VALIDATION_MODE, setTag: npm.setTag }));
             break;
         }
         default: throw new Error('Usage: node scripts/npm-release.mjs prepare|beta|download|promote');

@@ -6,6 +6,9 @@ on:
       release:
         type: string
         required: true
+      site-install:
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -51,6 +54,14 @@ jobs:
         env:
           CANDIDATE_DIRECTORY: ${{ steps.candidate.outputs.directory }}
         run: node scripts/smoke-uninstall.mjs "$CANDIDATE_DIRECTORY" .dev-smoke/uninstall-ci/evidence.json
+      - name: Verify stable website DOM installation and packaged instructions
+        if: matrix.platform == 'linux-x64' && inputs.site-install
+        env:
+          RELEASE_DESCRIPTOR: ${{ inputs.release }}
+        run: |
+          bunx playwright install --with-deps chromium
+          node website/build.mjs
+          node website/verify.mjs
       - name: Keep sanitized installation evidence in logs
         if: always()
         run: node scripts/report-evidence.mjs

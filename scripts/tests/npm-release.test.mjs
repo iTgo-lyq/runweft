@@ -1,11 +1,12 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { createHash } from 'node:crypto';
-import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:http';
+import { spawnSync } from 'node:child_process';
 import { join, resolve } from 'node:path';
 import { parse } from 'yaml';
-import { assertDescriptor, downloadJobLog, downloadRelease, promoteRelease, readReleaseLog, recoveryMode, verifyPublicRelease } from '../npm-release.mjs';
+import { assertDescriptor, downloadJobLog, downloadRelease, promoteRelease, previousRunLog, readReleaseLog, recoveryMode, releaseChecks, unpackRelease, verifyPublicRelease } from '../npm-release.mjs';
 import { npmPublishArgs, packageNames, publishCandidate, registry } from '../npm-publish.mjs';
 
 const bytes = Buffer.from('public tarball fixture');
@@ -30,7 +31,8 @@ function promotionOptions(release, overrides = {}) {
     const current = Object.fromEntries(packageNames.map(name => [name, { latest: '1.1.1', beta: release.version }]));
     const updates = [];
     return {
-        installationResult: 'success', read: async entry => publicManifest(entry),
+        installationResult: 'success', betaResult: 'success',
+        validationMode: release.version.includes('-beta.') ? 'inline' : 'public', integrationResult: release.version.includes('-beta.') ? 'skipped' : 'success', read: async entry => publicManifest(entry),
         tags: async entry => ({ ...current[entry.name] }),
         setTag: async (entry, tag) => { updates.push(entry.name); current[entry.name][tag] = entry.version; },
         current, updates, ...overrides,
@@ -58,7 +60,7 @@ test('recovery refuses partial, unknown, missing provenance log and wrong source
     assert.throws(() => recoveryMode([{}, null, null, null, null], {}, source, version), /Partial beta/);
     assert.throws(() => recoveryMode(Array(5).fill({}), {}, source, version), /source-run-id/);
     assert.throws(() => recoveryMode(Array(5).fill({}), { release }, 'f'.repeat(40), version), /different tag/);
-    assert.equal(recoveryMode(Array(5).fill({}), { release }, source, version), 'existing');
+    assert.equal(recoveryMode(Array(5).fill({}), { release, prepublicationVerified: true }, source, version), 'existing');
     const log = '2026-10-11T00:00:00Z RUNWEFT_RELEASE_DESCRIPTOR=' + JSON.stringify(release) + '\nRUNWEFT_UPLOAD_STARTED=runweft-linux-x64\n';
     assert.deepEqual(readReleaseLog(log), { release, uploadStarted: true });
     const bad = structuredClone(release); bad.packages[0].path = '../escape';
@@ -87,6 +89,82 @@ test('four native job failures prevent promotion before any public check or muta
     for (const installationResult of ['failure', 'cancelled', 'skipped', '']) {
         await assert.rejects(promoteRelease(descriptor(), { installationResult, read() { throw new Error('Unexpected request'); } }), /four native/);
     }
+});
+
+test('all five release modes retain their required integration and recovery evidence', async () => {
+    assert.deepEqual(releaseChecks('1.2.0', false, 'build'), { publicIntegration: false,
+        groups: ['access', 'storage', 'web', 'service-package'], siteInstall: false });
+    assert.equal(releaseChecks('1.2.0-beta.1', true, 'build').publicIntegration, false);
+    assert.deepEqual(releaseChecks('1.2.0', true, 'build').groups, ['service-package']);
+    for (const version of ['1.2.0', '1.2.0-beta.1']) {
+        const release = descriptor(version);
+        assert.equal(releaseChecks(version, true, 'existing').publicIntegration, true);
+        assert.throws(() => recoveryMode(Array(5).fill({}), { release }, release.source.revision, version), /prepublication/);
+        assert.equal(recoveryMode(Array(5).fill({}), { release, prepublicationVerified: true }, release.source.revision, version), 'existing');
+        for (const integrationResult of ['failure', 'cancelled', 'skipped', undefined]) {
+            const options = promotionOptions(release, { validationMode: 'public', integrationResult });
+            await assert.rejects(promoteRelease(release, options), /integration/);
+            assert.deepEqual(options.updates, []);
+        }
+        for (const betaResult of ['failure', 'cancelled', 'skipped', undefined]) {
+            const options = promotionOptions(release, { betaResult });
+            await assert.rejects(promoteRelease(release, options), /prepublication/);
+            assert.deepEqual(options.updates, []);
+        }
+        const result = await promoteRelease(release, promotionOptions(release, { validationMode: 'public', integrationResult: 'success' }));
+        assert.equal(result.promoted, !version.includes('-beta.'));
+    }
+    await assert.rejects(promoteRelease(descriptor(), promotionOptions(descriptor(), {
+        validationMode: 'inline', integrationResult: 'skipped' })), /Stable releases require/);
+});
+
+test('prerelease recovery reads original successful gates for rerun-all and main/source-run-id', async () => {
+    const release = descriptor('1.2.0-beta.1');
+    for (const sourceRun of ['', '100']) {
+        const env = { GITHUB_REPOSITORY: 'owner/repo', GITHUB_RUN_ID: '101', GITHUB_RUN_ATTEMPT: '2', SOURCE_RUN_ID: sourceRun };
+        const original = sourceRun || env.GITHUB_RUN_ID, paths = [];
+        const options = {
+            query: async path => {
+                paths.push(path); assert(path.startsWith('repos/owner/repo/actions/runs/' + original));
+                return path.endsWith('/jobs?per_page=100') ? { jobs: [{ name: 'beta', id: 1, steps: [{
+                    name: 'Check every model-free integration group on the frozen candidate', conclusion: 'success',
+                }] }] } : { path: '.github/workflows/npm-publish.yml', run_attempt: 1 };
+            }, readLog: async () => 'RUNWEFT_RELEASE_DESCRIPTOR=' + JSON.stringify(release) + '\nRUNWEFT_UPLOAD_STARTED=runweft',
+        };
+        const prior = await previousRunLog(env, options);
+        assert.equal(recoveryMode(Array(5).fill({}), prior, release.source.revision, release.version), 'existing');
+        assert.equal(releaseChecks(release.version, true, 'existing').publicIntegration, true);
+        assert.equal(paths.length, 2);
+        const missing = await previousRunLog(env, { ...options, query: async path => {
+            const value = await options.query(path); if (value.jobs) value.jobs[0].steps[0].conclusion = 'skipped'; return value;
+        } });
+        assert.throws(() => recoveryMode(Array(5).fill({}), missing, release.source.revision, release.version), /prepublication/);
+    }
+});
+
+test('public integration extracts the bound archive and rejects either changed program', () => {
+    const directory = mkdtempSync(resolve('.dev-smoke/unpack-candidate-'));
+    const release = descriptor(), entry = release.packages.find(item => item.name === 'runweft-linux-x64');
+    const source = join(directory, 'fixture'); mkdirSync(join(source, 'package/bin'), { recursive: true });
+    mkdirSync(join(directory, 'tarballs'));
+    writeFileSync(join(source, 'package/package.json'), JSON.stringify(entry.manifest));
+    for (const name of ['runweft', 'hapi']) {
+        writeFileSync(join(source, 'package/bin', name), name);
+        entry.binaries['bin/' + name] = createHash('sha256').update(name).digest('hex');
+    }
+    try {
+        assert.equal(spawnSync('tar', ['-czf', join(directory, entry.tarball), '-C', source, 'package']).status, 0);
+        entry.sha512 = createHash('sha512').update(readFileSync(join(directory, entry.tarball))).digest('base64');
+        const result = unpackRelease(release, directory, 'linux-x64');
+        assert.equal(result.binaries.hapi.sha256, entry.binaries['bin/hapi']);
+        for (const name of ['runweft', 'hapi']) {
+            const bad = structuredClone(release);
+            bad.packages.find(item => item.name === entry.name).binaries['bin/' + name] = 'e'.repeat(64);
+            assert.throws(() => unpackRelease(bad, directory, 'linux-x64'), /hash differs/);
+        }
+        writeFileSync(join(directory, entry.tarball), 'corrupt');
+        assert.throws(() => unpackRelease(release, directory, 'linux-x64'), /archive changed/);
+    } finally { rmSync(directory, { recursive: true, force: true }); }
 });
 
 test('promotion checks every integrity before writes and advances main last', async () => {
@@ -151,7 +229,7 @@ test('workflow topology requires all four platforms and has no artifact dependen
     };
     const publish = load('npm-publish.yml'), install = load('cli-install.yml');
     load('checks.yml'); load('website-pages.yml');
-    assert.deepEqual(publish.jobs.promote.needs, ['beta', 'install']);
+    assert.deepEqual(publish.jobs.promote.needs, ['beta', 'install', 'integration']);
     assert.match(publish.jobs.promote.if, /needs\.install\.result == 'success'/);
     assert.equal(publish.concurrency.group, 'npm-publish'); assert.equal(publish.concurrency['cancel-in-progress'], false);
     const sourceCheckout = publish.jobs.beta.steps.find(step => step.name === 'Check out exact tag source for packaging');
@@ -163,6 +241,14 @@ test('workflow topology requires all four platforms and has no artifact dependen
         ['darwin-arm64', 'darwin-x64', 'linux-arm64', 'linux-x64']);
     assert.equal(install.permissions['id-token'], undefined);
     assert.equal(install.jobs.install['continue-on-error'], undefined);
+    assert.deepEqual(publish.jobs.integration.strategy.matrix.group, ['access', 'storage', 'web']);
+    assert.equal(publish.jobs.integration.strategy['fail-fast'], false);
+    assert.equal(publish.jobs.integration.permissions?.['id-token'], undefined);
+    assert(publish.jobs.integration.steps.some(step => step.with?.submodules === true));
+    assert.match(publish.jobs.promote.if, /always\(\).*needs.beta.result/s);
+    assert.match(publish.jobs.promote.if, /needs.integration.result == 'success'/);
+    assert.match(publish.jobs.promote.if, /needs.integration.result == 'skipped'/);
+    assert.match(install.jobs.install.steps.find(step => step.run?.includes('node website/verify.mjs')).if, /linux-x64.*site-install/);
 });
 
 test('HTTP candidate reads retry propagation, throttling and interrupted bodies within one budget', async () => {

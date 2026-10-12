@@ -35,6 +35,9 @@ jobs:
     outputs:
       release: ${{ steps.prepared.outputs.release || steps.published.outputs.release }}
       publish: ${{ steps.prepared.outputs.publish }}
+      public-integration: ${{ steps.prepared.outputs.public-integration }}
+      validation-mode: ${{ steps.prepared.outputs.validation-mode }}
+      site-install: ${{ steps.prepared.outputs.site-install }}
     steps:
       - name: Free hosted runner space for four-platform packages and integration fixtures
         run: |
@@ -79,7 +82,7 @@ jobs:
         run: bun run typecheck && bun run test
       - if: steps.prepared.outputs.build == 'true'
         run: node --test ./scripts/tests/*.test.mjs ./website/publish.test.mjs
-      - if: steps.prepared.outputs.build == 'true'
+      - if: steps.prepared.outputs.build == 'true' && steps.prepared.outputs.public-integration != 'true'
         run: bunx playwright install --with-deps chromium
       - name: Check out exact tag source for packaging
         if: steps.prepared.outputs.build == 'true'
@@ -102,8 +105,9 @@ jobs:
         if: steps.prepared.outputs.build == 'true'
         env:
           RUNWEFT_SMOKE_PACKAGES: .dev-smoke/release-source/dist/packages
+          INTEGRATION_GROUPS: ${{ steps.prepared.outputs.integration-groups }}
         run: |
-          for group in access storage web service-package; do
+          for group in $INTEGRATION_GROUPS; do
             bun scripts/smoke-integration.ts "$group" .dev-smoke/release-source/dist/packages/runweft-linux-x64/bin/runweft || exit $?
             df -h .
           done
@@ -121,16 +125,72 @@ jobs:
         if: always()
         run: node scripts/report-evidence.mjs
 
+  integration:
+    needs: beta
+    if: needs.beta.outputs.public-integration == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        group: [access, storage, web]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      CODEX_HOME: ${{ github.workspace }}/.dev-smoke/ci-codex
+      CLAUDE_CONFIG_DIR: ${{ github.workspace }}/.dev-smoke/ci-claude
+      RELEASE_DESCRIPTOR: ${{ needs.beta.outputs.release }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          submodules: true
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '24'
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: '1.4.2'
+      - run: bun install --frozen-lockfile
+      - run: bun install --frozen-lockfile
+        working-directory: hapi
+      - name: Install clients for configuration and discovery only
+        run: |
+          mkdir -p "$CODEX_HOME" "$CLAUDE_CONFIG_DIR"
+          npm install --prefix .dev-smoke/native-tools --ignore-scripts --registry=https://registry.npmjs.org/ @openai/codex@0.159.2 @anthropic-ai/claude-code@2.1.283
+          node .dev-smoke/native-tools/node_modules/@anthropic-ai/claude-code/install.cjs
+          echo "$GITHUB_WORKSPACE/.dev-smoke/native-tools/node_modules/.bin" >> "$GITHUB_PATH"
+      - if: matrix.group == 'web'
+        run: bunx playwright install --with-deps chromium
+      - name: Download immutable public candidate
+        id: candidate
+        run: node scripts/npm-release.mjs download
+      - name: Extract and verify both candidate programs
+        id: programs
+        env:
+          CANDIDATE_DIRECTORY: ${{ steps.candidate.outputs.directory }}
+        run: node scripts/npm-release.mjs unpack
+      - name: Run selected integration group on the public candidate
+        env:
+          INTEGRATION_GROUP: ${{ matrix.group }}
+          CANDIDATE_BINARY: ${{ steps.programs.outputs.binary }}
+        run: bun scripts/smoke-integration.ts "$INTEGRATION_GROUP" "$CANDIDATE_BINARY"
+      - name: Keep sanitized integration evidence in logs
+        if: always()
+        run: node scripts/report-evidence.mjs
+
   install:
     needs: beta
     if: needs.beta.outputs.publish == 'true'
     uses: ./.github/workflows/cli-install.yml
     with:
       release: ${{ needs.beta.outputs.release }}
+      site-install: ${{ needs.beta.outputs.site-install == 'true' }}
 
   promote:
-    needs: [beta, install]
-    if: needs.beta.result == 'success' && needs.install.result == 'success'
+    needs: [beta, install, integration]
+    if: >-
+      always() && needs.beta.result == 'success' && needs.install.result == 'success' &&
+      ((needs.beta.outputs.validation-mode == 'public' && needs.integration.result == 'success') ||
+      (needs.beta.outputs.validation-mode == 'inline' && needs.integration.result == 'skipped'))
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     permissions:
@@ -148,4 +208,7 @@ jobs:
         env:
           RELEASE_DESCRIPTOR: ${{ needs.beta.outputs.release }}
           INSTALL_RESULT: ${{ needs.install.result }}
+          BETA_RESULT: ${{ needs.beta.result }}
+          INTEGRATION_RESULT: ${{ needs.integration.result }}
+          VALIDATION_MODE: ${{ needs.beta.outputs.validation-mode }}
         run: node scripts/npm-release.mjs promote

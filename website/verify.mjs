@@ -7,6 +7,8 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { chromium } from 'playwright';
 import { serveSite } from './serve.mjs';
+import { assertDescriptor } from '../scripts/npm-release.mjs';
+import { assertCandidateBinaries } from '../scripts/fixtures/installed-binaries.mjs';
 
 const run = promisify(execFile);
 const browserOnly = process.argv.includes('--browser-only');
@@ -47,6 +49,8 @@ const assertScreenshots = async page => {
 try {
   const release = JSON.parse(await readFile(join(output, 'release.json'), 'utf8'));
   assert.deepEqual(release, { version: release.version, installation: 'npm', package: 'runweft', registry: 'https://registry.npmjs.org/' });
+  const candidate = process.env.RELEASE_DESCRIPTOR ? assertDescriptor(JSON.parse(process.env.RELEASE_DESCRIPTOR)) : null;
+  if (candidate) assert.equal(release.version, candidate.version, 'Website must install the exact release candidate');
   const staticFiles = await readdir(output, { recursive: true });
   assert(!staticFiles.some(file => /(^|\/)downloads(\/|$)|\.(tgz|gz|sha256)$|SHA256SUMS/.test(file)));
   const sizes = await Promise.all(staticFiles.map(async file => { const info = await stat(join(output, file)); return info.isFile() ? info.size : 0; }));
@@ -229,11 +233,16 @@ try {
     const located = await run('/bin/bash', ['--noprofile', '--norc', '-c', 'command -v runweft'], { env: environment });
     const binary = join(prefix, 'bin/runweft'); assert.equal(located.stdout.trim(), binary);
     const version = await run(binary, ['--version'], { env: environment }); assert.equal(version.stdout.trim(), release.version);
+    if (candidate) {
+      const entry = candidate.packages.find(item => item.name === `runweft-${process.platform}-${process.arch}`);
+      evidence.candidateBinaries = assertCandidateBinaries(binary, Object.fromEntries(['runweft', 'hapi'].map(name => [name, { sha256: entry.binaries['bin/' + name] }])));
+    }
+    assert.deepEqual(await readFile(join(prefix, 'lib/node_modules/runweft/README.md')), await readFile(join(repository, 'docs/usage.md')));
     const locatedSkill = await run('/bin/bash', ['--noprofile', '--norc', join(evidenceRoot, 'skill-path-from-dom.sh')], { env: environment });
     const skillDirectory = locatedSkill.stdout.trim();
     assert.equal(skillDirectory, join(prefix, 'lib/node_modules/runweft/skills/runweft'));
     for (const file of ['SKILL.md', 'references/onboarding.md', 'references/configuration.md', 'references/delegation.md', 'references/maintenance.md']) {
-      assert((await stat(join(skillDirectory, file))).size > 0);
+      assert.deepEqual(await readFile(join(skillDirectory, file)), await readFile(join(repository, 'skills/runweft', file)));
     }
     const installedPackage = JSON.parse(await readFile(join(prefix, 'lib/node_modules/runweft/package.json'), 'utf8'));
     assert.equal(installedPackage.name, release.package); assert.equal(installedPackage.version, release.version);
