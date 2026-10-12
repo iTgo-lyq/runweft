@@ -29,7 +29,7 @@
 
 ## 依据与并行边界
 
-- 项目入口：[docs/README](../../../README.md)、[架构](https://github.com/iTgo-lyq/runweft/blob/e85ef3af1b9fed9cc9ac00bcd764d3954bb283da/docs/project/architecture.md)、[开发说明](../../../development.md)、根 AGENTS.md。
+- 项目入口：[docs/README](https://github.com/iTgo-lyq/runweft/blob/bea2509426d9307b5df786aa3bc4c27069ad613e/docs/README.md)、[架构](https://github.com/iTgo-lyq/runweft/blob/e85ef3af1b9fed9cc9ac00bcd764d3954bb283da/docs/project/architecture.md)、[开发说明](https://github.com/iTgo-lyq/runweft/blob/bea2509426d9307b5df786aa3bc4c27069ad613e/docs/development.md)、根 AGENTS.md。
 - 当前行为以 [Specs](../../specs/) 为准；主要迁移依据为 [Hub 委派切换](../../archive/2026-10-01-hub-delegation-migration/technical.md)、[Hub 后台](../../archive/2026-10-01-hub-console-onboarding/technical.md)、[集中配置七阶段交付](../../archive/2026-10-01-hub-spaces-and-agent-configuration/delivery.md)。旧验收只用于理解历史保障，不据此恢复旧入口。
 - [npm-patch-release](../2026-10-02-npm-patch-release/requirement.md) 正在发行阶段，本次不改其候选输入、Plan、Execution 或发行事实。
 - 沿用 AGENTS.md 的工程决策与自动本地验收授权，不重复设置用户门禁。Plan 形成后在实施工作区用 iclaude 只读评审一次；主 agent 独立取舍，并按内部复核检查点逐任务执行。

@@ -55,7 +55,7 @@ Linux x64 原生矩阵使用真实 npm 安装后的程序，证据入口为 `.de
 - **Playwright**：Chromium headless 验证登录、凭据恢复、筛选/分页、503 与断连恢复、无结果/空列表、URL token 清理、375/1200 布局和 HAPI 历史导航；pageErrors/cleanupErrors 均为空。截图已目视检查，60 条故障与分页合成记录明确区别于真实任务。
 - **Linux arm64**：QEMU 7.2.22 执行最终程序的 Runweft/HAPI 版本、初始化、配置校验、路径和 Agent 创建/列表通过。证据为 `.dev-smoke/release-arm64/case-x4hsbvk7/evidence.json`；不宣称原生 arm64 或仿真完整服务/模型验收。
 
-原始记录仅保存在本机 `.dev-smoke/`，不随发行包分发。各记录的用途、失败实验及模型测试修正见 [T1–T3](execution.md#t1-四平台发行包与可复现安装)，复现入口见[开发说明](../../../development.md)。
+原始记录仅保存在本机 `.dev-smoke/`，不随发行包分发。各记录的用途、失败实验及模型测试修正见 [T1–T3](execution.md#t1-四平台发行包与可复现安装)，复现入口见[开发说明](https://github.com/iTgo-lyq/runweft/blob/bea2509426d9307b5df786aa3bc4c27069ad613e/docs/development.md)。
 
 ## 已知限制与用户验证
 
