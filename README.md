@@ -15,7 +15,7 @@ runweft --version
 
 npm 自动选择 macOS/Linux arm64/x64 对应平台包，附带相邻 HAPI、Skill 和说明，无需全局 Bun 或另装 HAPI。平台 tarball 也可直接解包运行，无需 Node。发行与真实验收范围见[项目入口](docs/README.md)；Mac 实机与物理跨机、Linux arm64 QEMU 与原生协作分别记录。
 
-从[项目文档](docs/README.md)阅读架构决策、当前 Specs 和全部归档；后续开发沿 [project-workflow](.agents/skills/project-workflow/SKILL.md)。旧实现保留在 [runweft-archive](https://github.com/iTgo-lyq/runweft-archive)，本仓库使用新的 Git 历史。
+从[项目文档](docs/README.md)阅读当前 Specs、开发入口和历史归档；开发约束见 [AGENTS.md](AGENTS.md)，工作流沿 [SpecTrail](.agents/skills/spec-trail/SKILL.md)。旧实现保留在 [runweft-archive](https://github.com/iTgo-lyq/runweft-archive)，本仓库使用新的 Git 历史。
 
 产品官网 [runweft.pages.dev](https://runweft.pages.dev/)包含介绍、统一 npm 安装与上手指南，Skill 随 npm 包提供。main 的官网相关推送由 GitHub Actions 自动部署生产，codex 分支部署预览；配置和验收见[官网说明](website/README.md)。无需准备发行产物，运行 `node website/build.mjs` 和 `node website/serve.mjs` 可在本机预览。
 
@@ -23,9 +23,9 @@ npm 自动选择 macOS/Linux arm64/x64 对应平台包，附带相邻 HAPI、Ski
 
 通用 HAPI fork 位于 [iTgo-lyq/hapi](https://github.com/iTgo-lyq/hapi)，本仓库通过 [`hapi/`](hapi/) Git submodule 固定其版本。克隆本仓库后运行 `git submodule update --init hapi` 获取源码；HAPI 的修改与提交在 fork 仓库中进行。
 
-文档检查（将 CHANGE_NAME 替换为实际 Change 目录名）：
+工作流与差异检查：
 
 ```sh
-bun .agents/skills/project-workflow/scripts/validate-change.mjs docs/project/changes/CHANGE_NAME
+node scripts/check-workflow.mjs
 git diff --check
 ```

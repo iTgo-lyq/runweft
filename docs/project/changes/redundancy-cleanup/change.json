@@ -16,7 +16,9 @@
     },
     "T2": {
       "title": "删除冗余内容并收敛当前文档入口",
-      "status": "todo"
+      "status": "done",
+      "verification": "四文件删除及长期原则/入口/Spec精简核对完成；typecheck和260项根测试通过；207处本地链接/历史目标/工作流/diff检查通过，受保护输入无差异",
+      "commitTitle": "redundancy-cleanup T2: remove obsolete plans and unused remote probe"
     }
   },
   "closure": {}

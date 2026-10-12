@@ -6,11 +6,11 @@
 - 项目工作流见 `.agents/skills/spec-trail/SKILL.md`；流程状态只写 `change.json`，需求、技术、计划与验收的既有确认在会话间持续有效，不重复询问。
 - 用户已授权按顺序完成全部 Change：细节由主 agent 制定，每个 Change 的 Plan 形成后在当前工作区用 iclaude 评审一次，再独立判断并落实；仅 iclaude 额度耗尽时改用新 subagent。该授权覆盖方案/Plan 的工程决策与本地自动验收，不重复设置人工门禁。逐任务提交，通过验收后同步 Specs 并归档；远端实测无法完成时如实保留缺口。
 - 实现优先直观、易配置、易部署；不为假设边界堆叠防御框架。失败应清楚抛出并在入口呈现可操作的错误。
-- 当前正按 Change 实现；已确认决策见 `docs/project/architecture.md` 与各 Change，只在验证并验收后将实现行为写入 Specs。
+- 已确认目标、方案与依赖见各 Change；当前实现与长期契约见 `docs/project/specs/`，只在验证并验收后将新增行为写入 Specs。
 
 ## 架构边界
 
-- Runweft 负责 MCP 适配与委派调度，执行基础复用 HAPI。职责与 Change 依赖见 `docs/project/architecture.md`。
+- Runweft 负责 MCP 适配与委派调度，执行基础复用 HAPI。业务编排与 Agent 选择由主 Agent / 业务 Skill 决定，Runweft 不构建自动业务编排器。
 - MCP 接入侧只支持 Codex 和 Claude Code；执行侧直接复用 HAPI 已内置的 Codex/Claude Code 适配，不预设新增、重写或主动改造其 launcher、原生协议、会话、审批与恢复逻辑。能力验证和上层调用封装不等于 runtime 改造；真实缺口须先复现并定位。
 - 通用 HAPI 改造与私有内部 runtime 接入分别在独立仓库维护；本仓库不保存 HAPI fork 源码或延续旧补丁流水线。
 - 今后独立接入内部 runtime 时按 HAPI 原有方式在对应 fork 源码内接入，不实现 npm 包或路径插件加载；不把这类扩展或社区插件 PR 作为本轮内置 runtime 复用的前置。
