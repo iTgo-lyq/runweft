@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "id": "spec-trail-adoption",
+  "title": "SpecTrail 工作流、历史 Change 与交互原型接入",
+  "size": "large",
+  "status": "active",
+  "stage": "plan",
+  "branch": "codex/spec-trail-adoption",
+  "confirmations": {
+    "requirement": {
+      "at": "2026-10-12T13:55:11.775Z",
+      "summary": "依据本次用户明确要求替换工作流、迁移历史 Change、建立并发布交互原型，按 AGENTS.md 持续授权由主 agent 制定细节。",
+      "source": "当前会话用户指令及 AGENTS.md 项目入口"
+    },
+    "technical": {
+      "at": "2026-10-12T13:55:11.842Z",
+      "summary": "主 agent 按持续授权确定固定上游分发、证据迁移、独立原型与 R2 固定版本方案；Plan 由 iclaude 一次评审后执行。",
+      "source": "AGENTS.md：方案/Plan 工程决策与自动验收授权"
+    }
+  },
+  "tasks": {},
+  "closure": {}
+}
