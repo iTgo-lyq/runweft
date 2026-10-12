@@ -39,7 +39,7 @@ node website/serve.mjs
 
 仅规范稳定版本运行表中的构建/公开 npm/部署步骤。codex/** 的 push 或 dispatch 遇到 Beta 根版本时执行聚焦检查并写 summary，跳过构建和准备/上传；main 或 PR 遇到 Beta 版本直接失败，避免生产更新被静默跳过。真实 builder 仍只接受稳定版本，不生成 Beta 产品站点。
 
-相关路径为 website/**、package.json、docs/usage.md、scripts/npm-publish.mjs 和该工作流。既有生产/codex 预览推送及 main 手动入口已实测；新增 npm 自动接续和整条新流水线留待下次授权发行验证，PR 入口尚未实测。
+相关路径为 website/**、package.json、docs/usage.md、scripts/npm-publish.mjs 和该工作流。既有生产/codex 预览推送及 main 手动入口已实测；新增在线浏览器阶段已通过 [codex 预览 CI](https://github.com/iTgo-lyq/runweft/actions/runs/38289992727)。npm 自动接续和整条新流水线留待下次授权发行验证，PR 入口尚未实测。
 
 在[仓库 Actions Secrets](https://github.com/iTgo-lyq/runweft/settings/secrets/actions)的 **Repository secrets** 保存，不需要 Environment secrets：
 

@@ -26,7 +26,7 @@
 
 57 项发布/官网 Node 测试通过，包括真实 CLI 的“唯一 URL 成功、正式域名失败”及成功对照、官网 A 失败/B 成功的跨 attempt 汇总。既有 1.1.4 发布 run 38241538144（2 attempts）与官网 run 38245448709 的只读实测汇总得到 13 个 job、47 条证据、无日志缺失；识别 4 个继承成功 job，避免重复计时。实际运行时间 ubuntu-24.04 1,598 秒、ubuntu-24.04-arm 77 秒、macos-15-intel 198 秒、macos-15 58 秒；这是旧流水线历史样本，不是新流水线性能。
 
-只读访问既有 1.1.4 唯一 URL https://6c712b0f.runweft.pages.dev/ 和正式域名 https://runweft.pages.dev/，两处十文件 hash/MIME 均通过。新在线浏览器检查先暴露隐藏图片不应滚入视口，修正后桌面 1440px 三页通过；该次手机导航遇到代理 ERR_TUNNEL_CONNECTION_FAILED，诊断后仅续验 390px 三页，通过。证据保留在 `.dev-smoke/website-pages/deployment.json`、`browser.json` 和 `browser-390.json`，不将部分失败记录写成整组成功。未真实 dispatch、上传或新发版。
+只读访问既有 1.1.4 唯一 URL https://6c712b0f.runweft.pages.dev/ 和正式域名 https://runweft.pages.dev/，两处十文件 hash/MIME 均通过。新在线浏览器检查先暴露隐藏图片不应滚入视口，修正后桌面 1440px 三页通过；该次手机导航遇到代理 ERR_TUNNEL_CONNECTION_FAILED，诊断后仅续验 390px 三页，通过。证据保留在 `.dev-smoke/website-pages/deployment.json`、`browser.json` 和 `browser-390.json`，不将部分失败记录写成整组成功。未主动执行 dispatch、生产上传或新发版；分支推送自动触发的预览见下述远端证据。
 
 独立 subagent 整体评审发现两项：T3 的历史官网 run 遗漏已补测试修正；T1/T2 的晋级默认读取器契约不匹配由追加 T4 处理，见 Review。未改写已提交任务记录。
 
@@ -35,3 +35,9 @@
 晋级默认读取器直接使用 verifyPublicRelease 内部的精确版本 fetch，不把 signal 误传为 metadata 的版本。新增测试拦截真实默认 fetch，分别核对稳定/预发行的五个 URL、AbortSignal 及相应标签结果。HTTP 错误响应体取消失败时保留原状态，401/403 回归确认只请求一次、不重试。
 
 59 项发布/官网 Node 测试、typecheck、三份 workflow 的 actionlint、workflow 和 diff 检查通过。独立评审者复核全部修正并自行执行 9 项定向测试，均通过，未发现新增明确问题。根 260 项测试、build:hapi 及 T2 三组真实公共候选集成证据继续有效：产品输入、HAPI pin 未改变。新四平台 CI、真实 dispatch 及性能测量仍留待授权发行。
+
+## 分支自动检查
+
+T3 推送后 [website Pages 38289992727](https://github.com/iTgo-lyq/runweft/actions/runs/38289992727) 自动预览部署成功，固定 URL https://536c043e.runweft.pages.dev/；日志确认十文件验证、三页两宽度浏览器 6 项全部通过，脱敏回执在 `.dev-smoke/release-throughput/t3-preview-ci.json`。这是新在线浏览器阶段的真实托管运行，不代表生产域名更新或 npm 接续 dispatch 已实测。
+
+初始计划提交的 Development checks 38285620465 在未改产品代码时，既有 tasks-mcp 双宿主测试触发 5 秒超时（259 通过、1 失败）；后续 T2 的 38288117206 全部成功，T3 的类型/根/Node 检查通过后被 T4 新推送按既有 concurrency 规则取消。保留首次失败，不为超时放宽测试或盲目重跑整组。最终推送的 CI 结果以 Actions 为准。

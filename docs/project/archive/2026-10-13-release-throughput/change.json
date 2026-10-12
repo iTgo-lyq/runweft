@@ -3,8 +3,8 @@
   "id": "release-throughput",
   "title": "缩短正常发布与失败恢复时间",
   "size": "medium",
-  "status": "active",
-  "stage": "execution",
+  "status": "completed",
+  "stage": "close",
   "branch": "codex/release-throughput",
   "confirmations": {
     "requirement": {
@@ -49,5 +49,28 @@
       "commitTitle": "release-throughput T4: fix promotion reader and preserve fatal HTTP errors"
     }
   },
-  "closure": {}
+  "closure": {
+    "verification": {
+      "result": "passed",
+      "at": "2026-10-12T18:20:42.490Z",
+      "summary": "T1–T4 均提交推送；59 项 Node、260 项根测试、typecheck、actionlint、实际公共候选三组集成/DOM 安装及既有官网检查通过；隔离上下文 subagent 整体独立评审并修复 P1/P2 后复核通过，新完整四平台 CI/dispatch/性能待授权发行"
+    },
+    "acceptance": {
+      "result": "accepted",
+      "at": "2026-10-12T18:20:42.574Z",
+      "summary": "依既有明确自动本地验收授权，由 Agent 对照 Requirement 完成本地验收通过，不代表用户手工验收；真实新流水线和性能缺口按原范围保留，见 acceptance.md",
+      "source": "本分支 AGENTS.md：授权覆盖方案/Plan 工程决策与本地自动验收，不重复设置人工门禁；通过验收后同步 Specs 并归档。用户本次明确继续推进 release-throughput。"
+    },
+    "specs": {
+      "result": "synced",
+      "at": "2026-10-12T18:23:21.760Z",
+      "summary": "同步 release/distribution 的并行完整门禁和有界读取、release/acceptance 的证据及实际范围、website/product 的等待/自动接续与正式域名/浏览器验证；保留新完整远端发布尚未实测的边界"
+    },
+    "archive": {
+      "result": "done",
+      "at": "2026-10-12T18:23:21.840Z",
+      "summary": "T1–T4 已验证提交推送，独立评审问题修复并复核，依既有自动本地验收授权完成验收与三处 Specs 同步，归档完整证据及远端未实测边界",
+      "path": "docs/project/archive/2026-10-13-release-throughput"
+    }
+  }
 }

@@ -33,7 +33,9 @@
 
 ## CI与公开交付边界
 
-普通push/PR执行一次核心准备及按diff选择的Linux集成；路径未知保守全选。正式tag或main显式release-tag构建完整四平台候选，完整根/Node/Linux gate不按diff跳过；同job先上传beta，公共npm四平台实际安装和完整卸载全部成功才晋级latest。发布/核心/官网证据保存在日志/summary及仓库摘要，不依赖Actions artifact。实际main及1.1.4流程已通过，见[本次验收](../../../archive/2026-10-12-npm-uninstall-release/acceptance.md)。
+普通 push/PR 执行一次核心准备及按 diff 选择的 Linux 集成；路径未知保守全选。正式 tag 或 main 显式 release-tag 构建完整四平台候选，完整根/Node/Linux gate 不按 diff 跳过。稳定发布上传前保留 service-package，三组公共候选集成与四平台实际安装/完整卸载并行，全部成功才晋级 latest；预检及预发行构建仍在上传前完成四组，所有已有候选恢复重新执行公共集成。稳定版 Linux x64 另核对网页 DOM 精确安装、README/Skill 字节及配对程序摘要。发布/核心/官网证据保存在日志/summary 及仓库摘要，不依赖 Actions artifact。原 main 及 1.1.4 流程已通过，见[1.1.4 验收](../../../archive/2026-10-12-npm-uninstall-release/acceptance.md)。
+
+公共读取的暂时传播、限流及网络中断在统一预算内恢复，候选完整性或鉴权错误直接失败。摘要读取各 attempt 与全部关联官网 run 的真实 job 时间和 runner 标签，不重复统计继承的成功 job；缺失时间与日志不推断成功，Agent 复核后形成发行记录。[发布提速验收](../../../archive/2026-10-13-release-throughput/acceptance.md)覆盖本地 59 项 Node、260 项核心、类型与 workflow 检查，原公共 1.1.4 三组集成/DOM 安装及官网检查；新并行四平台 CI、实际 dispatch 和耗时收益尚待下一次授权发行，不用历史成功替代。
 
 1.1.4公共候选源码为 `3f873788b11926d2e51c9ccf9f3f661dc239ab6a`，HAPI为 `8f774b9413fd483bc163cc06425d7646f10a7c92`。四平台托管runner均通过精确公共npm安装、摘要/配对程序、MCP目录、默认服务/信号、重装/npm卸载保留及各8组完整卸载；五包latest/beta=1.1.4。完整卸载包含两个真实Hub、同home双连接Runner、当前和恢复记录中的登记控制测试进程、MCP/Skill/数据/全部备份删除、失败重试及其他软件配置/模型凭据/源项目保留；独立平台包也实际自删除。Linux x64匿名五包下载、实际网页DOM安装、主/平台六Skill文件/README核对，以及生产官网十文件摘要/MIME和三页Playwright通过。当前Linux Runweft SHA256 `e9b01c1c70d1fda1b0dbd565e233c383ba3a07abf864c7870dd35f703214727d`，HAPI SHA256 `269d3f183b7bdcb17839bd688769d3c6a88e56a1d2f605c6f791b83bbb7dc16e`。
 

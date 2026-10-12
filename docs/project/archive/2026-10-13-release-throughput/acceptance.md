@@ -22,6 +22,7 @@ Agent 自动本地验收通过。依据本分支 AGENTS.md 的既有工程决策
 - 公共 1.1.4 候选的 access 4 脚本、storage 11 脚本、web 3 脚本，独立现场均通过。
 - 实际页面 DOM 精确 npm 安装、两程序 hash、README 和五份 Skill 内容核对通过。
 - 既有生产部署十文件/两地址及三页两宽度浏览器证据，详见 Execution 中的失败诊断与定向续验。
+- T3 分支推送自动触发的 [Pages 预览 CI](https://github.com/iTgo-lyq/runweft/actions/runs/38289992727) 实际部署成功，新在线三页两宽度浏览器 6 项通过；生产自动接续仍未实测。
 - Plan 用 iclaude 评审；最终由隔离上下文 subagent 独立评审完整差异，两项发现均修复并复核，另独立运行 9 项定向测试。
 
 证据均保存在该 worktree 的 `.dev-smoke/`，未提交原始现场、凭据或模型记录。各次失败保留原证据，不改写为成功。

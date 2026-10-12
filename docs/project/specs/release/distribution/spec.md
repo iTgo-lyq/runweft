@@ -32,11 +32,15 @@ HAPI 固定版本和协议见[执行兼容](../../execution/compatibility/spec.m
 
 版本入口接受规范不可变tag：稳定 `vX.Y.Z`、预发行 `vX.Y.Z-beta.N`，整数无前导零且N非负，源码版本必须匹配。main/codex普通推送不发布npm；手动release-tag留空只预演，main显式输入已有tag可恢复原源码。当前控制提交运行检查，独立checkout原tag及固定HAPI构建一次；固定packageInputs与tag必须一致。
 
-基础检查、四平台构建/包内容及Linux四组无模型集成通过后，同一构建job以--tag=beta依次上传四平台和主包；主包等待四平台公开确认。上传前输出原候选描述，绑定tag/source、HAPI、完整manifest、五包SHA-512和程序SHA-256，并记录latestBefore。已有beta不得倒退，上传期间latest须保持基线。beta是公开渠道，精确版本可以安装，失败不能覆盖同版本。
+稳定正式发布在基础检查、四平台构建/包内容及 service-package 通过后，同一 beta job 以 --tag=beta 依次上传四平台和主包；主包等待四平台公开确认。access/storage/web 从公共 npm 下载同一候选，在三个独立 Linux job 中与四平台安装并行，全部成功后才晋级。空参数预检和 X.Y.Z-beta.N 预发行构建仍在上传前完成四组，预检不上传。上传前输出原候选描述，绑定 tag/source、HAPI、完整 manifest、五包 SHA-512 和程序 SHA-256，并记录 latestBefore。已有 beta 不得倒退，上传期间 latest 须保持基线。稳定版本的 beta 是等待完整验收的公开候选；精确版本可以安装，失败不能覆盖同版本。
 
-Linux x64/arm64、macOS x64/arm64四个托管job重新读取五包公共元数据，下载主包与本平台tarball并核验SHA-512，从公共npm安装精确版本到专用prefix/cache；核对Runweft/HAPI程序SHA-256，验证MCP目录、无Bun服务与信号、重装、缺依赖诊断、npm卸载保留。每个job还用原平台tarball验证8组完整卸载：Hub/双连接Runner/登记会话停止、预览与拒绝、删除失败保留及重试、Skill/MCP/数据/备份删除和其他配置/凭据/项目保留、独立包/PATH链接自删除。控制程序在第一次安装前另存整包，测试PATH不含模型客户端；会话为登记到真实HAPI的控制测试进程。四job整体success才允许晋级；稳定版本复查五包后先更新平台latest、最后主包latest，X.Y.Z-beta.N保持beta。部分晋级可幂等续跑，不倒退或改动外部推进的标签。
+Linux x64/arm64、macOS x64/arm64四个托管job重新读取五包公共元数据，下载主包与本平台tarball并核验SHA-512，从公共npm安装精确版本到专用prefix/cache；核对Runweft/HAPI程序SHA-256，验证MCP目录、无Bun服务与信号、重装、缺依赖诊断、npm卸载保留。每个job还用原平台tarball验证8组完整卸载：Hub/双连接Runner/登记会话停止、预览与拒绝、删除失败保留及重试、Skill/MCP/数据/备份删除和其他配置/凭据/项目保留、独立包/PATH链接自删除。控制程序在第一次安装前另存整包，测试PATH不含模型客户端；会话为登记到真实HAPI的控制测试进程。稳定版 Linux x64 同时运行真实网页 DOM 精确版本安装，核对配对程序、README 和五份 Skill 的内容。工作流与晋级脚本均要求 beta、四平台安装及所需公共集成整体成功；失败、取消或非预期跳过均阻止晋级。稳定版本复查五包后先更新平台latest、最后主包latest，X.Y.Z-beta.N保持beta。部分晋级可幂等续跑，不倒退或改动外部推进的标签。
 
-工作流串行且不中途取消。安装或晋级失败只重跑失败job，复用原成功beta输出与npm原包。beta job失败但五包全部公开时，从原attempt日志取原候选描述并校验，不重新打包；修正后工作流可从main填写release-tag和原source-run-id恢复。部分公开、未知上传、无法取得原日志直接停止，使用新版本处理；仅无公开版本且此前未开始上传可重建。旧artifact发布run38041451856不再重跑。
+公共候选下载的五包元数据与主包/平台 tarball 共享十分钟预算，单请求及完整流受剩余时间限制。传播 404、408、429、5xx 和明确网络中断可重试并尊重 Retry-After；鉴权、410、地址、manifest 和摘要错误直接失败。完整 SHA-512 校验后才接纳临时下载，失败清理部分文件；确定性验收不循环重跑。
+
+工作流串行且不中途取消。集成、安装或晋级失败只重跑失败 job，复用原成功 beta 输出与 npm 原包。beta job 失败但五包全部公开时，从原 attempt 日志取原候选描述、上传及成功的上传前检查证据，不重新打包；所有已有候选恢复（含预发行）重新运行三组公共集成和四平台安装。修正后工作流可从 main 填写 release-tag 和原 source-run-id 恢复，包输入仍须等于原 tag。部分公开、未知上传、无法取得原日志直接停止，使用新版本处理；仅无公开版本且此前未开始上传可重建。旧 artifact 发布 run38041451856 不再重跑。
+
+稳定晋级后自动 dispatch main 官网，关联来源 run/attempt 和精确版本，等待真实结果；预发行不部署。官网失败或状态未知只处理官网，不重发 npm。发布摘要收集各 attempt 及全部关联官网运行的候选、验收、重试和实际 job 排队/运行时间，继承成功 job 不重复计时；未知字段与日志缺失明确保留，不推断计费额度。新并行流水线的四平台远端运行与实际耗时尚待授权发行验证，现有本地验证范围见[提速验收](../../../archive/2026-10-13-release-throughput/acceptance.md)。
 
 发布、安装、普通CI和官网均不上传或下载Actions artifact；候选描述与脱敏验收保存在任务日志/summary，最终摘要写入仓库归档。公开候选1.1.4绑定源码 `3f873788b11926d2e51c9ccf9f3f661dc239ab6a` 与HAPI `8f774b9413fd483bc163cc06425d7646f10a7c92`；原离线1.1.0交付保留，不继承其他候选的模型组合证据。
 
