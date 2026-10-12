@@ -1,0 +1,388 @@
+{
+  "sourceRevision": "2eb6d4c1fb3a84819e01b146d1c4ad99b5cd57bc",
+  "version": "1.1.3",
+  "authorship": {
+    "sessions": {
+      "review": "b3378282-93dd-43a4-93f0-bec1c3d5ac31",
+      "author": "10f4318b-2bd2-472e-b6d0-fbeee9006fc5",
+      "correction": "dffc1554-d436-4a9e-b9ef-4f1d132db3fa"
+    },
+    "exactCopy": true,
+    "files": {
+      "index.html": {
+        "preservedIds": 15,
+        "sha256": "8f1fb108dda3c6abac09ecb74e6f365414cbc75ef38f725e951f120ccdce5da9"
+      },
+      "guide.html": {
+        "preservedIds": 21,
+        "sha256": "6bc5c83f503ff7c8b72ecb621da101b89dbac44971d2e744b78e098ccc47417c"
+      }
+    }
+  },
+  "local": {
+    "publishTests": 15,
+    "scope": "browser",
+    "checks": [
+      "Static website has npm metadata and contains no downloads, archives or checksums",
+      "Local / remote diagram is interactive and explicitly illustrative",
+      "Agent prompt and npm commands copy correctly; clipboard denial selects the command with accessible feedback",
+      "Home, guide and manual have no page overflow at 1440 / 1024 / 768 / 390 / 320px",
+      "Product definition and primary action are visible before scrolling on desktop and mobile",
+      "Home-to-guide path preserves the setup prompt and copies a separate first task",
+      "Mobile menu, Escape focus and guide client/runtime switches",
+      "Relative deployment: 25 local links and anchors",
+      "Reduced motion and the same npm installation / Skill location commands without JavaScript",
+      "A failed npm install stops the DOM command before running any existing Runweft",
+      "Public npm installation skipped explicitly; browser checks do not revalidate the released binaries",
+      "Preview root and method boundaries hold"
+    ],
+    "layouts": [
+      {
+        "route": "index.html",
+        "width": 1440,
+        "client": 1440,
+        "scroll": 1440
+      },
+      {
+        "route": "guide.html",
+        "width": 1440,
+        "client": 1440,
+        "scroll": 1440
+      },
+      {
+        "route": "manual.html",
+        "width": 1440,
+        "client": 1440,
+        "scroll": 1440
+      },
+      {
+        "route": "index.html",
+        "width": 1024,
+        "client": 1024,
+        "scroll": 1024
+      },
+      {
+        "route": "guide.html",
+        "width": 1024,
+        "client": 1024,
+        "scroll": 1024
+      },
+      {
+        "route": "manual.html",
+        "width": 1024,
+        "client": 1024,
+        "scroll": 1024
+      },
+      {
+        "route": "index.html",
+        "width": 768,
+        "client": 768,
+        "scroll": 768
+      },
+      {
+        "route": "guide.html",
+        "width": 768,
+        "client": 768,
+        "scroll": 768
+      },
+      {
+        "route": "manual.html",
+        "width": 768,
+        "client": 768,
+        "scroll": 768
+      },
+      {
+        "route": "index.html",
+        "width": 390,
+        "client": 390,
+        "scroll": 390
+      },
+      {
+        "route": "guide.html",
+        "width": 390,
+        "client": 390,
+        "scroll": 390
+      },
+      {
+        "route": "manual.html",
+        "width": 390,
+        "client": 390,
+        "scroll": 390
+      },
+      {
+        "route": "index.html",
+        "width": 320,
+        "client": 320,
+        "scroll": 320
+      },
+      {
+        "route": "guide.html",
+        "width": 320,
+        "client": 320,
+        "scroll": 320
+      },
+      {
+        "route": "manual.html",
+        "width": 320,
+        "client": 320,
+        "scroll": 320
+      },
+      {
+        "route": "/sub/",
+        "width": 390,
+        "client": 390,
+        "scroll": 390
+      },
+      {
+        "route": "/sub/guide.html",
+        "width": 390,
+        "client": 390,
+        "scroll": 390
+      },
+      {
+        "route": "/sub/manual.html",
+        "width": 390,
+        "client": 390,
+        "scroll": 390
+      },
+      {
+        "route": "no-js guide",
+        "width": 390,
+        "client": 390,
+        "scroll": 390
+      }
+    ],
+    "install": {
+      "skipped": true,
+      "reason": "--browser-only"
+    },
+    "errors": [],
+    "firstScreenAndNewSection": {
+      "phase": "after",
+      "success": true,
+      "views": [
+        {
+          "width": 1440,
+          "bounds": {
+            "x": 0,
+            "y": 80,
+            "width": 1440,
+            "height": 669.125
+          },
+          "cta": {
+            "x": 136,
+            "y": 532.703125,
+            "width": 183.828125,
+            "height": 50.25
+          }
+        },
+        {
+          "width": 1280,
+          "bounds": {
+            "x": 0,
+            "y": 80,
+            "width": 1280,
+            "height": 669.125
+          },
+          "cta": {
+            "x": 56,
+            "y": 525.640625,
+            "width": 183.828125,
+            "height": 50.25
+          }
+        },
+        {
+          "width": 1024,
+          "bounds": {
+            "x": 0,
+            "y": 80,
+            "width": 1024,
+            "height": 649.125
+          },
+          "cta": {
+            "x": 32,
+            "y": 516.703125,
+            "width": 183.828125,
+            "height": 50.25
+          }
+        },
+        {
+          "width": 768,
+          "bounds": {
+            "x": 0,
+            "y": 70,
+            "width": 768,
+            "height": 1088
+          },
+          "cta": {
+            "x": 24,
+            "y": 455.125,
+            "width": 183.828125,
+            "height": 50.25
+          }
+        },
+        {
+          "width": 390,
+          "bounds": {
+            "x": 0,
+            "y": 67.25,
+            "width": 390,
+            "height": 922.65625
+          },
+          "cta": {
+            "x": 20,
+            "y": 401.90625,
+            "width": 151.71875,
+            "height": 44.75
+          }
+        },
+        {
+          "width": 320,
+          "bounds": {
+            "x": 0,
+            "y": 67.25,
+            "width": 320,
+            "height": 1049.515625
+          },
+          "cta": {
+            "x": 20,
+            "y": 436.015625,
+            "width": 151.71875,
+            "height": 44.75
+          }
+        }
+      ],
+      "errors": []
+    },
+    "frozenPackageSource": "dab91e089c63a64a4d275a81b7b793354d86200b"
+  },
+  "ci": {
+    "core": {
+      "runId": 38196238712,
+      "url": "https://github.com/iTgo-lyq/runweft/actions/runs/38196238712",
+      "conclusion": "success"
+    },
+    "pages": {
+      "runId": 38196238787,
+      "url": "https://github.com/iTgo-lyq/runweft/actions/runs/38196238787",
+      "conclusion": "success",
+      "artifacts": 0
+    }
+  },
+  "static": {
+    "release": {
+      "version": "1.1.3",
+      "installation": "npm",
+      "package": "runweft",
+      "registry": "https://registry.npmjs.org/"
+    },
+    "files": [
+      {
+        "name": "assets/icons.svg",
+        "bytes": 1598,
+        "sha256": "d708610fe6b75591b214722352dd8dc33671bab46d8f38c21cf154552f3762fa"
+      },
+      {
+        "name": "assets/mark.svg",
+        "bytes": 297,
+        "sha256": "af2367afb3fed6d7b5bb615cf508e4defcb300975f2e575f75db4e50cb2d4168"
+      },
+      {
+        "name": "assets/site.js",
+        "bytes": 4268,
+        "sha256": "ed35037638f804971bf2c292c2e446664936edcbb99c5489e0f6e961da83cebc"
+      },
+      {
+        "name": "assets/style.css",
+        "bytes": 30672,
+        "sha256": "2aff264dd50554ad1dab5b91d2178a9952c94b3921c1ca837ca77d5aed10da6b"
+      },
+      {
+        "name": "guide.html",
+        "bytes": 22584,
+        "sha256": "d90a57b2df965fba2b488d860b1ae7395201b9dfb7df3e0a46c5fdc94d834f4f"
+      },
+      {
+        "name": "index.html",
+        "bytes": 22526,
+        "sha256": "139e411db317e21ba21af2e41b44e82334947bae2018eddf41c2f98e81b09a10"
+      },
+      {
+        "name": "manual.html",
+        "bytes": 25423,
+        "sha256": "341ba82c6e4268167759f9edadcdaeaa8a3f019f78b1d0ae708e7ce8a4d9efa4"
+      },
+      {
+        "name": "release.json",
+        "bytes": 119,
+        "sha256": "694c70c7de1100a2d306e04730b5686ce0ab9c2bcd8c50d4c4bde3defdc68c61"
+      }
+    ],
+    "bytes": 107487
+  },
+  "deployment": {
+    "url": "https://1cde674a.runweft.pages.dev/",
+    "mode": "production"
+  },
+  "productionBrowser": {
+    "success": true,
+    "browserTransport": {
+      "configuredSessionProxy": true,
+      "quicDisabled": true,
+      "ignoreHTTPSErrors": true
+    },
+    "pages": [
+      {
+        "url": "https://runweft.pages.dev/#onboarding",
+        "status": 200,
+        "version": "1.1.3",
+        "cssLoaded": true
+      },
+      {
+        "url": "https://runweft.pages.dev/guide",
+        "status": 200,
+        "version": "1.1.3",
+        "cssLoaded": true
+      },
+      {
+        "url": "https://runweft.pages.dev/manual",
+        "status": 200,
+        "version": "1.1.3",
+        "cssLoaded": true
+      }
+    ],
+    "nativeNavigation": true,
+    "errors": []
+  },
+  "uniqueBrowser": {
+    "success": true,
+    "browserTransport": {
+      "configuredSessionProxy": true,
+      "quicDisabled": true,
+      "ignoreHTTPSErrors": true
+    },
+    "pages": [
+      {
+        "url": "https://1cde674a.runweft.pages.dev/#onboarding",
+        "status": 200,
+        "version": "1.1.3",
+        "cssLoaded": true
+      },
+      {
+        "url": "https://1cde674a.runweft.pages.dev/guide",
+        "status": 200,
+        "version": "1.1.3",
+        "cssLoaded": true
+      },
+      {
+        "url": "https://1cde674a.runweft.pages.dev/manual",
+        "status": 200,
+        "version": "1.1.3",
+        "cssLoaded": true
+      }
+    ],
+    "nativeNavigation": true,
+    "errors": []
+  },
+  "httpFilesMatchBothUrls": true
+}

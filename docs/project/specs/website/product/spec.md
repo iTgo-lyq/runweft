@@ -4,6 +4,8 @@ Runweft 官网是独立静态站点，不与业务看板或 HAPI 服务混用。
 
 委派必须连接 Hub；local 仅表示可托管本机 Hub，不是离线 Agent 模式。本机/远端图是交互示意：本机评审用共享目录、实现用独立 worktree；远端从已提交版本准备独立 worktree。首页文案、指南及参考导读由 iclaude 编写，原有视觉样式保留。
 
+首页 `#native-experience` 解释 HAPI 驱动原生 Codex/Claude 的执行方式：采用执行机器已有的登录、项目指令、Skill 和其他 MCP，权限沿原生规则，会话和目录跨轮保留。HAPI 会话网页提供消息/工具历史、待审批处理及在线会话文件和 Git 暂存/未暂存差异；新增入口链接到指南的具体步骤。手机使用浏览器，须能访问 Hub 并选择本人身份/空间；不承诺全部 HAPI 客户端或功能已接通。
+
 ## npm 安装
 
 所有支持的平台使用同一条固定版本 npm 命令，注明 Node.js 20+、npm、任务所需 Git 与原生工具。npm 自动选择 macOS arm64/x64、glibc Linux arm64/x64 平台依赖，随包提供 HAPI 和 Skill。安装成功后才检查版本；失败不继续运行已有程序。PATH 说明以 npm 全局 prefix 的 bin 为准。
@@ -24,7 +26,7 @@ website/serve.mjs 提供 loopback GET/HEAD 预览，只能读取站点目录。�
 
 website-pages.yml 复用规范版本识别，稳定版本使用托管 runner 构建、检查公共 npm 版本并上传 Direct Upload 项目；main 的官网相关推送部署 production，codex 分支部署 preview，action 返回环境须与请求模式匹配。生产部署先确认 run 的 SHA 为 main 当前提交，拒绝旧提交覆盖官网。仅 codex/** push/dispatch 的 Beta 在聚焦检查后明确跳过构建、准备/上传与静态产物；main 或 PR 的 Beta 版本失败，真实构建器仍只接受稳定版本。Beta 跳过仅有本地夹具证据，尚未真实触发。
 
-[正式官网](https://runweft.pages.dev/)安装版本为 npm 1.1.3，内容更新已通过 [main Pages CI](https://github.com/iTgo-lyq/runweft/actions/runs/38159759169)。固定构建为 [9417cc0a.runweft.pages.dev](https://9417cc0a.runweft.pages.dev/)，静态输出 102,120 字节；唯一 URL 与正式域名的八文件摘要/MIME、三页 Playwright 均通过，见[内容更新验收](../../../archive/2026-10-12-website-content-onboarding/acceptance.md)。[codex 分支预览](https://codex-cli-foundation.runweft.pages.dev/)保留原配置，范围见[Pages 验收](../../../archive/2026-10-02-website-cloudflare-pages/acceptance.md)。
+[正式官网](https://runweft.pages.dev/)安装版本为 npm 1.1.3；[main Pages CI](https://github.com/iTgo-lyq/runweft/actions/runs/38196238787)已发布原生执行与 HAPI 能力说明。固定构建为[1cde674a.runweft.pages.dev](https://1cde674a.runweft.pages.dev/)，静态输出 107,487 字节；唯一 URL 与正式域名八文件摘要/MIME、三页浏览器和新增指南入口均通过，见[本轮验收](../../../archive/2026-10-12-website-hapi-capabilities/acceptance.md)。此前[内容重写验收](../../../archive/2026-10-12-website-content-onboarding/acceptance.md)与[codex 分支预览](https://codex-cli-foundation.runweft.pages.dev/)记录继续保留。
 
 准备步骤和官方上传 action 使用 Repository secrets 的 CLOUDFLARE_ACCOUNT_ID/CLOUDFLARE_API_TOKEN；凭证不写入静态站点或验收 JSON。主包/四平台包的公开版本、SHA-512 字段、精确可选依赖和 tarball HEAD 均通过；五包latest必须与站点版本一致，不下载程序、不调用npm发布。静态输出为八文件白名单，拒绝链接、隐藏文件、归档和未知文件。
 

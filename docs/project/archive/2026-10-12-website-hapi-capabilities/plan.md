@@ -2,7 +2,7 @@
 
 > 来源：./requirement.md
 > 技术方案：./technical.md
-> 状态：执行中
+> 状态：已完成
 > 执行模式：逐任务提交
 
 ## 交付目标
@@ -30,7 +30,7 @@
 
 ### T2 上线核对并同步规格
 
-- 状态：待开始
+- 状态：已完成
 - 交付：main/Pages 发布、线上验收、website/product 与 website/guide Specs、Change 归档。
 - 依赖：T1。
 - 验收：唯一部署与正式域名内容一致，CI 成功，需求逐项可追溯。

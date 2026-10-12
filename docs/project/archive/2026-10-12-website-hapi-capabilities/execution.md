@@ -12,3 +12,10 @@ iclaude session `b3378282-93dd-43a4-93f0-bec1c3d5ac31` 成功完成 Plan 评审�
 - 验证：构建、15/15 发布检查、既有 Playwright `--browser-only` 通过，覆盖三页五宽度、25 个本地链接/锚点、复制/键盘/无 JS。六种宽度首页首屏与 CTA 边界和改动前逐项相同；新增入口和无 JS 指南可达，桌面/手机截图已查看。原始完整证据 `/home/tiger/workspace/runweft/.dev-smoke/website-Sqwlcv/evidence.json`，本次副本 `browser-evidence.json`；定向结果 `after/native-evidence.json`。
 - 事实：归档后的原生消息历史可读；主 Agent 有 respond_to_permission，仍受用户授权。文件/diff 依赖会话 RPC 在线；当前 Claude 拒绝请求可能结束本轮。依据来自当前实现与既有 Specs，本次不新增模型或真机执行证明。
 - Commit：`website-hapi-capabilities T1: explain native execution and HAPI session features`。
+
+## T2 上线核对并同步规格
+
+- 结果：快进 main 并正常推送，Pages 正式部署至 `https://1cde674a.runweft.pages.dev/`；正式域名展示新增原生执行和 HAPI 会话内容。
+- 验证：核心 CI 与 Pages CI 成功；唯一 URL 与正式域名八文件 SHA/MIME、三页浏览器及新增内容链接均通过；107,487 字节，Actions artifact 为零。具体来源和验收范围见 acceptance.md、verification.json。
+- 关闭：按既有授权自动验收，同步 website/product 与 website/guide Specs 及文档入口，归档本 Change。产品、Skill 与 npm 1.1.3 不变。
+- Commit：`website-hapi-capabilities T2: verify production and archive website update`。

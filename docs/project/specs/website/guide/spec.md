@@ -14,6 +14,8 @@
 
 本地配置、数据位置、MCP 备份、模型登录、服务版本、排错和清理入口有具体说明。指南中的未知任务/runtime ID 和示例域名需要使用者替换，网站不自行执行这些命令或修改用户配置。
 
+指南 `#native-session` 从“任务 → 查看任务详情”说明“打开原生详情 / 审批”和“打开原生文件”，支持目录及首页链接。审批是否出现沿原生配置，同意后执行相应操作，拒绝可能结束本轮。文件/diff 需要原生会话在线，完成后的代码通过 Runweft 取回；任务追加/续接仍回到主 Agent。手机访问需网络可达的 Hub 地址与同一身份/空间，localhost 仅本机，公网部署沿现有 HTTPS 代理说明。
+
 源文件与部署方式见[官网说明](../../../../../website/README.md)，对应产品行为仍以[安装](../../installation/cli/spec.md)、[MCP 安装](../../installation/mcp/spec.md)、[资源](../../resources/scope/spec.md)、[委派](../../delegation/interface/spec.md)和[部署](../../deployment/spec.md)为准。
 
-三页、两页提示/复制、五步路径和 24 个站内链接/锚点已通过本地自动验收；正式域名三页及文件摘要与验收版本一致，见[内容更新验收](../../../archive/2026-10-12-website-content-onboarding/acceptance.md)。
+三页、两页提示/复制、五步路径、原生会话入口和 25 个站内链接/锚点已通过本地自动验收，六宽度首屏与增补前相同；正式域名三页及文件摘要与验收版本一致，见[本轮验收](../../../archive/2026-10-12-website-hapi-capabilities/acceptance.md)。
