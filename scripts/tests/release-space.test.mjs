@@ -34,6 +34,12 @@ test('sampling failure waits for the command to finish and cannot report a succe
         available: () => { if (reads++) throw new Error('statfs failed'); return 1024; }, sampleIntervalMs: 10,
     });
     assert.equal(result.exitCode, 1); assert.equal(result.samplingError, 'statfs failed'); assert(reads > 2);
+    assert.equal(result.afterBytes, null);
+    let first = true;
+    const nonError = await measureReleaseSpace([process.execPath, '-e', ''], {
+        available: () => { if (first) { first = false; return 1024; } throw undefined; },
+    });
+    assert.equal(nonError.exitCode, 1); assert(nonError.samplingError); assert.equal(nonError.afterBytes, null);
 });
 
 test('measurement SIGTERM reaches the owned command and writes a failed report even if the child exits zero', async () => {

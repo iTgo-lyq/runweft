@@ -32,7 +32,10 @@ export async function measureReleaseSpace(command, { available = availableBytes,
     result.minAvailableBytes = result.beforeBytes;
     const sample = () => {
         try { result.afterBytes = available(); result.minAvailableBytes = Math.min(result.minAvailableBytes, result.afterBytes); }
-        catch (error) { result.samplingError = error.message; } // Await the owned command; a telemetry failure must not orphan it.
+        catch (error) {
+            result.afterBytes = null;
+            result.samplingError = String(error?.message || error || 'Unknown space sampling failure');
+        } // Await the owned command; a telemetry failure must not orphan it.
     };
     const child = spawn(command[0], command.slice(1), { stdio: 'inherit' });
     let interrupted = false;

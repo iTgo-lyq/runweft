@@ -38,7 +38,9 @@
     },
     "T3": {
       "title": "完成独立复核与发行准备",
-      "status": "todo"
+      "status": "done",
+      "verification": "iclaude三轮独立/定向复核无未解决P0-P2，低风险采样异常已定向修复并验证；最终Node64通过，1.1.6固定安装/构建/CLI版本及CLI冻结3测试、网页17测试通过，docs/workflow/actionlint/diff通过。正式新候选发布按授权在合入后进行，未预填成功。",
+      "commitTitle": "release-validation-efficiency T3: finalize review and prepare 1.1.6"
     }
   },
   "closure": {}

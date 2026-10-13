@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       release-tag:
-        description: 'Existing immutable version tag to release/recover; blank runs preflight only'
+        description: 'Existing immutable version tag to release/recover; leave all inputs blank for preflight'
         type: string
         default: ''
       source-run-id:

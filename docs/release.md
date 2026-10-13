@@ -74,7 +74,7 @@ gh workflow run npm-publish.yml --repo iTgo-lyq/runweft --ref main \
   -f 'release-tag=<原版本tag>' -f 'source-run-id=<原run编号>'
 ```
 
-手动 `release-tag` 留空只预演。恢复必须取得原候选描述、上传及成功的上传前检查证据，并核对来源、摘要和 packageInputs；包内说明、package.json 等输入变化后，不能从当前 main 恢复旧候选，应为下一版本重新冻结构建。部分公开、日志不可取得或上传结果未知时停止，不盲目重发。beta 是公开渠道，已公开版本不能覆盖。
+手动参数全部留空只预演。恢复必须取得原候选描述、上传及成功的上传前检查证据，并核对来源、摘要和 packageInputs；包内说明、package.json 等输入变化后，不能从当前 main 恢复旧候选，应为下一版本重新冻结构建。部分公开、日志不可取得或上传结果未知时停止，不盲目重发。beta 是公开渠道，已公开版本不能覆盖。
 
 调整验收脚本后，可以只读验证已公开的原候选：`gh workflow run npm-publish.yml --ref <验收分支> -f verify-run-id=<原发布run编号>`。包输入必须仍与原候选完全相同，并有原 run 的成功上传前证据；该模式实际执行全部公共分片、四平台安装/完整卸载及稳定版网页安装，跳过构建、上传、晋级和官网部署。不能同时填写 release-tag 或 source-run-id。所有手动参数均为空时仍是本地候选预演。
 
