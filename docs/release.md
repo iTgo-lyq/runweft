@@ -57,7 +57,7 @@ bun run test:native <已安装CLI> all <前次evidence.json>
 
 四平台托管安装不代替用户 Mac 实机、Mac/arm64 模型、物理跨机/WAN 或生产 TLS 实测；同机多 Runner 不等于物理远端。规范 `X.Y.Z-beta.N` 的发布/不晋级与官网 Beta 跳过只有[本地夹具证据](project/archive/2026-10-02-npm-beta-publishing/acceptance.md)，稳定版本上传 beta 再晋级不等于已经实际发布该类预发行版本。
 
-[发布提速验收](project/archive/2026-10-13-release-throughput/acceptance.md)记录候选读取、完整门禁、官网接续及摘要汇总的本地验证和分支预览 CI。新并行四平台发布、真实接续 dispatch 和实际耗时尚待正式发行验证；历史候选与旧流水线成功不替代新流程实测。
+[发布提速验收](project/archive/2026-10-13-release-throughput/acceptance.md)记录本地验证和分支预览 CI；[1.1.5 正式发行实测](releases/1.1.5.md)补充新并行四平台发布、真实官网 dispatch、故障定向恢复及实际耗时。该次 npm 晋级为 28 分 28 秒，含官网修复和恢复的完整流程为 35 分 42 秒；单次实测不保证后续公开传播与排队时间。
 
 ## npm 发布与恢复
 

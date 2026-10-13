@@ -1,0 +1,1139 @@
+{
+  "version": "1.1.5",
+  "sourceRevision": "d56ea6257a66271f3b7318d00be228076330739b",
+  "runId": 38345712525,
+  "url": "https://github.com/iTgo-lyq/runweft/actions/runs/38345712525",
+  "attempt": 1,
+  "originalConclusion": "failure",
+  "createdAt": "2026-10-13T04:17:17Z",
+  "latestCompletedAt": "2026-10-13T04:45:45Z",
+  "websiteCompletedAt": "2026-10-13T04:52:59.000Z",
+  "totalSeconds": 2142,
+  "npmSeconds": 1708,
+  "npmAndWebsiteSeconds": 2142,
+  "phases": [
+    {
+      "name": "启动及排队",
+      "start": "2026-10-13T04:17:17Z",
+      "end": "2026-10-13T04:17:20Z",
+      "seconds": 3,
+      "percent": 0.1400560224089636
+    },
+    {
+      "name": "上传前检查、四平台打包与 beta 上传",
+      "start": "2026-10-13T04:17:20Z",
+      "end": "2026-10-13T04:36:48Z",
+      "seconds": 1168,
+      "percent": 54.52847805788982
+    },
+    {
+      "name": "公共集成及四平台安装/卸载并行验收",
+      "start": "2026-10-13T04:36:48Z",
+      "end": "2026-10-13T04:45:18.000Z",
+      "seconds": 510,
+      "percent": 23.809523809523807
+    },
+    {
+      "name": "latest 晋级",
+      "start": "2026-10-13T04:45:18.000Z",
+      "end": "2026-10-13T04:45:45Z",
+      "seconds": 27,
+      "percent": 1.2605042016806722
+    },
+    {
+      "name": "官网首次失败及定位修复",
+      "start": "2026-10-13T04:45:45Z",
+      "end": "2026-10-13T04:51:20Z",
+      "seconds": 335,
+      "percent": 15.639589169000933
+    },
+    {
+      "name": "官网恢复排队",
+      "start": "2026-10-13T04:51:20Z",
+      "end": "2026-10-13T04:51:51.000Z",
+      "seconds": 31,
+      "percent": 1.4472455648926237
+    },
+    {
+      "name": "官网恢复部署与在线验证",
+      "start": "2026-10-13T04:51:51.000Z",
+      "end": "2026-10-13T04:52:59.000Z",
+      "seconds": 68,
+      "percent": 3.1746031746031744
+    }
+  ],
+  "jobs": [
+    {
+      "name": "beta",
+      "id": 115126522813,
+      "labels": [
+        "ubuntu-24.04"
+      ],
+      "conclusion": "success",
+      "createdAt": "2026-10-13T04:17:17Z",
+      "startedAt": "2026-10-13T04:17:20Z",
+      "completedAt": "2026-10-13T04:36:48Z",
+      "queuedSeconds": 3,
+      "runningSeconds": 1168,
+      "steps": [
+        {
+          "name": "Set up job",
+          "seconds": 2
+        },
+        {
+          "name": "Free hosted runner space for four-platform packages and integration fixtures",
+          "seconds": 88
+        },
+        {
+          "name": "Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+          "seconds": 6
+        },
+        {
+          "name": "Run actions/setup-node@820762786026740c76f36085b0efc47a31fe5020",
+          "seconds": 1
+        },
+        {
+          "name": "Run npm install --global npm@11.21.0 --registry=https://registry.npmjs.org/ --ignore-scripts",
+          "seconds": 5
+        },
+        {
+          "name": "Select immutable source or recover original public packages",
+          "seconds": 1
+        },
+        {
+          "name": "Run oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6",
+          "seconds": 3
+        },
+        {
+          "name": "Run bun install --frozen-lockfile",
+          "seconds": 0
+        },
+        {
+          "name": "Run bun install --frozen-lockfile",
+          "seconds": 15
+        },
+        {
+          "name": "Install native clients for configuration tests and discovery only",
+          "seconds": 9
+        },
+        {
+          "name": "Run bun run typecheck && bun run test",
+          "seconds": 99
+        },
+        {
+          "name": "Run node --test ./scripts/tests/*.test.mjs ./website/publish.test.mjs",
+          "seconds": 2
+        },
+        {
+          "name": "Check out exact tag source for packaging",
+          "seconds": 4
+        },
+        {
+          "name": "Run bun install --frozen-lockfile",
+          "seconds": 0
+        },
+        {
+          "name": "Run bun install --frozen-lockfile",
+          "seconds": 3
+        },
+        {
+          "name": "Run bun run package --all",
+          "seconds": 90
+        },
+        {
+          "name": "Check every model-free integration group on the frozen candidate",
+          "seconds": 110
+        },
+        {
+          "name": "Verify five package OIDC bindings",
+          "seconds": 4
+        },
+        {
+          "name": "Preflight or upload exact tarballs to beta",
+          "seconds": 720
+        },
+        {
+          "name": "Keep sanitized validation in logs",
+          "seconds": 0
+        },
+        {
+          "name": "Post Check out exact tag source for packaging",
+          "seconds": 1
+        },
+        {
+          "name": "Post Run oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6",
+          "seconds": 0
+        },
+        {
+          "name": "Post Run actions/setup-node@820762786026740c76f36085b0efc47a31fe5020",
+          "seconds": 0
+        },
+        {
+          "name": "Post Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+          "seconds": 0
+        },
+        {
+          "name": "Complete job",
+          "seconds": 0
+        }
+      ]
+    },
+    {
+      "name": "integration (storage)",
+      "id": 115131518616,
+      "labels": [
+        "ubuntu-24.04"
+      ],
+      "conclusion": "success",
+      "createdAt": "2026-10-13T04:36:49Z",
+      "startedAt": "2026-10-13T04:36:50Z",
+      "completedAt": "2026-10-13T04:45:18Z",
+      "queuedSeconds": 1,
+      "runningSeconds": 508,
+      "steps": [
+        {
+          "name": "Set up job",
+          "seconds": 1
+        },
+        {
+          "name": "Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+          "seconds": 5
+        },
+        {
+          "name": "Run actions/setup-node@820762786026740c76f36085b0efc47a31fe5020",
+          "seconds": 0
+        },
+        {
+          "name": "Run oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6",
+          "seconds": 1
+        },
+        {
+          "name": "Run bun install --frozen-lockfile",
+          "seconds": 1
+        },
+        {
+          "name": "Run bun install --frozen-lockfile",
+          "seconds": 19
+        },
+        {
+          "name": "Install clients for configuration and discovery only",
+          "seconds": 43
+        },
+        {
+          "name": "Download immutable public candidate",
+          "seconds": 180
+        },
+        {
+          "name": "Extract and verify both candidate programs",
+          "seconds": 2
+        },
+        {
+          "name": "Run selected integration group on the public candidate",
+          "seconds": 252
+        },
+        {
+          "name": "Keep sanitized integration evidence in logs",
+          "seconds": 0
+        },
+        {
+          "name": "Post Run oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6",
+          "seconds": 0
+        },
+        {
+          "name": "Post Run actions/setup-node@820762786026740c76f36085b0efc47a31fe5020",
+          "seconds": 0
+        },
+        {
+          "name": "Post Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+          "seconds": 1
+        },
+        {
+          "name": "Complete job",
+          "seconds": 0
+        }
+      ]
+    },
+    {
+      "name": "install / install (ubuntu-24.04-arm, linux-arm64)",
+      "id": 115131518667,
+      "labels": [
+        "ubuntu-24.04-arm"
+      ],
+      "conclusion": "success",
+      "createdAt": "2026-10-13T04:36:49Z",
+      "startedAt": "2026-10-13T04:36:53Z",
+      "completedAt": "2026-10-13T04:37:59Z",
+      "queuedSeconds": 4,
+      "runningSeconds": 66,
+      "steps": [
+        {
+          "name": "Set up job",
+          "seconds": 1
+        },
+        {
+          "name": "Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+          "seconds": 1
+        },
+        {
+          "name": "Run actions/setup-node@820762786026740c76f36085b0efc47a31fe5020",
+          "seconds": 1
+        },
+        {
+          "name": "Run oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6",
+          "seconds": 1
+        },
+        {
+          "name": "Run bun install --frozen-lockfile",
+          "seconds": 0
+        },
+        {
+          "name": "Download and verify public npm candidate",
+          "seconds": 2
+        },
+        {
+          "name": "Install exact public version and verify paired binaries and services",
+          "seconds": 32
+        },
+        {
+          "name": "Verify complete uninstall and preservation on the exact public candidate",
+          "seconds": 24
+        },
+        {
+          "name": "Keep sanitized installation evidence in logs",
+          "seconds": 0
+        },
+        {
+          "name": "Post Run oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6",
+          "seconds": 0
+        },
+        {
+          "name": "Post Run actions/setup-node@820762786026740c76f36085b0efc47a31fe5020",
+          "seconds": 1
+        },
+        {
+          "name": "Post Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+          "seconds": 0
+        },
+        {
+          "name": "Complete job",
+          "seconds": 0
+        }
+      ]
+    },
+    {
+      "name": "integration (access)",
+      "id": 115131518673,
+      "labels": [
+        "ubuntu-24.04"
+      ],
+      "conclusion": "success",
+      "createdAt": "2026-10-13T04:36:49Z",
+      "startedAt": "2026-10-13T04:36:51Z",
+      "completedAt": "2026-10-13T04:43:42Z",
+      "queuedSeconds": 2,
+      "runningSeconds": 411,
+      "steps": [
+        {
+          "name": "Set up job",
+          "seconds": 2
+        },
+        {
+          "name": "Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+          "seconds": 5
+        },
+        {
+          "name": "Run actions/setup-node@820762786026740c76f36085b0efc47a31fe5020",
+          "seconds": 0
+        },
+        {
+          "name": "Run oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6",
+          "seconds": 2
+        },
+        {
+          "name": "Run bun install --frozen-lockfile",
+          "seconds": 1
+        },
+        {
+          "name": "Run bun install --frozen-lockfile",
+          "seconds": 15
+        },
+        {
+          "name": "Install clients for configuration and discovery only",
+          "seconds": 11
+        },
+        {
+          "name": "Download immutable public candidate",
+          "seconds": 199
+        },
+        {
+          "name": "Extract and verify both candidate programs",
+          "seconds": 3
+        },
+        {
+          "name": "Run selected integration group on the public candidate",
+          "seconds": 169
+        },
+        {
+          "name": "Keep sanitized integration evidence in logs",
+          "seconds": 0
+        },
+        {
+          "name": "Post Run oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6",
+          "seconds": 0
+        },
+        {
+          "name": "Post Run actions/setup-node@820762786026740c76f36085b0efc47a31fe5020",
+          "seconds": 1
+        },
+        {
+          "name": "Post Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+          "seconds": 0
+        },
+        {
+          "name": "Complete job",
+          "seconds": 0
+        }
+      ]
+    },
+    {
+      "name": "integration (web)",
+      "id": 115131518700,
+      "labels": [
+        "ubuntu-24.04"
+      ],
+      "conclusion": "success",
+      "createdAt": "2026-10-13T04:36:49Z",
+      "startedAt": "2026-10-13T04:36:51Z",
+      "completedAt": "2026-10-13T04:41:39Z",
+      "queuedSeconds": 2,
+      "runningSeconds": 288,
+      "steps": [
+        {
+          "name": "Set up job",
+          "seconds": 2
+        },
+        {
+          "name": "Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+          "seconds": 7
+        },
+        {
+          "name": "Run actions/setup-node@820762786026740c76f36085b0efc47a31fe5020",
+          "seconds": 1
+        },
+        {
+          "name": "Run oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6",
+          "seconds": 1
+        },
+        {
+          "name": "Run bun install --frozen-lockfile",
+          "seconds": 0
+        },
+        {
+          "name": "Run bun install --frozen-lockfile",
+          "seconds": 20
+        },
+        {
+          "name": "Install clients for configuration and discovery only",
+          "seconds": 13
+        },
+        {
+          "name": "Run bunx playwright install --with-deps chromium",
+          "seconds": 31
+        },
+        {
+          "name": "Download immutable public candidate",
+          "seconds": 161
+        },
+        {
+          "name": "Extract and verify both candidate programs",
+          "seconds": 3
+        },
+        {
+          "name": "Run selected integration group on the public candidate",
+          "seconds": 46
+        },
+        {
+          "name": "Keep sanitized integration evidence in logs",
+          "seconds": 0
+        },
+        {
+          "name": "Post Run oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6",
+          "seconds": 1
+        },
+        {
+          "name": "Post Run actions/setup-node@820762786026740c76f36085b0efc47a31fe5020",
+          "seconds": 0
+        },
+        {
+          "name": "Post Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+          "seconds": 1
+        },
+        {
+          "name": "Complete job",
+          "seconds": 0
+        }
+      ]
+    },
+    {
+      "name": "install / install (macos-15, darwin-arm64)",
+      "id": 115131518723,
+      "labels": [
+        "macos-15"
+      ],
+      "conclusion": "success",
+      "createdAt": "2026-10-13T04:36:49Z",
+      "startedAt": "2026-10-13T04:36:53Z",
+      "completedAt": "2026-10-13T04:38:03Z",
+      "queuedSeconds": 4,
+      "runningSeconds": 70,
+      "steps": [
+        {
+          "name": "Set up job",
+          "seconds": 1
+        },
+        {
+          "name": "Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+          "seconds": 1
+        },
+        {
+          "name": "Run actions/setup-node@820762786026740c76f36085b0efc47a31fe5020",
+          "seconds": 1
+        },
+        {
+          "name": "Run oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6",
+          "seconds": 2
+        },
+        {
+          "name": "Run bun install --frozen-lockfile",
+          "seconds": 0
+        },
+        {
+          "name": "Download and verify public npm candidate",
+          "seconds": 3
+        },
+        {
+          "name": "Install exact public version and verify paired binaries and services",
+          "seconds": 22
+        },
+        {
+          "name": "Verify complete uninstall and preservation on the exact public candidate",
+          "seconds": 35
+        },
+        {
+          "name": "Keep sanitized installation evidence in logs",
+          "seconds": 0
+        },
+        {
+          "name": "Post Run oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6",
+          "seconds": 0
+        },
+        {
+          "name": "Post Run actions/setup-node@820762786026740c76f36085b0efc47a31fe5020",
+          "seconds": 1
+        },
+        {
+          "name": "Post Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+          "seconds": 0
+        },
+        {
+          "name": "Complete job",
+          "seconds": 0
+        }
+      ]
+    },
+    {
+      "name": "install / install (ubuntu-24.04, linux-x64)",
+      "id": 115131518738,
+      "labels": [
+        "ubuntu-24.04"
+      ],
+      "conclusion": "success",
+      "createdAt": "2026-10-13T04:36:49Z",
+      "startedAt": "2026-10-13T04:36:51Z",
+      "completedAt": "2026-10-13T04:42:51Z",
+      "queuedSeconds": 2,
+      "runningSeconds": 360,
+      "steps": [
+        {
+          "name": "Set up job",
+          "seconds": 3
+        },
+        {
+          "name": "Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+          "seconds": 4
+        },
+        {
+          "name": "Run actions/setup-node@820762786026740c76f36085b0efc47a31fe5020",
+          "seconds": 0
+        },
+        {
+          "name": "Run oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6",
+          "seconds": 2
+        },
+        {
+          "name": "Run bun install --frozen-lockfile",
+          "seconds": 1
+        },
+        {
+          "name": "Download and verify public npm candidate",
+          "seconds": 239
+        },
+        {
+          "name": "Install exact public version and verify paired binaries and services",
+          "seconds": 36
+        },
+        {
+          "name": "Verify complete uninstall and preservation on the exact public candidate",
+          "seconds": 28
+        },
+        {
+          "name": "Verify stable website DOM installation and packaged instructions",
+          "seconds": 42
+        },
+        {
+          "name": "Keep sanitized installation evidence in logs",
+          "seconds": 1
+        },
+        {
+          "name": "Post Run oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6",
+          "seconds": 0
+        },
+        {
+          "name": "Post Run actions/setup-node@820762786026740c76f36085b0efc47a31fe5020",
+          "seconds": 0
+        },
+        {
+          "name": "Post Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+          "seconds": 0
+        },
+        {
+          "name": "Complete job",
+          "seconds": 0
+        }
+      ]
+    },
+    {
+      "name": "install / install (macos-15-intel, darwin-x64)",
+      "id": 115131518813,
+      "labels": [
+        "macos-15-intel"
+      ],
+      "conclusion": "success",
+      "createdAt": "2026-10-13T04:36:49Z",
+      "startedAt": "2026-10-13T04:36:52Z",
+      "completedAt": "2026-10-13T04:42:03Z",
+      "queuedSeconds": 3,
+      "runningSeconds": 311,
+      "steps": [
+        {
+          "name": "Set up job",
+          "seconds": 2
+        },
+        {
+          "name": "Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+          "seconds": 6
+        },
+        {
+          "name": "Run actions/setup-node@820762786026740c76f36085b0efc47a31fe5020",
+          "seconds": 4
+        },
+        {
+          "name": "Run oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6",
+          "seconds": 4
+        },
+        {
+          "name": "Run bun install --frozen-lockfile",
+          "seconds": 3
+        },
+        {
+          "name": "Download and verify public npm candidate",
+          "seconds": 6
+        },
+        {
+          "name": "Install exact public version and verify paired binaries and services",
+          "seconds": 131
+        },
+        {
+          "name": "Verify complete uninstall and preservation on the exact public candidate",
+          "seconds": 146
+        },
+        {
+          "name": "Keep sanitized installation evidence in logs",
+          "seconds": 1
+        },
+        {
+          "name": "Post Run oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6",
+          "seconds": 1
+        },
+        {
+          "name": "Post Run actions/setup-node@820762786026740c76f36085b0efc47a31fe5020",
+          "seconds": 0
+        },
+        {
+          "name": "Post Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+          "seconds": 2
+        },
+        {
+          "name": "Complete job",
+          "seconds": 1
+        }
+      ]
+    },
+    {
+      "name": "promote",
+      "id": 115133676626,
+      "labels": [
+        "ubuntu-24.04"
+      ],
+      "conclusion": "success",
+      "createdAt": "2026-10-13T04:45:18Z",
+      "startedAt": "2026-10-13T04:45:20Z",
+      "completedAt": "2026-10-13T04:45:45Z",
+      "queuedSeconds": 2,
+      "runningSeconds": 25,
+      "steps": [
+        {
+          "name": "Set up job",
+          "seconds": 1
+        },
+        {
+          "name": "Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+          "seconds": 1
+        },
+        {
+          "name": "Run actions/setup-node@820762786026740c76f36085b0efc47a31fe5020",
+          "seconds": 1
+        },
+        {
+          "name": "Run npm install --global npm@11.21.0 --registry=https://registry.npmjs.org/ --ignore-scripts",
+          "seconds": 5
+        },
+        {
+          "name": "Confirm five packages and promote platforms before main",
+          "seconds": 14
+        },
+        {
+          "name": "Post Run actions/setup-node@820762786026740c76f36085b0efc47a31fe5020",
+          "seconds": 0
+        },
+        {
+          "name": "Post Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+          "seconds": 0
+        },
+        {
+          "name": "Complete job",
+          "seconds": 1
+        }
+      ]
+    },
+    {
+      "name": "website",
+      "id": 115133793690,
+      "labels": [
+        "ubuntu-24.04"
+      ],
+      "conclusion": "failure",
+      "createdAt": "2026-10-13T04:45:46Z",
+      "startedAt": "2026-10-13T04:45:48Z",
+      "completedAt": "2026-10-13T04:45:56Z",
+      "queuedSeconds": 2,
+      "runningSeconds": 8,
+      "steps": [
+        {
+          "name": "Set up job",
+          "seconds": 0
+        },
+        {
+          "name": "Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+          "seconds": 2
+        },
+        {
+          "name": "Run actions/setup-node@820762786026740c76f36085b0efc47a31fe5020",
+          "seconds": 1
+        },
+        {
+          "name": "Post Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+          "seconds": 0
+        },
+        {
+          "name": "Complete job",
+          "seconds": 0
+        }
+      ]
+    },
+    {
+      "name": "summary",
+      "id": 115133839732,
+      "labels": [
+        "ubuntu-24.04"
+      ],
+      "conclusion": "success",
+      "createdAt": "2026-10-13T04:45:56Z",
+      "startedAt": "2026-10-13T04:45:59Z",
+      "completedAt": "2026-10-13T04:46:13Z",
+      "queuedSeconds": 3,
+      "runningSeconds": 14,
+      "steps": [
+        {
+          "name": "Set up job",
+          "seconds": 2
+        },
+        {
+          "name": "Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+          "seconds": 2
+        },
+        {
+          "name": "Run actions/setup-node@820762786026740c76f36085b0efc47a31fe5020",
+          "seconds": 1
+        },
+        {
+          "name": "Collect candidate, validation, retry and job timing evidence",
+          "seconds": 5
+        },
+        {
+          "name": "Post Run actions/setup-node@820762786026740c76f36085b0efc47a31fe5020",
+          "seconds": 0
+        },
+        {
+          "name": "Post Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+          "seconds": 0
+        },
+        {
+          "name": "Complete job",
+          "seconds": 0
+        }
+      ]
+    }
+  ],
+  "websiteRun": {
+    "id": 38348471070,
+    "url": "https://github.com/iTgo-lyq/runweft/actions/runs/38348471070",
+    "attempt": 1,
+    "createdAt": "2026-10-13T04:51:20Z",
+    "jobs": [
+      {
+        "name": "website",
+        "id": 115135347736,
+        "labels": [
+          "ubuntu-24.04"
+        ],
+        "conclusion": "success",
+        "createdAt": "2026-10-13T04:51:49Z",
+        "startedAt": "2026-10-13T04:51:51Z",
+        "completedAt": "2026-10-13T04:52:59Z",
+        "queuedSeconds": 2,
+        "runningSeconds": 68,
+        "steps": [
+          {
+            "name": "Set up job",
+            "seconds": 2
+          },
+          {
+            "name": "Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+            "seconds": 1
+          },
+          {
+            "name": "Run actions/setup-node@820762786026740c76f36085b0efc47a31fe5020",
+            "seconds": 1
+          },
+          {
+            "name": "Test deployment checks",
+            "seconds": 1
+          },
+          {
+            "name": "Check website version eligibility",
+            "seconds": 0
+          },
+          {
+            "name": "Build npm installation site",
+            "seconds": 0
+          },
+          {
+            "name": "Check static output and public npm release",
+            "seconds": 1
+          },
+          {
+            "name": "Prepare Pages project",
+            "seconds": 1
+          },
+          {
+            "name": "Recheck main immediately before upload",
+            "seconds": 0
+          },
+          {
+            "name": "Upload to Cloudflare Pages",
+            "seconds": 19
+          },
+          {
+            "name": "Verify unique deployment URL",
+            "seconds": 2
+          },
+          {
+            "name": "Run oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6",
+            "seconds": 2
+          },
+          {
+            "name": "Run bun install --frozen-lockfile",
+            "seconds": 0
+          },
+          {
+            "name": "Verify deployed pages at desktop and mobile sizes",
+            "seconds": 34
+          },
+          {
+            "name": "Keep sanitized deployment evidence and file hashes in logs",
+            "seconds": 0
+          },
+          {
+            "name": "Post Run oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6",
+            "seconds": 1
+          },
+          {
+            "name": "Post Run actions/setup-node@820762786026740c76f36085b0efc47a31fe5020",
+            "seconds": 0
+          },
+          {
+            "name": "Post Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+            "seconds": 0
+          },
+          {
+            "name": "Complete job",
+            "seconds": 0
+          }
+        ]
+      }
+    ]
+  },
+  "note": "各阶段为关键路径墙钟耗时；并行 job 不相加。计时始于 GitHub 创建 tag 发布 run。记录来自 GitHub API，秒级时间精度。",
+  "publication": {
+    "uploadSeconds": 82.395,
+    "platformVisibilityWaitSeconds": 572.866,
+    "mainVisibilityWaitSeconds": 56.637,
+    "visibilityWaitSeconds": 629.5029999999999,
+    "events": [
+      {
+        "time": "2026-10-13T04:24:51.3449033Z",
+        "changes": [
+          {
+            "name": "runweft-linux-x64",
+            "status": "uploading"
+          }
+        ],
+        "success": false
+      },
+      {
+        "time": "2026-10-13T04:25:12.9219058Z",
+        "changes": [
+          {
+            "name": "runweft-linux-x64",
+            "status": "accepted"
+          }
+        ],
+        "success": false
+      },
+      {
+        "time": "2026-10-13T04:25:12.9227883Z",
+        "changes": [
+          {
+            "name": "runweft-linux-arm64",
+            "status": "uploading"
+          }
+        ],
+        "success": false
+      },
+      {
+        "time": "2026-10-13T04:25:35.4116309Z",
+        "changes": [
+          {
+            "name": "runweft-linux-arm64",
+            "status": "accepted"
+          }
+        ],
+        "success": false
+      },
+      {
+        "time": "2026-10-13T04:25:35.4131013Z",
+        "changes": [
+          {
+            "name": "runweft-darwin-x64",
+            "status": "uploading"
+          }
+        ],
+        "success": false
+      },
+      {
+        "time": "2026-10-13T04:25:53.0958957Z",
+        "changes": [
+          {
+            "name": "runweft-darwin-x64",
+            "status": "accepted"
+          }
+        ],
+        "success": false
+      },
+      {
+        "time": "2026-10-13T04:25:53.0971897Z",
+        "changes": [
+          {
+            "name": "runweft-darwin-arm64",
+            "status": "uploading"
+          }
+        ],
+        "success": false
+      },
+      {
+        "time": "2026-10-13T04:26:10.4718709Z",
+        "changes": [
+          {
+            "name": "runweft-darwin-arm64",
+            "status": "accepted"
+          }
+        ],
+        "success": false
+      },
+      {
+        "time": "2026-10-13T04:31:20.4811566Z",
+        "changes": [
+          {
+            "name": "runweft-darwin-x64",
+            "status": "confirmed"
+          }
+        ],
+        "success": false
+      },
+      {
+        "time": "2026-10-13T04:32:07.3517457Z",
+        "changes": [
+          {
+            "name": "runweft-linux-arm64",
+            "status": "confirmed"
+          }
+        ],
+        "success": false
+      },
+      {
+        "time": "2026-10-13T04:34:41.7661418Z",
+        "changes": [
+          {
+            "name": "runweft-darwin-arm64",
+            "status": "confirmed"
+          }
+        ],
+        "success": false
+      },
+      {
+        "time": "2026-10-13T04:35:43.3378266Z",
+        "changes": [
+          {
+            "name": "runweft-linux-x64",
+            "status": "confirmed"
+          }
+        ],
+        "success": false
+      },
+      {
+        "time": "2026-10-13T04:35:43.3391101Z",
+        "changes": [
+          {
+            "name": "runweft",
+            "status": "uploading"
+          }
+        ],
+        "success": false
+      },
+      {
+        "time": "2026-10-13T04:35:46.6124599Z",
+        "changes": [
+          {
+            "name": "runweft",
+            "status": "accepted"
+          }
+        ],
+        "success": false
+      },
+      {
+        "time": "2026-10-13T04:36:43.2495716Z",
+        "changes": [
+          {
+            "name": "runweft",
+            "status": "confirmed"
+          }
+        ],
+        "success": false
+      },
+      {
+        "time": "2026-10-13T04:36:43.3394782Z",
+        "changes": [],
+        "success": true
+      }
+    ]
+  },
+  "publicVerification": {
+    "at": "2026-10-13T04:54:17.054Z",
+    "version": "1.1.5",
+    "source": {
+      "revision": "d56ea6257a66271f3b7318d00be228076330739b",
+      "dirty": false
+    },
+    "packages": [
+      {
+        "name": "runweft-darwin-arm64",
+        "tags": {
+          "latest": "1.1.5",
+          "beta": "1.1.5"
+        },
+        "integrity": "sha512-Om1B2zJUg4nlhlBX4EmV11dPs/kNytY7MCcE0J/xC7H+eAxDLE3xM/cK3oJqqxRTtWiciMRe1Omqld09LdvU/A=="
+      },
+      {
+        "name": "runweft-darwin-x64",
+        "tags": {
+          "latest": "1.1.5",
+          "beta": "1.1.5"
+        },
+        "integrity": "sha512-gXmYRZ5KVUiE7py5v3ZsMJzmWo+CICwvB5r/bFyCNf7uYeqICSxCjs+pUr/NVjROGxQXBLO2R5x+ag5LY4sWlg=="
+      },
+      {
+        "name": "runweft-linux-arm64",
+        "tags": {
+          "latest": "1.1.5",
+          "beta": "1.1.5"
+        },
+        "integrity": "sha512-EDMLoCCo5MzD5+5PFnNJL0FltHXnKCZHLw2tb1Yrbel8X9NsL9VT0bczxOUy8QQOkx1nYPXT49AT3A1Dmr4Uxg=="
+      },
+      {
+        "name": "runweft-linux-x64",
+        "tags": {
+          "latest": "1.1.5",
+          "beta": "1.1.5"
+        },
+        "integrity": "sha512-Pyq5IsaZ2JJFinV9pMWbUHEILjerWDlIcgi39msRvzvxCuBonp/v90pUO6rgo70FYSE8DcBuzlgH98ZMYROb1A=="
+      },
+      {
+        "name": "runweft",
+        "tags": {
+          "latest": "1.1.5",
+          "beta": "1.1.5"
+        },
+        "integrity": "sha512-yV6d9I8L7DqnLmwAMnxy4NFGRk0v/78SAFlStPTPHUK459gu2+a8Cz1i6iH15Oc1u7D0AHML0WuEJKElY3VsJw=="
+      }
+    ],
+    "website": {
+      "version": "1.1.5",
+      "installation": "npm",
+      "package": "runweft",
+      "registry": "https://registry.npmjs.org/"
+    }
+  },
+  "recovery": {
+    "commit": "0d0996a5c855b6acd7009ccb9350091850705cb8",
+    "originalWebsiteRun": 38348023714,
+    "intermediatePushWebsiteRun": 38348458793,
+    "successfulWebsiteRun": 38348471070,
+    "issues": [
+      "initial run-name not initialized",
+      "Beta fixture inherited RELEASE_VERSION",
+      "intermediate push unique guide.html hash mismatch"
+    ],
+    "successfulDeployment": "https://62840a84.runweft.pages.dev/"
+  }
+}
