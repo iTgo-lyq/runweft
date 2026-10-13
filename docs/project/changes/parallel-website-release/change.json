@@ -31,7 +31,8 @@
     },
     "T2": {
       "title": "官网与 npm 正式发行并行",
-      "status": "todo"
+      "status": "done",
+      "verification": "70项Node检查和生产发行环境下20项官网检查通过；actionlint、文档/workflow/diff通过。夹具覆盖提前部署、稳定tag、预检/Beta/只读排除、最终双端汇合及仅复验无上传。"
     },
     "T3": {
       "title": "独立复核与交付",

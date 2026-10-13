@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { readFileSync } from 'node:fs';
 import { parse } from 'yaml';
-import { collectReleaseEvidence, dispatchWebsite, jobTiming, websiteRunName } from '../release-finish.mjs';
+import { assertReleaseResults, collectReleaseEvidence, dispatchWebsite, jobTiming, selectWebsiteRelease, websiteRunName } from '../release-finish.mjs';
 import { packageNames } from '../npm-publish.mjs';
 
 const env = { GITHUB_REPOSITORY: 'owner/repo', GH_TOKEN: 'fixture-token', GITHUB_RUN_ID: '10', GITHUB_RUN_ATTEMPT: '2' };
@@ -77,19 +77,70 @@ test('summary retains original attempts and derives actual queue/runtime without
     assert.equal(jobTiming({ ...job, created_at: undefined }, 1).queuedMs, null);
 });
 
-test('workflow follow-up has scoped permissions, complete prerequisites and production verification', () => {
+test('website starts independently while final summary joins all release gates and read-only recovery cannot upload', () => {
     const publish = parse(readFileSync('.github/workflows/npm-publish.yml', 'utf8'));
     const site = parse(readFileSync('.github/workflows/website-pages.yml', 'utf8'));
-    assert.deepEqual(publish.jobs.website.needs, ['beta', 'promote']);
+    assert.equal(publish.jobs.website.needs, undefined);
+    assert.match(publish.jobs.website.if, /inputs.verify-run-id == ''/);
+    const start = publish.jobs.website.steps.find(step => step.id === 'website');
+    assert.equal(start.env.RELEASE_TAG, '${{ github.event_name == \'push\' && github.ref_name || inputs.release-tag }}');
+    assert.equal(start.env.RELEASE_DESCRIPTOR, undefined);
+    assert.equal(publish.jobs.website.steps[0].with['fetch-depth'], 0);
     assert.equal(publish.jobs.website.permissions['actions'], 'write');
     assert.equal(publish.jobs.website.permissions['id-token'], undefined);
     assert.equal(publish.jobs.summary.if, 'always()');
     assert.equal(publish.jobs.summary.permissions.actions, 'read');
     assert(publish.jobs.summary.needs.includes('website'));
+    assert.equal(publish.jobs.summary.steps.at(-1).env.RELEASE_RESULTS, '${{ toJSON(needs) }}');
     assert.match(site['run-name'], /release-version.*release-run-id.*release-attempt/);
     assert.match(site.jobs.website.steps.find(step => step.id === 'prepare').if, /publication.outputs.ready/);
+    for (const id of ['prepare', 'pages']) assert.match(site.jobs.website.steps.find(step => step.id === id).if, /inputs.verify-run-id == ''/);
+    assert(site.jobs.website.steps.some(step => step.id === 'recovered' && step.run === 'node website/recover.mjs'));
     assert(site.jobs.website.steps.some(step => step.run === 'node website/publish.mjs current'));
     assert(site.jobs.website.steps.some(step => step.run?.includes('node website/verify-live.mjs')));
+});
+
+test('parallel website selects only an immutable stable tag; preflight, beta and read-only checks do not dispatch', () => {
+    const request = { RELEASE_TAG: 'v1.2.0', GITHUB_EVENT_NAME: 'push', GITHUB_REF_TYPE: 'tag', GITHUB_REF_NAME: 'v1.2.0' };
+    const git = args => args[0] === 'show' ? JSON.stringify({ version }) : 'a'.repeat(40);
+    assert.equal(selectWebsiteRelease(request, { git }).version, version);
+    for (const update of [{ RELEASE_TAG: '' }, { RELEASE_TAG: 'v1.2.0-beta.1' }, { VERIFY_RUN_ID: '12' }]) {
+        assert.equal(selectWebsiteRelease({ ...request, ...update }, { git: () => assert.fail('must not resolve/deploy') }), null);
+    }
+    for (const update of [{ RELEASE_TAG: 'v1.02.0' }, { GITHUB_REF_TYPE: 'branch' }, { GITHUB_EVENT_NAME: 'pull_request' },
+        { GITHUB_EVENT_NAME: 'workflow_dispatch', GITHUB_REF_NAME: 'codex/test' }]) {
+        assert.throws(() => selectWebsiteRelease({ ...request, ...update }, { git }));
+    }
+    assert.throws(() => selectWebsiteRelease(request, { git: args => args[0] === 'show' ? '{"version":"9.0.0"}' : git(args) }), /differs/);
+});
+
+test('parallel dispatch needs no published descriptor but still binds version and actual child run', async () => {
+    let posts = 0;
+    const result = await dispatchWebsite({ version }, env, { parallel: true, request: async (_, options) => {
+        if (options.method === 'POST') {
+            posts++;
+            assert.equal(JSON.parse(options.body).inputs['release-parallel'], true);
+            return Response.json({ workflow_run_id: 20 });
+        }
+        return Response.json(run);
+    } });
+    assert.equal(result.status, 'success'); assert.equal(posts, 1);
+});
+
+test('website success cannot hide npm failure and missing or unsuccessful website cannot complete a stable release', () => {
+    const needs = { beta: { result: 'success', outputs: { publish: 'true', 'site-install': 'true', 'validation-mode': 'public' } },
+        install: { result: 'success' }, integration: { result: 'success' }, promote: { result: 'success' },
+        website: { result: 'success', outputs: { 'run-id': '20' } } };
+    assertReleaseResults(needs);
+    for (const name of ['beta', 'install', 'integration', 'promote', 'website']) for (const result of ['failure', 'cancelled', 'skipped']) {
+        const changed = structuredClone(needs); changed[name].result = result;
+        assert.throws(() => assertReleaseResults(changed));
+    }
+    const missing = structuredClone(needs); missing.website.outputs = {};
+    assert.throws(() => assertReleaseResults(missing), /Missing actual website run/);
+    assertReleaseResults({ ...needs, beta: { result: 'success', outputs: { ...needs.beta.outputs, publish: 'false', 'verify-only': 'true' } },
+        promote: { result: 'skipped' }, website: { result: 'skipped' } });
+    assertReleaseResults({ beta: { result: 'success', outputs: { publish: 'false' } } });
 });
 
 test('summary skips intentionally skipped jobs and marks unavailable started-job logs as incomplete', async () => {

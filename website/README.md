@@ -35,7 +35,7 @@ node website/serve.mjs
 | codex/** 的官网相关推送 | 已晋级时部署分支预览，未晋级时静态检查后等待 |
 | pull_request 的官网相关变更 | 聚焦测试、构建和公共 npm 检查，不上传 |
 | workflow_dispatch | 所选 main/codex 分支按同一规则部署；tag/其他分支只检查 |
-| 稳定 npm 晋级接续 | 自动 dispatch main，核对预期版本和来源 run/attempt，发布任务等待官网实际完成 |
+| 稳定正式发行 | 与 npm 并行 dispatch main，核对预期版本和来源 run/attempt；允许官网短暂领先，整体等待两端完成 |
 
 仅规范稳定版本运行表中的构建/公开 npm/部署步骤。codex/** 的 push 或 dispatch 遇到 Beta 根版本时执行聚焦检查并写 summary，跳过构建和准备/上传；main 或 PR 遇到 Beta 版本直接失败，避免生产更新被静默跳过。真实 builder 仍只接受稳定版本，不生成 Beta 产品站点。
 
@@ -50,7 +50,11 @@ Pages 项目默认 `runweft`；已有专用项目可在同一设置的 Variables
 
 无凭证的开发推送仍完成检查，summary 明确标为“未部署”并提示缺失名称；生产和手动部署缺凭证会失败。Token 仅进入 Pages 准备步骤与官方上传 action，Wrangler 4.146.0 在 runner 临时目录的独立 npm 工程安装，不写入根工程或上传目录。
 
-上传前验证静态文件白名单、npm 元数据、五包 latest 已晋级到官网版本、完整性字段/精确平台依赖及公开 tarball HEAD；此检查不代替各平台真实安装验收。普通 push 未晋级时只等待；发布接续、PR 与手动部署要求已晋级，否则失败。稳定 npm 晋级后自动触发最新 main，版本不符或 main 推进时拒绝旧运行。官网失败只检查/恢复官网，不重发 npm；未知 dispatch 先检查 Actions，不盲目再次触发。
+普通官网部署上传前验证静态文件白名单、npm 元数据、五包 latest 已晋级到官网版本、完整性字段/精确平台依赖及公开 tarball HEAD；此检查不代替各平台真实安装验收。普通 push 未晋级时只等待，PR 与普通手动部署要求已晋级。
+
+稳定正式发行从不可变 tag 读取规范版本，与 npm 上传/可见性等待并行触发最新 main 官网。显式 `release-parallel=true` 必须绑定稳定版本和发行 run/attempt，并核对 main 版本及当前提交；仅该模式跳过官网上传前的 npm 就绪检查，证据标记 `npmValidation=deferred-to-release`。官网可能短暂显示尚不可安装的版本，这是已接受的发布取舍；父流程仍要求 npm 全部验收/晋级与官网在线验证成功。任一端失败如实保留，分别定向恢复，不自动回滚已上线官网。若 npm 最终失败，不一致可能持续到故障处理完成。预发行、空参数预检及公共候选只读验证不部署官网。
+
+版本不符或 main 推进时拒绝旧运行。官网失败只检查/恢复官网，不重发 npm；未知 dispatch 先检查 Actions，不盲目再次触发。
 
 上传后先核对 action 返回的唯一 URL 和 preview/production 分类；生产部署还须核对正式域名。在 HTTP 校验前保存已上传回执，全部通过后更新 success。每个地址在约三分钟共享窗口内等待传播并核对十文件摘要与 MIME，单次请求最多三十秒且不超过剩余预算。200 的暂时旧内容重新读取，始终要求精确摘要，预算耗尽仍失败；Access、错误 MIME 或鉴权错误立即失败。读取证据只含文件名、摘要、主机和耗时，不记录网页正文。随后用 Playwright 验证三页 1440/390px 的版本、布局与可见图片。不使用 Actions artifact；部署回执、浏览器证据及十文件摘要写入日志，npm 发布摘要收集全部关联官网 run（含失败重跑）。
 

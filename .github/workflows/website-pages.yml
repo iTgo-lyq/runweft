@@ -20,7 +20,7 @@ on:
   workflow_dispatch:
     inputs:
       release-version:
-        description: 'Already promoted stable version; blank uses ordinary website routing'
+        description: 'Expected stable version; blank uses ordinary website routing'
         type: string
         default: ''
       release-run-id:
@@ -31,6 +31,10 @@ on:
         description: 'Associated npm release attempt'
         type: string
         default: ''
+      release-parallel:
+        description: 'Deploy alongside the associated npm release; allow temporary website/npm mismatch'
+        type: boolean
+        default: false
       verify-run-id:
         description: 'Recheck an existing website deployment without uploading; use the same branch and unchanged site files'
         type: string
@@ -50,6 +54,9 @@ jobs:
     timeout-minutes: 18
     env:
       RELEASE_VERSION: ${{ inputs.release-version }}
+      RELEASE_PARALLEL: ${{ inputs.release-parallel }}
+      RELEASE_RUN_ID: ${{ inputs.release-run-id }}
+      RELEASE_ATTEMPT: ${{ inputs.release-attempt }}
       VERIFY_RUN_ID: ${{ inputs.verify-run-id }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

@@ -82,6 +82,8 @@ gh workflow run npm-publish.yml --repo iTgo-lyq/runweft --ref main \
 
 缺少标签权限时，逐包检查 npm 的 `/package/<包名>/access` Trusted publishing：仓库 `iTgo-lyq/runweft`、文件 `npm-publish.yml`、environment 留空，同时允许 `npm publish` 与 `Allow npm dist-tag`。权限修复后只重跑 promote。
 
-稳定晋级后自动 dispatch 最新 main 官网，绑定预期版本和发布 run/attempt，等待其真实完成。官网须通过唯一 URL、正式域名十文件和三页桌面/手机浏览器验证；源码版本不符或 main 已推进时拒绝旧运行。官网失败只恢复官网，不重发 npm；触发或上传结果未知时先查 Actions/Pages，不盲目重发，也不用旧生产提交回退网站。
+稳定正式发行的官网与 npm 并行启动，从不可变 tag 读取版本后 dispatch 最新 main，绑定预期版本、发布 run/attempt 和显式 parallel 模式；此模式允许官网短暂显示尚不可安装的版本。官网仍须通过唯一 URL、正式域名十文件和三页桌面/手机浏览器验证，npm 的公共验收和晋级门禁保持完整；最终 summary 要求两端成功。预发行、空参数预检及 verify-run-id 不部署官网。普通官网 push/手动入口保留 npm 就绪前置，源码版本不符或 main 已推进时拒绝旧运行。
+
+官网短暂旧摘要在每地址三分钟预算内重读，最终仍须完全匹配。官网失败只恢复官网，不重发 npm；触发或上传结果未知时先查 Actions/Pages，不盲目重发，也不用旧生产提交回退网站。已保存上传回执且静态文件未变时，使用 `gh workflow run website-pages.yml --ref main -f verify-run-id=<原官网run-id>` 只复验原部署。若 npm 最终失败，官网可能领先直到定向恢复完成，整体不能报告成功。
 
 发布 summary 汇总所有 attempt 和关联官网 run 的候选、验收、重试及 job 排队/运行时长，继承成功 job 不重复计时。时间字段或日志缺失明确标记，日志暂不可取时仅恢复 summary。Agent 复核实际证据后整理发行记录，不把 runner 运行时长推断为计费额度。

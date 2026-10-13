@@ -17,6 +17,11 @@ const noDownloads = html => assert(!/<a\b[^>]*\bdownload(?:\s|=|>)/i.test(html)
   && !/(?:href|src)=["'][^"']*(?:\/downloads\/|\.(?:tgz|tar\.gz|zip|sha256)(?:["'?#]))/i.test(html), '官网不能提供包下载。');
 
 export function siteEligibility(env, version) {
+  if (env.RELEASE_PARALLEL === 'true') {
+    assert(env.RELEASE_VERSION, '并行官网必须绑定发行版本。');
+    assert.match(env.RELEASE_RUN_ID ?? '', /^[1-9]\d*$/, '并行官网必须绑定发行 run。');
+    assert.match(env.RELEASE_ATTEMPT ?? '', /^[1-9]\d*$/, '并行官网必须绑定发行 attempt。');
+  }
   if (env.RELEASE_VERSION) {
     assert.equal(env.GITHUB_EVENT_NAME, 'workflow_dispatch');
     assert.equal(env.GITHUB_REF, 'refs/heads/main', '发行接续只能部署 main。');
@@ -26,6 +31,14 @@ export function siteEligibility(env, version) {
   assert(['push', 'workflow_dispatch'].includes(env.GITHUB_EVENT_NAME) && env.GITHUB_REF_TYPE === 'branch'
     && env.GITHUB_REF_NAME?.startsWith('codex/'), 'Beta 官网只允许开发分支跳过；main 和 PR 必须使用稳定版本。');
   return false;
+}
+
+export async function checkPublication(site, env, { fetchImpl = fetch } = {}) {
+  assert(siteEligibility(env, site.release.version), '官网仅接受稳定版本。');
+  if (env.RELEASE_PARALLEL === 'true') return { ready: true, packages: [], npmValidation: 'deferred-to-release',
+    releaseRunId: env.RELEASE_RUN_ID, releaseAttempt: env.RELEASE_ATTEMPT };
+  const publication = await publicationReady(site.release, { allowPending: env.GITHUB_EVENT_NAME === 'push' && !env.RELEASE_VERSION, fetchImpl });
+  return { ...publication, ...(publication.ready ? { packages: await checkNpmRelease(site.release, fetchImpl), npmValidation: 'passed' } : {}) };
 }
 
 export async function publicationReady(release, { allowPending = false, fetchImpl = fetch } = {}) {
@@ -219,17 +232,18 @@ async function main() {
     }
     case 'check': {
       const site = await validateSite(directory);
-      const publication = await publicationReady(site.release, { allowPending: env.GITHUB_EVENT_NAME === 'push' && !env.RELEASE_VERSION });
+      const publication = await checkPublication(site, env);
       await outputs({ ready: publication.ready });
       if (!publication.ready) {
         await save('check', { success: true, deployed: false, waitingFor: 'npm-promotion', ...site, ...publication });
         await summary(`静态检查通过；npm ${site.release.version} 尚未晋级，官网等待发布。`);
         break;
       }
-      const packages = await checkNpmRelease(site.release);
-      await save('check', { success: true, sourceRevision: env.GITHUB_SHA, ...site, packages });
-      await summary(`官网检查通过：npm ${site.release.version} 五包公开、tarball 可访问；${site.files.length} 个静态文件，${site.bytes} bytes。`);
-      console.log(`官网与 npm ${site.release.version} 就绪。`);
+      await save('check', { success: true, sourceRevision: env.GITHUB_SHA, ...site, ...publication });
+      await summary(publication.npmValidation === 'deferred-to-release'
+        ? `官网静态检查通过：与 npm ${site.release.version} 并行发布，允许短暂不可安装；npm 结果由发行流程单独核验并汇合。`
+        : `官网检查通过：npm ${site.release.version} 五包公开、tarball 可访问；${site.files.length} 个静态文件，${site.bytes} bytes。`);
+      console.log(`官网 ${site.release.version} 检查通过：${publication.npmValidation}。`);
       break;
     }
     case 'prepare': {

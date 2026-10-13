@@ -5,7 +5,7 @@ import { spawnSync } from 'node:child_process';
 import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { buildSite } from './build.mjs';
-import { assertCurrentProduction, checkNpmRelease, publicationReady, siteEligibility, deploymentTarget, ensurePagesProject, validateSite, verifyDeployment } from './publish.mjs';
+import { assertCurrentProduction, checkNpmRelease, checkPublication, publicationReady, siteEligibility, deploymentTarget, ensurePagesProject, validateSite, verifyDeployment } from './publish.mjs';
 import { packageNames, registry } from '../scripts/npm-publish.mjs';
 import { recoverDeployment } from './recover.mjs';
 
@@ -95,6 +95,19 @@ test('five public exact versions and tarball HEAD are checked without downloadin
 
 test('a beta-only public stable version cannot deploy the website before latest promotion', async () => {
   await assert.rejects(checkNpmRelease(site.release, async () => json({ latest: '1.0.0', beta: site.release.version })), /latest 尚未晋级/);
+});
+
+test('only explicitly bound parallel releases bypass npm readiness, retaining stable version and main checks', async () => {
+  const parallel = { ...env, GITHUB_EVENT_NAME: 'workflow_dispatch', GITHUB_REF: 'refs/heads/main',
+    RELEASE_VERSION: site.release.version, RELEASE_PARALLEL: 'true', RELEASE_RUN_ID: '10', RELEASE_ATTEMPT: '1' };
+  const result = await checkPublication(site, parallel, { fetchImpl: () => assert.fail('npm visibility must not block parallel deployment') });
+  assert.equal(result.ready, true); assert.equal(result.npmValidation, 'deferred-to-release'); assert.deepEqual(result.packages, []);
+  for (const change of [{ RELEASE_VERSION: '' }, { RELEASE_VERSION: '9.0.0' }, { RELEASE_RUN_ID: '' }, { RELEASE_ATTEMPT: '0' },
+    { GITHUB_REF: 'refs/heads/codex/test' }, { GITHUB_EVENT_NAME: 'push' }]) {
+    await assert.rejects(checkPublication(site, { ...parallel, ...change }));
+  }
+  assert.equal((await checkPublication(site, env, { fetchImpl: async () => json({}, 404) })).ready, false);
+  await assert.rejects(checkPublication(site, { ...parallel, RELEASE_PARALLEL: 'false' }, { fetchImpl: async () => json({}, 404) }), /尚未晋级/);
 });
 
 test('npm missing, wrong identity, integrity, dependency and tarball failures stop checking', async () => {
@@ -324,7 +337,8 @@ test('only a Beta development branch skips the site; main, PR, tags and invalid 
   await writeFile(join(working, 'package.json'), JSON.stringify({ version }));
   const output = join(working, 'output'), summary = join(working, 'summary');
   const child = spawnSync(process.execPath, [resolve(import.meta.dirname, 'publish.mjs'), 'eligibility'], { cwd: working, env: {
-    ...process.env, ...env, RELEASE_VERSION: '', GITHUB_REF_NAME: 'codex/beta', GITHUB_OUTPUT: output, GITHUB_STEP_SUMMARY: summary,
+    ...process.env, ...env, RELEASE_VERSION: '', RELEASE_PARALLEL: '', RELEASE_RUN_ID: '', RELEASE_ATTEMPT: '',
+    GITHUB_REF_NAME: 'codex/beta', GITHUB_OUTPUT: output, GITHUB_STEP_SUMMARY: summary,
   }, encoding: 'utf8' });
   assert.equal(child.status, 0, child.stderr);
   assert.equal(await readFile(output, 'utf8'), 'build=false\n');

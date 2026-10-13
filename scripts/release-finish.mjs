@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { appendFileSync, mkdirSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { execFileSync } from 'node:child_process';
 import { assertDescriptor, downloadJobLog } from './npm-release.mjs';
 import { releaseChannel } from './npm-publish.mjs';
 
@@ -27,24 +28,54 @@ export function websiteRunName(version, runId, attempt) {
     return `release ${version} from ${runId}/${attempt}`;
 }
 
+export function selectWebsiteRelease(env, { git = args => execFileSync('git', args, { encoding: 'utf8' }).trim() } = {}) {
+    if (env.VERIFY_RUN_ID || !env.RELEASE_TAG) return null;
+    assert(['push', 'workflow_dispatch'].includes(env.GITHUB_EVENT_NAME), 'Website release requires a release event');
+    assert.match(env.RELEASE_TAG, /^v/);
+    const version = env.RELEASE_TAG.slice(1);
+    if (releaseChannel(version) !== 'latest') return null;
+    if (env.GITHUB_EVENT_NAME === 'push') {
+        assert.equal(env.GITHUB_REF_TYPE, 'tag'); assert.equal(env.GITHUB_REF_NAME, env.RELEASE_TAG);
+    } else assert.equal(env.GITHUB_REF_NAME, 'main', 'Release recovery must run from main');
+    const revision = git(['rev-parse', '--verify', `refs/tags/${env.RELEASE_TAG}^{commit}`]);
+    assert.match(revision, /^[a-f0-9]{40}$/);
+    assert.equal(JSON.parse(git(['show', `${revision}:package.json`])).version, version, 'Website version differs from immutable tag');
+    return { version, source: { revision, dirty: false } };
+}
+
+export function assertReleaseResults(needs) {
+    assert.equal(needs.beta.result, 'success', 'Release beta stage did not succeed');
+    const output = needs.beta.outputs;
+    if (output.publish === 'true' || output['verify-only'] === 'true') {
+        assert.equal(needs.install.result, 'success', 'Required installation checks did not succeed');
+        assert.equal(needs.integration.result, output['validation-mode'] === 'public' ? 'success' : 'skipped', 'Required integration result is invalid');
+        assert.equal(needs.promote.result, output['verify-only'] === 'true' ? 'skipped' : 'success', 'Required promotion did not succeed');
+        if (output.publish === 'true' && output['site-install'] === 'true' && output['verify-only'] !== 'true') {
+            assert.equal(needs.website.result, 'success', 'Website did not succeed; npm success alone is not a complete release');
+            assert.match(needs.website.outputs['run-id'] ?? '', /^[1-9]\d*$/, 'Missing actual website run');
+        }
+    }
+}
+
 export async function dispatchWebsite(release, env, { request = fetch, wait = pause, now = Date.now,
-    timeoutMs = 20 * 60_000, record = () => {} } = {}) {
-    assertDescriptor(release);
+    timeoutMs = 20 * 60_000, record = () => {}, parallel = false } = {}) {
+    if (!parallel) assertDescriptor(release);
     const name = websiteRunName(release.version, env.GITHUB_RUN_ID, env.GITHUB_RUN_ATTEMPT);
     const call = api(env, request), deadline = now() + timeoutMs;
     let accepted;
     try {
         accepted = await call('actions/workflows/website-pages.yml/dispatches', { ref: 'main', inputs: {
             'release-version': release.version, 'release-run-id': env.GITHUB_RUN_ID, 'release-attempt': env.GITHUB_RUN_ATTEMPT,
+            ...(parallel ? { 'release-parallel': true } : {}),
         } }, Math.min(30_000, timeoutMs));
     } catch {
-        throw new Error('npm 已发布，官网触发结果未确认；检查官网 Actions 后仅恢复官网，不要重发 npm 或盲目再次 dispatch。');
+        throw new Error('官网触发结果未确认；分别检查 npm 与官网 Actions，仅恢复未完成部分，不要盲目重发。');
     }
     assert(Number.isSafeInteger(accepted.workflow_run_id) && accepted.workflow_run_id > 0, '官网触发缺少实际 run ID；检查 Actions，不要盲目重发。');
     const id = accepted.workflow_run_id, url = `https://github.com/${env.GITHUB_REPOSITORY}/actions/runs/${id}`;
     record({ runId: id, url, status: 'pending', version: release.version });
     while (true) {
-        assert(now() < deadline, 'npm 已发布，官网状态待确认：等待超时；仅检查/恢复官网 ' + url);
+        assert(now() < deadline, '官网状态待确认：等待超时；仅检查/恢复官网 ' + url);
         const run = await call('actions/runs/' + id, undefined, Math.min(30_000, deadline - now()));
         assert.equal(run.path, '.github/workflows/website-pages.yml');
         assert.equal(run.event, 'workflow_dispatch'); assert.equal(run.head_branch, 'main');
@@ -57,7 +88,7 @@ export async function dispatchWebsite(release, env, { request = fetch, wait = pa
         if (run.status === 'completed') {
             const result = { runId: id, attempt: run.run_attempt, url, version: release.version, status: run.conclusion };
             record(result);
-            assert.equal(run.conclusion, 'success', 'npm 已发布，官网未成功；仅恢复官网 ' + url);
+            assert.equal(run.conclusion, 'success', '官网未成功；单独检查 npm 结果，仅恢复官网 ' + url);
             return result;
         }
         await wait(Math.min(5000, Math.max(0, deadline - now())));
@@ -111,7 +142,7 @@ export async function collectReleaseEvidence(env, { request = fetch, readLog = d
                     }
                     if (log === undefined) continue;
                     for (const line of log.split('\n')) {
-                        const match = line.match(/RUNWEFT_(RELEASE_DESCRIPTOR|RELEASE_WEBSITE|PUBLIC_READ|CI_EVIDENCE|INTEGRATION_CANDIDATE|PROMOTION)=(\{.*\})\s*$/);
+                        const match = line.match(/RUNWEFT_(RELEASE_DESCRIPTOR|RELEASE_WEBSITE|PUBLIC_READ|WEBSITE_READ|CI_EVIDENCE|INTEGRATION_CANDIDATE|PROMOTION)=(\{.*\})\s*$/);
                         if (match) {
                             const value = JSON.parse(match[2]);
                             records.push({ runId: run.id, jobId: job.id, attempt, kind: match[1], value });
@@ -147,9 +178,11 @@ function save(name, result) {
 
 async function main() {
     if (process.argv[2] === 'website') {
+        const release = process.env.RELEASE_DESCRIPTOR ? JSON.parse(process.env.RELEASE_DESCRIPTOR) : selectWebsiteRelease(process.env);
+        if (!release) { save('website', { skipped: true, reason: 'No stable publishing request' }); return; }
         let recorded;
         try {
-            await dispatchWebsite(JSON.parse(process.env.RELEASE_DESCRIPTOR), process.env, { record: value => {
+            await dispatchWebsite(release, process.env, { parallel: !process.env.RELEASE_DESCRIPTOR, record: value => {
                 recorded = value; save('website', value);
                 if (process.env.GITHUB_OUTPUT) appendFileSync(process.env.GITHUB_OUTPUT, 'run-id=' + value.runId + '\n');
             } });
@@ -158,6 +191,7 @@ async function main() {
         const result = await collectReleaseEvidence(process.env);
         save('summary', result);
         assert.equal(result.missingLogs.length, 0, '发布摘要含无法取得的日志；已保留可用证据，仅恢复 summary，不重发 npm。');
+        if (process.env.RELEASE_RESULTS) assertReleaseResults(JSON.parse(process.env.RELEASE_RESULTS));
     } else throw new Error('Usage: node scripts/release-finish.mjs website|summary');
 }
 if (resolve(process.argv[1] ?? '') === fileURLToPath(import.meta.url)) main().catch(error => { console.error(error.message); process.exitCode = 1; });
