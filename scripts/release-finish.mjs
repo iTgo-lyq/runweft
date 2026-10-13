@@ -48,6 +48,11 @@ export async function dispatchWebsite(release, env, { request = fetch, wait = pa
         const run = await call('actions/runs/' + id, undefined, Math.min(30_000, deadline - now()));
         assert.equal(run.path, '.github/workflows/website-pages.yml');
         assert.equal(run.event, 'workflow_dispatch'); assert.equal(run.head_branch, 'main');
+        // The returned run exists before GitHub resolves its input-based run-name.
+        if (run.status !== 'completed' && run.display_title === 'website Pages') {
+            await wait(Math.min(5000, Math.max(0, deadline - now())));
+            continue;
+        }
         assert.equal(run.display_title, name, '官网 run 与本次发布关联不符');
         if (run.status === 'completed') {
             const result = { runId: id, attempt: run.run_attempt, url, version: release.version, status: run.conclusion };

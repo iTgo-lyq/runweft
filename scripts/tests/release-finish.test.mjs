@@ -27,16 +27,17 @@ test('website dispatch binds the returned run and waits for actual completion', 
             assert.deepEqual(JSON.parse(options.body), { ref: 'main', inputs: { 'release-version': version, 'release-run-id': '10', 'release-attempt': '2' } });
             return Response.json({ workflow_run_id: 20 });
         }
-        reads++; return Response.json(reads === 1 ? { ...run, status: 'in_progress', conclusion: null } : run);
+        reads++; return Response.json(reads === 1 ? { ...run, display_title: 'website Pages', status: 'queued', conclusion: null }
+            : reads === 2 ? { ...run, status: 'in_progress', conclusion: null } : run);
     } });
-    assert.equal(result.status, 'success'); assert.equal(reads, 2);
+    assert.equal(result.status, 'success'); assert.equal(reads, 3);
     assert.equal(records[0].status, 'pending'); assert.equal(records.at(-1).status, 'success');
     assert(calls.slice(1).every(call => call.url.endsWith('/actions/runs/20')));
     assert.equal(calls[0].options.headers['X-GitHub-Api-Version'], '2026-03-10');
 });
 
 test('unknown dispatch, mismatched run, failure and timeout never resend or report success', async () => {
-    for (const scenario of ['unknown', 'wrong-branch', 'wrong-title', 'failure', 'cancelled', 'timeout']) {
+    for (const scenario of ['unknown', 'wrong-branch', 'wrong-title', 'completed-placeholder', 'failure', 'cancelled', 'timeout', 'placeholder-timeout']) {
         let posts = 0, clock = 0; const records = [];
         await assert.rejects(dispatchWebsite(release, env, { now: () => clock, timeoutMs: 10,
             wait: async ms => { clock += ms; }, record: item => records.push(item), request: async (_, options) => {
@@ -47,7 +48,9 @@ test('unknown dispatch, mismatched run, failure and timeout never resend or repo
                 }
                 return Response.json({ ...run, ...(scenario === 'wrong-branch' ? { head_branch: 'stale' } : {}),
                     ...(scenario === 'wrong-title' ? { display_title: 'another release' } : {}),
+                    ...(scenario === 'completed-placeholder' ? { display_title: 'website Pages' } : {}),
                     ...(scenario === 'timeout' ? { status: 'in_progress', conclusion: null } : {}),
+                    ...(scenario === 'placeholder-timeout' ? { display_title: 'website Pages', status: 'queued', conclusion: null } : {}),
                     ...(['failure', 'cancelled'].includes(scenario) ? { conclusion: scenario } : {}) });
             } }));
         assert.equal(posts, 1); assert(!records.some(item => item.status === 'success'));

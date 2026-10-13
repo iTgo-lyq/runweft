@@ -4,13 +4,15 @@
   "title": "恢复 1.1.5 官网接续",
   "size": "small",
   "status": "active",
-  "stage": "requirement",
+  "stage": "execution",
   "branch": "codex/release-website-recovery",
   "confirmations": {},
   "tasks": {
     "T1": {
       "title": "隔离官网测试环境并等待 dispatch 标题就绪",
-      "status": "todo"
+      "status": "done",
+      "verification": "发布环境下 24 项定向 Node 通过，覆盖初始默认标题/严格完成标题/超时与 Beta CLI 继承变量修正；文档/流程/diff 通过，全部 packageInputs 与 v1.1.5 无差异。",
+      "commitTitle": "release-website-recovery T1: isolate fixtures and await resolved workflow titles"
     }
   },
   "closure": {}

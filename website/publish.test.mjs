@@ -275,7 +275,7 @@ test('only a Beta development branch skips the site; main, PR, tags and invalid 
   await writeFile(join(working, 'package.json'), JSON.stringify({ version }));
   const output = join(working, 'output'), summary = join(working, 'summary');
   const child = spawnSync(process.execPath, [resolve(import.meta.dirname, 'publish.mjs'), 'eligibility'], { cwd: working, env: {
-    ...process.env, ...env, GITHUB_REF_NAME: 'codex/beta', GITHUB_OUTPUT: output, GITHUB_STEP_SUMMARY: summary,
+    ...process.env, ...env, RELEASE_VERSION: '', GITHUB_REF_NAME: 'codex/beta', GITHUB_OUTPUT: output, GITHUB_STEP_SUMMARY: summary,
   }, encoding: 'utf8' });
   assert.equal(child.status, 0, child.stderr);
   assert.equal(await readFile(output, 'utf8'), 'build=false\n');
