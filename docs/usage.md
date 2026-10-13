@@ -2,14 +2,14 @@
 
 Runweft 为 Codex 和 Claude Code 提供 Hub 集中配置、任务委派、本地共享/独立 worktree、远端独立 worktree，以及附件和 Git 成果回收。执行基于配套 HAPI 内置适配。用户通过对话交给 Agent 安装和操作，在 Web 维护有权使用的资源、查看本人任务。
 
-本文配套 Runweft 1.1.4。通过公共 npm 主包选择四个平台依赖；官网安装版本见 `release.json`，程序来源与验证范围以对应发行记录为准。
+本文配套 Runweft 1.1.5。通过公共 npm 主包选择四个平台依赖；官网安装版本见 `release.json`，程序来源与验证范围以对应发行记录为准。
 
 ## 通过 npm 安装
 
 支持 macOS arm64/x64、glibc Linux arm64/x64。安装需要 Node.js 20+ 和 npm；运行任务需要已登录的 Codex 或 Claude Code，Git 操作需要 Git 2.31+。LFS/子模块需在相关机器具备工具与对象访问条件。
 
 ```sh
-npm install -g runweft@1.1.4 --registry=https://registry.npmjs.org/ --include=optional &&
+npm install -g runweft@1.1.5 --registry=https://registry.npmjs.org/ --include=optional &&
 runweft --version
 ```
 
@@ -21,7 +21,7 @@ npm 自动选择当前平台依赖，随包提供配套 HAPI 与产品 Skill，�
 
 把下面这段话交给正在使用的 Agent：
 
-> 通过 npm 安装 runweft@1.1.4，从已安装包中读取并接入 Runweft Skill。程序安装和升级用 npm，完整卸载按 Skill 的维护说明执行。帮我连接指定 Hub；没有 Hub 时先询问是否在本机启动。保留其他 MCP 和模型配置，身份通过浏览器确认，不向我索要 token。分别登记机器和执行工具，创建代码评审 Agent，再在当前项目完成一次只读委派。
+> 通过 npm 安装 runweft@1.1.5，从已安装包中读取并接入 Runweft Skill。程序安装和升级用 npm，完整卸载按 Skill 的维护说明执行。帮我连接指定 Hub；没有 Hub 时先询问是否在本机启动。保留其他 MCP 和模型配置，身份通过浏览器确认，不向我索要 token。分别登记机器和执行工具，创建代码评审 Agent，再在当前项目完成一次只读委派。
 
 Skill 源目录：
 

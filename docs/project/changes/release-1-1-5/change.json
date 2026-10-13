@@ -4,13 +4,15 @@
   "title": "准备 1.1.5 正式发行候选",
   "size": "small",
   "status": "active",
-  "stage": "requirement",
+  "stage": "execution",
   "branch": "codex/release-1-1-5",
   "confirmations": {},
   "tasks": {
     "T1": {
       "title": "修正原生身份到期验收并冻结 1.1.5 发布输入",
-      "status": "todo"
+      "status": "done",
+      "verification": "后台全场景 Chromium 定向验收及清理、typecheck、build、文档/流程/diff 通过；版本和说明一致为 1.1.5，公共五包及 tag 未占用，正式完整门禁待 tag CI",
+      "commitTitle": "release-1-1-5 T1: freeze stable inputs and verify native JWT expiry correctly"
     }
   },
   "closure": {}

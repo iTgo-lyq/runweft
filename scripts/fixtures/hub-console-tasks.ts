@@ -23,7 +23,6 @@ export async function consoleTasks(options: { origin: string; home: string; root
     const scopes = new DelegationScopes(access), sockets: Socket[] = [], nativePages: Page[] = [], clockContexts: BrowserContext[] = [];
     const heartbeats: ReturnType<typeof setInterval>[] = [];
     const urls: string[] = [], authBodies: string[] = [], errors: string[] = [];
-    const authByPage = new Map<Page, number>();
     const nativeRequests: { path: string; claims: ReturnType<typeof decodeJwt> }[] = [];
     const observed = new Set<Page>(), credentials = new Set([options.identityToken, options.memberIdentity, options.ownerToken, options.memberToken]);
     const machine = JSON.parse(readFileSync(hubConnectionPaths(home, origin).machineConnection, 'utf8'));
@@ -72,7 +71,6 @@ export async function consoleTasks(options: { origin: string; home: string; root
             urls.push(request.url()); const path = new URL(request.url()).pathname;
             if (path === '/api/auth') {
                 authBodies.push(request.postData() ?? '');
-                authByPage.set(tab, (authByPage.get(tab) ?? 0) + 1);
             }
             if (path.startsWith('/api/sessions/') || path === '/api/events') {
                 const authorization = request.headers().authorization ?? '';
@@ -296,15 +294,28 @@ export async function consoleTasks(options: { origin: string; home: string; root
         // Install before application timers exist; the clock affects an entire browser context.
         const clockContext = await context.browser()!.newContext(); clockContexts.push(clockContext);
         const expiring = await clockContext.newPage(); observe(expiring); await expiring.clock.install();
+        const expiryAuthTokens: string[] = []; let identityCreates = 0;
+        expiring.on('request', request => {
+            const path = new URL(request.url()).pathname;
+            if (path === '/api/auth') expiryAuthTokens.push(JSON.parse(request.postData() ?? '{}').accessToken);
+            if (path === '/api/runweft/hub/identities' && request.method() === 'POST') identityCreates++;
+        });
         await expiring.goto(origin + '/hub'); await ready(expiring);
         await expiring.evaluate(token => sessionStorage.setItem('runweft.native.access', token!), beforeReloadJwt);
         await expiring.goto(native.url()); await expiring.getByText('OWNER_CONSOLE_HISTORY_NATIVE_MESSAGE', { exact: true }).waitFor();
         assert.equal(await expiring.evaluate(() => sessionStorage.getItem('runweft.native.access')), beforeReloadJwt);
-        const authCountBeforeExpiry = authByPage.get(expiring) ?? 0;
-        await expiring.clock.fastForward(16 * 60_000); await expiring.waitForURL(/\/hub#native-expired/);
+        const remainingMs = decodeJwt(beforeReloadJwt!).exp! * 1000 - await expiring.evaluate(() => Date.now());
+        assert(remainingMs > 60_000);
+        const refresh = expiring.waitForResponse(response => new URL(response.url()).pathname === '/api/auth');
+        await expiring.clock.fastForward(remainingMs - 30_000);
+        const refreshed = await refresh; assert.equal(refreshed.status(), 200);
+        assert((await refreshed.json()).token === beforeReloadJwt, 'Native auth check must not extend JWT lifetime');
+        assert(await expiring.evaluate(() => sessionStorage.getItem('runweft.native.access')) === beforeReloadJwt);
+        await expiring.clock.fastForward(60_000); await expiring.waitForURL(/\/hub#native-expired/);
         assert.match(await expiring.locator('#notice').innerText(), /限时身份/);
         assert(await expiring.evaluate(() => sessionStorage.getItem('runweft.native.access') === null), 'Expired native credential must clear');
-        assert.equal(authByPage.get(expiring) ?? 0, authCountBeforeExpiry);
+        assert(expiryAuthTokens.length > 0 && expiryAuthTokens.every(token => token === beforeReloadJwt), 'Native auth must only use the original limited JWT');
+        assert.equal(identityCreates, 0, 'Expiry must not create a new identity');
         assert(await page.locator('#workspace').isVisible());
 
         assert(urls.every(url => !new URL(url).searchParams.has('token'))); assert.deepEqual(errors, []);
