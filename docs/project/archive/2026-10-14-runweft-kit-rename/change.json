@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "id": "runweft-kit-rename",
+  "title": "统一 Runweft Kit 的公开仓库与 Skill 身份",
+  "size": "small",
+  "status": "completed",
+  "stage": "close",
+  "branch": "codex/runweft-kit-rename",
+  "confirmations": {},
+  "tasks": {
+    "T1": {
+      "title": "统一 Kit 身份、公开分发和安装维护入口并验证",
+      "status": "done",
+      "verification": "264 Bun 测试、75 Node 测试、结构与独立 Agent 场景、官网 Playwright、公开候选真实安装、Linux x64 冻结打包和真实 npm 安装/完整卸载全部通过。主分支集成后验收自动同步与公开 main，并清理旧凭据和分发目录。"
+    }
+  },
+  "closure": {
+    "verification": {
+      "result": "passed",
+      "at": "2026-10-13T17:22:44.958Z",
+      "summary": "Agent 自查及独立 Skill 场景通过；339 项测试、浏览器、公开候选安装、干净 Linux x64 打包及真实 npm 安装/完整卸载通过，当前维护文件无旧身份引用。"
+    },
+    "acceptance": {
+      "result": "accepted",
+      "at": "2026-10-13T17:22:45.027Z",
+      "summary": "Agent 自验收通过：新身份和目录完整一致，公开仓库已改名、候选可真实安装，构建与卸载识别验证通过。主分支自动同步及公开 main 清理按集成交付继续验证。",
+      "source": "small 自验收规则及用户明确改名和重新验收指令"
+    },
+    "specs": {
+      "result": "synced",
+      "at": "2026-10-13T17:22:45.098Z",
+      "summary": "安装、发行、官网规格已同步 Runweft Kit 身份、目录、公开入口与独立安装语义。"
+    },
+    "archive": {
+      "result": "done",
+      "at": "2026-10-13T17:22:45.165Z",
+      "summary": "新名称的实现和合入前验收已完成；最终主分支集成结果留在 Git/CI。",
+      "path": "docs/project/archive/2026-10-14-runweft-kit-rename"
+    }
+  }
+}
