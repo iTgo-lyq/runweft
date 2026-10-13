@@ -26,7 +26,9 @@
   "tasks": {
     "T1": {
       "title": "取消残留计时器并去除重复服务验收",
-      "status": "doing"
+      "status": "done",
+      "verification": "同候选顺序前后均通过：service-package 89.757→68.243s，access 159.370→140.663s，storage 249.565→207.668s；旧代码退出测试复现失败，修复后生命周期/截止测试5通过、类型检查通过，详见execution.md。",
+      "commitTitle": "release-validation-efficiency T1: record measured timer and duplicate removal"
     },
     "T2": {
       "title": "按实测拆分验收并优化磁盘准备",
