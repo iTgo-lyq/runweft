@@ -10,7 +10,8 @@
   "tasks": {
     "T1": {
       "title": "统一 Kit 身份、公开分发和安装维护入口并验证",
-      "status": "doing"
+      "status": "done",
+      "verification": "264 Bun 测试、75 Node 测试、结构与独立 Agent 场景、官网 Playwright、公开候选真实安装、Linux x64 冻结打包和真实 npm 安装/完整卸载全部通过。主分支集成后验收自动同步与公开 main，并清理旧凭据和分发目录。"
     }
   },
   "closure": {}
