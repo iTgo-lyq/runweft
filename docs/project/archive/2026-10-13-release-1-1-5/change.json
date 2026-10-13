@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "id": "release-1-1-5",
+  "title": "准备 1.1.5 正式发行候选",
+  "size": "small",
+  "status": "completed",
+  "stage": "close",
+  "branch": "codex/release-1-1-5",
+  "confirmations": {},
+  "tasks": {
+    "T1": {
+      "title": "修正原生身份到期验收并冻结 1.1.5 发布输入",
+      "status": "done",
+      "verification": "后台全场景 Chromium 定向验收及清理、typecheck、build、文档/流程/diff 通过；版本和说明一致为 1.1.5，公共五包及 tag 未占用，正式完整门禁待 tag CI",
+      "commitTitle": "release-1-1-5 T1: freeze stable inputs and verify native JWT expiry correctly"
+    }
+  },
+  "closure": {
+    "verification": {
+      "result": "passed",
+      "at": "2026-10-13T04:16:36.440Z",
+      "summary": "Agent 自查整个差异：只更新发行版本/说明和错误计数判据，显式真实认证响应保证不续期；后台 16 场景及清理、typecheck/build、文档/流程/diff 成功。正式 CI 将对冻结候选完整验收。"
+    },
+    "acceptance": {
+      "result": "accepted",
+      "at": "2026-10-13T04:16:36.516Z",
+      "summary": "Agent 自验收通过：后台身份隔离/原 JWT 不续期/到期删除/无身份创建均有 Chromium 证据；1.1.5 版本说明一致，五包及 tag 未占用，候选准备范围完成。",
+      "source": "small 默认自验收；用户：现在测试一下正式发布的耗时吧。发布完毕后告诉我目前的耗时分布。"
+    },
+    "specs": {
+      "result": "not_needed",
+      "at": "2026-10-13T04:16:36.584Z",
+      "summary": "只有发行版本与验收时序判据调整，产品现有行为和核心方案不变；发行完成后的实测事实另行记录。"
+    },
+    "archive": {
+      "result": "done",
+      "at": "2026-10-13T04:16:36.651Z",
+      "summary": "1.1.5 输入准备和定向验收完成，归档不代表已发布；随后按用户授权执行不可变 tag 正式发布并记录真实耗时。",
+      "path": "docs/project/archive/2026-10-13-release-1-1-5"
+    }
+  }
+}
