@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "id": "release-website-recovery",
+  "title": "恢复 1.1.5 官网接续",
+  "size": "small",
+  "status": "active",
+  "stage": "requirement",
+  "branch": "codex/release-website-recovery",
+  "confirmations": {},
+  "tasks": {
+    "T1": {
+      "title": "隔离官网测试环境并等待 dispatch 标题就绪",
+      "status": "todo"
+    }
+  },
+  "closure": {}
+}
