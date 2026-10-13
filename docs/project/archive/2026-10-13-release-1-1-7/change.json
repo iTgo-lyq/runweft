@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "id": "release-1-1-7",
+  "title": "1.1.7 正式发布版本准备",
+  "size": "small",
+  "status": "completed",
+  "stage": "close",
+  "branch": "codex/release-1-1-7",
+  "confirmations": {},
+  "tasks": {
+    "T1": {
+      "title": "冻结 1.1.7 版本与安装说明",
+      "status": "done",
+      "verification": "70项Node检查通过；1.1.7源码/三处安装提示/十文件官网一致，Bun与HAPI固定，文档/workflow/diff检查通过；正式发行尚未触发。"
+    }
+  },
+  "closure": {
+    "verification": {
+      "result": "passed",
+      "at": "2026-10-13T11:01:21.804Z",
+      "summary": "版本准备Agent自查：70项Node、稳定官网构建与十文件版本校验、文档/workflow/diff通过；正式全套发行验证由tag工作流执行。"
+    },
+    "acceptance": {
+      "result": "accepted",
+      "at": "2026-10-13T11:01:21.875Z",
+      "summary": "Agent自验收通过：仅版本与说明同步，版本/安装提示/静态元数据一致，相关检查通过，没有把版本准备冒充已发布。",
+      "source": "small默认Agent自验收；用户明确要求正式发布一次并实测并行总耗时和阶段分布，沿已有发布及合入授权执行必要版本准备。"
+    },
+    "specs": {
+      "result": "not_needed",
+      "at": "2026-10-13T11:01:21.944Z",
+      "summary": "只递增版本和纠正文档，既有发布/网站能力与长期契约不变。"
+    },
+    "archive": {
+      "result": "done",
+      "at": "2026-10-13T11:01:22.012Z",
+      "summary": "版本准备已验证；正式tag发布及性能结果另存发行记录，不回写归档。",
+      "path": "docs/project/archive/2026-10-13-release-1-1-7"
+    }
+  }
+}
