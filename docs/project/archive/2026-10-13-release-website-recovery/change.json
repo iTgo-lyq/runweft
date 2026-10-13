@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "id": "release-website-recovery",
+  "title": "恢复 1.1.5 官网接续",
+  "size": "small",
+  "status": "completed",
+  "stage": "close",
+  "branch": "codex/release-website-recovery",
+  "confirmations": {},
+  "tasks": {
+    "T1": {
+      "title": "隔离官网测试环境并等待 dispatch 标题就绪",
+      "status": "done",
+      "verification": "发布环境下 24 项定向 Node 通过，覆盖初始默认标题/严格完成标题/超时与 Beta CLI 继承变量修正；文档/流程/diff 通过，全部 packageInputs 与 v1.1.5 无差异。",
+      "commitTitle": "release-website-recovery T1: isolate fixtures and await resolved workflow titles"
+    }
+  },
+  "closure": {
+    "verification": {
+      "result": "passed",
+      "at": "2026-10-13T04:50:37.752Z",
+      "summary": "Agent 自查完整修正；RELEASE_VERSION=1.1.5 下全部 58 Node 通过，实际失败对应环境和初始标题时序均有定向覆盖，错误身份/完成标题/超时继续拒绝；包输入不变。"
+    },
+    "acceptance": {
+      "result": "accepted",
+      "at": "2026-10-13T04:50:37.826Z",
+      "summary": "Agent 自验收通过：真实失败原因已定位，58 项 Node 验证环境隔离和有界等待、仍保持最终身份门禁；修正可合入以恢复已发布 1.1.5 官网。",
+      "source": "small 自验收；用户明确要求完成正式发布并报告耗时。"
+    },
+    "specs": {
+      "result": "not_needed",
+      "at": "2026-10-13T04:50:37.899Z",
+      "summary": "恢复既有发布接续，只有测试隔离和运行元数据就绪时序修正，没有产品核心能力变化。"
+    },
+    "archive": {
+      "result": "done",
+      "at": "2026-10-13T04:50:37.969Z",
+      "summary": "局部修正和本地验收完成，归档后按正式发布授权合入并定向恢复官网；实际远端结果及恢复时间另记。",
+      "path": "docs/project/archive/2026-10-13-release-website-recovery"
+    }
+  }
+}
