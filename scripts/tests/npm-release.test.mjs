@@ -268,11 +268,20 @@ test('workflow topology requires all four platforms and has no artifact dependen
     const candidateDirectory = sourceCheckout.with.path + '/dist/packages';
     assert.equal(integration.env.RUNWEFT_SMOKE_PACKAGES, candidateDirectory);
     assert(integration.run.includes(candidateDirectory + '/runweft-linux-x64/bin/runweft'));
-    assert.deepEqual(install.jobs.install.strategy.matrix.include.map(row => row.platform).sort(),
+    const installationRows = install.jobs.install.strategy.matrix.include;
+    assert.deepEqual([...new Set(installationRows.map(row => row.platform))].sort(),
         ['darwin-arm64', 'darwin-x64', 'linux-arm64', 'linux-x64']);
+    for (const platform of ['darwin-arm64', 'darwin-x64', 'linux-arm64', 'linux-x64']) {
+        const checks = installationRows.filter(row => row.platform === platform)
+            .flatMap(row => row.check === 'both' ? ['install', 'uninstall'] : [row.check]);
+        assert.deepEqual(checks.sort(), ['install', 'uninstall'], platform + ': both acceptance paths are mandatory, exactly once');
+    }
+    assert.equal(install.jobs.install.steps.find(step => step.run?.includes('node scripts/smoke-install.mjs')).if, "matrix.check != 'uninstall'");
+    assert.equal(install.jobs.install.steps.find(step => step.run?.includes('node scripts/smoke-uninstall.mjs')).if, "matrix.check != 'install'");
     assert.equal(install.permissions['id-token'], undefined);
     assert.equal(install.jobs.install['continue-on-error'], undefined);
-    assert.deepEqual(publish.jobs.integration.strategy.matrix.group, ['access', 'storage', 'web']);
+    assert.deepEqual(publish.jobs.integration.strategy.matrix.include.map(row => row.group + ':' + row.shard).sort(),
+        ['access:1/2', 'access:2/2', 'storage:1/3', 'storage:2/3', 'storage:3/3', 'web:1/1']);
     assert.equal(publish.jobs.integration.strategy['fail-fast'], false);
     assert.equal(publish.jobs.integration.permissions?.['id-token'], undefined);
     assert(publish.jobs.integration.steps.some(step => step.with?.submodules === true));

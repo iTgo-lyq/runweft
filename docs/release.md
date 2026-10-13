@@ -28,6 +28,10 @@ bun run test:uninstall dist/packages
 
 发布工作流不按 diff 跳过验收。稳定版本上传 beta 前完成核心、四平台构建和 service-package；access/storage/web 从公共 npm 下载同一候选，与四平台安装及完整卸载并行。稳定版 Linux x64 同时运行真实网页 DOM 的精确版本安装，核对配对程序摘要、README 和五份 Skill 内容。空参数预检和 X.Y.Z-beta.N 预发行构建仍在上传前完成四组；所有已有候选恢复重新执行公共集成和四平台安装。任一必需 job 失败、取消或非预期跳过均阻止晋级。
 
+公共集成按固定用例分为 access 两片、storage 三片、web 一片，各自下载并校验同一候选。`RUNWEFT_SMOKE_SHARD=1/3 bun run test:integration storage <CLI>` 可定向运行一片；不设该变量仍运行完整组。service-package 仅保留 tarball/symlink 和 npm launcher 两套完整验收，最多两个并行并等待各自清理；`RUNWEFT_SMOKE_SERIAL=1` 可顺序运行。Mac Intel 的公共安装和完整卸载分为两个独立 job，其他三平台各自在同一 job 顺序完成，两种路径均必须成功。
+
+四平台构建前检查至少 14 GiB 可用空间；不足时依次清理 GitHub 托管 Linux 镜像的 dotnet、GHC、Android SDK，达到余量即停止，清理失败或仍不足则拒绝继续。构建及上传前验收每秒采样可用空间并记录实际最低值，不将采样值当作瞬时精确峰值；候选恢复不执行构建空间清理。
+
 原生及 HAPI 专项调用模型，须已有授权并使用专用认证副本，核对源配置不变。Claude 默认优先 iclaude，可用 `RUNWEFT_SMOKE_CLAUDE` 指定程序；`RUNWEFT_SMOKE_CODEX_MODEL/EFFORT` 覆盖专用副本模型选择。已有 Chromium 可用 `RUNWEFT_SMOKE_CHROMIUM` 指定。机器轮换要求旧 Runner 退出 0 并完成清理。
 
 | 主链 | 保障范围 |

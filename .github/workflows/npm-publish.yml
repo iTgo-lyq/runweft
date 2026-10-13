@@ -39,11 +39,6 @@ jobs:
       validation-mode: ${{ steps.prepared.outputs.validation-mode }}
       site-install: ${{ steps.prepared.outputs.site-install }}
     steps:
-      - name: Free hosted runner space for four-platform packages and integration fixtures
-        run: |
-          df -h /
-          sudo rm -rf -- /usr/local/lib/android /usr/share/dotnet /opt/ghc
-          df -h /
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           submodules: true
@@ -60,6 +55,9 @@ jobs:
           SOURCE_RUN_ID: ${{ inputs.source-run-id }}
           GH_TOKEN: ${{ github.token }}
         run: node scripts/npm-release.mjs prepare
+      - name: Reserve release space with only the necessary hosted SDK cleanup
+        if: steps.prepared.outputs.build == 'true'
+        run: node scripts/release-space.mjs ensure
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         if: steps.prepared.outputs.build == 'true'
         with:
@@ -99,7 +97,7 @@ jobs:
         run: bun install --frozen-lockfile
         working-directory: .dev-smoke/release-source/hapi
       - if: steps.prepared.outputs.build == 'true'
-        run: bun run package --all
+        run: node "$GITHUB_WORKSPACE/scripts/release-space.mjs" measure bun run package --all
         working-directory: .dev-smoke/release-source
       - name: Check every model-free integration group on the frozen candidate
         if: steps.prepared.outputs.build == 'true'
@@ -108,7 +106,7 @@ jobs:
           INTEGRATION_GROUPS: ${{ steps.prepared.outputs.integration-groups }}
         run: |
           for group in $INTEGRATION_GROUPS; do
-            bun scripts/smoke-integration.ts "$group" .dev-smoke/release-source/dist/packages/runweft-linux-x64/bin/runweft || exit $?
+            node scripts/release-space.mjs measure bun scripts/smoke-integration.ts "$group" .dev-smoke/release-source/dist/packages/runweft-linux-x64/bin/runweft || exit $?
             df -h .
           done
       - name: Verify five package OIDC bindings
@@ -131,7 +129,19 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        group: [access, storage, web]
+        include:
+          - group: access
+            shard: 1/2
+          - group: access
+            shard: 2/2
+          - group: storage
+            shard: 1/3
+          - group: storage
+            shard: 2/3
+          - group: storage
+            shard: 3/3
+          - group: web
+            shard: 1/1
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     env:
@@ -171,6 +181,7 @@ jobs:
       - name: Run selected integration group on the public candidate
         env:
           INTEGRATION_GROUP: ${{ matrix.group }}
+          RUNWEFT_SMOKE_SHARD: ${{ matrix.shard }}
           CANDIDATE_BINARY: ${{ steps.programs.outputs.binary }}
         run: bun scripts/smoke-integration.ts "$INTEGRATION_GROUP" "$CANDIDATE_BINARY"
       - name: Keep sanitized integration evidence in logs
