@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "id": "parallel-website-release",
+  "title": "官网与 npm 并行发布及部署定向复验",
+  "size": "medium",
+  "status": "active",
+  "stage": "technical",
+  "branch": "codex/parallel-website-release",
+  "confirmations": {
+    "requirement": {
+      "at": "2026-10-13T10:03:09.484Z",
+      "summary": "接受官网与实际npm短暂不一致，继续发布优化：并行官网和npm，严格最终汇合并修复旧内容复验。",
+      "source": "用户：我可以接受官网短暂的和实际不一致；此前：按这个方案推进优化，建独立worktree，做完和iclaude一起复核，验证通过后合入main。"
+    },
+    "technical": {
+      "at": "2026-10-13T10:03:09.551Z",
+      "summary": "沿已讨论方案并行正式官网与npm；增加有界摘要确认及已上传部署只读复验，最终门禁不放宽。",
+      "source": "当前用户接受提前官网上线的关键取舍；前文提出有界重读与只复验已有部署，并已授权推进发布优化。"
+    },
+    "plan": {
+      "at": "2026-10-13T10:03:09.615Z",
+      "summary": "按旧内容与恢复、正式并行、验证和独立复核顺序推进；沿用既有worktree及合入授权。",
+      "source": "用户已授权推进优化、独立worktree、iclaude复核后合入main，并接受官网短暂领先。"
+    }
+  },
+  "tasks": {
+    "T1": {
+      "title": "官网短暂旧内容与仅复验恢复",
+      "status": "todo"
+    },
+    "T2": {
+      "title": "官网与 npm 正式发行并行",
+      "status": "todo"
+    },
+    "T3": {
+      "title": "独立复核与交付",
+      "status": "todo"
+    }
+  },
+  "closure": {}
+}
