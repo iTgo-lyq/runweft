@@ -2,6 +2,16 @@
 
 包与发布门禁见[发行规格](project/specs/release/spec.md)，官网操作见 [website/README](../website/README.md)。
 
+## 产品 Skill 分发
+
+工程唯一来源是 `.agents/skills/runweft/`，供本仓库 Agent 使用。npm 主包和平台包继续携带 `skills/runweft/`，独立 tarball 保持 `runweft/` 根目录。
+
+公开安装来源是 [runweft-skill](https://github.com/iTgo-lyq/runweft-skill)。`sync-runweft-skill.yml` 在 main 的 Skill 或同步入口变化时运行，也可手动触发；串行读取最新 main，用 Git archive 导出已提交目录，校验元数据与完整本地引用后，只同步目标 `skills/runweft/`。相同内容不提交，失效文件会删除，目标 README 等其他内容保留。目标 checkout 必须干净且位于 main；推送失败保留已生成提交，如实报告，不能认为外部同步已完成。
+
+源码仓库 Actions secret `RUNWEFT_SKILL_SYNC_SSH_KEY` 对应公开仓库专用的可写 deploy key，checkout 源码不保留写凭据。密钥只用于该目标，不使用源码仓库 token 推送另一仓库，不写入源码或日志。公开分发不包含 Runweft 程序源码、SpecTrail 或工程文档；不从公开仓库反向更新源码。公开 Skill 与 npm 版本分别发布，Agent 操作前仍核对已安装 CLI 版本与 `--help`。
+
+skills.sh 收录依赖用户通过 skills CLI 安装时的遥测及平台索引，公开仓库同步成功不等于市场已可搜索。
+
 ## 本地候选
 
 从已提交的干净源码构建候选：

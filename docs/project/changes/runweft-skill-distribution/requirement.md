@@ -22,7 +22,7 @@ Runweft 源码后续不直接公开，产品 Skill 需要独立的公开 GitHub 
 ## 验收标准
 
 - 工程可直接发现 `.agents/skills/runweft/SKILL.md`，原 `skills/runweft` 源码目录不再存在；打包和当前校验读取新目录，包内路径保持原约定。
-- 公开 GitHub 仓库可匿名读取并由 skills CLI 唯一识别为 `runweft`，完整五份 Skill 文件与已提交源码一致。
+- 公开 GitHub 仓库可匿名读取并由 skills CLI 唯一识别为 `runweft`，完整 Skill 文件（含宿主 UI 元数据）与已提交源码一致。
 - 同步夹具通过：只发布已提交 Skill，忽略未提交及目录外内容，删除失效文件，保留分发说明，重复同步无新提交；脏目标、错误分支、损坏 Skill 均不推送。
 - 同步 workflow 语法校验通过，使用仅限公开目标的 deploy key；运行现有相关检查和独立 Agent 的 Skill 场景验收。
 - 明确区分公开仓库已创建、同步脚本已实测、CI 是否已在 main 启用及 skills.sh 是否实际收录。

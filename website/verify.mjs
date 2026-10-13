@@ -242,7 +242,7 @@ try {
     const skillDirectory = locatedSkill.stdout.trim();
     assert.equal(skillDirectory, join(prefix, 'lib/node_modules/runweft/skills/runweft'));
     for (const file of ['SKILL.md', 'references/onboarding.md', 'references/configuration.md', 'references/delegation.md', 'references/maintenance.md']) {
-      assert.deepEqual(await readFile(join(skillDirectory, file)), await readFile(join(repository, 'skills/runweft', file)));
+      assert.deepEqual(await readFile(join(skillDirectory, file)), await readFile(join(repository, '.agents/skills/runweft', file)));
     }
     const installedPackage = JSON.parse(await readFile(join(prefix, 'lib/node_modules/runweft/package.json'), 'utf8'));
     assert.equal(installedPackage.name, release.package); assert.equal(installedPackage.version, release.version);

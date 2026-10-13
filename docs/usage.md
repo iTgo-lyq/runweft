@@ -19,6 +19,14 @@ npm 自动选择当前平台依赖，随包提供配套 HAPI 与产品 Skill，�
 
 ## 交给 Agent 接入
 
+也可先从独立公开仓库安装产品 Skill，再交给 Agent 接入程序和 MCP：
+
+```sh
+npx skills add iTgo-lyq/runweft-skill --skill runweft --agent codex -g --copy -y
+```
+
+Claude Code 使用 `--agent claude-code`。先核对已有同名 Skill，不同内容先备份并确认替换。Skill 安装不等于程序或 MCP 安装；已有工程内 Skill 时直接复用，不重复安装全局副本。
+
 把下面这段话交给正在使用的 Agent：
 
 > 通过 npm 安装 runweft@1.1.7，从已安装包中读取并接入 Runweft Skill。程序安装和升级用 npm，完整卸载按 Skill 的维护说明执行。帮我连接指定 Hub；没有 Hub 时先询问是否在本机启动。保留其他 MCP 和模型配置，身份通过浏览器确认，不向我索要 token。分别登记机器和执行工具，创建代码评审 Agent，再在当前项目完成一次只读委派。

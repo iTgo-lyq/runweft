@@ -38,7 +38,7 @@ git diff --check
 ## 验证边界与按需入口
 
 - 不自动修改用户 Codex / Claude Code 配置、HAPI 数据或模型凭据。接入由显式 CLI 辅助安装/更新/卸载，开发验收使用专用 `HOME`、`CODEX_HOME`、`CLAUDE_CONFIG_DIR`，保留其他 MCP 和原生配置；真实模型验收须已有授权。
-- 产品 Skill 在 `skills/runweft/`，只交付、不安装到开发者全局；修改后做结构校验和独立 Agent 场景验收。网页使用 Playwright 自动验收，无需用户真实浏览器。
+- 产品 Skill 源码在 `.agents/skills/runweft/`，供工程 Agent 使用并同步到独立公开仓库；不安装到开发者全局；修改后做结构校验和独立 Agent 场景验收。网页使用 Playwright 自动验收，无需用户真实浏览器。
 - MCP stdout 只输出协议，日志走 stderr；不记录凭据、完整 prompt 或用户源码。区分真实验证、文档证据和推断，结果未知时不推断成功、不盲目重发。
 - 临时文件放 `.dev-smoke/`，不提交；搜索默认排除 `node_modules/`、`dist/` 和历史归档。
 - 打包与发布按[发行操作](docs/release.md)，官网按 [website/README](website/README.md)。独立原型按 [包内说明](packages/prototype/README.md) 与 DESIGN.md，使用内存示例并登记 SpecTrail 固定发布引用。

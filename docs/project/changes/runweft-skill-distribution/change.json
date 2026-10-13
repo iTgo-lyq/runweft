@@ -4,13 +4,13 @@
   "title": "公开分发 Runweft Skill 并自动同步",
   "size": "small",
   "status": "active",
-  "stage": "requirement",
+  "stage": "execution",
   "branch": "codex/runweft-skill-distribution",
   "confirmations": {},
   "tasks": {
     "T1": {
       "title": "迁移工程 Skill、建立公开分发仓库和单向同步 CI，并验证发布边界",
-      "status": "todo"
+      "status": "doing"
     }
   },
   "closure": {}

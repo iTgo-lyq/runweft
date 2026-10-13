@@ -36,7 +36,7 @@ runweft mcp check --client <codex或claude>
 
 先记录安装版本、路径、Hub 角色、数据根、活跃任务。结束/中断任务并确认停止后再停对应服务；停止 Runner/Hub 不能代替中断模型进程。
 
-升级：确认当前入口属于 npm 安装，使用 `npm install -g runweft@<目标版本> --registry=https://registry.npmjs.org/ --include=optional`；成功后核对版本和入口，再运行 `mcp install --client <宿主>` 更新入口/timeout/hook。从更新后的 npm 包读取产品 Skill，比对、备份扫描目录外的旧目录再替换。没有 `runweft upgrade` 命令。当前业务库只支持 schema19，不通过切换程序迁移数据。
+升级：确认当前入口属于 npm 安装，使用 `npm install -g runweft@<目标版本> --registry=https://registry.npmjs.org/ --include=optional`；成功后核对版本和入口，再运行 `mcp install --client <宿主>` 更新入口/timeout/hook。Skill 来自 npm 包时，从更新后的包读取，比对、备份扫描目录外的旧目录再替换；通过 skills CLI 安装时，先核对来源与本地修改，有修改先备份到扫描目录外并确认替换范围，再按用户授权运行 `npx skills update runweft -g -y`，项目安装则改为 `-p`。不承诺更新命令会保留个人修改。工程维护的 Skill 由工程 Git 更新，不用全局更新覆盖。Skill 版本不代替程序版本，操作前仍查实际 CLI 的 `--help`。没有 `runweft upgrade` 命令。当前业务库只支持 schema19，不通过切换程序迁移数据。
 
 按原角色启动：本机 Hub `start`，独立执行机 `runner start`，前台公开服务由原进程管理器执行 `serve --public`。核对 `--version/status/doctor/mcp check`，再做一次低风险真实调用。只执行用户指定范围，不更新在线其他实例。
 

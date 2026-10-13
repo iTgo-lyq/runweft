@@ -5,7 +5,7 @@ import { dirname, extname, relative, resolve } from 'node:path';
 // Current docs validate files and headings; archives validate local file targets only.
 const root = process.cwd();
 const documents = [...new Set(execFileSync('git', ['ls-files', '-z', '--cached', '--others', '--exclude-standard', '--', '*.md'], { encoding: 'utf8' }).split('\0'))]
-    .filter(file => file && !/^(\.agents\/|hapi\/)/.test(file) && existsSync(file));
+    .filter(file => file && !/^(\.agents\/skills\/spec-trail\/|hapi\/)/.test(file) && existsSync(file));
 const withoutFences = body => {
     let fence;
     return body.split('\n').map(line => {

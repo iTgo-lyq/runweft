@@ -1,0 +1,55 @@
+name: Sync Runweft Skill
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .agents/skills/runweft/**
+      - .github/workflows/sync-runweft-skill.yml
+      - scripts/sync-runweft-skill.sh
+      - scripts/check-runweft-skill.mjs
+      - package.json
+      - bun.lock
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: runweft-skill-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out latest source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+          path: source
+          persist-credentials: false
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '24'
+
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: '1.4.2'
+
+      - run: bun install --frozen-lockfile
+        working-directory: source
+
+      - name: Check out distribution
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: iTgo-lyq/runweft-skill
+          ref: main
+          path: distribution
+          ssh-key: ${{ secrets.RUNWEFT_SKILL_SYNC_SSH_KEY }}
+
+      - name: Publish committed Skill
+        run: bash source/scripts/sync-runweft-skill.sh "$GITHUB_WORKSPACE/source" "$GITHUB_WORKSPACE/distribution"

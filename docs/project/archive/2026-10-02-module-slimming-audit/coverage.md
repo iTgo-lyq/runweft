@@ -481,12 +481,12 @@
 
 ### K01 随包产品 Skill
 
-- [skills/runweft/SKILL.md](../../../../skills/runweft/SKILL.md)
-- [skills/runweft/agents/openai.yaml](../../../../skills/runweft/agents/openai.yaml)
-- [skills/runweft/references/configuration.md](../../../../skills/runweft/references/configuration.md)
-- [skills/runweft/references/delegation.md](../../../../skills/runweft/references/delegation.md)
-- [skills/runweft/references/maintenance.md](../../../../skills/runweft/references/maintenance.md)
-- [skills/runweft/references/onboarding.md](../../../../skills/runweft/references/onboarding.md)
+- [skills/runweft/SKILL.md](https://github.com/iTgo-lyq/runweft/blob/64df00254894b718cf8737ab2730c6d0ea56d38d/skills/runweft/SKILL.md)
+- [skills/runweft/agents/openai.yaml](https://github.com/iTgo-lyq/runweft/blob/64df00254894b718cf8737ab2730c6d0ea56d38d/skills/runweft/agents/openai.yaml)
+- [skills/runweft/references/configuration.md](https://github.com/iTgo-lyq/runweft/blob/64df00254894b718cf8737ab2730c6d0ea56d38d/skills/runweft/references/configuration.md)
+- [skills/runweft/references/delegation.md](https://github.com/iTgo-lyq/runweft/blob/64df00254894b718cf8737ab2730c6d0ea56d38d/skills/runweft/references/delegation.md)
+- [skills/runweft/references/maintenance.md](https://github.com/iTgo-lyq/runweft/blob/64df00254894b718cf8737ab2730c6d0ea56d38d/skills/runweft/references/maintenance.md)
+- [skills/runweft/references/onboarding.md](https://github.com/iTgo-lyq/runweft/blob/64df00254894b718cf8737ab2730c6d0ea56d38d/skills/runweft/references/onboarding.md)
 
 ### R01 根构建与配置输入
 

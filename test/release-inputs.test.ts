@@ -1,7 +1,7 @@
 import { fixtureCleanup } from './fixture-cleanup';
 import { afterEach, expect, test } from 'bun:test';
 import { spawnSync } from 'node:child_process';
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fixture } from './helpers';
 import { assertFrozenCandidate } from '../scripts/fixtures/release-inputs.mjs';
@@ -30,4 +30,12 @@ test('release freeze rejects dirty, tracked and untracked package changes but al
     git('checkout', '--', 'src/entry.ts');
     writeFileSync(join(root, 'src/new.ts'), 'export {};\n');
     expect(() => assertFrozenCandidate({ source }, root)).toThrow('Untracked package');
+    rmSync(join(root, 'src/new.ts'));
+    mkdirSync(join(root, '.agents/skills/runweft'), { recursive: true });
+    writeFileSync(join(root, '.agents/skills/runweft/SKILL.md'), 'Product Skill\n');
+    expect(() => assertFrozenCandidate({ source }, root)).toThrow('Untracked package');
+    git('add', '.agents/skills/runweft'); git('commit', '-qm', 'Product Skill');
+    const skillSource = { revision: git('rev-parse', 'HEAD'), dirty: false };
+    writeFileSync(join(root, '.agents/skills/runweft/SKILL.md'), 'Changed Skill\n');
+    expect(() => assertFrozenCandidate({ source: skillSource }, root)).toThrow('inputs changed');
 });
