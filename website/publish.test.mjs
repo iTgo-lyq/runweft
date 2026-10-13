@@ -22,7 +22,9 @@ await buildSite({ projectDirectory, outputDirectory: directory });
 const site = await validateSite(directory);
 after(() => rm(temporary, { recursive: true, force: true }));
 const env = { GITHUB_EVENT_NAME: 'push', GITHUB_REF_TYPE: 'branch', GITHUB_REF_NAME: 'main' };
-const childEnv = { ...process.env, RELEASE_VERSION: '', RELEASE_PARALLEL: '', RELEASE_RUN_ID: '', RELEASE_ATTEMPT: '', VERIFY_RUN_ID: '' };
+const childEnv = { ...process.env, RELEASE_VERSION: '', RELEASE_PARALLEL: '', RELEASE_RUN_ID: '', RELEASE_ATTEMPT: '', VERIFY_RUN_ID: '',
+  GITHUB_OUTPUT: '', GITHUB_STEP_SUMMARY: '', GH_TOKEN: '', GITHUB_REPOSITORY: '', CLOUDFLARE_PAGES_PROJECT: '',
+  PAGES_DEPLOYMENT_URL: '', PAGES_ENVIRONMENT: '' };
 const json = (value, status = 200) => new Response(JSON.stringify(value), { status, headers: { 'content-type': 'application/json' } });
 const integrity = 'sha512-' + createHash('sha512').update('fixture').digest('base64');
 const manifest = name => ({ name, version: site.release.version,
@@ -104,11 +106,15 @@ test('only explicitly bound parallel releases bypass npm readiness, retaining st
     GITHUB_REPOSITORY: 'owner/repo', GH_TOKEN: 'fixture-token' };
   const source = { id: 10, path: '.github/workflows/npm-publish.yml', head_repository: { full_name: 'owner/repo' },
     run_attempt: 1, status: 'in_progress', event: 'push', head_branch: `v${site.release.version}` };
-  const sourceResponse = async url => { assert.equal(new URL(url).hostname, 'api.github.com'); return json(source); };
+  const sourceResponse = async (url, options) => {
+    assert.equal(url, 'https://api.github.com/repos/owner/repo/actions/runs/10');
+    assert.equal(options.headers.authorization, 'Bearer fixture-token');
+    return json(source);
+  };
   const result = await checkPublication(site, parallel, { fetchImpl: sourceResponse });
   assert.equal(result.ready, true); assert.equal(result.npmValidation, 'deferred-to-release'); assert.deepEqual(result.packages, []);
   for (const change of [{ RELEASE_VERSION: '' }, { RELEASE_VERSION: '9.0.0' }, { RELEASE_RUN_ID: '' }, { RELEASE_ATTEMPT: '0' },
-    { GITHUB_REF: 'refs/heads/codex/test' }, { GITHUB_EVENT_NAME: 'push' }]) {
+    { GITHUB_REF: 'refs/heads/codex/test' }, { GITHUB_EVENT_NAME: 'push' }, { GH_TOKEN: '' }]) {
     await assert.rejects(checkPublication(site, { ...parallel, ...change }));
   }
   assert.equal((await checkPublication(site, env, { fetchImpl: async () => json({}, 404) })).ready, false);
@@ -116,6 +122,12 @@ test('only explicitly bound parallel releases bypass npm readiness, retaining st
   for (const change of [{ id: 11 }, { path: '.github/workflows/checks.yml' }, { head_repository: { full_name: 'fork/repo' } },
     { status: 'completed' }, { run_attempt: 2 }, { event: 'pull_request' }, { head_branch: 'v9.0.0' }]) {
     await assert.rejects(checkPublication(site, parallel, { fetchImpl: async () => json({ ...source, ...change }) }));
+  }
+  await assert.rejects(checkPublication(site, parallel, { fetchImpl: async () => json({}, 403) }), /无法核对/);
+  const recovery = { ...source, event: 'workflow_dispatch', head_branch: 'main', display_title: `publish v${site.release.version}` };
+  assert.equal((await checkPublication(site, parallel, { fetchImpl: async () => json(recovery) })).ready, true);
+  for (const display_title of ['preflight', 'verify run 10', 'publish v9.0.0', undefined]) {
+    await assert.rejects(checkPublication(site, parallel, { fetchImpl: async () => json({ ...recovery, display_title }) }), /同版本正式发行/);
   }
 });
 
@@ -268,9 +280,9 @@ globalThis.fetch = async input => {
     ? 'wrong production version' : readFileSync('dist/website/' + path);
   return new Response(bytes, {headers:{'content-type':bytes === 'wrong production version' ? 'application/json' : mime}});
 };\n`);
-  for (const [fail, verificationOnly] of [['1', false], ['0', false], ['0', true]]) {
+  for (const [fail, verificationOnly] of [['1', false], ['0', false], ['0', true], ['1', true]]) {
     await writeFile(join(working, 'requests.jsonl'), '');
-    await writeFile(join(evidence, 'recovery.json'), JSON.stringify({ sourceRunId: 100, sourceAttempt: 1, sourceRevision: 'a'.repeat(40) }));
+    await writeFile(join(evidence, 'recovery.json'), JSON.stringify({ sourceRunId: 100, sourceAttempt: 1, sourceRevision: 'a'.repeat(40), url: online.url }));
     const child = spawnSync(process.execPath, ['--import', preload, resolve(import.meta.dirname, 'publish.mjs'), 'verify'], {
       cwd: working, env: { ...childEnv, VERIFY_RUN_ID: verificationOnly ? '100' : '', PAGES_DEPLOYMENT_URL: online.url,
         PAGES_ENVIRONMENT: 'production', FAIL_PRODUCTION: fail }, encoding: 'utf8',
@@ -283,7 +295,7 @@ globalThis.fetch = async input => {
     assert.equal(receipt.success, fail === '0');
     assert.equal(receipt.uploaded, !verificationOnly); assert.equal(receipt.verificationOnly, verificationOnly);
     if (verificationOnly) { assert.equal(receipt.sourceRunId, 100); assert.equal(receipt.deploymentSourceRevision, 'a'.repeat(40)); }
-    if (fail === '1') { assert.match(child.stderr, /MIME/); assert.equal(receipt.uploaded, true); }
+    if (fail === '1') assert.match(child.stderr, /MIME/);
     else assert.equal(receipt.production.success, true);
   }
 });

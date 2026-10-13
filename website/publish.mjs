@@ -50,6 +50,9 @@ export async function checkPublication(site, env, { fetchImpl = fetch } = {}) {
     assert.equal(run.status, 'in_progress', '并行官网必须属于正在进行的发行。');
     assert(['push', 'workflow_dispatch'].includes(run.event));
     assert.equal(run.head_branch, run.event === 'push' ? `v${site.release.version}` : 'main', '发行来源与官网版本/分支不符。');
+    if (run.event === 'workflow_dispatch') {
+      assert.equal(run.display_title, `publish v${site.release.version}`, '手动来源必须是同版本正式发行，不能使用预检或只读验证。');
+    }
     return { ready: true, packages: [], npmValidation: 'deferred-to-release',
       releaseRunId: env.RELEASE_RUN_ID, releaseAttempt: env.RELEASE_ATTEMPT };
   }
@@ -292,7 +295,10 @@ async function main() {
         mode: prepared.mode, pagesEnvironment: env.PAGES_ENVIRONMENT, site };
       const { deployment } = deploymentReference(target);
       const recovery = env.VERIFY_RUN_ID ? JSON.parse(await readFile('.dev-smoke/website-pages/recovery.json', 'utf8')) : null;
-      if (recovery) assert.equal(String(recovery.sourceRunId), env.VERIFY_RUN_ID);
+      if (recovery) {
+        assert.equal(String(recovery.sourceRunId), env.VERIFY_RUN_ID);
+        assert.equal(deployment.href, recovery.url, '复验 URL 必须与原上传回执一致。');
+      }
       const provenance = recovery ? { uploaded: false, verificationOnly: true, sourceRunId: recovery.sourceRunId,
         sourceAttempt: recovery.sourceAttempt, deploymentSourceRevision: recovery.sourceRevision } : { uploaded: true, verificationOnly: false };
       await save('deployment', { success: false, ...provenance, url: deployment.href, mode: prepared.mode,
@@ -305,7 +311,7 @@ async function main() {
       if (prepared.mode === 'production') production = await verifyDeployment({ ...target, url: `https://${prepared.subdomain}/` }, options);
       await save('deployment', { ...result, ...provenance, pagesEnvironment: env.PAGES_ENVIRONMENT,
         production, branch: prepared.branch, sourceRevision: env.GITHUB_SHA });
-      await summary(`**已部署并验证 ${result.mode}**：[${result.url}](${result.url})，npm ${result.version}，分支 ${prepared.branch}。`);
+      await summary(`**${recovery ? `复验通过（来源 run ${recovery.sourceRunId}）` : '已部署并验证'} ${result.mode}**：[${result.url}](${result.url})，npm ${result.version}，分支 ${prepared.branch}。`);
       console.log(`Pages ${result.mode} 在线校验通过：${result.url}`);
       break;
     }

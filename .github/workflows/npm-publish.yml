@@ -1,4 +1,5 @@
 name: npm publishing
+run-name: ${{ inputs.verify-run-id && format('verify run {0}', inputs.verify-run-id) || github.event_name == 'push' && format('publish {0}', github.ref_name) || inputs.release-tag && format('publish {0}', inputs.release-tag) || 'preflight' }}
 
 on:
   push:
