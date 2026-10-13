@@ -13,6 +13,10 @@ on:
         description: 'Original beta run ID when recovering published packages with an updated workflow'
         type: string
         default: ''
+      verify-run-id:
+        description: 'Read-only public verification of an original release run; no upload, promotion or deployment'
+        type: string
+        default: ''
 
 permissions:
   contents: read
@@ -38,6 +42,7 @@ jobs:
       public-integration: ${{ steps.prepared.outputs.public-integration }}
       validation-mode: ${{ steps.prepared.outputs.validation-mode }}
       site-install: ${{ steps.prepared.outputs.site-install }}
+      verify-only: ${{ steps.prepared.outputs.verify-only }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -53,6 +58,7 @@ jobs:
         env:
           RELEASE_TAG: ${{ github.event_name == 'push' && github.ref_name || inputs.release-tag }}
           SOURCE_RUN_ID: ${{ inputs.source-run-id }}
+          VERIFY_RUN_ID: ${{ inputs.verify-run-id }}
           GH_TOKEN: ${{ github.token }}
         run: node scripts/npm-release.mjs prepare
       - name: Reserve release space with only the necessary hosted SDK cleanup
@@ -118,6 +124,7 @@ jobs:
         env:
           SOURCE_REVISION: ${{ steps.prepared.outputs.source-ref }}
           PUBLISH_RELEASE: ${{ steps.prepared.outputs.publish }}
+          VERIFY_ONLY: ${{ steps.prepared.outputs.verify-only }}
         run: node scripts/npm-release.mjs beta
       - name: Keep sanitized validation in logs
         if: always()
@@ -190,7 +197,7 @@ jobs:
 
   install:
     needs: beta
-    if: needs.beta.outputs.publish == 'true'
+    if: needs.beta.outputs.publish == 'true' || needs.beta.outputs.verify-only == 'true'
     uses: ./.github/workflows/cli-install.yml
     with:
       release: ${{ needs.beta.outputs.release }}
@@ -199,7 +206,7 @@ jobs:
   promote:
     needs: [beta, install, integration]
     if: >-
-      always() && needs.beta.result == 'success' && needs.install.result == 'success' &&
+      always() && needs.beta.outputs.verify-only != 'true' && needs.beta.result == 'success' && needs.install.result == 'success' &&
       ((needs.beta.outputs.validation-mode == 'public' && needs.integration.result == 'success') ||
       (needs.beta.outputs.validation-mode == 'inline' && needs.integration.result == 'skipped'))
     runs-on: ubuntu-24.04
@@ -222,6 +229,7 @@ jobs:
           BETA_RESULT: ${{ needs.beta.result }}
           INTEGRATION_RESULT: ${{ needs.integration.result }}
           VALIDATION_MODE: ${{ needs.beta.outputs.validation-mode }}
+          VERIFY_ONLY: ${{ needs.beta.outputs.verify-only }}
         run: node scripts/npm-release.mjs promote
 
   website:

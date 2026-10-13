@@ -6,7 +6,7 @@ import { createServer } from 'node:http';
 import { spawnSync } from 'node:child_process';
 import { join, resolve } from 'node:path';
 import { parse } from 'yaml';
-import { assertDescriptor, downloadJobLog, downloadRelease, promoteRelease, previousRunLog, readReleaseLog, recoveryMode, releaseChecks, unpackRelease, verifyPublicRelease } from '../npm-release.mjs';
+import { assertDescriptor, downloadJobLog, downloadRelease, prepareVerification, promoteRelease, previousRunLog, readReleaseLog, recoveryMode, releaseChecks, unpackRelease, verifyPublicRelease } from '../npm-release.mjs';
 import { npmPublishArgs, packageNames, publishCandidate, registry } from '../npm-publish.mjs';
 import { publicReadBudget, publicResponse } from '../npm-read.mjs';
 
@@ -52,6 +52,30 @@ test('stable candidates upload beta and preserve latest before platform verifica
     });
     assert.equal(state.channel, 'beta'); assert.equal(state.success, true);
     assert.equal(Object.values(state.distTags).every(tags => tags.latest === '1.1.1'), true);
+});
+
+test('read-only public validation requires original provenance and frozen inputs, and can never authorize a mutation', async () => {
+    const release = descriptor(), env = { GITHUB_EVENT_NAME: 'workflow_dispatch', VERIFY_RUN_ID: '123' }, calls = [];
+    const options = {
+        load: async input => { assert.equal(input.SOURCE_RUN_ID, '123'); return { release, prepublicationVerified: true }; },
+        checkInputs: candidate => { assert.equal(candidate, release); calls.push('frozen'); },
+        verify: async candidate => { assert.equal(candidate, release); calls.push('public'); },
+    };
+    const result = await prepareVerification(env, options);
+    assert.deepEqual(calls, ['frozen', 'public']);
+    assert.equal(result.publish, false); assert.equal(result.build, false); assert.equal(result['verify-only'], true);
+    assert.equal(result['public-integration'], true); assert.equal(result['site-install'], true);
+    assert.deepEqual(JSON.parse(result.release), release);
+    for (const override of [{ GITHUB_EVENT_NAME: 'push' }, { RELEASE_TAG: 'v1.2.0' }, { SOURCE_RUN_ID: '456' }, { VERIFY_RUN_ID: '0' }]) {
+        await assert.rejects(prepareVerification({ ...env, ...override }, options));
+    }
+    await assert.rejects(prepareVerification(env, { ...options, load: async () => ({ release }) }), /original candidate/);
+    await assert.rejects(prepareVerification(env, { ...options, checkInputs: () => { throw new Error('inputs changed'); } }), /inputs changed/);
+    await assert.rejects(prepareVerification(env, { ...options, verify: async () => { throw new Error('hash changed'); } }), /hash changed/);
+    for (const command of ['beta', 'promote']) {
+        const run = spawnSync(process.execPath, ['scripts/npm-release.mjs', command], { env: { ...process.env, VERIFY_ONLY: 'true' }, encoding: 'utf8' });
+        assert.equal(run.status, 1); assert.match(run.stderr, /Read-only verification cannot/);
+    }
 });
 
 test('recovery refuses partial, unknown, missing provenance log and wrong source candidates', () => {
@@ -263,6 +287,10 @@ test('workflow topology requires all four platforms and has no artifact dependen
     assert.deepEqual(publish.jobs.promote.needs, ['beta', 'install', 'integration']);
     assert.match(publish.jobs.promote.if, /needs\.install\.result == 'success'/);
     assert.equal(publish.concurrency.group, 'npm-publish'); assert.equal(publish.concurrency['cancel-in-progress'], false);
+    assert.match(publish.jobs.install.if, /needs.beta.outputs.verify-only == 'true'/);
+    assert.match(publish.jobs.promote.if, /needs.beta.outputs.verify-only != 'true'/);
+    assert.equal(publish.jobs.promote.steps.find(step => step.run === 'node scripts/npm-release.mjs promote').env.VERIFY_ONLY, '${{ needs.beta.outputs.verify-only }}');
+    assert.equal(publish.jobs.beta.steps.find(step => step.id === 'published').env.VERIFY_ONLY, '${{ steps.prepared.outputs.verify-only }}');
     const sourceCheckout = publish.jobs.beta.steps.find(step => step.name === 'Check out exact tag source for packaging');
     const integration = publish.jobs.beta.steps.find(step => step.name === 'Check every model-free integration group on the frozen candidate');
     const candidateDirectory = sourceCheckout.with.path + '/dist/packages';

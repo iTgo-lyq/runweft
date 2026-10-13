@@ -76,6 +76,8 @@ gh workflow run npm-publish.yml --repo iTgo-lyq/runweft --ref main \
 
 手动 `release-tag` 留空只预演。恢复必须取得原候选描述、上传及成功的上传前检查证据，并核对来源、摘要和 packageInputs；包内说明、package.json 等输入变化后，不能从当前 main 恢复旧候选，应为下一版本重新冻结构建。部分公开、日志不可取得或上传结果未知时停止，不盲目重发。beta 是公开渠道，已公开版本不能覆盖。
 
+调整验收脚本后，可以只读验证已公开的原候选：`gh workflow run npm-publish.yml --ref <验收分支> -f verify-run-id=<原发布run编号>`。包输入必须仍与原候选完全相同，并有原 run 的成功上传前证据；该模式实际执行全部公共分片、四平台安装/完整卸载及稳定版网页安装，跳过构建、上传、晋级和官网部署。不能同时填写 release-tag 或 source-run-id。所有手动参数均为空时仍是本地候选预演。
+
 缺少标签权限时，逐包检查 npm 的 `/package/<包名>/access` Trusted publishing：仓库 `iTgo-lyq/runweft`、文件 `npm-publish.yml`、environment 留空，同时允许 `npm publish` 与 `Allow npm dist-tag`。权限修复后只重跑 promote。
 
 稳定晋级后自动 dispatch 最新 main 官网，绑定预期版本和发布 run/attempt，等待其真实完成。官网须通过唯一 URL、正式域名十文件和三页桌面/手机浏览器验证；源码版本不符或 main 已推进时拒绝旧运行。官网失败只恢复官网，不重发 npm；触发或上传结果未知时先查 Actions/Pages，不盲目重发，也不用旧生产提交回退网站。

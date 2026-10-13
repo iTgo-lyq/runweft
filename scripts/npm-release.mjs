@@ -228,7 +228,27 @@ export async function previousRunLog(env, { query = path => JSON.parse(command('
     return { ...readReleaseLog(log), prepublicationVerified };
 }
 
+export async function prepareVerification(env, { load = previousRunLog, verify = verifyPublicRelease, checkInputs = assertFrozenCandidate } = {}) {
+    assert.equal(env.GITHUB_EVENT_NAME, 'workflow_dispatch', 'Public verification requires an explicit dispatch');
+    assert(!env.RELEASE_TAG && !env.SOURCE_RUN_ID, 'verify-run-id cannot be combined with publishing/recovery inputs');
+    assert.match(env.VERIFY_RUN_ID ?? '', /^[1-9]\d*$/);
+    const prior = await load({ ...env, SOURCE_RUN_ID: env.VERIFY_RUN_ID });
+    assert(prior.release && prior.prepublicationVerified, 'Verification requires the original candidate and successful prepublication checks');
+    const release = assertDescriptor(prior.release);
+    checkInputs(release); // Exact package inputs must still match; only verification/control code may differ.
+    await verify(release);
+    return { 'source-ref': release.source.revision, publish: false, build: false, 'verify-only': true,
+        'public-integration': true, 'validation-mode': 'public', 'site-install': releaseChannel(release.version) === 'latest',
+        release: JSON.stringify(release) };
+}
+
 async function prepare(env) {
+    if (env.VERIFY_RUN_ID) {
+        const plan = await prepareVerification(env);
+        output(plan); console.log(descriptorMarker + plan.release);
+        report('RELEASE_PLAN', { sourceRunId: env.VERIFY_RUN_ID, controlRevision: env.GITHUB_SHA, mode: 'verify-only', publishing: false });
+        return;
+    }
     const publishing = Boolean(env.RELEASE_TAG);
     if (env.GITHUB_EVENT_NAME === 'push') {
         assert.equal(env.GITHUB_REF_TYPE, 'tag');
@@ -254,7 +274,7 @@ async function prepare(env) {
         await verifyPublicRelease(prior.release);
         console.log(descriptorMarker + JSON.stringify(prior.release));
     }
-    output({ 'source-ref': revision, publish: publishing, build: mode === 'build',
+    output({ 'source-ref': revision, publish: publishing, build: mode === 'build', 'verify-only': false,
         'public-integration': checks.publicIntegration, 'integration-groups': checks.groups.join(' '),
         'validation-mode': checks.publicIntegration ? 'public' : 'inline', 'site-install': checks.siteInstall,
         release: mode === 'existing' ? JSON.stringify(prior.release) : '' });
@@ -285,6 +305,7 @@ function npmRunner() {
 }
 
 async function beta(env) {
+    assert.notEqual(env.VERIFY_ONLY, 'true', 'Read-only verification cannot upload or promote packages');
     const source = resolve(env.RELEASE_SOURCE || '.dev-smoke/release-source');
     const { index, entries } = validateCandidate(join(source, 'dist/packages'), source);
     assert.equal(index.source.revision, env.SOURCE_REVISION, 'Candidate source differs from selected tag');
@@ -335,6 +356,7 @@ async function main() {
                 source: release.source, controlRevision: process.env.GITHUB_SHA }); break;
         }
         case 'promote': {
+            assert.notEqual(process.env.VERIFY_ONLY, 'true', 'Read-only verification cannot upload or promote packages');
             const release = JSON.parse(process.env.RELEASE_DESCRIPTOR);
             const npm = npmRunner();
             report('PROMOTION', await promoteRelease(release, { installationResult: process.env.INSTALL_RESULT,
