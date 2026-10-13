@@ -16,7 +16,7 @@ Runweft 官网是独立静态站点，不与业务看板或 HAPI 服务混用。
 
 ## 静态交付
 
-website/build.mjs 读取根 package.json 的稳定版本、网站源码和当前使用说明，不依赖 dist/packages 或构建网络。输出仅包含三页 HTML、资源和 release.json；元数据为 version、installation=npm、package=runweft 和公开 registry，不冒充程序候选来源。正式部署前须确认五包latest均为目标版本，公开元数据/完整性与精确平台依赖可安装；只有beta的稳定候选停止部署。
+website/build.mjs 读取根 package.json 的稳定版本、网站源码和当前使用说明，不依赖 dist/packages 或构建网络。输出仅包含三页 HTML、资源和 release.json；元数据为 version、installation=npm、package=runweft 和公开 registry，不冒充程序候选来源。普通部署前须确认五包 latest 均为目标版本，公开元数据/完整性与精确平台依赖可安装；只有 beta 的稳定候选停止普通部署。绑定正式发行的显式并行模式允许官网先于 npm 可安装状态，最终发布仍等待两端验收通过。
 
 暂存全部成功后才替换旧输出；非法版本、未知模板占位符失败保留旧站点并清理暂存。参考页转义完整使用说明。站内页面和资源均使用相对路径，支持根路径和子路径部署。
 
@@ -26,13 +26,15 @@ website/serve.mjs 提供 loopback GET/HEAD 预览，只能读取站点目录。�
 
 ## Cloudflare Pages 自动部署
 
-website-pages.yml 复用规范版本识别，稳定版本使用托管 runner 构建、检查公共 npm 版本并上传 Direct Upload 项目；main 的官网相关推送部署 production，codex 分支部署 preview，action 返回环境须与请求模式匹配。生产部署先确认 run 的 SHA 为 main 当前提交，拒绝旧提交覆盖官网。仅 codex/** push/dispatch 的 Beta 在聚焦检查后明确跳过构建、准备/上传与静态产物；main 或 PR 的 Beta 版本失败，真实构建器仍只接受稳定版本。
+website-pages.yml 复用规范版本识别，稳定版本使用托管 runner 构建、按入口检查 npm 就绪或正式发行来源，并上传 Direct Upload 项目；main 的官网相关推送部署 production，codex 分支部署 preview，action 返回环境须与请求模式匹配。生产部署先确认 run 的 SHA 为 main 当前提交，拒绝旧提交覆盖官网。仅 codex/** push/dispatch 的 Beta 在聚焦检查后明确跳过构建、准备/上传与静态产物；main 或 PR 的 Beta 版本失败，显式部署复验也拒绝 Beta，真实构建器仍只接受稳定版本。
 
-普通 push 的稳定版本尚未全部晋级时保留静态检查，标记等待发布并跳过上传；PR、手动及发布接续仍要求五包 latest 已晋级。稳定 npm 晋级后自动 dispatch main，核对预期版本及来源 run/attempt，发布端绑定实际官网 run 并限时等待完成；失败或未知不表示整体验收成功，只恢复官网。上传前再次确认 main 未推进，拒绝旧版本任务覆盖新网站；已晋级版本的独立官网变更仍可部署。
+普通 push 的稳定版本尚未全部晋级时保留静态检查，标记等待发布并跳过上传；普通 PR、手动入口仍要求五包 latest 已晋级。稳定正式发行与 npm 流程并行 dispatch main，显式并行模式核对预期版本、同仓库正在运行的 npm-publish 及来源 run/attempt；push 来源绑定版本 tag，手动来源绑定 main、正式发行模式和版本。仅该模式将 npm 就绪校验留给父流程，允许网站暂时展示尚不可安装的目标版本。发布端绑定实际官网 run 并限时等待完成，最终要求 npm 和官网都成功；任一端失败如实保留，不自动回滚网站。上传前再次确认 main 未推进，拒绝旧版本任务覆盖新网站；已晋级版本的独立官网变更仍可部署。
 
-准备步骤和官方上传 action 使用 Repository secrets 的 CLOUDFLARE_ACCOUNT_ID/CLOUDFLARE_API_TOKEN；凭证不写入静态站点或验收 JSON。上线检查主包/四平台包的公开版本、SHA-512 字段、精确可选依赖和 tarball HEAD；五包latest必须与站点版本一致，不下载程序、不调用npm发布。静态输出为十文件白名单，拒绝链接、隐藏文件、归档和未知文件。
+准备步骤和官方上传 action 使用 Repository secrets 的 CLOUDFLARE_ACCOUNT_ID/CLOUDFLARE_API_TOKEN；凭证不写入静态站点或验收 JSON。普通上线检查主包/四平台包的公开版本、SHA-512 字段、精确可选依赖和 tarball HEAD；五包 latest 必须与站点版本一致，不下载程序、不调用 npm 发布。静态输出为十文件白名单，拒绝链接、隐藏文件、归档和未知文件。
 
-校验前保存唯一 URL 与实际环境回执，在约三分钟窗口内重试暂时不可达请求，错误只记录有限网络错误码。在线验证跟随项目域内 HTML 重定向，核对三个页面、release.json、六个资源的 MIME 与 SHA-256；生产部署在唯一 URL 通过后还须验证正式域名。随后自动运行三页 1440/390px 的浏览器检查，核对版本、标题、布局、可见图片与页面错误。固定构建验收使用唯一 URL，正式域名失败不得报告整个部署已验证。
+校验前保存唯一 URL 与实际环境回执，在约三分钟窗口内重试暂时不可达请求与 HTTP 200 的短暂旧内容，最终仍要求精确摘要，错误只记录有限网络错误码及摘要。在线验证跟随项目域内 HTML 重定向，核对三个页面、release.json、六个资源的 MIME 与 SHA-256；生产部署在唯一 URL 通过后还须验证正式域名。随后自动运行三页 1440/390px 的浏览器检查，核对版本、标题、布局、可见图片与页面错误。固定构建验收使用唯一 URL，正式域名失败不得报告整个部署已验证。
+
+手动 verify-run-id 可仅复验已上传部署，跳过 Pages 准备和上传。来源必须为同仓库、同分支 push/workflow_dispatch 的已完成官网 run，实际上传步骤成功且日志保存完整静态检查与上传回执；拒绝 PR/fork、仅复验 run 或当前 Pages 项目不符。当前源码可变化，但版本与全部静态文件须与原部署一致；唯一 URL、环境、正式域名及浏览器检查保留。复验回执标记 uploaded=false/verificationOnly=true，分别记录本次控制源码和原上传 run/attempt/部署源码，不改写原失败记录。
 
 官网使用Cloudflare Direct Upload，不依赖Actions artifact；脱敏部署回执、十文件摘要与URL保存在日志/summary及仓库验收记录，静态输出按对应提交重建核对。
 

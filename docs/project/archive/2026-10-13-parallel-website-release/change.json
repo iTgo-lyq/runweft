@@ -3,8 +3,8 @@
   "id": "parallel-website-release",
   "title": "官网与 npm 并行发布及部署定向复验",
   "size": "medium",
-  "status": "active",
-  "stage": "execution",
+  "status": "completed",
+  "stage": "close",
   "branch": "codex/parallel-website-release",
   "confirmations": {
     "requirement": {
@@ -40,5 +40,28 @@
       "verification": "实际iclaude三轮复核无阻断问题；70项Node与完整发行环境20项官网测试、actionlint、文档/workflow通过。最终实现CI/预览及托管只读复验成功，原生产部署只读十文件成功；无新npm正式计时。"
     }
   },
-  "closure": {}
+  "closure": {
+    "verification": {
+      "result": "passed",
+      "at": "2026-10-13T10:51:48.459Z",
+      "summary": "70项Node、完整发行环境20项网站测试、actionlint、文档/workflow通过；实际iclaude三轮独立复核无阻断问题；最终代码CI、预览和托管仅复验成功；原生产部署真实只读十文件通过。未触发新npm正式版本。"
+    },
+    "acceptance": {
+      "result": "accepted",
+      "at": "2026-10-13T10:51:48.539Z",
+      "summary": "依据用户明确授权，在独立worktree优化、与iclaude复核且验证通过后合入main；用户已接受官网先于npm的短暂不一致。",
+      "source": "用户：按这个方案推进优化，建独立worktree，做完和iclaude一起复核，验证通过后合入main；本轮：我可以接受官网短暂的和实际不一致。"
+    },
+    "specs": {
+      "result": "synced",
+      "at": "2026-10-13T10:52:49.131Z",
+      "summary": "同步 release 与 website：稳定发行并行、显式来源与最终双端门禁、普通入口npm就绪前置，以及原部署只读复验与回执边界。"
+    },
+    "archive": {
+      "result": "done",
+      "at": "2026-10-13T10:52:49.214Z",
+      "summary": "独立复核与验证通过，沿用户合入授权完成归档；未发布新npm版本，正式并行墙钟留待下次新版本实测。",
+      "path": "docs/project/archive/2026-10-13-parallel-website-release"
+    }
+  }
 }
