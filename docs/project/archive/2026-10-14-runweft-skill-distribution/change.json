@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "id": "runweft-skill-distribution",
+  "title": "公开分发 Runweft Skill 并自动同步",
+  "size": "small",
+  "status": "completed",
+  "stage": "close",
+  "branch": "codex/runweft-skill-distribution",
+  "confirmations": {},
+  "tasks": {
+    "T1": {
+      "title": "迁移工程 Skill、建立公开分发仓库和单向同步 CI，并验证发布边界",
+      "status": "done",
+      "verification": "类型检查、264 根测试、75 Node 测试、同步五项 Git 夹具及最终定向复验、Skill 结构/文档/流程/Shell/actionlint 校验通过；公开仓库已发布并在隔离 HOME 实际安装六文件一致；Linux x64 主包/平台包/Skill tarball 内容与干净源码一致；main 自动同步待合入启用，skills.sh 搜索尚为0条",
+      "commitTitle": "runweft-skill-distribution T1: verify public distribution and package contents"
+    }
+  },
+  "closure": {
+    "verification": {
+      "result": "passed",
+      "at": "2026-10-13T16:06:25.681Z",
+      "summary": "Agent 自查及独立 Skill 两轮场景复核通过；本地类型/测试/结构/文档/流程/工作流校验通过，公开发布、隔离 CLI 安装和 Linux x64 打包已实测；main 自动同步需合入后启用，skills.sh 关键字搜索仍待平台索引"
+    },
+    "acceptance": {
+      "result": "accepted",
+      "at": "2026-10-13T16:06:25.754Z",
+      "summary": "Agent 自验收通过：工程 Skill 单一来源迁移、完整公开分发、只导出已提交目录的单向同步和专用目标凭据均有实际证据；包内路径保持原约定，损坏/脏目标/推送失败不报告成功；独立场景复核和安装/打包验收通过，未宣称 main CI 或市场搜索已成功",
+      "source": "SpecTrail small 默认 Agent 自验收及用户明确的独立仓库、自动同步、工程目录迁移指令"
+    },
+    "specs": {
+      "result": "synced",
+      "at": "2026-10-13T16:06:25.856Z",
+      "summary": "同步 installation 的工程单一 Skill 来源、公开安装与分别更新，以及 release 的提交导出、专用目标凭据、幂等同步和市场收录验证边界"
+    },
+    "archive": {
+      "result": "done",
+      "at": "2026-10-13T16:06:25.928Z",
+      "summary": "small Agent 自验收完成；公开仓库、Skill 安装和打包已实测，Spec 同步完成；main 自动同步启用留待守护分支合入授权",
+      "path": "docs/project/archive/2026-10-14-runweft-skill-distribution"
+    }
+  }
+}
