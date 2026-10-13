@@ -28,7 +28,7 @@ const cases: Record<string, string[][]> = {
         ['smoke-hub-console.ts', binary, ...history],
     ],
     'service-package': [
-        ['smoke-service.mjs', binary],
+        // Both run the full service suite: standalone tarball/symlink and npm launcher.
         ['verify-packages.mjs', resolve(process.env.RUNWEFT_SMOKE_PACKAGES ?? 'dist/packages')],
         ['smoke-install.mjs', resolve(process.env.RUNWEFT_SMOKE_PACKAGES ?? 'dist/packages')],
     ],

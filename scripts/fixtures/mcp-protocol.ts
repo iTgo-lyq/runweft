@@ -7,6 +7,7 @@ import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 import { createIdentityToken } from '../../src/hub/store';
 import { closeSmoke } from './smoke-lifecycle';
+import { withSmokeDeadline } from './smoke-deadline';
 
 /** Compiled stdio/auth transport only; no native tools, model credentials or fake Hub authorization. */
 export async function probeMcpProtocol(binary: string, root: string) {
@@ -27,7 +28,7 @@ export async function probeMcpProtocol(binary: string, root: string) {
     let stderr = ''; transport.stderr?.on('data', chunk => { stderr += chunk; });
     const client = new Client({ name: 'runweft-protocol-probe', version: '1' }); client.onerror = error => { errors.push(error); };
     const resources: Array<() => void | Promise<void>> = [() => server.stop(true), () => client.close()];
-    const bounded = <T>(promise: Promise<T>, label: string, ms = 5000) => Promise.race([promise, Bun.sleep(ms).then(() => { throw new Error(label); })]);
+    const bounded = <T>(promise: Promise<T>, label: string, ms = 5000) => withSmokeDeadline(promise, ms, () => { throw new Error(label); });
     try {
         await client.connect(transport);
         const catalog = await client.listTools(); assert.equal(catalog.tools.length, 17); assert(catalog.tools.some(tool => tool.name === 'runweft_status'));

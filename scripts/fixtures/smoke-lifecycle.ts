@@ -1,5 +1,6 @@
 import { join } from 'node:path';
 import { rmSync } from 'node:fs';
+import { withSmokeDeadline } from './smoke-deadline';
 
 /** Close acquired resources in reverse order; one failure never skips the rest. */
 export async function closeSmoke(resources: Array<() => void | Promise<void>>) {
@@ -17,7 +18,7 @@ export async function stopSmokeProcess(child: ReturnType<typeof Bun.spawn>) {
         return;
     }
     child.kill('SIGTERM');
-    const exited = await Promise.race([child.exited.then(() => true), Bun.sleep(5000).then(() => false)]);
+    const exited = await withSmokeDeadline(child.exited.then(() => true), 5000, () => false);
     if (!exited) { child.kill('SIGKILL'); await child.exited; throw new Error('Smoke process required SIGKILL'); }
     if (child.exitCode !== 0 && child.signalCode !== 'SIGTERM') throw new Error(`Smoke process failed during shutdown (${child.exitCode}, ${child.signalCode})`);
 }

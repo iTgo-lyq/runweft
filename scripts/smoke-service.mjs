@@ -181,7 +181,10 @@ try {
 finally {
     if (foreground && foreground.exitCode === null && foreground.signalCode === null) {
         const exited = new Promise(resolve => foreground.once('exit', resolve)); foreground.kill('SIGTERM');
-        const stopped = await Promise.race([exited.then(() => true), new Promise(resolve => setTimeout(() => resolve(false), 5000))]);
+        let timer, stopped;
+        try {
+            stopped = await Promise.race([exited.then(() => true), new Promise(resolve => { timer = setTimeout(() => resolve(false), 5000); })]);
+        } finally { clearTimeout(timer); }
         if (!stopped) { foreground.kill('SIGKILL'); await exited; evidence.cleanupErrors.push('Foreground required SIGKILL'); }
         else if (foreground.exitCode !== 0 && foreground.signalCode !== 'SIGTERM') evidence.cleanupErrors.push('Foreground exited abnormally');
     }

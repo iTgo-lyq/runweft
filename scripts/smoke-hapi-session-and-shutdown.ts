@@ -6,6 +6,7 @@ import { freePort } from '../src/services';
 import { getProjectPath } from '../hapi/cli/src/claude/utils/path';
 import { installedBinaries } from './fixtures/installed-binaries.mjs';
 import { closeSmoke, removeSmokeSecrets, startSmokeHapi, stopSmokeProcess } from './fixtures/smoke-lifecycle';
+import { withSmokeDeadline } from './fixtures/smoke-deadline';
 import { nonGitSmokeProject } from './fixtures/non-git-smoke-project';
 import { taskSmoke } from './fixtures/task-smoke';
 import pkg from '../package.json';
@@ -60,7 +61,7 @@ try {
         const before = existsSync(join(home, 'runner.state.json')) ? JSON.parse(readFileSync(join(home, 'runner.state.json'), 'utf8')) : undefined;
         const started = Date.now();
         if (child.exitCode === null && child.signalCode === null && expected === 0) child.kill('SIGTERM');
-        const result = await Promise.race([child.exited, Bun.sleep(10_000).then(() => { throw new Error('Runner exceeded 10s acceptance deadline'); })]);
+        const result = await withSmokeDeadline(child.exited, 10_000, () => { throw new Error('Runner exceeded 10s acceptance deadline'); });
         assert.equal(result, expected); assert.equal(child.signalCode, null); assert(!alive(child.pid));
         assert(!existsSync(join(home, 'runner.state.json')) && !existsSync(join(home, 'runner.state.json.lock')));
         const logFile = readdirSync(join(home, 'logs')).find(file => file.endsWith(`-pid-${child.pid}-runner.log`)); assert(logFile);
