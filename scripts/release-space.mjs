@@ -26,11 +26,14 @@ export function ensureReleaseSpace({ available = availableBytes, clean = path =>
     return result;
 }
 
-export async function measureReleaseSpace(command) {
+export async function measureReleaseSpace(command, { available = availableBytes, sampleIntervalMs = 1000 } = {}) {
     assert(command.length, 'measure requires a command');
-    const result = { beforeBytes: availableBytes(), minAvailableBytes: 0, afterBytes: 0, sampleIntervalMs: 1000, exitCode: null };
+    const result = { beforeBytes: available(), minAvailableBytes: 0, afterBytes: 0, sampleIntervalMs, exitCode: null };
     result.minAvailableBytes = result.beforeBytes;
-    const sample = () => { result.afterBytes = availableBytes(); result.minAvailableBytes = Math.min(result.minAvailableBytes, result.afterBytes); };
+    const sample = () => {
+        try { result.afterBytes = available(); result.minAvailableBytes = Math.min(result.minAvailableBytes, result.afterBytes); }
+        catch (error) { result.samplingError = error.message; } // Await the owned command; a telemetry failure must not orphan it.
+    };
     const child = spawn(command[0], command.slice(1), { stdio: 'inherit' });
     let interrupted = false;
     const term = () => { interrupted = true; child.kill('SIGTERM'); };
@@ -40,6 +43,7 @@ export async function measureReleaseSpace(command) {
     try {
         result.exitCode = await new Promise((resolve, reject) => { child.once('error', reject); child.once('close', code => resolve(interrupted ? 1 : code ?? 1)); });
     } finally { clearInterval(timer); process.off('SIGTERM', term); process.off('SIGINT', int); sample(); }
+    if (result.samplingError && result.exitCode === 0) result.exitCode = 1;
     return result;
 }
 

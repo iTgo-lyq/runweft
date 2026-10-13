@@ -32,7 +32,9 @@
     },
     "T2": {
       "title": "按实测拆分验收并优化磁盘准备",
-      "status": "doing"
+      "status": "done",
+      "verification": "本地三片storage 73.193s/两片access 71.581s/服务并行38.095s均通过；GitHub完整预检38370399338、开发CI38370379759、公共只读11门禁38372185710均success；磁盘仅清理dotnet7s、最低7.32GiB；264根测试、64Node、类型/actionlint通过，iclaude已复核，详见Execution/Review。",
+      "commitTitle": "release-validation-efficiency T2: verify public shards and hosted resource savings"
     },
     "T3": {
       "title": "完成独立复核与发行准备",
