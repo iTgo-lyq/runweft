@@ -6,4 +6,3 @@
 
 - [产品官网](https://runweft.pages.dev/)：介绍与上手指南。
 - [使用说明](docs/usage.md)与[产品 Skill](skills/runweft/SKILL.md)：安装、配置、委派和维护。
-- [AGENTS.md](AGENTS.md)：开发必读、源码准备、检查和按需工程文档入口。

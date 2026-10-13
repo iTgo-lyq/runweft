@@ -1,6 +1,6 @@
 # Runweft 原型工程
 
-遵循根目录 AGENTS.md、SpecTrail prototype skill 和本目录 DESIGN.md。
+遵循 SpecTrail prototype skill 和本目录 DESIGN.md。
 
 - 此包独立安装、构建与测试；不加入根包 workspace，不依赖产品后端或真实 Hub。
 - `src/ui/` 保存从 Hub 抽取的页面主体；新增产品交互先更新对应原型与内存场景，再同步产品。保持提取来源可追溯，不能把 mock 成功当作产品验证。

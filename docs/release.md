@@ -1,6 +1,6 @@
 # 打包与发行操作
 
-源码准备和日常检查见 [AGENTS.md](../AGENTS.md)，包与发布门禁见[发行规格](project/specs/release/spec.md)，官网操作见 [website/README](../website/README.md)。
+包与发布门禁见[发行规格](project/specs/release/spec.md)，官网操作见 [website/README](../website/README.md)。
 
 ## 本地候选
 
