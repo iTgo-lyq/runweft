@@ -7,6 +7,7 @@ import { join, resolve } from 'node:path';
 import { buildSite } from './build.mjs';
 import { assertCurrentProduction, checkNpmRelease, publicationReady, siteEligibility, deploymentTarget, ensurePagesProject, validateSite, verifyDeployment } from './publish.mjs';
 import { packageNames, registry } from '../scripts/npm-publish.mjs';
+import { recoverDeployment } from './recover.mjs';
 
 await mkdir('.dev-smoke', { recursive: true });
 const temporary = await mkdtemp(resolve('.dev-smoke/website-pages-test-'));
@@ -224,7 +225,7 @@ test('wrong deployment, Access redirect, wrong MIME/content and propagation fail
   }
   await assert.rejects(verifyDeployment(online, { fetchImpl: async () => { const response = json({}); Object.defineProperty(response, 'url', { value: 'https://cloudflareaccess.com/login' }); return response; } }), /Access/);
   await assert.rejects(verifyDeployment(online, { fetchImpl: async () => json({}) }), /MIME/);
-  await assert.rejects(verifyDeployment(online, { fetchImpl: async url => new Response('wrong', { headers: (await serveFixture(url)).headers }) }), /内容/);
+  await assert.rejects(verifyDeployment(online, { fetchImpl: async url => new Response('wrong', { headers: (await serveFixture(url)).headers }), attempts: 2, pause: async () => {} }), /内容/);
   await assert.rejects(verifyDeployment(online, { fetchImpl: async () => json({}, 404), pause: async () => {}, attempts: 2 }), /HTTP 404/);
 });
 
@@ -243,7 +244,7 @@ globalThis.fetch = async input => {
   const mime = {html:'text/html',css:'text/css',js:'text/javascript',json:'application/json',svg:'image/svg+xml',webp:'image/webp'}[extension];
   const bytes = url.hostname === '${project.subdomain}' && process.env.FAIL_PRODUCTION === '1'
     ? 'wrong production version' : readFileSync('dist/website/' + path);
-  return new Response(bytes, {headers:{'content-type':mime}});
+  return new Response(bytes, {headers:{'content-type':bytes === 'wrong production version' ? 'application/json' : mime}});
 };\n`);
   for (const fail of ['1', '0']) {
     await writeFile(join(working, 'requests.jsonl'), '');
@@ -256,8 +257,56 @@ globalThis.fetch = async input => {
     assert(requests.some(url => new URL(url).hostname === project.subdomain));
     assert.equal(child.status, fail === '1' ? 1 : 0, child.stderr);
     assert.equal(receipt.success, fail === '0');
-    if (fail === '1') { assert.match(child.stderr, /内容/); assert.equal(receipt.uploaded, true); }
+    if (fail === '1') { assert.match(child.stderr, /MIME/); assert.equal(receipt.uploaded, true); }
     else assert.equal(receipt.production.success, true);
+  }
+});
+
+test('stale successful responses retry exact bytes within the shared budget, without accepting corrupt content', async () => {
+  let reads = 0, clock = 0; const records = [];
+  const result = await verifyDeployment(online, { now: () => clock, pause: async ms => { clock += ms; },
+    record: record => records.push(record), fetchImpl: async url => {
+      const response = await serveFixture(url);
+      return ++reads <= 2 ? new Response('old version', { headers: response.headers }) : response;
+    } });
+  assert.equal(result.success, true); assert.equal(clock, 10_000); assert.equal(reads, 12);
+  assert.equal(records.filter(x => !x.matched).length, 2);
+  clock = 0; reads = 0;
+  await assert.rejects(verifyDeployment(online, { now: () => clock, timeoutMs: 6000,
+    pause: async ms => { clock += ms; }, fetchImpl: async url => {
+      reads++; return new Response('permanent corruption', { headers: (await serveFixture(url)).headers });
+    } }), /传播等待/);
+  assert.equal(clock, 6000); assert.equal(reads, 2);
+  await assert.rejects(verifyDeployment(online, { fetchImpl: async () => json({}, 403), pause: async () => { assert.fail('must not retry authentication'); } }), /HTTP 403/);
+});
+
+test('read-only recovery binds the uploaded receipt, origin and all static bytes', async () => {
+  const revision = 'a'.repeat(40);
+  const recoveryEnv = { ...env, GITHUB_EVENT_NAME: 'workflow_dispatch', GITHUB_REF_NAME: 'codex/test',
+    VERIFY_RUN_ID: '100', GITHUB_REPOSITORY: 'owner/repo', GITHUB_SHA: 'b'.repeat(40), GH_TOKEN: 'fixture-token' };
+  const evidence = { check: { success: true, sourceRevision: revision, ...site },
+    prepare: { branch: 'codex/test', mode: 'preview', subdomain: project.subdomain },
+    deployment: { uploaded: true, success: false, url: online.url, branch: 'codex/test', mode: 'preview', pagesEnvironment: 'preview', sourceRevision: revision } };
+  const original = { id: 100, run_attempt: 1, head_sha: revision, head_branch: 'codex/test', path: '.github/workflows/website-pages.yml', status: 'completed' };
+  const options = (modify = () => {}, runChanges = {}) => {
+    const reports = structuredClone(evidence); modify(reports);
+    return { site, query: async path => path.includes('/jobs?')
+      ? { jobs: [{ id: 7, name: 'website', status: 'completed' }] } : { ...original, ...runChanges },
+      readLog: async (repo, id, { token }) => {
+        assert.equal(repo, 'owner/repo'); assert.equal(id, 7); assert.equal(token, 'fixture-token');
+        return Object.entries(reports).map(([name, report]) => 'RUNWEFT_CI_EVIDENCE=' + JSON.stringify({ path: `.dev-smoke/website-pages/${name}.json`, report })).join('\n');
+      } };
+  };
+  const recovered = await recoverDeployment(recoveryEnv, options());
+  assert.equal(recovered.reference.url, online.url); assert.equal(recovered.recovery.uploaded, false);
+  assert.equal(recovered.check.sourceRevision, recoveryEnv.GITHUB_SHA);
+  for (const modify of [x => { delete x.deployment; }, x => { x.check.files[0].sha256 = 'c'.repeat(64); },
+    x => { x.check.release.version = '9.0.0'; }, x => { x.deployment.sourceRevision = 'd'.repeat(40); },
+    x => { x.prepare.mode = 'production'; }, x => { x.deployment.url = 'https://evil.invalid/'; }]) {
+    await assert.rejects(recoverDeployment(recoveryEnv, options(modify)));
+  }
+  for (const change of [{ head_branch: 'main' }, { path: '.github/workflows/checks.yml' }, { status: 'in_progress' }]) {
+    await assert.rejects(recoverDeployment(recoveryEnv, options(undefined, change)));
   }
 });
 

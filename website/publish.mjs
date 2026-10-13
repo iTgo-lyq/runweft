@@ -81,8 +81,8 @@ export async function validateSite(directory) {
   return { release, files: entries, bytes: entries.reduce((sum, file) => sum + file.bytes, 0) };
 }
 
-async function request(url, options, fetchImpl) {
-  try { return await fetchImpl(url, { ...options, signal: AbortSignal.timeout(30_000) }); }
+async function request(url, options, fetchImpl, timeoutMs = 30_000) {
+  try { return await fetchImpl(url, { ...options, signal: AbortSignal.timeout(Math.max(1, Math.ceil(timeoutMs))) }); }
   catch (error) {
     const code = error.cause?.code ?? error.code ?? error.name;
     const detail = /^[A-Z][A-Z0-9_]{0,79}$/.test(code ?? '') ? `（${code}）` : '';
@@ -149,7 +149,7 @@ export async function ensurePagesProject({ accountId, apiToken, projectName }, f
   return { project: project.name, subdomain: project.subdomain, created };
 }
 
-function deploymentReference({ url, subdomain, mode, pagesEnvironment }) {
+export function deploymentReference({ url, subdomain, mode, pagesEnvironment }) {
   assert.equal(pagesEnvironment, mode, 'Pages 实际生产/预览环境不匹配。');
   const deployment = new URL(url);
   const validHost = host => host === subdomain || host.endsWith(`.${subdomain}`);
@@ -159,25 +159,35 @@ function deploymentReference({ url, subdomain, mode, pagesEnvironment }) {
 }
 
 export async function verifyDeployment(target, {
-  fetchImpl = fetch, pause = () => new Promise(done => setTimeout(done, 5000)), attempts = 36,
+  fetchImpl = fetch, pause = ms => new Promise(done => setTimeout(done, ms)), attempts = 36,
+  now = Date.now, timeoutMs = 180_000, record = () => {},
 } = {}) {
   const { deployment, validHost } = deploymentReference(target);
   const { mode, site } = target;
-  const deadline = Date.now() + 180_000;
+  const started = now(), deadline = started + timeoutMs;
+  const retry = async () => {
+    assert(now() < deadline, 'Pages 在线校验传播等待超过三分钟；请检查实际部署，不会重新上传。');
+    await pause(Math.min(5000, deadline - now()));
+  };
   for (const file of site.files) {
     let confirmed = false;
     for (let attempt = 0; attempt < attempts; attempt++) {
-      assert(Date.now() < deadline, 'Pages 在线校验传播等待超过三分钟；请检查实际部署，不会重新上传。');
+      assert(now() < deadline, 'Pages 在线校验传播等待超过三分钟；请检查实际部署，不会重新上传。');
       let response;
-      try { response = await request(new URL(file.name, deployment).href, { headers: { 'cache-control': 'no-cache' } }, fetchImpl); }
-      catch (error) { if (attempt + 1 === attempts) throw error; await pause(); continue; }
+      try { response = await request(new URL(file.name, deployment).href, { headers: { 'cache-control': 'no-cache' } }, fetchImpl, Math.min(30_000, deadline - now())); }
+      catch (error) { if (attempt + 1 === attempts) throw error; await retry(); continue; }
       assert(!response.url || validHost(new URL(response.url).hostname), 'Pages 转到了项目外地址；请检查 Access 保护。');
-      if (response.status === 404 || response.status >= 500) { if (attempt + 1 < attempts) { await pause(); continue; } }
+      if (response.status === 404 || response.status >= 500) { if (attempt + 1 < attempts) { await retry(); continue; } }
       assert.equal(response.status, 200, `${file.name} 在线校验失败：HTTP ${response.status}`);
       const mime = response.headers.get('content-type')?.split(';')[0].trim().toLowerCase();
       assert([siteFiles[file.name]].flat().includes(mime), `${file.name} MIME 不匹配：${mime}`);
       const bytes = Buffer.from(await response.arrayBuffer());
-      assert.equal(digest(bytes), file.sha256, `${file.name} 在线内容与本次构建不一致。`);
+      const sha256 = digest(bytes), matched = sha256 === file.sha256;
+      record({ file: file.name, attempt: attempt + 1, status: response.status, host: new URL(response.url || deployment).hostname,
+        sha256, expectedSha256: file.sha256, matched, elapsedMs: now() - started });
+      if (!matched && attempt + 1 < attempts && now() < deadline) { await retry(); continue; }
+      assert.equal(sha256, file.sha256, `${file.name} 在线内容与本次构建不一致。`);
+      assert(now() <= deadline, 'Pages 在线校验超过传播预算。');
       confirmed = true;
       break;
     }
@@ -255,9 +265,10 @@ async function main() {
         pagesEnvironment: env.PAGES_ENVIRONMENT, branch: prepared.branch, sourceRevision: env.GITHUB_SHA,
         verification: 'pending' });
       await summary(`Pages 已上传 ${prepared.mode}：[${deployment.href}](${deployment.href})，正在校验在线内容。`);
-      const result = await verifyDeployment(target);
+      const options = { record: value => console.log('RUNWEFT_WEBSITE_READ=' + JSON.stringify(value)) };
+      const result = await verifyDeployment(target, options);
       let production;
-      if (prepared.mode === 'production') production = await verifyDeployment({ ...target, url: `https://${prepared.subdomain}/` });
+      if (prepared.mode === 'production') production = await verifyDeployment({ ...target, url: `https://${prepared.subdomain}/` }, options);
       await save('deployment', { ...result, production, branch: prepared.branch, sourceRevision: env.GITHUB_SHA });
       await summary(`**已部署并验证 ${result.mode}**：[${result.url}](${result.url})，npm ${result.version}，分支 ${prepared.branch}。`);
       console.log(`Pages ${result.mode} 在线校验通过：${result.url}`);

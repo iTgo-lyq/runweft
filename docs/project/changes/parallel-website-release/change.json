@@ -4,7 +4,7 @@
   "title": "官网与 npm 并行发布及部署定向复验",
   "size": "medium",
   "status": "active",
-  "stage": "technical",
+  "stage": "execution",
   "branch": "codex/parallel-website-release",
   "confirmations": {
     "requirement": {
@@ -26,7 +26,8 @@
   "tasks": {
     "T1": {
       "title": "官网短暂旧内容与仅复验恢复",
-      "status": "todo"
+      "status": "done",
+      "verification": "66项Node检查、actionlint、文档/workflow/diff通过；原1.1.6失败官网回执真实只读恢复、两地址十文件及三页双尺寸浏览器通过，无上传。"
     },
     "T2": {
       "title": "官网与 npm 正式发行并行",
