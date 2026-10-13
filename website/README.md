@@ -52,7 +52,7 @@ Pages 项目默认 `runweft`；已有专用项目可在同一设置的 Variables
 
 普通官网部署上传前验证静态文件白名单、npm 元数据、五包 latest 已晋级到官网版本、完整性字段/精确平台依赖及公开 tarball HEAD；此检查不代替各平台真实安装验收。普通 push 未晋级时只等待，PR 与普通手动部署要求已晋级。
 
-稳定正式发行从不可变 tag 读取规范版本，与 npm 上传/可见性等待并行触发最新 main 官网。显式 `release-parallel=true` 必须绑定稳定版本和发行 run/attempt，并核对 main 版本及当前提交；仅该模式跳过官网上传前的 npm 就绪检查，证据标记 `npmValidation=deferred-to-release`。官网可能短暂显示尚不可安装的版本，这是已接受的发布取舍；父流程仍要求 npm 全部验收/晋级与官网在线验证成功。任一端失败如实保留，分别定向恢复，不自动回滚已上线官网。若 npm 最终失败，不一致可能持续到故障处理完成。预发行、空参数预检及公共候选只读验证不部署官网。
+稳定正式发行从不可变 tag 读取规范版本，与 npm 上传/可见性等待并行触发最新 main 官网。显式 `release-parallel=true` 必须绑定稳定版本和发行 run/attempt，查询同仓库正在运行的 npm-publish、来源事件及 tag/main 分支，并核对 main 版本及当前提交；仅该模式跳过官网上传前的 npm 就绪检查，证据标记 `npmValidation=deferred-to-release`。官网可能短暂显示尚不可安装的版本，这是已接受的发布取舍；父流程仍要求 npm 全部验收/晋级与官网在线验证成功。任一端失败如实保留，分别定向恢复，不自动回滚已上线官网。若 npm 最终失败，不一致可能持续到故障处理完成。预发行、空参数预检及公共候选只读验证不部署官网。
 
 版本不符或 main 推进时拒绝旧运行。官网失败只检查/恢复官网，不重发 npm；未知 dispatch 先检查 Actions，不盲目再次触发。
 
@@ -66,7 +66,7 @@ Pages 项目默认 `runweft`；已有专用项目可在同一设置的 Variables
 gh workflow run website-pages.yml --ref main -f verify-run-id=<原官网run-id>
 ```
 
-预览使用原 codex 分支。入口读取同仓库原官网 workflow 的最后一个 attempt，核对分支、源码记录、环境、版本及完整静态文件摘要，再验证原唯一 URL、生产域名与双尺寸浏览器。原 run 仍在运行、回执缺失或当前静态文件已改变则停止；此入口不会更新部署或 npm，也不改写原失败记录。
+预览使用原 codex 分支。入口只接受同仓库 push/workflow_dispatch 的原官网 workflow，核对最后一个 attempt 的实际上传步骤成功，以及当前 Pages 项目、分支、源码记录、环境、版本和完整静态文件摘要，再验证原唯一 URL、生产域名与双尺寸浏览器。PR/fork、Beta 当前版本、仅复验 run、原 run 仍在运行、回执缺失或静态文件改变均拒绝。复验回执保留原 run/源码并标记未上传；此入口不会更新部署或 npm，也不改写原失败记录。官网失败时使用此入口，不在 npm 父 run 上盲目重跑 website job（后者会重新 dispatch 上传）。
 
 ## 其他静态托管
 

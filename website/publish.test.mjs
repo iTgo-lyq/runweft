@@ -22,6 +22,7 @@ await buildSite({ projectDirectory, outputDirectory: directory });
 const site = await validateSite(directory);
 after(() => rm(temporary, { recursive: true, force: true }));
 const env = { GITHUB_EVENT_NAME: 'push', GITHUB_REF_TYPE: 'branch', GITHUB_REF_NAME: 'main' };
+const childEnv = { ...process.env, RELEASE_VERSION: '', RELEASE_PARALLEL: '', RELEASE_RUN_ID: '', RELEASE_ATTEMPT: '', VERIFY_RUN_ID: '' };
 const json = (value, status = 200) => new Response(JSON.stringify(value), { status, headers: { 'content-type': 'application/json' } });
 const integrity = 'sha512-' + createHash('sha512').update('fixture').digest('base64');
 const manifest = name => ({ name, version: site.release.version,
@@ -99,8 +100,12 @@ test('a beta-only public stable version cannot deploy the website before latest 
 
 test('only explicitly bound parallel releases bypass npm readiness, retaining stable version and main checks', async () => {
   const parallel = { ...env, GITHUB_EVENT_NAME: 'workflow_dispatch', GITHUB_REF: 'refs/heads/main',
-    RELEASE_VERSION: site.release.version, RELEASE_PARALLEL: 'true', RELEASE_RUN_ID: '10', RELEASE_ATTEMPT: '1' };
-  const result = await checkPublication(site, parallel, { fetchImpl: () => assert.fail('npm visibility must not block parallel deployment') });
+    RELEASE_VERSION: site.release.version, RELEASE_PARALLEL: 'true', RELEASE_RUN_ID: '10', RELEASE_ATTEMPT: '1',
+    GITHUB_REPOSITORY: 'owner/repo', GH_TOKEN: 'fixture-token' };
+  const source = { id: 10, path: '.github/workflows/npm-publish.yml', head_repository: { full_name: 'owner/repo' },
+    run_attempt: 1, status: 'in_progress', event: 'push', head_branch: `v${site.release.version}` };
+  const sourceResponse = async url => { assert.equal(new URL(url).hostname, 'api.github.com'); return json(source); };
+  const result = await checkPublication(site, parallel, { fetchImpl: sourceResponse });
   assert.equal(result.ready, true); assert.equal(result.npmValidation, 'deferred-to-release'); assert.deepEqual(result.packages, []);
   for (const change of [{ RELEASE_VERSION: '' }, { RELEASE_VERSION: '9.0.0' }, { RELEASE_RUN_ID: '' }, { RELEASE_ATTEMPT: '0' },
     { GITHUB_REF: 'refs/heads/codex/test' }, { GITHUB_EVENT_NAME: 'push' }]) {
@@ -108,6 +113,10 @@ test('only explicitly bound parallel releases bypass npm readiness, retaining st
   }
   assert.equal((await checkPublication(site, env, { fetchImpl: async () => json({}, 404) })).ready, false);
   await assert.rejects(checkPublication(site, { ...parallel, RELEASE_PARALLEL: 'false' }, { fetchImpl: async () => json({}, 404) }), /尚未晋级/);
+  for (const change of [{ id: 11 }, { path: '.github/workflows/checks.yml' }, { head_repository: { full_name: 'fork/repo' } },
+    { status: 'completed' }, { run_attempt: 2 }, { event: 'pull_request' }, { head_branch: 'v9.0.0' }]) {
+    await assert.rejects(checkPublication(site, parallel, { fetchImpl: async () => json({ ...source, ...change }) }));
+  }
 });
 
 test('npm missing, wrong identity, integrity, dependency and tarball failures stop checking', async () => {
@@ -169,7 +178,7 @@ test('missing secrets explicitly skip preview, fail production, and never output
   for (const branch of ['codex/test', 'main']) {
     const output = join(temporary, `${branch.replace('/', '-')}.output`);
     const summary = `${output}.summary`;
-    const isolated = { ...process.env, ...env, GITHUB_REF_NAME: branch, CLOUDFLARE_ACCOUNT_ID: '', CLOUDFLARE_API_TOKEN: '', GITHUB_OUTPUT: output, GITHUB_STEP_SUMMARY: summary };
+    const isolated = { ...childEnv, ...env, GITHUB_REF_NAME: branch, CLOUDFLARE_ACCOUNT_ID: '', CLOUDFLARE_API_TOKEN: '', GITHUB_OUTPUT: output, GITHUB_STEP_SUMMARY: summary };
     const child = spawnSync(process.execPath, [resolve(import.meta.dirname, 'publish.mjs'), 'prepare'], { cwd: temporary, env: isolated, encoding: 'utf8' });
     assert.equal(child.status, branch === 'main' ? 1 : 0);
     assert.equal(await readFile(output, 'utf8'), 'deploy=false\n');
@@ -217,7 +226,7 @@ test('verification failure retains uploaded URL/environment receipt without cred
   const preload = join(working, 'unavailable-page.mjs');
   await writeFile(preload, "globalThis.fetch = async () => new Response('{}', {headers:{'content-type':'application/json'}});\n");
   const child = spawnSync(process.execPath, ['--import', preload, resolve(import.meta.dirname, 'publish.mjs'), 'verify'], { cwd: working, env: {
-    ...process.env, PAGES_DEPLOYMENT_URL: online.url, PAGES_ENVIRONMENT: 'preview',
+    ...childEnv, PAGES_DEPLOYMENT_URL: online.url, PAGES_ENVIRONMENT: 'preview',
     CLOUDFLARE_API_TOKEN: 'fixture-secret-never-recorded', GITHUB_SHA: 'a'.repeat(40),
   }, encoding: 'utf8' });
   assert.equal(child.status, 1);
@@ -259,10 +268,12 @@ globalThis.fetch = async input => {
     ? 'wrong production version' : readFileSync('dist/website/' + path);
   return new Response(bytes, {headers:{'content-type':bytes === 'wrong production version' ? 'application/json' : mime}});
 };\n`);
-  for (const fail of ['1', '0']) {
+  for (const [fail, verificationOnly] of [['1', false], ['0', false], ['0', true]]) {
     await writeFile(join(working, 'requests.jsonl'), '');
+    await writeFile(join(evidence, 'recovery.json'), JSON.stringify({ sourceRunId: 100, sourceAttempt: 1, sourceRevision: 'a'.repeat(40) }));
     const child = spawnSync(process.execPath, ['--import', preload, resolve(import.meta.dirname, 'publish.mjs'), 'verify'], {
-      cwd: working, env: { ...process.env, PAGES_DEPLOYMENT_URL: online.url, PAGES_ENVIRONMENT: 'production', FAIL_PRODUCTION: fail }, encoding: 'utf8',
+      cwd: working, env: { ...childEnv, VERIFY_RUN_ID: verificationOnly ? '100' : '', PAGES_DEPLOYMENT_URL: online.url,
+        PAGES_ENVIRONMENT: 'production', FAIL_PRODUCTION: fail }, encoding: 'utf8',
     });
     const receipt = JSON.parse(await readFile(join(evidence, 'deployment.json'), 'utf8'));
     const requests = (await readFile(join(working, 'requests.jsonl'), 'utf8')).trim().split('\n').map(JSON.parse);
@@ -270,6 +281,8 @@ globalThis.fetch = async input => {
     assert(requests.some(url => new URL(url).hostname === project.subdomain));
     assert.equal(child.status, fail === '1' ? 1 : 0, child.stderr);
     assert.equal(receipt.success, fail === '0');
+    assert.equal(receipt.uploaded, !verificationOnly); assert.equal(receipt.verificationOnly, verificationOnly);
+    if (verificationOnly) { assert.equal(receipt.sourceRunId, 100); assert.equal(receipt.deploymentSourceRevision, 'a'.repeat(40)); }
     if (fail === '1') { assert.match(child.stderr, /MIME/); assert.equal(receipt.uploaded, true); }
     else assert.equal(receipt.production.success, true);
   }
@@ -298,13 +311,14 @@ test('read-only recovery binds the uploaded receipt, origin and all static bytes
   const recoveryEnv = { ...env, GITHUB_EVENT_NAME: 'workflow_dispatch', GITHUB_REF_NAME: 'codex/test',
     VERIFY_RUN_ID: '100', GITHUB_REPOSITORY: 'owner/repo', GITHUB_SHA: 'b'.repeat(40), GH_TOKEN: 'fixture-token' };
   const evidence = { check: { success: true, sourceRevision: revision, ...site },
-    prepare: { branch: 'codex/test', mode: 'preview', subdomain: project.subdomain },
+    prepare: { branch: 'codex/test', mode: 'preview', project: 'runweft', subdomain: project.subdomain },
     deployment: { uploaded: true, success: false, url: online.url, branch: 'codex/test', mode: 'preview', pagesEnvironment: 'preview', sourceRevision: revision } };
-  const original = { id: 100, run_attempt: 1, head_sha: revision, head_branch: 'codex/test', path: '.github/workflows/website-pages.yml', status: 'completed' };
+  const original = { id: 100, run_attempt: 1, head_sha: revision, head_branch: 'codex/test', path: '.github/workflows/website-pages.yml', status: 'completed',
+    event: 'push', head_repository: { full_name: 'owner/repo' } };
   const options = (modify = () => {}, runChanges = {}) => {
     const reports = structuredClone(evidence); modify(reports);
     return { site, query: async path => path.includes('/jobs?')
-      ? { jobs: [{ id: 7, name: 'website', status: 'completed' }] } : { ...original, ...runChanges },
+      ? { jobs: [{ id: 7, name: 'website', status: 'completed', steps: [{ name: 'Upload to Cloudflare Pages', conclusion: 'success' }] }] } : { ...original, ...runChanges },
       readLog: async (repo, id, { token }) => {
         assert.equal(repo, 'owner/repo'); assert.equal(id, 7); assert.equal(token, 'fixture-token');
         return Object.entries(reports).map(([name, report]) => 'RUNWEFT_CI_EVIDENCE=' + JSON.stringify({ path: `.dev-smoke/website-pages/${name}.json`, report })).join('\n');
@@ -315,16 +329,24 @@ test('read-only recovery binds the uploaded receipt, origin and all static bytes
   assert.equal(recovered.check.sourceRevision, recoveryEnv.GITHUB_SHA);
   for (const modify of [x => { delete x.deployment; }, x => { x.check.files[0].sha256 = 'c'.repeat(64); },
     x => { x.check.release.version = '9.0.0'; }, x => { x.deployment.sourceRevision = 'd'.repeat(40); },
-    x => { x.prepare.mode = 'production'; }, x => { x.deployment.url = 'https://evil.invalid/'; }]) {
+    x => { x.prepare.mode = 'production'; }, x => { x.prepare.project = 'another-project'; },
+    x => { x.deployment.verificationOnly = true; }, x => { x.check.verificationOnly = true; },
+    x => { x.deployment.url = 'https://evil.invalid/'; }]) {
     await assert.rejects(recoverDeployment(recoveryEnv, options(modify)));
   }
-  for (const change of [{ head_branch: 'main' }, { path: '.github/workflows/checks.yml' }, { status: 'in_progress' }]) {
+  for (const change of [{ head_branch: 'main' }, { path: '.github/workflows/checks.yml' }, { status: 'in_progress' },
+    { event: 'pull_request' }, { head_repository: { full_name: 'fork/repo' } }]) {
     await assert.rejects(recoverDeployment(recoveryEnv, options(undefined, change)));
   }
+  const missingUpload = options(); const query = missingUpload.query;
+  missingUpload.query = async path => path.includes('/jobs?')
+    ? { jobs: [{ id: 7, name: 'website', status: 'completed', steps: [{ name: 'Upload to Cloudflare Pages', conclusion: 'skipped' }] }] } : query(path);
+  await assert.rejects(recoverDeployment(recoveryEnv, missingUpload), /实际上传/);
 });
 
 test('only a Beta development branch skips the site; main, PR, tags and invalid versions fail', async () => {
   const version = '1.2.0-beta.1';
+  assert.throws(() => siteEligibility({ ...env, GITHUB_REF_NAME: 'codex/beta', VERIFY_RUN_ID: '10' }, version), /不能以 Beta/);
   assert.equal(siteEligibility(env, '1.1.1'), true);
   assert.equal(siteEligibility({ ...env, GITHUB_REF_NAME: 'codex/beta' }, version), false);
   assert.equal(siteEligibility({ ...env, GITHUB_EVENT_NAME: 'workflow_dispatch', GITHUB_REF_NAME: 'codex/beta' }, version), false);
@@ -337,7 +359,7 @@ test('only a Beta development branch skips the site; main, PR, tags and invalid 
   await writeFile(join(working, 'package.json'), JSON.stringify({ version }));
   const output = join(working, 'output'), summary = join(working, 'summary');
   const child = spawnSync(process.execPath, [resolve(import.meta.dirname, 'publish.mjs'), 'eligibility'], { cwd: working, env: {
-    ...process.env, ...env, RELEASE_VERSION: '', RELEASE_PARALLEL: '', RELEASE_RUN_ID: '', RELEASE_ATTEMPT: '',
+    ...childEnv, ...env,
     GITHUB_REF_NAME: 'codex/beta', GITHUB_OUTPUT: output, GITHUB_STEP_SUMMARY: summary,
   }, encoding: 'utf8' });
   assert.equal(child.status, 0, child.stderr);

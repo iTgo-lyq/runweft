@@ -17,6 +17,7 @@ const noDownloads = html => assert(!/<a\b[^>]*\bdownload(?:\s|=|>)/i.test(html)
   && !/(?:href|src)=["'][^"']*(?:\/downloads\/|\.(?:tgz|tar\.gz|zip|sha256)(?:["'?#]))/i.test(html), '官网不能提供包下载。');
 
 export function siteEligibility(env, version) {
+  if (env.VERIFY_RUN_ID) assert.equal(releaseChannel(version), 'latest', '不能以 Beta 版本静默跳过部署复验。');
   if (env.RELEASE_PARALLEL === 'true') {
     assert(env.RELEASE_VERSION, '并行官网必须绑定发行版本。');
     assert.match(env.RELEASE_RUN_ID ?? '', /^[1-9]\d*$/, '并行官网必须绑定发行 run。');
@@ -35,8 +36,23 @@ export function siteEligibility(env, version) {
 
 export async function checkPublication(site, env, { fetchImpl = fetch } = {}) {
   assert(siteEligibility(env, site.release.version), '官网仅接受稳定版本。');
-  if (env.RELEASE_PARALLEL === 'true') return { ready: true, packages: [], npmValidation: 'deferred-to-release',
-    releaseRunId: env.RELEASE_RUN_ID, releaseAttempt: env.RELEASE_ATTEMPT };
+  if (env.RELEASE_PARALLEL === 'true') {
+    assert.match(env.GITHUB_REPOSITORY ?? '', /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/);
+    assert(env.GH_TOKEN, '并行官网缺少发行来源查询凭据。');
+    const response = await request(`https://api.github.com/repos/${env.GITHUB_REPOSITORY}/actions/runs/${env.RELEASE_RUN_ID}`,
+      { headers: { authorization: `Bearer ${env.GH_TOKEN}`, accept: 'application/vnd.github+json' } }, fetchImpl);
+    assert.equal(response.status, 200, '无法核对并行官网的发行来源。');
+    const run = await response.json();
+    assert.equal(run.id, Number(env.RELEASE_RUN_ID));
+    assert.equal(run.path, '.github/workflows/npm-publish.yml');
+    assert.equal(run.head_repository?.full_name, env.GITHUB_REPOSITORY);
+    assert.equal(run.run_attempt, Number(env.RELEASE_ATTEMPT), '发行 attempt 已变化。');
+    assert.equal(run.status, 'in_progress', '并行官网必须属于正在进行的发行。');
+    assert(['push', 'workflow_dispatch'].includes(run.event));
+    assert.equal(run.head_branch, run.event === 'push' ? `v${site.release.version}` : 'main', '发行来源与官网版本/分支不符。');
+    return { ready: true, packages: [], npmValidation: 'deferred-to-release',
+      releaseRunId: env.RELEASE_RUN_ID, releaseAttempt: env.RELEASE_ATTEMPT };
+  }
   const publication = await publicationReady(site.release, { allowPending: env.GITHUB_EVENT_NAME === 'push' && !env.RELEASE_VERSION, fetchImpl });
   return { ...publication, ...(publication.ready ? { packages: await checkNpmRelease(site.release, fetchImpl), npmValidation: 'passed' } : {}) };
 }
@@ -275,15 +291,20 @@ async function main() {
       const target = { url: env.PAGES_DEPLOYMENT_URL, subdomain: prepared.subdomain,
         mode: prepared.mode, pagesEnvironment: env.PAGES_ENVIRONMENT, site };
       const { deployment } = deploymentReference(target);
-      await save('deployment', { success: false, uploaded: true, url: deployment.href, mode: prepared.mode,
+      const recovery = env.VERIFY_RUN_ID ? JSON.parse(await readFile('.dev-smoke/website-pages/recovery.json', 'utf8')) : null;
+      if (recovery) assert.equal(String(recovery.sourceRunId), env.VERIFY_RUN_ID);
+      const provenance = recovery ? { uploaded: false, verificationOnly: true, sourceRunId: recovery.sourceRunId,
+        sourceAttempt: recovery.sourceAttempt, deploymentSourceRevision: recovery.sourceRevision } : { uploaded: true, verificationOnly: false };
+      await save('deployment', { success: false, ...provenance, url: deployment.href, mode: prepared.mode,
         pagesEnvironment: env.PAGES_ENVIRONMENT, branch: prepared.branch, sourceRevision: env.GITHUB_SHA,
         verification: 'pending' });
-      await summary(`Pages 已上传 ${prepared.mode}：[${deployment.href}](${deployment.href})，正在校验在线内容。`);
+      await summary(`Pages ${recovery ? '复验既有部署' : '已上传'} ${prepared.mode}：[${deployment.href}](${deployment.href})，正在校验在线内容。`);
       const options = { record: value => console.log('RUNWEFT_WEBSITE_READ=' + JSON.stringify(value)) };
       const result = await verifyDeployment(target, options);
       let production;
       if (prepared.mode === 'production') production = await verifyDeployment({ ...target, url: `https://${prepared.subdomain}/` }, options);
-      await save('deployment', { ...result, production, branch: prepared.branch, sourceRevision: env.GITHUB_SHA });
+      await save('deployment', { ...result, ...provenance, pagesEnvironment: env.PAGES_ENVIRONMENT,
+        production, branch: prepared.branch, sourceRevision: env.GITHUB_SHA });
       await summary(`**已部署并验证 ${result.mode}**：[${result.url}](${result.url})，npm ${result.version}，分支 ${prepared.branch}。`);
       console.log(`Pages ${result.mode} 在线校验通过：${result.url}`);
       break;

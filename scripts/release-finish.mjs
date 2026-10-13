@@ -66,7 +66,7 @@ export async function dispatchWebsite(release, env, { request = fetch, wait = pa
     try {
         accepted = await call('actions/workflows/website-pages.yml/dispatches', { ref: 'main', inputs: {
             'release-version': release.version, 'release-run-id': env.GITHUB_RUN_ID, 'release-attempt': env.GITHUB_RUN_ATTEMPT,
-            ...(parallel ? { 'release-parallel': true } : {}),
+            ...(parallel ? { 'release-parallel': 'true' } : {}),
         } }, Math.min(30_000, timeoutMs));
     } catch {
         throw new Error('官网触发结果未确认；分别检查 npm 与官网 Actions，仅恢复未完成部分，不要盲目重发。');

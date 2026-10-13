@@ -119,7 +119,7 @@ test('parallel dispatch needs no published descriptor but still binds version an
     const result = await dispatchWebsite({ version }, env, { parallel: true, request: async (_, options) => {
         if (options.method === 'POST') {
             posts++;
-            assert.equal(JSON.parse(options.body).inputs['release-parallel'], true);
+            assert.equal(JSON.parse(options.body).inputs['release-parallel'], 'true');
             return Response.json({ workflow_run_id: 20 });
         }
         return Response.json(run);

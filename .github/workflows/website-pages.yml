@@ -76,12 +76,15 @@ jobs:
       - name: Check static output and public npm release
         id: publication
         if: steps.release.outputs.build == 'true' && inputs.verify-run-id == ''
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: node website/publish.mjs check
       - name: Recover the original uploaded deployment for verification only
         id: recovered
         if: steps.release.outputs.build == 'true' && inputs.verify-run-id != ''
         env:
           GH_TOKEN: ${{ github.token }}
+          CLOUDFLARE_PAGES_PROJECT: ${{ vars.CLOUDFLARE_PAGES_PROJECT }}
         run: node website/recover.mjs
       - name: Prepare Pages project
         id: prepare
