@@ -36,7 +36,8 @@
     },
     "T3": {
       "title": "独立复核与交付",
-      "status": "doing"
+      "status": "done",
+      "verification": "实际iclaude三轮复核无阻断问题；70项Node与完整发行环境20项官网测试、actionlint、文档/workflow通过。最终实现CI/预览及托管只读复验成功，原生产部署只读十文件成功；无新npm正式计时。"
     }
   },
   "closure": {}

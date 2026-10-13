@@ -25,3 +25,9 @@
 第二轮实际 iclaude 复核耗时 383.188 秒，确认 R1–R3 已闭合；指出条件性 P2：workflow_dispatch 的父 run 仅绑定 main，会把正在运行的预检或只读验证当作发布来源。现 npm-publish 的 run-name 明确区分只读验证、正式 tag/恢复、空参数预检；官网要求手动父 run 的 display_title 精确等于目标版本的 publish vX.Y.Z，保留正式恢复能力。夹具验证恢复正例及预检、只读、异版和缺标题拒绝。
 
 同时清空测试子进程的 Actions 输出路径与 Pages/查询环境，补充失败复验 uploaded=false，成功 summary 明确为复验，并核对复验 URL 与原恢复记录一致。sourceRevision 继续表示本次控制代码，deploymentSourceRevision 单独表示原部署源码。没有审批 environment 或 boolean 字符串 if 比较；Pages 项目名两入口均无隐式规范化。
+
+## 最终定向复核
+
+第三轮实际 iclaude 耗时 143.982 秒，结论为 R4 已闭合，没有确定的 P0/P1/P2。复核前提已逐项核对：npm-release 的 verify-run-id 优先且与发布参数互斥；其余仅依据非空 RELEASE_TAG 决定发布，source-run-id 不会降为预检；tag 经规范版本、真实 Git ref 和源码 package.json 一致性校验。recover.mjs 写入 recovery.url 前已通过 deploymentReference 并规范化为 URL.href，最终本地真实生产复验已通过严格 URL 绑定。
+
+评审建议增加 npm preflight/verify 标题实测，但这会重跑与本改动无关的完整构建或公共矩阵；不为标题检查发起该组验收。网站仅复验工作流本身不使用 npm 的 run-name，不能把其标题冒充 npm 模式证据。新的正式并行来源查询与 publish 标题仍明确留待下一次正式版本实测；本次继续执行新版网站的托管只读复验。
