@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "id": "release-1-1-7",
+  "title": "1.1.7 正式发布版本准备",
+  "size": "small",
+  "status": "active",
+  "stage": "requirement",
+  "branch": "codex/release-1-1-7",
+  "confirmations": {},
+  "tasks": {
+    "T1": {
+      "title": "冻结 1.1.7 版本与安装说明",
+      "status": "todo"
+    }
+  },
+  "closure": {}
+}
