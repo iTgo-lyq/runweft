@@ -67,7 +67,7 @@ bun run test:native <已安装CLI> all <前次evidence.json>
 
 ## npm 发布与恢复
 
-公开发布按用户授权执行。更新根版本与包内说明、完成验收并提交后，推送匹配的 `vX.Y.Z` 或 `vX.Y.Z-beta.N` tag 触发 `npm-publish.yml`。先上传 beta，经所需公共集成和四平台安装及完整卸载 gate 后，稳定版本晋级 latest，再自动接续 main 官网。稳定版本的 beta 是等待完整验收的公开候选；预发行保持 beta，不部署官网。
+公开发布按用户授权执行。更新根版本与包内说明、完成验收并提交后，推送匹配的 `vX.Y.Z` 或 `vX.Y.Z-beta.N` tag 触发 `npm-publish.yml`。npm 先上传 beta，经所需公共集成和四平台安装及完整卸载 gate 后，稳定版本晋级 latest；官网从稳定 tag 起并行更新，最终等待两端验收成功。稳定版本的 beta 是等待完整验收的公开候选；预发行保持 beta，不部署官网。
 
 集成、安装或晋级失败只重跑失败 job，保留原 beta 包与候选。公共候选读取在共享十分钟预算内恢复传播 404、限流和明确网络中断，仍核对原 SHA-512；鉴权、地址、manifest/hash 错误和确定性验收失败直接停止。工作流修复后，从最新 main 手动恢复原 tag 和原 run：
 
