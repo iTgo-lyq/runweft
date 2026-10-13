@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "id": "release-validation-efficiency",
+  "title": "缩短发行验收等待并保留完整门禁",
+  "size": "medium",
+  "status": "active",
+  "stage": "execution",
+  "branch": "codex/release-validation-efficiency",
+  "confirmations": {
+    "requirement": {
+      "at": "2026-10-13T08:05:49.940Z",
+      "summary": "用户确认此前优化方案的目标、边界和验证后合入及发布测试",
+      "source": "按这个方案推进优化，建独立 worktree，先修计时器和重复验收，再根据实测拆分并行。做完和 iclaude 一起复核，验证通过后合入 main，进行正式发布测试。"
+    },
+    "technical": {
+      "at": "2026-10-13T08:05:50.007Z",
+      "summary": "沿用已审计方案：先计时器和重复验收，再依实测有限并行，完整门禁和上传顺序保留",
+      "source": "用户：按这个方案推进优化"
+    },
+    "plan": {
+      "at": "2026-10-13T08:05:50.077Z",
+      "summary": "T1 计时与去重 → T2 实测并行 → T3 iclaude 复核及发行准备，验证后归档合入发布",
+      "source": "用户明确指定实施顺序、复核、合入和正式发布测试"
+    }
+  },
+  "tasks": {
+    "T1": {
+      "title": "取消残留计时器并去除重复服务验收",
+      "status": "todo"
+    },
+    "T2": {
+      "title": "按实测拆分验收并优化磁盘准备",
+      "status": "todo"
+    },
+    "T3": {
+      "title": "完成独立复核与发行准备",
+      "status": "todo"
+    }
+  },
+  "closure": {}
+}
