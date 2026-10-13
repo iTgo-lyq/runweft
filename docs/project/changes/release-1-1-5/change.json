@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "id": "release-1-1-5",
+  "title": "准备 1.1.5 正式发行候选",
+  "size": "small",
+  "status": "active",
+  "stage": "requirement",
+  "branch": "codex/release-1-1-5",
+  "confirmations": {},
+  "tasks": {
+    "T1": {
+      "title": "修正原生身份到期验收并冻结 1.1.5 发布输入",
+      "status": "todo"
+    }
+  },
+  "closure": {}
+}
