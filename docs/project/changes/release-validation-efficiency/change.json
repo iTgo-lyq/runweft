@@ -26,7 +26,7 @@
   "tasks": {
     "T1": {
       "title": "取消残留计时器并去除重复服务验收",
-      "status": "todo"
+      "status": "doing"
     },
     "T2": {
       "title": "按实测拆分验收并优化磁盘准备",
