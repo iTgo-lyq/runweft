@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "id": "runweft-kit-rename",
+  "title": "统一 Runweft Kit 的公开仓库与 Skill 身份",
+  "size": "small",
+  "status": "active",
+  "stage": "execution",
+  "branch": "codex/runweft-kit-rename",
+  "confirmations": {},
+  "tasks": {
+    "T1": {
+      "title": "统一 Kit 身份、公开分发和安装维护入口并验证",
+      "status": "doing"
+    }
+  },
+  "closure": {}
+}
