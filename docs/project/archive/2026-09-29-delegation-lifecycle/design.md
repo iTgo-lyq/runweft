@@ -1,6 +1,6 @@
 # 委派、轮次与子会话续接设计
 
-> 来源：[本 Change 需求](requirement.md)、[跨 Change 架构](../../architecture.md)
+> 来源：[本 Change 需求](requirement.md)、[跨 Change 架构](https://github.com/iTgo-lyq/runweft/blob/e85ef3af1b9fed9cc9ac00bcd764d3954bb283da/docs/project/architecture.md)
 > 按用户要求保留需求阶段的方案讨论；本文件不是已确认 Technical，也不代表已实现。
 
 本 Change 负责共用委派语义、实际 CLI/MCP 协作工具，以及本地共享 cwd 的完整流程。宿主适配只提供身份和传递机制；共享目录并发由主 agent 安排，不自动提交或清理。下文的 Git 基线、准备回执和封存要求适用于远端组合；公共 Git 准备和封存归属[本地工作区](../2026-09-29-local-workspace-execution/requirement.md)，跨机传输分别归属[远端准备](../2026-09-30-remote-workspace-preparation/requirement.md)与[代码回收](../2026-09-30-remote-result-delivery/requirement.md)。

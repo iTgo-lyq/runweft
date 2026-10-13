@@ -95,6 +95,16 @@ try {
     assert.deepEqual((await request(url + '/api/runweft/tasks/overview', undefined, jwt)).body.items, []);
     record('public identity and explicit machine enrollment are independent; adjacent HAPI Runner and scoped task read work without model tools');
 
+    secrets.push(JSON.parse(readFileSync(localPaths.machineConnection, 'utf8')).active.token);
+    run(home, ['machine', 'revoke-credential', machine.machineId]);
+    run(home, ['runner', 'stop']);
+    run(home, ['runner', 'start'], { failure: 'identity_token_invalid' });
+    run(home, ['machine', 'rotate-credential']);
+    const rotated = JSON.parse(readFileSync(localPaths.machineConnection, 'utf8'));
+    assert.equal(rotated.machineId, machine.machineId); secrets.push(rotated.active.token);
+    assert(run(home, ['runner', 'start']).online);
+    record('revoked machine credential cannot restart; explicit rotation reconnects the same machine');
+
     run(remote, ['init', '--url', url]); const remotePaths = connect(remote, url, user);
     const second = run(remote, ['machine', 'enroll']); assert.notEqual(second.machineId, machine.machineId);
     run(remote, ['machine', 'associate', second.machineId, user.personalSpace.id]);

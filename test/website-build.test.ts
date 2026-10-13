@@ -14,7 +14,7 @@ test('npm website builds without release packages and preserves the existing sit
     const projectDirectory = fixture('website-npm-build', cleanupOwner.resources);
     cpSync(resolve('website'), join(projectDirectory, 'website'), { recursive: true });
     mkdirSync(join(projectDirectory, 'docs'));
-    writeFileSync(join(projectDirectory, 'docs/usage.md'), 'npm usage <script>unsafe</script>\n## 离线完整交付（工程参考）\nprivate offline appendix');
+    writeFileSync(join(projectDirectory, 'docs/usage.md'), 'npm usage <script>unsafe</script>\n## 使用边界\ncomplete manual');
     const manifest = join(projectDirectory, 'package.json');
     writeFileSync(manifest, JSON.stringify({ version: '1.1.0' }));
     expect(existsSync(join(projectDirectory, 'dist/packages'))).toBe(false);
@@ -28,7 +28,7 @@ test('npm website builds without release packages and preserves the existing sit
     expect(files.some(file => /\.(tgz|gz|sha256)$|SHA256SUMS/.test(file))).toBe(false);
     const manual = readFileSync(join(outputDirectory, 'manual.html'), 'utf8');
     expect(manual).toContain('&lt;script&gt;unsafe&lt;/script&gt;');
-    expect(manual).not.toContain('private offline appendix');
+    expect(manual).toContain('complete manual');
     const digest = () => createHash('sha256').update(readFileSync(join(outputDirectory, 'index.html'))).digest('hex');
     const before = digest();
     writeFileSync(manifest, JSON.stringify({ version: 'invalid' }));

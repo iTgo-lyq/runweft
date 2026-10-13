@@ -17,8 +17,6 @@
     "test:install": "node scripts/smoke-install.mjs",
     "test:uninstall": "node scripts/smoke-uninstall.mjs",
     "test:packages": "node scripts/verify-packages.mjs",
-    "test:arm64": "node scripts/smoke-arm64.mjs",
-    "release:assemble": "node scripts/assemble-release.mjs",
     "build": "bun scripts/build.ts",
     "build:hapi": "bun scripts/build-hapi.ts",
     "package": "bun scripts/package.ts",

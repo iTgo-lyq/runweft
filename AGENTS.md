@@ -1,38 +1,44 @@
 # Runweft 开发约定
 
-## 项目入口
+## 架构与数据
 
-- 先读 `docs/README.md`、相关 Change 和已有 Specs。
-- 项目工作流见 `.agents/skills/spec-trail/SKILL.md`；流程状态只写 `change.json`，需求、技术、计划与验收的既有确认在会话间持续有效，不重复询问。
-- 用户已授权按顺序完成全部 Change：细节由主 agent 制定，每个 Change 的 Plan 形成后在当前工作区用 iclaude 评审一次，再独立判断并落实；仅 iclaude 额度耗尽时改用新 subagent。该授权覆盖方案/Plan 的工程决策与本地自动验收，不重复设置人工门禁。逐任务提交，通过验收后同步 Specs 并归档；远端实测无法完成时如实保留缺口。
-- 实现优先直观、易配置、易部署；不为假设边界堆叠防御框架。失败应清楚抛出并在入口呈现可操作的错误。
-- 当前正按 Change 实现；已确认决策见 `docs/project/architecture.md` 与各 Change，只在验证并验收后将实现行为写入 Specs。
+- Runweft 负责 MCP 适配与委派调度，执行基础复用 HAPI。业务编排与 Agent 选择由主 Agent / 业务 Skill 决定，Runweft 不构建自动业务编排器。
+- 接入和执行只支持 Codex / Claude Code，复用 HAPI 内置适配、会话、状态、恢复、审批、文件和 UI。新增能力先核对 HAPI 接口与实现、复现定位具体缺口；不预设改造 launcher、原生协议或执行逻辑，不另建通用 runtime 协议与执行框架。
+- HAPI 通过 `hapi/` submodule 固定版本，修改在[独立 fork](https://github.com/iTgo-lyq/hapi)提交；通用改造与内部 runtime 接入分别维护。本仓库不保存 fork 源码或旧补丁流水线；内部 runtime 按 HAPI 原有方式在 fork 源码接入，不做 npm/路径插件，扩展及社区插件 PR 不作为内置 runtime 复用的前置。
+- 自有数据只支持当前格式，旧、未知、损坏格式明确拒绝并保留原文件，不做旧记录兼容、补写或自动清理；保留当前业务恢复与显式留存操作。后续升级在对应 Change 从[首次部署基线](docs/project/specs/deployment/spec.md#当前数据格式)明确处理和验证，不预建迁移框架；外部 HAPI 数据由 HAPI 负责。历史测试环境的单次清理授权不成为产品自动清理行为。
 
-## 架构边界
+## 源码准备与检查
 
-- Runweft 负责 MCP 适配与委派调度，执行基础复用 HAPI。职责与 Change 依赖见 `docs/project/architecture.md`。
-- MCP 接入侧只支持 Codex 和 Claude Code；执行侧直接复用 HAPI 已内置的 Codex/Claude Code 适配，不预设新增、重写或主动改造其 launcher、原生协议、会话、审批与恢复逻辑。能力验证和上层调用封装不等于 runtime 改造；真实缺口须先复现并定位。
-- 通用 HAPI 改造与私有内部 runtime 接入分别在独立仓库维护；本仓库不保存 HAPI fork 源码或延续旧补丁流水线。
-- 今后独立接入内部 runtime 时按 HAPI 原有方式在对应 fork 源码内接入，不实现 npm 包或路径插件加载；不把这类扩展或社区插件 PR 作为本轮内置 runtime 复用的前置。
-- 需要 HAPI 能力时，先核对现有接口与内部实现，再判断是否需要暴露入口或补齐行为；不另建通用 runtime 协议和执行框架。
-- Runweft 尽量只做 HAPI 上层流程封装与 MCP 适配；会话、执行、状态、恢复、审批、文件和已有 UI 优先复用 HAPI。每项新增实现先说明当前 HAPI 的具体缺口，不能完全照搬旧工程技术方案。
-- 数据库和本地配置的首次部署基线为源码 `afdcd81a4e062f56edab533b9874f266b70f655b`（工程版本 1.1.1，Hub schema19/client schema1/config schemaVersion1及该提交的连接文件、Task/Round定义）。用户确认截至2026-10-10尚未在其他机器部署；基线之前的历史测试格式不构成发行或升级兼容前提。后续结构升级在对应Change中明确从此基线起的升级处理与验证，不预先实现迁移框架。
-- 自有数据目前只支持当前格式；不保留基线之前的版本迁移、旧记录兼容/补写或产品内旧数据清理。旧、未知、损坏格式明确拒绝并保留原文件；当前业务恢复与显式留存操作继续保留。外部 HAPI 数据实现由 HAPI 负责。2026-10-10用户显式授权删除本机Runweft历史测试环境，不推广为自动清理用户数据的产品行为。
-- 旧存档只作为研究材料。其工具名称、状态机、认证锁和补丁不能自动成为新项目约束。
+使用 package.json 固定的 Bun（当前 1.4.2）和 HAPI pin。首次准备：
 
-## 文档与验证
+```sh
+git submodule update --init hapi
+bun install --frozen-lockfile
+(cd hapi && bun install --frozen-lockfile)
+git config --local core.hooksPath .githooks
+bun run build:hapi
+```
 
-- 文档优先中文。`docs/project/changes/` 保存目标与方案，`specs/` 只记录验证并验收后的实现；当前无需空目录或占位文档。
-- 每句话只保留影响操作、判断或实现的信息，不重复记录同一决策。
-- 基础检查为 `bun run typecheck`、`bun run test`、`bun run build`；测试使用明确的 `./test` 路径，避免把 HAPI 的测试当作本仓库测试。按改动选择检查，不声称未执行的验证通过。
-- 明确区分真实验证、文档证据和推断；执行结果无法确认时不推断成功，不盲目重发任务。
-- 用户已要求除远端协作外由 agent 自动完成验收；不将本地功能、安装、配置或看板转交用户手工测试，不因工作流中的人工验收惯例反复等待确认。远端协作仅在需要真实机器或访问条件时请用户参与；缺少本地验收环境时先寻找可自动执行的等价环境并如实记录缺口。
-- 临时验证文件放在 `.dev-smoke/`，不提交。搜索默认排除 `node_modules/`、`dist/` 和历史归档。
+同仓库 worktree 共用 hook 配置；`node .agents/skills/spec-trail/setup/scripts/check-setup.mjs .` 只查准备条件，hook 须由实际提交验证。HAPI pin 改变后重跑 build:hapi；构建会核对 revision、源码干净和程序 hash。
 
-## 本地环境
+按改动选择检查，不声称未执行的验证通过：
 
-- MCP stdout 只输出协议数据，日志走 stderr；不记录凭据、完整 prompt 或用户源码。
-- 不自动修改用户 Codex / Claude Code 配置、HAPI 数据或模型凭据。真实 agent 验收需已有授权和专用环境。
-- 产品须提供显式 CLI 命令一键辅助全局安装/更新/卸载 Runweft MCP；该产品需求不代表开发过程中可擅自修改当前用户配置。自动验收使用专用配置，保留其他 MCP 和原生配置。
-- 网页测试使用 Playwright 自动验收，无需连接用户真实浏览器。
-- 独立交互原型维护在 `packages/prototype`，遵循包内 AGENTS.md 与 DESIGN.md；使用内存示例，通过 SpecTrail 登记固定发布引用。
+```sh
+bun run typecheck
+bun run test
+bun run build
+node --test ./scripts/tests/*.test.mjs ./website/publish.test.mjs
+node scripts/check-docs.mjs
+node scripts/check-workflow.mjs
+git diff --check
+```
+
+根测试显式运行 `./test`，不执行 HAPI 全套测试；Node 测试单独运行。集成与模型验收按[发行验收](docs/release.md#验收矩阵)选择，失败先诊断、定向续验，不自动整组重试。
+
+## 验证边界与按需入口
+
+- 不自动修改用户 Codex / Claude Code 配置、HAPI 数据或模型凭据。接入由显式 CLI 辅助安装/更新/卸载，开发验收使用专用 `HOME`、`CODEX_HOME`、`CLAUDE_CONFIG_DIR`，保留其他 MCP 和原生配置；真实模型验收须已有授权。
+- 产品 Skill 在 `skills/runweft/`，只交付、不安装到开发者全局；修改后做结构校验和独立 Agent 场景验收。网页使用 Playwright 自动验收，无需用户真实浏览器。
+- MCP stdout 只输出协议，日志走 stderr；不记录凭据、完整 prompt 或用户源码。区分真实验证、文档证据和推断，结果未知时不推断成功、不盲目重发。
+- 临时文件放 `.dev-smoke/`，不提交；搜索默认排除 `node_modules/`、`dist/` 和历史归档。
+- 打包与发布按[发行操作](docs/release.md)，官网按 [website/README](website/README.md)。独立原型按 [包内说明](packages/prototype/README.md) 与 DESIGN.md，使用内存示例并登记 SpecTrail 固定发布引用。

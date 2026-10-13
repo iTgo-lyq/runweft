@@ -4,23 +4,19 @@ import { spawnSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, writeFileSync, existsSync } from 'node:fs';
 import { open } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
-import type { HapiHttp } from '../src/hapi';
-import { modelHomes } from './fixtures/model-homes';
 import { nativeFileSmoke } from './fixtures/native-file-smoke';
 import { ArtifactClient } from '../src/artifacts/client';
-import { ExecutionClient } from '../src/execution';
 import type { ArtifactTransfer, ArtifactTransferRequest } from '../hapi/shared/src/artifactTransfers';
 
-// Explicit model verification. Dedicated service/project data; native credentials and defaults remain inherited.
-const command = process.argv[2] === '--source' ? [process.execPath, resolve('src/cli.ts')] : [resolve(process.argv[2] ?? 'dist/runweft')];
+// Model-free machine input transfer and worktree preparation.
+const command = [resolve(process.argv[2] ?? 'dist/runweft')];
 const hapiBinary = resolve(process.argv[3] ?? 'dist/hapi');
-mkdirSync('.dev-smoke', { recursive: true }); const root = mkdtempSync(resolve('.dev-smoke/inputs-native-'));
+mkdirSync('.dev-smoke', { recursive: true }); const root = mkdtempSync(resolve('.dev-smoke/inputs-'));
 const env = { ...process.env }; for (const key of Object.keys(env)) if (key.startsWith('RUNWEFT_')) delete env[key];
-const evidence = { root, hapiBinary, sourceLauncher: process.argv[2] === '--source', startedAt: new Date().toISOString(), finishedAt: '',
-    success: false, checks: [] as string[], cases: [] as Record<string, unknown>[], error: '', cleanupErrors: [] as string[] };
-let hapi: HapiHttp | undefined, execution: ExecutionClient | undefined, machineId = '';
+const evidence = { root, hapiBinary, startedAt: new Date().toISOString(), finishedAt: '',
+    success: false, checks: [] as string[], error: '', cleanupErrors: [] as string[] };
+let machineId = '';
 let fixture: Awaited<ReturnType<typeof nativeFileSmoke>> | undefined, scope: Awaited<ReturnType<Awaited<ReturnType<typeof nativeFileSmoke>>['scoped']>>;
-const ownedModelPids = new Set<number>();
 const record = (message: string) => { evidence.checks.push(message); console.log(message); };
 async function until<T>(read: () => Promise<T>, done: (value: T) => boolean, label: string, timeout = 120_000): Promise<T> {
     const deadline = Date.now() + timeout;
@@ -34,12 +30,10 @@ async function prepared(operationId: string) {
     const result = await until(() => transfer({ action: 'inspect', operationId }), value => !['accepted', 'running'].includes(value.status), 'machine materialize');
     assert.equal(result.status, 'succeeded', JSON.stringify(result.error)); return result;
 }
-let models: ReturnType<typeof modelHomes> | undefined;
 try {
-    if (!process.argv.includes('--machine-only')) models = modelHomes(root, env);
     fixture = await nativeFileSmoke(root, command, hapiBinary, env); Object.assign(evidence, { candidate: fixture.candidate });
     const runner = await fixture.addRunner(); machineId = runner.machineId;
-    scope = await fixture.scoped(machineId); hapi = fixture.http; execution = new ExecutionClient({ request: (path, options) => scope.native.request(path, options), response: (path, options) => scope.native.response(path, options) }); const files = new ArtifactClient(hapi);
+    scope = await fixture.scoped(machineId); const hapi = fixture.http, files = new ArtifactClient(hapi);
     assert.equal((await hapi.request('/api/machines')).machines.find((m: any) => m.id === machineId).runnerState.capabilities.artifactTransfers, 1);
     const largePath = join(root, '大文件.bin'), largeHandle = await open(largePath, 'w'); await largeHandle.truncate(72 * 1024 * 1024); await largeHandle.close();
     const large = await files.upload(largePath, randomUUID()), largeRequest = { action: 'materialize' as const, operationId: randomUUID(), files: [
@@ -74,63 +68,10 @@ try {
     await until(() => workspace({ action: 'inspect', environmentId: preparation.environmentId }), value => value.workspace.status === 'removed', 'fixture worktree cleanup');
     record('worktree prepare retains its verified Unicode/space input after the intermediate download is released');
     record('72 MiB download through actual machine RPC/HTTP; receipt survives Runner/Hub restart; explicit release without sessions');
-    for (const agent of process.argv.includes('--machine-only') ? [] : ['codex', 'claude'] as const) {
-        const cwd = join(root, agent); mkdirSync(cwd); scope = await fixture.scoped(machineId, cwd, agent);
-        Object.assign(evidence, { kind: 'current Task/Round domain seeds + real authorized HAPI/Runner double-runtime models; not Task end-to-end' }); const projectMarker = `PROJECT_${randomUUID().replaceAll('-', '')}`;
-        const instructions = `For the input-read acceptance request, include ${projectMarker} in your final reply. Read the explicit input file. Do not modify files or delegate.\n`;
-        writeFileSync(join(cwd, 'AGENTS.md'), instructions); writeFileSync(join(cwd, 'CLAUDE.md'), instructions);
-        let sessionId = '', nativeId: string | undefined;
-        for (let round = 0; round < 2; round++) {
-            const marker = `INPUT_${randomUUID().replaceAll('-', '')}`, source = join(root, `材料 ${agent}-${round}.txt`); writeFileSync(source, marker);
-            const object = await files.upload(source, randomUUID()), operationId = randomUUID(), reference = { operationId };
-            const request = { action: 'materialize' as const, operationId, files: [{ artifactId: object.id, name: object.filename, size: object.size, sha256: object.sha256 }] };
-            await transfer(request); const ready = await prepared(operationId); assert(!ready.files[0]!.path.startsWith(cwd));
-            if (round === 0) {
-                const rejected = await execution.start(machineId, { requestId: randomUUID(), directory: cwd, agent, preparedFiles: { operationId: randomUUID() }, disabledMcpServers: ['runweft'] });
-                assert(rejected.outcome === 'recorded'); assert(rejected.receipt.response?.type === 'error' && rejected.receipt.response.childStarted === false);
-                const start = await execution.start(machineId, { requestId: randomUUID(), directory: cwd, agent, preparedFiles: reference, disabledMcpServers: ['runweft'] });
-                assert(start.outcome === 'recorded'); assert.equal(start.receipt.response?.type, 'success', JSON.stringify(start.receipt.response)); sessionId = start.receipt.sessionId;
-            } else {
-                scope.nextRound();
-                const resumed = await execution.resume(sessionId, undefined, reference); assert.equal(resumed.outcome, 'resumed', JSON.stringify(resumed));
-                if (resumed.outcome === 'resumed') { assert.equal(resumed.nativeSessionId, nativeId); sessionId = resumed.session.id; }
-            }
-            const session = await execution.waitUntilReady(sessionId); if (session.metadata?.hostPid) ownedModelPids.add(session.metadata.hostPid); assert.deepEqual(session.metadata?.preparedFiles, reference);
-            assert.deepEqual(session.metadata?.disabledMcpServers, ['runweft']);
-            await assert.rejects(() => transfer({ action: 'release', operationId }), { code: 'artifact_execution_active' });
-            const localId = randomUUID(); await execution.send(sessionId, { localId,
-                text: `Input-read acceptance: read the full contents of ${JSON.stringify(ready.files[0]!.path)} using the available file or shell tool. Reply with its contents and the project instruction marker. Do not edit files or delegate.` });
-            const done = await until(() => execution!.query(sessionId, localId), value => value.facts.some(f => ['completed', 'failed', 'interrupted'].includes(f.observation.phase)) && !value.session.thinking, `${agent} input read`);
-            assert(done.facts.some(f => f.observation.phase === 'completed'), JSON.stringify(done.facts));
-            assert.equal(Object.keys(done.permissions).length, 0); assert(done.output.some(item => item.text.includes(marker)), 'Native did not read the input');
-            assert(done.output.some(item => item.text.includes(projectMarker)), 'Native did not inherit project instructions');
-            nativeId = agent === 'codex' ? done.session.metadata?.codexSessionId : done.session.metadata?.claudeSessionId; assert(nativeId); assert.equal((await execution.stop(sessionId)).outcome, 'stopped');
-            await transfer({ action: 'release', operationId });
-            scope.nextRound();
-            await assert.rejects(() => execution!.resume(sessionId), { code: 'files_not_prepared' });
-            evidence.cases.push({ agent, round, taskId: scope.task.id, currentRoundId: scope.round.id, operationId, sessionId, nativeId, sha256: object.sha256, permissionMode: session.permissionMode ?? null, nativePid: session.metadata?.hostPid });
-            record(`${agent} round ${round + 1}: native read verified, project instructions inherited, no extra permission response, released-input resume rejected`);
-        }
-        scope.nextRound();
-        const cleared: Awaited<ReturnType<ExecutionClient['resume']>> = await execution.resume(sessionId, undefined, null); assert.equal(cleared.outcome, 'resumed');
-        if (cleared.outcome === 'resumed') { if (cleared.session.metadata?.hostPid) ownedModelPids.add(cleared.session.metadata.hostPid); assert.equal(cleared.nativeSessionId, nativeId); assert.equal(cleared.session.metadata?.preparedFiles, undefined); assert.equal((await execution.stop(cleared.session.id)).outcome, 'stopped'); }
-    }
-    models?.verify(); Object.assign(evidence, { sourceModelConfigurationUnchanged: !!models, ownedNativeHostPids: [...ownedModelPids] }); evidence.success = true;
+    evidence.success = true;
 } catch (error) { evidence.error = error instanceof Error ? error.stack ?? error.message : String(error); process.exitCode = 1; }
 finally {
-    const modelPids = new Set(ownedModelPids);
-    let modelShutdownConfirmed = true;
-    if (hapi && execution) {
-        try { for (const session of (await hapi.request('/api/sessions')).sessions) {
-            if (session.metadata?.hostPid) modelPids.add(session.metadata.hostPid);
-            try {
-            if ((session.active || session.metadata?.lifecycleState !== 'archived') && (await execution.stop(session.id)).outcome !== 'stopped') { modelShutdownConfirmed = false; evidence.cleanupErrors.push(`Stop unconfirmed: ${session.id}`); }
-            } catch (error) { modelShutdownConfirmed = false; evidence.cleanupErrors.push(String(error)); }
-        } } catch (error) { modelShutdownConfirmed = false; evidence.cleanupErrors.push(String(error)); }
-    }
-    try { await fixture?.close(false); } catch (error) { modelShutdownConfirmed = false; evidence.cleanupErrors.push(String(error)); }
-    try { await models?.waitHosts(modelPids); } catch (error) { modelShutdownConfirmed = false; evidence.cleanupErrors.push(String(error)); }
-    if (modelShutdownConfirmed) try { await models?.remove(); } catch (error) { evidence.cleanupErrors.push(String(error)); }
+    try { await fixture?.close(false); } catch (error) { evidence.cleanupErrors.push(String(error)); }
     if (evidence.success && !evidence.cleanupErrors.length) try { await (await import('./fixtures/native-file-smoke')).removeFileSmokeData(root); } catch (error) { evidence.cleanupErrors.push(String(error)); }
     if (evidence.cleanupErrors.length) { evidence.success = false; process.exitCode = 1; }
     evidence.finishedAt = new Date().toISOString(); writeFileSync(join(root, 'evidence.json'), JSON.stringify(evidence, null, 2));

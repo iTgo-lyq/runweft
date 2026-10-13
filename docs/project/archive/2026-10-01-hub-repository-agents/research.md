@@ -6,7 +6,7 @@
 
 ## 可直接复用
 
-- [资源归属规格](../../specs/resources/ownership/spec.md)已验收稳定 machine/runtime、空间分享、同步 usable 与原生启动授权。新 Agent 解析调用该领域的受控目标解析，不复制可用性或私有路径裁剪。
+- [资源归属规格](https://github.com/iTgo-lyq/runweft/blob/d7bc66b9ffd7c4c07fbb940280424b11feffc58a/docs/project/specs/resources/ownership/spec.md)已验收稳定 machine/runtime、空间分享、同步 usable 与原生启动授权。新 Agent 解析调用该领域的受控目标解析，不复制可用性或私有路径裁剪。
 - [HAPI 工作区管理](../../../../hapi/cli/src/runner/workspaces/manager.ts)的 resolveRepository 使用真实 Git 根/commonDir/objectFormat，并把 machineId/commonDir/objectFormat 摘要作为原生 repositoryId。该 ID 有明确的本机对象用途，不能换成跨 clone 的 Hub Repository UUID；远端基线、bundle 和 worktree 仍沿原契约。
 - [原 Agent 定义](https://github.com/iTgo-lyq/runweft/blob/4a7300c6b0683bd1a601e1eced20dd9d5396b0e3/src/agents/definitions.ts)保存职责、instructions、runtime、flavor、model、reasoningEffort；[解析](https://github.com/iTgo-lyq/runweft/blob/d5ad3002d64b4329d43aa6960f93cbfd7cc76219/src/agents/client.ts)映射 Codex modelReasoningEffort / Claude effort 并固定 disabledMcpServers=['runweft']。这些业务字段和原生参数映射可复用；文件路径、slug ID、同名遮蔽、namespace 绑定不是新中心权威。
 - [资源 CLI 客户端](../../../../src/hub/resources/client.ts)已有显式 Hub、Web 备份 origin/身份检查、能力预检、身份交换和错误脱敏。仓库/Agent CLI 应抽取通用连接部分，不另造认证。

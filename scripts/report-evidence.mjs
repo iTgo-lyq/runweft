@@ -6,7 +6,7 @@ function walk(directory, allJson) {
     if (!existsSync(directory)) return;
     for (const entry of readdirSync(directory, { withFileTypes: true })) {
         const path = join(directory, entry.name);
-        if (entry.isDirectory() && !['node_modules', 'release-source', 'artifact-backup'].includes(entry.name)) walk(path, allJson);
+        if (entry.isDirectory() && !['node_modules', 'release-source'].includes(entry.name)) walk(path, allJson);
         else if (entry.isFile() && (entry.name === 'evidence.json' || allJson && entry.name.endsWith('.json'))) {
             const report = JSON.parse(readFileSync(path, 'utf8'));
             console.log('RUNWEFT_CI_EVIDENCE=' + JSON.stringify({ path, report }));

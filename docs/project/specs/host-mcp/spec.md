@@ -1,6 +1,6 @@
 # 宿主 MCP 接入
 
-Runweft 的 stdio MCP 接入支持 Codex 和 Claude Code。`runweft mcp serve --client codex|claude` 从原生客户端的实际工作目录启动；stdout 只输出 MCP 协议，诊断走 stderr。全局安装见 [MCP 安装](../installation/mcp/spec.md)。
+Runweft 的 stdio MCP 接入支持 Codex 和 Claude Code。`runweft mcp serve --client codex|claude` 从原生客户端的实际工作目录启动；stdout 只输出 MCP 协议，诊断走 stderr。全局安装见 [MCP 安装](../installation/spec.md)。
 
 ## 身份与工作区
 
@@ -12,7 +12,7 @@ Claude Code 通过匹配 Runweft 工具的 PreToolUse hook 保存该次 toolUseI
 
 ## 工具、结果与取消
 
-runweft_status 返回原生身份、工作区、数据根和当前 local/hub 连接诊断，诊断不启动服务或模型任务；另提供定义发现、派生、列表、读取、等待、追加、中断和审批工具，见[委派入口](../delegation/interface/spec.md)。服务认证与连通性失败在结果中可见。
+runweft_status 返回原生身份、工作区、数据根和当前 local/hub 连接诊断，诊断不启动服务或模型任务；另提供定义发现、派生、列表、读取、等待、追加、中断和审批工具，见[委派入口](../delegation/spec.md)。服务认证与连通性失败在结果中可见。
 
 [文件工具](../artifacts/spec.md)支持上传、元数据查询、下载和任务补交/重传，与 CLI 共用客户端。MCP 文件路径按宿主实际 cwd 限定，不接收覆盖身份或 cwd 的业务参数；输入输出只经明确文件声明关联，不将二进制传入上下文。
 
@@ -24,4 +24,4 @@ HAPI 启动参数 disabledMcpServers 按执行禁用指定 MCP，保存在会话
 
 Codex 将完整禁用定义应用于目标 root 的原生 thread/start、thread/resume，未安装该 MCP 时也可启动；同一共享 runtime 的无关 root 不受影响。Claude 使用原生 disallowedTools 排除指定 server 的工具，保留其他原生设置；其 MCP 进程仍可能连接，但工具不进入模型可用目录。
 
-其他 MCP 和原生 Agent/Task 等子代理能力保留，原生递归与工具继承由原生客户端管理。子执行结果从 HAPI 原生输出读取，不需要子端 Runweft 汇报工具。能力兼容见 [执行兼容](../execution/compatibility/spec.md)；这不是同一系统账户内的进程隔离。
+其他 MCP 和原生 Agent/Task 等子代理能力保留，原生递归与工具继承由原生客户端管理。子执行结果从 HAPI 原生输出读取，不需要子端 Runweft 汇报工具。能力兼容见 [执行兼容](../execution/spec.md)；这不是同一系统账户内的进程隔离。

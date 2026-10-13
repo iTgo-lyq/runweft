@@ -18,10 +18,10 @@ CI 候选源码为干净 fe6017e531f06c0c01980d362b8b5b32bc6fde71。四平台真
 
 ## 发布行为与边界
 
-正式发布只接受 push 稳定版本标签，标签/源码/索引版本一致；四平台检查后依次上传平台，全部公开完整性确认后才上传主包。普通分支和手动入口只预演。候选/回执保留三十天，恢复重跑原 run 的失败 job；同版本冲突及未知上传结果停止。操作见[开发说明](../../../development.md#npm-可信发布)。
+正式发布只接受 push 稳定版本标签，标签/源码/索引版本一致；四平台检查后依次上传平台，全部公开完整性确认后才上传主包。普通分支和手动入口只预演。候选/回执保留三十天，恢复重跑原 run 的失败 job；同版本冲突及未知上传结果停止。操作见[开发说明](https://github.com/iTgo-lyq/runweft/blob/bea2509426d9307b5df786aa3bc4c27069ad613e/docs/development.md#npm-可信发布)。
 
 本次完成绑定与真实授权，未上传新版本、创建发布标签或合入 main。当前 main 尚无工作流，手动入口将来合入后可用；标签入口已配置。仓库仍为私有，因此无自动 npm provenance。
 
-正式上传与部分发布失败路径通过聚焦模拟验证，下一次新版本上传尚未执行。新 CI 候选不继承原程序 hash 的模型/Web/实机验收；现有公共 1.1.0 证据仍见[首次 npm 发布](../2026-10-01-npm-publication/acceptance.md)和[发行验收范围](../../specs/release/acceptance/spec.md)。
+正式上传与部分发布失败路径通过聚焦模拟验证，下一次新版本上传尚未执行。新 CI 候选不继承原程序 hash 的模型/Web/实机验收；现有公共 1.1.0 证据仍见[首次 npm 发布](../2026-10-01-npm-publication/acceptance.md)和[发行验收范围](https://github.com/iTgo-lyq/runweft/blob/d7bc66b9ffd7c4c07fbb940280424b11feffc58a/docs/project/specs/release/acceptance/spec.md)。
 
 Specs 已同步 release/distribution 和 release/acceptance；Plan 逐任务提交，完整 Change 归档。

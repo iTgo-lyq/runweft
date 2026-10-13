@@ -77,7 +77,7 @@
 
 ### S03 — 产品已必连 Hub，内部仍保留旧客户端和 YAML Agent 选择
 
-- **位置/证据**：`src/cli.ts` 接中心命令及 `HubTaskClient`；`src/mcp/commands.ts:46` 给服务传入 Hub options。但 `mcp/tasks.ts:10,25–36`、`mcp/server.ts:15,31–44,53,59–66`、`mcp/artifacts.ts:33` 仍以可选 Hub 切换旧客户端、诊断和 schema。`tasks/client.ts:64` 自称等待默认入口切换的 Legacy consumer，调用 `AgentClient`；`remote/client.ts:11` 同类。`agents/client.ts`、`agents/bindings.ts` 和 `agents/definitions.ts:49` 起仍实现项目/全局 YAML、旧 namespace 绑定与文件 init。当前入口探针和 [中心委派 Spec](../../specs/delegation/central/spec.md) 已排除这些产品路径。
+- **位置/证据**：`src/cli.ts` 接中心命令及 `HubTaskClient`；`src/mcp/commands.ts:46` 给服务传入 Hub options。但 `mcp/tasks.ts:10,25–36`、`mcp/server.ts:15,31–44,53,59–66`、`mcp/artifacts.ts:33` 仍以可选 Hub 切换旧客户端、诊断和 schema。`tasks/client.ts:64` 自称等待默认入口切换的 Legacy consumer，调用 `AgentClient`；`remote/client.ts:11` 同类。`agents/client.ts`、`agents/bindings.ts` 和 `agents/definitions.ts:49` 起仍实现项目/全局 YAML、旧 namespace 绑定与文件 init。当前入口探针和 [中心委派 Spec](https://github.com/iTgo-lyq/runweft/blob/d7bc66b9ffd7c4c07fbb940280424b11feffc58a/docs/project/specs/delegation/central/spec.md) 已排除这些产品路径。
 - **具体改法**：MCP 产品 context 必须携带 Hub connection；移除旧分支与 `taskTools(hub=false)` 的双套定义，使公开 schema 保持当前 Hub 版本。删除无现行消费者的 `TaskClient`、旧 `PreparationClient`、`AgentClient`/bindings/YAML discovery。只在测试 seam 中保留必要可注入工具，不留“无 Hub 产品模式”。旧 TaskClient 去除后，评估把唯一继承的 `TaskOperations` 直接并入 HubTaskClient，保持方法签名，不另建客户端抽象。
 - **不能整目录删除**：`agents/definitions.ts:35` 的 `contentVersion` 被中心 resolver/selections 使用；`AgentDefinition`/`AgentSource`/schema 仍是持久快照和类型依赖，应迁到现有领域类型模块后再删文件读写部分。`agents/launch.ts` 仍承载原生参数与 MCP 禁用映射。`PreparationView` 等被中心客户端使用的类型应搬迁保留。`resources/native.ts`、`resources/types.ts` 仍被中心资源模块使用。
 - **能力保持**：npm 包对外提供二进制，`scripts/package.ts` 没有发布旧 TypeScript SDK exports；这里清理的是内部旧实现。CLI/MCP 名称、当前参数/返回字段、身份校验、stderr/协议 stdout、错误提示及显式 Hub 要求不变。`HapiClient` 仍服务私有 HAPI 和透传命令，不能因删旧客户端一并移除。
@@ -93,7 +93,7 @@
 
 ### S05 — 旧看板具有第二套认证与展示实现
 
-- **位置/证据**：`src/dashboard/server.ts` 仅由旧 `src/api.ts:23` 调用；app/page/style 对应 `/runweft` 及旧 HAPI 登录。当前 `hub/access/http.ts:64` 起及 [看板 Spec](../../specs/dashboard/subagents/spec.md) 只开放新后台。`test/dashboard.test.ts:18–106` 测旧界面，`:109` 起却是仍有效的 `open` 命令安全行为；`scripts/smoke-dashboard.ts`、`dashboard-browser.ts` 也接旧数据/页面。
+- **位置/证据**：`src/dashboard/server.ts` 仅由旧 `src/api.ts:23` 调用；app/page/style 对应 `/runweft` 及旧 HAPI 登录。当前 `hub/access/http.ts:64` 起及 [看板 Spec](https://github.com/iTgo-lyq/runweft/blob/d7bc66b9ffd7c4c07fbb940280424b11feffc58a/docs/project/specs/dashboard/subagents/spec.md) 只开放新后台。`test/dashboard.test.ts:18–106` 测旧界面，`:109` 起却是仍有效的 `open` 命令安全行为；`scripts/smoke-dashboard.ts`、`dashboard-browser.ts` 也接旧数据/页面。
 - **具体改法**：将 `open` 用例移动到 `service-commands.test.ts`，把仍适用的旧请求竞态、渲染转义、状态可读性保障移入当前 console 测试，再删除旧 app/page/style/server 与对应认证流程测试。`src/dashboard/assets.d.ts` 是全局 CSS 模块声明，当前 `hub/page.ts` 仍需要它，应移动到公共声明位置，而非删除。
 - **能力保持**：当前后台的身份/空间切换、任务详情、原生会话跳转、撤权、浏览器存储与无凭据 URL 均保留；旧 localStorage/HAPI root 登录不是恢复目标。
 - **验证**：`hub-console`、`service-commands`、`hub-access` 根测试；当前 `smoke-hub-console` 的 Playwright 页面/弹窗/移动端流程。`scripts/fixtures/hub-console-tasks.ts:89–91` 已断言含 HTML 的报告不生成 img，继续保留；旧 UI 的“过期请求不得覆盖新筛选”需确认当前等价自动保障，没有则先补到既有 Playwright 流程，未补不算替代完成。

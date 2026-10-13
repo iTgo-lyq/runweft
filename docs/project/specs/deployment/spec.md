@@ -20,7 +20,7 @@ Runner停止同步拒绝新执行/RPC并取消心跳和状态重试；有连接�
 
 Runner凭据在启动时载入，替换本地凭据不会热更新现有进程。轮换后停止旧Runner，再以新凭据启动，保持machineId；停止本身保留独立原生session，不能据此推断任务已停止或完成。
 
-用户先通过 Web 领取/导入独立身份，再用 [hub connect](../identity/connection/spec.md) 交接到本机。auth login 生成相同确认流程，auth status 核对身份与空间。open 打开 /hub，--print 只输出无秘密地址，--hapi 打开原生界面；浏览器使用自身身份，URL 不注入 token。已移除 auth token、--token-stdin 和 hub.tokenEnv。
+用户先通过 Web 领取/导入独立身份，再用 [hub connect](../identity/spec.md) 交接到本机。auth login 生成相同确认流程，auth status 核对身份与空间。open 打开 /hub，--print 只输出无秘密地址，--hapi 打开原生界面；浏览器使用自身身份，URL 不注入 token。已移除 auth token、--token-stdin 和 hub.tokenEnv。
 
 托管原生进程的目录、数据库、地址、凭据、CORS 由 Runweft 设置，忽略冲突部署环境；用户身份环境变量不传给原生子进程。其余模型配置沿原生机制继承，不改变权限默认值或增加审批绕过。
 
@@ -51,7 +51,7 @@ paths 列出实际绝对路径：
 
 正常成果清理按 result release → workspace remove → artifact prune/remove 显式执行，未交付候选受保护。server.artifacts 配置托管中心限制，远端客户端用 artifact limits 查询实际策略；传输流式转发，代理需支持相应体积和长流，不另加固定总传输时限。
 
-用户显式销毁本机环境时使用[完整卸载](../installation/cli/spec.md#完整卸载)：选定 home 的配置、连接、数据库、日志、缓存、工作区副本和全部备份均删除，不留新备份。停止全部连接的受管会话/Runner 及 Hub 后核对占用；未知状态或其他 home 使用当前程序时拒绝。受管 Git 元数据按记录验证并删除确切工作树注册和引用，保留源项目、用户分支和其他工作树，不全局 prune。数据根之外的其他软件/原生模型数据和远端 Hub 不清理；普通 npm 卸载保留 home。
+用户显式销毁本机环境时使用[完整卸载](../installation/spec.md#完整卸载)：选定 home 的配置、连接、数据库、日志、缓存、工作区副本和全部备份均删除，不留新备份。停止全部连接的受管会话/Runner 及 Hub 后核对占用；未知状态或其他 home 使用当前程序时拒绝。受管 Git 元数据按记录验证并删除确切工作树注册和引用，保留源项目、用户分支和其他工作树，不全局 prune。数据根之外的其他软件/原生模型数据和远端 Hub 不清理；普通 npm 卸载保留 home。
 
 ## 当前数据格式
 

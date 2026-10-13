@@ -1,6 +1,6 @@
 # 远端代码回收设计
 
-> 来源：[本 Change 需求](requirement.md)、[跨 Change 架构](../../architecture.md)
+> 来源：[本 Change 需求](requirement.md)、[跨 Change 架构](https://github.com/iTgo-lyq/runweft/blob/e85ef3af1b9fed9cc9ac00bcd764d3954bb283da/docs/project/architecture.md)
 > 按用户要求保留需求阶段方案讨论，不表示 Technical 已确认。
 > 已确认：成果可取回、附件集中管理、轮次结束保留 worktree 供续接、独立 worktree 自动 checkpoint 和默认 bundle 交付。具体清理期限、配额及接口细节在正式方案中落实。
 

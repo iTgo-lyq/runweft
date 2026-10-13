@@ -1,4 +1,4 @@
-import { taskResultsProbe } from './task-results-probe';
+import { taskResultsProbe } from './fixtures/task-results-probe';
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
 import { ArtifactClient } from '../src/artifacts/client';

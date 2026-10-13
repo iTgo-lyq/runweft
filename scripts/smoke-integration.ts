@@ -16,7 +16,7 @@ const cases: Record<string, string[][]> = {
         ['smoke-hub-resources.ts', hapi, binary], ['smoke-hub-configuration.ts', hapi, binary],
     ],
     storage: [
-        ['smoke-artifacts.ts', binary, hapi], ['smoke-inputs.ts', binary, hapi, '--machine-only'],
+        ['smoke-artifacts.ts', binary, hapi], ['smoke-inputs.ts', binary, hapi],
         ['smoke-outputs.ts', binary, hapi], ['smoke-artifact-prune.ts', binary, hapi],
         ['smoke-repository-export.ts', binary, hapi], ['smoke-repository-import.ts', binary, hapi],
         ['smoke-result-export.ts', binary, hapi, '--fetch'], ['smoke-result-export.ts', binary, hapi, '--tasks'],
@@ -28,7 +28,7 @@ const cases: Record<string, string[][]> = {
         ['smoke-hub-console.ts', binary, ...history],
     ],
     'service-package': [
-        ['smoke-service.mjs', binary], ['smoke-hub-service.ts', binary],
+        ['smoke-service.mjs', binary],
         ['verify-packages.mjs', resolve(process.env.RUNWEFT_SMOKE_PACKAGES ?? 'dist/packages')],
         ['smoke-install.mjs', resolve(process.env.RUNWEFT_SMOKE_PACKAGES ?? 'dist/packages')],
     ],

@@ -1,6 +1,6 @@
 # 任务附件与交付记录设计
 
-> 来源：[本 Change 需求](requirement.md)、[跨 Change 架构](../../architecture.md)
+> 来源：[本 Change 需求](requirement.md)、[跨 Change 架构](https://github.com/iTgo-lyq/runweft/blob/e85ef3af1b9fed9cc9ac00bcd764d3954bb283da/docs/project/architecture.md)
 > 本文件保留需求阶段方案讨论；正式细节以 [Technical](technical.md) 和 [契约](artifact-contract.md) 为准。
 
 ## 1. 附件存储与运行模式

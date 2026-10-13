@@ -1,7 +1,7 @@
 # 公共 Git 工作区与本地独立执行设计
 
 > 更新：2026-09-29
-> 来源：[Requirement](requirement.md)、[拆分方案](../../delivery-structure.md)。本文件集中原远端方案中的公共 Git 规则，不表示正式 Technical 已确认。
+> 来源：[Requirement](requirement.md)、[拆分方案](https://github.com/iTgo-lyq/runweft/blob/e85ef3af1b9fed9cc9ac00bcd764d3954bb283da/docs/project/delivery-structure.md)。本文件集中原远端方案中的公共 Git 规则，不表示正式 Technical 已确认。
 
 ## 所有权与调用边界
 
