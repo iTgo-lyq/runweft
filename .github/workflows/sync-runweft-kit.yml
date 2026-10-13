@@ -1,13 +1,13 @@
-name: Sync Runweft Skill
+name: Sync Runweft Kit
 
 on:
   push:
     branches: [main]
     paths:
-      - .agents/skills/runweft/**
-      - .github/workflows/sync-runweft-skill.yml
-      - scripts/sync-runweft-skill.sh
-      - scripts/check-runweft-skill.mjs
+      - .agents/skills/runweft-kit/**
+      - .github/workflows/sync-runweft-kit.yml
+      - scripts/sync-runweft-kit.sh
+      - scripts/check-runweft-kit.mjs
       - package.json
       - bun.lock
   workflow_dispatch:
@@ -16,7 +16,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: runweft-skill-sync
+  group: runweft-kit-sync
   cancel-in-progress: false
 
 jobs:
@@ -46,10 +46,10 @@ jobs:
       - name: Check out distribution
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          repository: iTgo-lyq/runweft-skill
+          repository: iTgo-lyq/runweft-kit
           ref: main
           path: distribution
-          ssh-key: ${{ secrets.RUNWEFT_SKILL_SYNC_SSH_KEY }}
+          ssh-key: ${{ secrets.RUNWEFT_KIT_SYNC_SSH_KEY }}
 
       - name: Publish committed Skill
-        run: bash source/scripts/sync-runweft-skill.sh "$GITHUB_WORKSPACE/source" "$GITHUB_WORKSPACE/distribution"
+        run: bash source/scripts/sync-runweft-kit.sh "$GITHUB_WORKSPACE/source" "$GITHUB_WORKSPACE/distribution"

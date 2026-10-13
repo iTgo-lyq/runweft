@@ -17,7 +17,7 @@ async function setup() {
     for (const path of [join(pkg, 'bin'), join(home, 'server', 'runweft'), codex, claude]) mkdirSync(path, { recursive: true });
     copyFileSync(await compiledCli(), binary);
     writeFileSync(join(pkg, 'bin', 'hapi'), 'placeholder-not-a-running-HAPI');
-    cpSync(resolve('.agents/skills/runweft'), join(pkg, 'skills', 'runweft'), { recursive: true });
+    cpSync(resolve('.agents/skills/runweft-kit'), join(pkg, 'skills', 'runweft-kit'), { recursive: true });
     writeFileSync(join(pkg, 'package.json'), JSON.stringify({ name: `runweft-${process.platform}-${process.arch}`, version: '1.1.3', files: ['bin', 'skills'] }));
     const env = Object.fromEntries(Object.entries(process.env).filter(([key]) => !key.startsWith('RUNWEFT_') && !/^npm_config_/i.test(key)));
     Object.assign(env, { HOME: user, CODEX_HOME: codex, CLAUDE_CONFIG_DIR: claude });
@@ -37,8 +37,8 @@ test('complete uninstall previews then removes standalone package, data and own 
     const keep = [join(f.codex, 'auth.json'), join(f.codex, 'sessions', 'session.jsonl'), join(f.claude, '.credentials.json'), join(f.user, 'project', 'source.ts'), join(f.user, '.hapi', 'settings.json'), join(f.user, '.agents', 'skills', 'other', 'SKILL.md')];
     for (const file of keep) atomicWrite(file, 'KEEP ' + file);
     for (const file of ['config.yaml', 'client.sqlite', 'backups/mcp/old.json', 'logs/old.log', 'cache/item']) atomicWrite(join(f.home, file), 'DELETE');
-    const skill = join(f.user, '.agents', 'skills', 'runweft');
-    cpSync(resolve('.agents/skills/runweft'), skill, { recursive: true });
+    const skill = join(f.user, '.agents', 'skills', 'runweft-kit');
+    cpSync(resolve('.agents/skills/runweft-kit'), skill, { recursive: true });
     const snapshot = [readFileSync(codexConfig, 'utf8'), readFileSync(claudeConfig, 'utf8')];
     const preview = f.run(['uninstall']); expect(preview.status).toBe(0);
     expect(JSON.parse(preview.stdout).applied).toBe(false);
@@ -64,8 +64,8 @@ test('dangerous, generic and symlink homes are refused without changing the prog
 });
 
 test('unknown Skill files block removal; data and Skill symlink targets remain untouched', async () => {
-    const f = await setup(), skill = join(f.user, '.agents', 'skills', 'runweft'), target = join(f.root, 'source');
-    cpSync(resolve('.agents/skills/runweft'), skill, { recursive: true }); atomicWrite(join(skill, 'my-file.txt'), 'KEEP');
+    const f = await setup(), skill = join(f.user, '.agents', 'skills', 'runweft-kit'), target = join(f.root, 'source');
+    cpSync(resolve('.agents/skills/runweft-kit'), skill, { recursive: true }); atomicWrite(join(skill, 'my-file.txt'), 'KEEP');
     expect(f.error(f.run(['uninstall', '--yes']))).toBe('uninstall_skill_unknown'); expect(existsSync(f.home)).toBe(true);
     rmSync(skill, { recursive: true }); atomicWrite(join(target, 'file.txt'), 'KEEP'); symlinkSync(target, skill);
     symlinkSync(target, join(f.home, 'cache'));

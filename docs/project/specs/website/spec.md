@@ -38,7 +38,7 @@ website-pages.yml 复用规范版本识别，稳定版本使用托管 runner 构
 
 官网使用Cloudflare Direct Upload，不依赖Actions artifact；脱敏部署回执、十文件摘要与URL保存在日志/summary及仓库验收记录，静态输出按对应提交重建核对。
 
-官网内容改动可使用 `website/verify.mjs --browser-only` 验证三页、首屏入口、两页提示一致性及既有交互；证据明确标注跳过 npm 安装。默认模式仍从实际 DOM 取命令，在独立环境执行公共 npm 安装。
+官网内容改动可使用 `website/verify.mjs --browser-only` 验证三页、首屏入口、两页提示一致性及既有交互；证据明确标注跳过 npm 安装。默认模式仍从实际 DOM 取命令，在独立环境执行公共 npm 与公开 Kit 安装，分别核对冻结包内文件与当前公开 Skill 的元数据和完整引用。
 
 ## 官网使用指南
 
@@ -50,7 +50,7 @@ website-pages.yml 复用规范版本识别，稳定版本使用托管 runner 构
 
 接入使用真实 begin/complete 加密确认，不要求向模型发送 token；MCP 安装保留其他原生配置。无仓库 Runweft YAML、旧 root 认证或离线委派路径。固定 Git 基线、未提交内容不随基线传输、主 Agent 决定合入和保留 worktree 的边界明确。
 
-首页和指南给出相同 npm 安装命令。指南提供从 `$(npm root -g)/runweft/skills/runweft` 定位完整 Skill 的命令，说明 npm prefix/PATH、宿主 Skill 备份与 MCP 的独立接入；维护用 npm 安装目标版本；完整删除使用 runweft uninstall（默认预览，--yes执行），npm uninstall仅删除程序并保留数据。
+首页和指南给出相同 npm 安装命令。指南提供从公开 `iTgo-lyq/runweft-kit` 安装 `runweft-kit` 的命令，说明 npm prefix/PATH、宿主 Skill 备份与 MCP 的独立接入；维护用 npm 安装目标版本；完整删除使用 runweft uninstall（默认预览，--yes执行），npm uninstall仅删除程序并保留数据。
 
 `manual.html` 转义展示完整使用说明；无 Markdown 下载。参考页不执行命令或 HTML。参考导读说明适用人群和页内搜索，接入提示指向上手指南。
 

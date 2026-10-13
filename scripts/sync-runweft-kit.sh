@@ -2,7 +2,7 @@
 set -euo pipefail
 
 if [[ $# -ne 2 ]]; then
-  echo "Usage: sync-runweft-skill.sh <source-repository> <distribution-repository>" >&2
+  echo "Usage: sync-runweft-kit.sh <source-repository> <distribution-repository>" >&2
   exit 1
 fi
 
@@ -21,23 +21,23 @@ if [[ $(git -C "$distribution_root" branch --show-current) != main ]]; then
 fi
 
 mkdir -p "$source_root/.dev-smoke"
-skill_export=$(mktemp -d "$source_root/.dev-smoke/runweft-skill-export-XXXXXX")
+skill_export=$(mktemp -d "$source_root/.dev-smoke/runweft-kit-export-XXXXXX")
 trap 'rm -rf -- "$skill_export"' EXIT
 # Publish the committed Skill tree, never working-tree edits or other source files.
-git -C "$source_root" archive "$source_commit:.agents/skills/runweft" |
+git -C "$source_root" archive "$source_commit:.agents/skills/runweft-kit" |
   tar -x -C "$skill_export"
-node "$script_root/check-runweft-skill.mjs" "$skill_export"
-mkdir -p "$distribution_root/skills/runweft"
-rsync -a --delete "$skill_export/" "$distribution_root/skills/runweft/"
+node "$script_root/check-runweft-kit.mjs" "$skill_export"
+mkdir -p "$distribution_root/skills/runweft-kit"
+rsync -a --delete "$skill_export/" "$distribution_root/skills/runweft-kit/"
 
-if [[ -z $(git -C "$distribution_root" status --porcelain -- skills/runweft) ]]; then
-  echo "Runweft Skill already matches source $source_commit."
+if [[ -z $(git -C "$distribution_root" status --porcelain -- skills/runweft-kit) ]]; then
+  echo "Runweft Kit already matches source $source_commit."
   exit 0
 fi
 
-git -C "$distribution_root" add --all -- skills/runweft
+git -C "$distribution_root" add --all -- skills/runweft-kit
 git -C "$distribution_root" -c user.name='github-actions[bot]' \
   -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
-  commit -m "Sync Runweft Skill from ${source_commit:0:12}" \
+  commit -m "Sync Runweft Kit from ${source_commit:0:12}" \
   -m "Source revision: $source_commit"
 git -C "$distribution_root" push origin HEAD:main

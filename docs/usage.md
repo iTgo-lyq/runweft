@@ -19,25 +19,19 @@ npm 自动选择当前平台依赖，随包提供配套 HAPI 与产品 Skill，�
 
 ## 交给 Agent 接入
 
-也可先从独立公开仓库安装产品 Skill，再交给 Agent 接入程序和 MCP：
+先从独立公开仓库安装 Runweft Kit，再交给 Agent 接入程序和 MCP：
 
 ```sh
-npx skills add iTgo-lyq/runweft-skill --skill runweft --agent codex -g --copy -y
+npx skills add iTgo-lyq/runweft-kit --skill runweft-kit --agent codex -g --copy -y
 ```
 
 Claude Code 使用 `--agent claude-code`。先核对已有同名 Skill，不同内容先备份并确认替换。Skill 安装不等于程序或 MCP 安装；已有工程内 Skill 时直接复用，不重复安装全局副本。
 
 把下面这段话交给正在使用的 Agent：
 
-> 通过 npm 安装 runweft@1.1.7，从已安装包中读取并接入 Runweft Skill。程序安装和升级用 npm，完整卸载按 Skill 的维护说明执行。帮我连接指定 Hub；没有 Hub 时先询问是否在本机启动。保留其他 MCP 和模型配置，身份通过浏览器确认，不向我索要 token。分别登记机器和执行工具，创建代码评审 Agent，再在当前项目完成一次只读委派。
+> 通过 npm 安装 runweft@1.1.7，从 https://github.com/iTgo-lyq/runweft-kit 安装名为 runweft-kit 的 Skill 并按其说明接入。程序安装和升级用 npm，完整卸载按 Skill 的维护说明执行。帮我连接指定 Hub；没有 Hub 时先询问是否在本机启动。保留其他 MCP 和模型配置，身份通过浏览器确认，不向我索要 token。分别登记机器和执行工具，创建代码评审 Agent，再在当前项目完成一次只读委派。
 
-Skill 源目录：
-
-```sh
-printf '%s\n' "$(npm root -g)/runweft/skills/runweft"
-```
-
-Agent 先读取 `SKILL.md`，再将完整目录复制到 Codex 的 `~/.agents/skills/runweft` 或 Claude 的 `${CLAUDE_CONFIG_DIR:-$HOME/.claude}/skills/runweft`；已有不同内容先备份到扫描目录外并确认替换。Skill 与 MCP 是两项安装。下面是 Agent 使用的工程参考，不要求用户逐条手工执行。
+安装后 Skill 名为 `runweft-kit`；使用 `$runweft-kit` 可显式调用。工程内已有 `.agents/skills/runweft-kit/` 时直接复用。发现用途相同的其他名称副本时，先备份已有修改到扫描目录之外，经确认替换后仅保留新入口，避免重复加载。Skill 与 MCP 分别安装。下面是 Agent 使用的工程参考，不要求用户逐条手工执行。
 
 ## Hub、身份与空间
 

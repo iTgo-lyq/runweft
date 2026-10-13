@@ -58,20 +58,20 @@ runweft runtime check <返回的runtimeId>
 
 ## 安装产品 Skill 与 MCP
 
-先复用已加载的 Runweft Skill，不再重复安装全局副本。工程内 `.agents/skills/runweft/` 可由 Agent 显式读取使用；宿主自动发现位置按所用客户端核对。需要另行安装 Skill 时，经用户安装授权，可从独立公开仓库安装到选定宿主：
+先复用已加载的 Runweft Kit，不再重复安装全局副本。工程内 `.agents/skills/runweft-kit/` 可由 Agent 显式读取使用；宿主自动发现位置按所用客户端核对。需要另行安装 Skill 时，经用户安装授权，可从独立公开仓库安装到选定宿主：
 
 ```sh
-npx skills add iTgo-lyq/runweft-skill --skill runweft --agent codex -g --copy -y
+npx skills add iTgo-lyq/runweft-kit --skill runweft-kit --agent codex -g --copy -y
 ```
 
-Claude Code 将 `--agent codex` 改为 `--agent claude-code`；只安装用户选定的宿主。安装前核对目标，内容不同的已有 Runweft Skill 先告知并备份到扫描目录外，确认替换范围后再执行。Skill 安装不等于程序或 MCP 安装。
+Claude Code 将 `--agent codex` 改为 `--agent claude-code`；只安装用户选定的宿主。安装前核对目标，内容不同的已有 Runweft Kit 先告知并备份到扫描目录外，确认替换范围后再执行。Skill 安装不等于程序或 MCP 安装。
 
-产品 Skill 也随 npm 主包提供，源目录为 `$(npm root -g)/runweft/skills/runweft`；官网不提供独立下载。未通过公开仓库安装时，先读包内 `SKILL.md`，再经安装授权把完整目录复制到宿主发现位置：
+新构建的 npm 主包也提供 Runweft Kit，包内目录为 `$(npm root -g)/runweft/skills/runweft-kit`；先检查该目录存在且 frontmatter.name 为 `runweft-kit`。已安装包没有该目录时使用上面的公开仓库安装，不猜测或复用其他名称的包内 Skill。未通过公开仓库安装时，先读包内 `SKILL.md`，再经安装授权把完整目录复制到宿主发现位置：
 
-- Codex：`$HOME/.agents/skills/runweft`。
-- Claude Code：`${CLAUDE_CONFIG_DIR:-$HOME/.claude}/skills/runweft`。
+- Codex：`$HOME/.agents/skills/runweft-kit`。
+- Claude Code：`${CLAUDE_CONFIG_DIR:-$HOME/.claude}/skills/runweft-kit`。
 
-先比对目标；相同内容不改，不同内容先告知并备份到宿主扫描目录外，确认覆盖范围后再替换。不要把旧副本留在 skills 下导致重复加载。不安装到正在使用的工程仓库，也不删除其他 Skill。Skill 不自动安装 MCP：
+先比对目标；相同内容不改，不同内容先告知并备份到宿主扫描目录外，确认覆盖范围后再替换。发现同功能但不同名称的旧副本时，先识别来源并备份用户修改，经安装/替换授权后将确认被替代的副本移出扫描目录；不要把旧副本留在 skills 下导致重复加载。不安装到正在使用的工程仓库，也不删除其他 Skill。Skill 不自动安装 MCP：
 
 ```sh
 runweft mcp install --client codex

@@ -4,7 +4,7 @@ import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parse } from 'yaml';
 
-export function checkRunweftSkill(directory) {
+export function checkRunweftKit(directory) {
     const root = resolve(directory), files = [];
     function walk(path) {
         const stat = lstatSync(path);
@@ -17,7 +17,7 @@ export function checkRunweftSkill(directory) {
     const frontmatter = entry.match(/^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/);
     assert(frontmatter, 'SKILL.md must contain YAML frontmatter');
     const metadata = parse(frontmatter[1]);
-    assert.equal(metadata?.name, 'runweft', 'Skill name must be runweft');
+    assert.equal(metadata?.name, 'runweft-kit', 'Skill name must be runweft-kit');
     assert(typeof metadata.description === 'string' && metadata.description.trim(), 'Skill description must be nonempty');
     assert(metadata.metadata?.internal !== true, 'Product Skill must be publicly discoverable');
     for (const name of ['onboarding', 'configuration', 'delegation', 'maintenance']) {
@@ -38,6 +38,6 @@ export function checkRunweftSkill(directory) {
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-    const files = checkRunweftSkill(process.argv[2] ?? '.agents/skills/runweft');
-    console.log(`Runweft Skill: ${files.length} files, metadata and local references passed.`);
+    const files = checkRunweftKit(process.argv[2] ?? '.agents/skills/runweft-kit');
+    console.log(`Runweft Kit: ${files.length} files, metadata and local references passed.`);
 }

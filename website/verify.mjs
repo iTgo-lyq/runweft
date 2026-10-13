@@ -142,8 +142,11 @@ try {
   await page.locator('[data-copy="first-task-prompt"]').click();
   assert.equal(await page.evaluate(() => navigator.clipboard.readText()), firstTask);
   check('Home-to-guide path preserves the setup prompt and copies a separate first task');
-  const skillCommand = await page.locator('#skill-path-command').textContent();
-  await writeFile(join(evidenceRoot, 'skill-path-from-dom.sh'), skillCommand + '\n');
+  const skillCommand = await page.locator('#skill-install-command').textContent();
+  assert.equal(skillCommand, 'npx skills add iTgo-lyq/runweft-kit --skill runweft-kit --agent codex -g --copy -y');
+  await page.locator('[data-copy="skill-install-command"]').click();
+  assert.equal(await page.evaluate(() => navigator.clipboard.readText()), skillCommand);
+  await writeFile(join(evidenceRoot, 'skill-install-from-dom.sh'), skillCommand + '\n');
   await page.locator('#mcp details:has([data-client]) > summary').click();
   await page.locator('[data-client="claude"]').click();
   assert.equal(await page.locator('#mcp-command').textContent(), 'runweft mcp install --client claude\nrunweft mcp check --client claude');
@@ -156,7 +159,7 @@ try {
   const checkedLinks = new Set();
   for (const route of ['', 'guide.html', 'manual.html']) {
     await page.goto(subpath.url + route);
-    assert.equal(await page.locator('a[href^="https://github.com/"]').count(), 0, 'Public navigation must not point to the private source repository');
+    assert.equal(await page.locator('a[href="https://github.com/iTgo-lyq/runweft"], a[href^="https://github.com/iTgo-lyq/runweft/"]').count(), 0, 'Public navigation must not point to the private source repository');
     const links = await page.locator('a[href],link[href],script[src],img[src]').evaluateAll(elements => elements.map(element => element.href || element.src));
     for (const value of links) {
       const url = new URL(value, page.url());
@@ -193,22 +196,23 @@ try {
   check('Both original WebP images open by keyboard without JavaScript');
   await plainPage.locator('a[href="guide.html"]').first().click();
   assert.equal(await plainPage.locator('#guide-install-command').textContent(), expected);
-  assert.equal(await plainPage.locator('#skill-path-command').textContent(), skillCommand);
+  assert.equal(await plainPage.locator('#skill-install-command').textContent(), skillCommand);
   assert.equal(await plainPage.locator('#guide-prompt').textContent(), prompt);
   assert.equal(await plainPage.locator('#first-task-prompt').textContent(), firstTask);
   await assertLayout(plainPage, 'no-js guide', 390); await plainPage.close(); await plain.close();
-  check('Reduced motion and the same npm installation / Skill location commands without JavaScript');
+  check('Reduced motion and the same npm / Kit installation commands without JavaScript');
 
   // Execute the exact rendered commands without inheriting user npm configuration, credentials or installed binaries.
   const installHome = join(evidenceRoot, 'install-home'); await mkdir(installHome);
   const prefix = join(installHome, 'npm-global'), nodeOnly = join(evidenceRoot, 'node-bin');
   await mkdir(nodeOnly); await symlink(process.execPath, join(nodeOnly, 'node'));
   await symlink(await realpath(join(dirname(process.execPath), 'npm')), join(nodeOnly, 'npm'));
+  await symlink(await realpath(join(dirname(process.execPath), 'npx')), join(nodeOnly, 'npx'));
   const userconfig = join(installHome, 'npmrc'), globalconfig = join(installHome, 'npmrc-global');
   await writeFile(userconfig, '', { mode: 0o600 }); await writeFile(globalconfig, '', { mode: 0o600 });
   const environment = { ...process.env };
   for (const key of Object.keys(environment)) if (/^npm_config_/i.test(key) || /^(NPM_TOKEN|NODE_AUTH_TOKEN|BASH_ENV|ENV)$/i.test(key)) delete environment[key];
-  Object.assign(environment, { HOME: installHome, RUNWEFT_HOME: join(installHome, '.runweft'),
+  Object.assign(environment, { HOME: installHome, CODEX_HOME: join(installHome, '.codex'), CLAUDE_CONFIG_DIR: join(installHome, '.claude'), RUNWEFT_HOME: join(installHome, '.runweft'),
     PATH: `${prefix}/bin:${nodeOnly}:/usr/bin:/bin`, npm_config_prefix: prefix,
     npm_config_userconfig: userconfig, npm_config_globalconfig: globalconfig, npm_config_cache: join(installHome, 'npm-cache'),
   });
@@ -238,16 +242,18 @@ try {
       evidence.candidateBinaries = assertCandidateBinaries(binary, Object.fromEntries(['runweft', 'hapi'].map(name => [name, { sha256: entry.binaries['bin/' + name] }])));
     }
     assert.deepEqual(await readFile(join(prefix, 'lib/node_modules/runweft/README.md')), await readFile(join(repository, 'docs/usage.md')));
-    const locatedSkill = await run('/bin/bash', ['--noprofile', '--norc', join(evidenceRoot, 'skill-path-from-dom.sh')], { env: environment });
-    const skillDirectory = locatedSkill.stdout.trim();
-    assert.equal(skillDirectory, join(prefix, 'lib/node_modules/runweft/skills/runweft'));
-    for (const file of ['SKILL.md', 'references/onboarding.md', 'references/configuration.md', 'references/delegation.md', 'references/maintenance.md']) {
-      assert.deepEqual(await readFile(join(skillDirectory, file)), await readFile(join(repository, '.agents/skills/runweft', file)));
+    const skillDirectory = join(prefix, 'lib/node_modules/runweft/skills/runweft-kit');
+    for (const file of ['SKILL.md', 'agents/openai.yaml', 'references/onboarding.md', 'references/configuration.md', 'references/delegation.md', 'references/maintenance.md']) {
+      assert.deepEqual(await readFile(join(skillDirectory, file)), await readFile(join(repository, '.agents/skills/runweft-kit', file)));
     }
+    await run('/bin/bash', ['--noprofile', '--norc', join(evidenceRoot, 'skill-install-from-dom.sh')], { env: environment, timeout: 180_000 });
+    const installedKitDirectory = join(installHome, '.agents/skills/runweft-kit');
+    const { checkRunweftKit } = await import('../scripts/check-runweft-kit.mjs');
+    checkRunweftKit(installedKitDirectory);
     const installedPackage = JSON.parse(await readFile(join(prefix, 'lib/node_modules/runweft/package.json'), 'utf8'));
     assert.equal(installedPackage.name, release.package); assert.equal(installedPackage.version, release.version);
-    evidence.install = { version: version.stdout.trim(), commandSource: 'rendered DOM', prefix, binary, launcherSha256: await hash(binary), skillDirectory };
-    check('DOM npm install and Skill location succeed; the installed binary belongs to the isolated prefix and all Skill references exist');
+    evidence.install = { version: version.stdout.trim(), commandSource: 'rendered DOM', prefix, binary, launcherSha256: await hash(binary), skillDirectory, installedKitDirectory };
+    check('DOM npm and Kit installs succeed; packaged Skill matches the candidate and the public Kit has valid metadata and references');
   }
   assert.equal((await fetch(started.url + '../package.json')).status, 404);
   assert.equal((await fetch(started.url, { method: 'POST' })).status, 405);

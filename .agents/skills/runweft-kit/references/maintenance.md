@@ -36,13 +36,13 @@ runweft mcp check --client <codex或claude>
 
 先记录安装版本、路径、Hub 角色、数据根、活跃任务。结束/中断任务并确认停止后再停对应服务；停止 Runner/Hub 不能代替中断模型进程。
 
-升级：确认当前入口属于 npm 安装，使用 `npm install -g runweft@<目标版本> --registry=https://registry.npmjs.org/ --include=optional`；成功后核对版本和入口，再运行 `mcp install --client <宿主>` 更新入口/timeout/hook。Skill 来自 npm 包时，从更新后的包读取，比对、备份扫描目录外的旧目录再替换；通过 skills CLI 安装时，先核对来源与本地修改，有修改先备份到扫描目录外并确认替换范围，再按用户授权运行 `npx skills update runweft -g -y`，项目安装则改为 `-p`。不承诺更新命令会保留个人修改。工程维护的 Skill 由工程 Git 更新，不用全局更新覆盖。Skill 版本不代替程序版本，操作前仍查实际 CLI 的 `--help`。没有 `runweft upgrade` 命令。当前业务库只支持 schema19，不通过切换程序迁移数据。
+升级：确认当前入口属于 npm 安装，使用 `npm install -g runweft@<目标版本> --registry=https://registry.npmjs.org/ --include=optional`；成功后核对版本和入口，再运行 `mcp install --client <宿主>` 更新入口/timeout/hook。Skill 来自 npm 包时，从更新后的包读取，比对、备份扫描目录外的旧目录再替换；通过 skills CLI 安装时，先核对来源与本地修改，有修改先备份到扫描目录外并确认替换范围，再按用户授权运行 `npx skills update runweft-kit -g -y`，项目安装则改为 `-p`。不承诺更新命令会保留个人修改。工程维护的 Skill 由工程 Git 更新，不用全局更新覆盖。Skill 版本不代替程序版本，操作前仍查实际 CLI 的 `--help`。没有 `runweft upgrade` 命令。当前业务库只支持 schema19，不通过切换程序迁移数据。
 
 按原角色启动：本机 Hub `start`，独立执行机 `runner start`，前台公开服务由原进程管理器执行 `serve --public`。核对 `--version/status/doctor/mcp check`，再做一次低风险真实调用。只执行用户指定范围，不更新在线其他实例。
 
 完整卸载：先用 `--version` 和 `uninstall --help` 核对实际版本支持；1.1.4 起支持完整卸载。用户已明确要求完整卸载即视为授权：先用 `runweft --home <目录> uninstall` 预览，核对数据根和删除范围；与要求一致就直接执行 `runweft --home <目录> uninstall --yes`，不再次确认。范围不符或命令报错时停止，并如实说明。npm 卸载失败时数据仍在，可重试；程序已删而数据未删时，按错误给出的准确路径处理。
 
-完整卸载无备份地移除该 home 的全部数据、当前程序、自身 MCP/hook 和已确认的 Skill，保留其他软件配置、模型凭据、原生会话和用户项目。默认 home 可省略 `--home <目录>`；`--dry-run` 始终只预览。不要在受管会话内执行完整卸载，使用独立终端。
+完整卸载无备份地移除该 home 的全部数据、当前程序、自身 MCP/hook 和预览中已确认的 Skill，保留其他软件配置、模型凭据、原生会话和用户项目。单独安装的 `runweft-kit` 若未列入 CLI 预览，不能认为程序卸载已清理它：先核对所选宿主、安装来源、目录内用户改动和实际路径；用户完整卸载授权内仅移除已确认属于本产品的 Skill，遇到未知文件或来源不明时停止。符号链接只移除链接，保留目标。默认 home 可省略 `--home <目录>`；`--dry-run` 始终只预览。不要在受管会话内执行完整卸载，使用独立终端。
 
 只删程序、保留数据：先结束任务、停止相关 Runner/Hub，用 `mcp uninstall --client <宿主>` 移除接入并核对其他 MCP/hooks 保留；确认当前 npm prefix 后执行 `npm uninstall -g runweft`，仅移除未改写的产品 Skill。此处 `mcp uninstall` 仍生成备份。既有可信独立平台包按其受管目录处理，不删除未知入口。
 

@@ -104,7 +104,7 @@ node website/verify.mjs --browser-only
 
 已有兼容浏览器可用 RUNWEFT_SITE_CHROMIUM 指定可执行路径。验收覆盖三个页面、320–1440px、首屏定义/主入口、首页到指南路径、两页接入及首项任务提示一致性、复制成功/拒绝与焦点、菜单、FAQ、MCP/runtime 切换、无 JS、reduced motion 和子路径全部本地链接。
 
-安装命令及 Skill 目录命令从实际页面 DOM 获取。安装使用独立 HOME、npm prefix/userconfig/globalconfig/cache，清除继承的 npm 配置与认证环境变量，PATH 仅含本次安装、Node/npm 和系统工具。失败 npm 夹具确认不继续运行旧程序；公共 registry 实际安装核对入口归属、精确版本、README 和五个 Skill 文件字节。稳定发布的 Linux x64 job 传入原 descriptor，另核对 Runweft/HAPI 两程序摘要。不改用户 MCP/Skill，不启动模型。该检查不代表 Mac/arm64 实机运行。
+程序和 Kit 安装命令从实际页面 DOM 获取。安装使用独立 HOME、npm prefix/userconfig/globalconfig/cache，清除继承的 npm 配置与认证环境变量，PATH 仅含本次安装、Node/npm/npx 和系统工具。失败 npm 夹具确认不继续运行旧程序；公共 registry 实际安装核对入口归属、精确版本、README 和全部六个包内 Skill 文件字节；公开 Kit 安装核对新名称、完整引用和独立宿主目录。稳定发布的 Linux x64 job 传入原 descriptor，另核对 Runweft/HAPI 两程序摘要。不改用户 MCP/Skill，不启动模型。该检查不代表 Mac/arm64 实机运行。
 
 本次服务和浏览器在结束时关闭；证据与截图、专用安装留在 `.dev-smoke/website-*/`，不提交。
 

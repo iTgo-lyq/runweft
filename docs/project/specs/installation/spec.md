@@ -60,11 +60,11 @@ Codex 受管超时缺失或小于 600 秒时，check 提示重新安装，不自
 
 ## 产品接入 Skill
 
-`.agents/skills/runweft` 是工程内唯一产品 Skill 源码，供 Agent 显式读取或由支持该位置的宿主发现；主文件按接入、中心配置、委派和维护路由到 references，包含完整命令、安全限制、诊断和升级/卸载流程。主包和全部平台包继续在 `skills/runweft` 携带同一 Skill（含宿主 UI 元数据），另有根目录为 `runweft/` 的 `runweft-skill-<version>.tgz`；发行索引记录 SHA-256/SHA-512，官网以 npm 安装为程序入口，不提供独立下载。
+`.agents/skills/runweft-kit` 是工程内唯一产品 Skill 源码，供 Agent 显式读取或由支持该位置的宿主发现；主文件按接入、中心配置、委派和维护路由到 references，包含完整命令、安全限制、诊断和升级/卸载流程。主包和全部平台包继续在 `skills/runweft-kit` 携带同一 Skill（含宿主 UI 元数据），另有根目录为 `runweft-kit/` 的 `runweft-kit-<version>.tgz`；发行索引记录 SHA-256/SHA-512，官网以 npm 安装为程序入口，不提供独立下载。
 
-独立公开仓库 [runweft-skill](https://github.com/iTgo-lyq/runweft-skill) 提供 `skills/runweft/`，可通过 `npx skills add iTgo-lyq/runweft-skill --skill runweft --agent codex -g --copy -y` 安装；Claude Code 使用 `--agent claude-code`。公开分发只包含产品 Skill 和安装说明，不依赖 Runweft 源码公开。已有加载的工程 Skill 时直接复用，不重复安装全局副本；自动发现能力按实际宿主核对。
+独立公开仓库 [runweft-kit](https://github.com/iTgo-lyq/runweft-kit) 提供 `skills/runweft-kit/`，可通过 `npx skills add iTgo-lyq/runweft-kit --skill runweft-kit --agent codex -g --copy -y` 安装；Claude Code 使用 `--agent claude-code`。公开分发只包含产品 Skill 和安装说明，不依赖 Runweft 源码公开。已有加载的工程 Skill 时直接复用，不重复安装全局副本；自动发现能力按实际宿主核对。
 
-用户授权后，Agent 将 Skill 放到 Codex `.agents/skills/runweft` 或 Claude `.claude/skills/runweft`；不同已有内容先备份/确认，卸载只删除确认受管目录。不自动安装到开发者全局配置，不修改模型凭据或其他 MCP/Skill。MCP 使用产品显式安装/更新/卸载命令。
+用户授权后，Agent 将 Skill 放到 Codex `.agents/skills/runweft-kit` 或 Claude `.claude/skills/runweft-kit`；不同已有内容先备份/确认，卸载只删除确认受管目录。不自动安装到开发者全局配置，不修改模型凭据或其他 MCP/Skill。MCP 使用产品显式安装/更新/卸载命令。
 
 流程先选择明确 Hub，再由用户浏览器确认独立身份/空间，使用加密 begin/complete，凭据不进模型、URL 或日志。新电脑即使只用 task CLI 仍须先登记本机；Web 读本人任务不需要登记。机器、runtime、中心 Agent 分开建立，不能把在线/工具发现当作模型成功。
 

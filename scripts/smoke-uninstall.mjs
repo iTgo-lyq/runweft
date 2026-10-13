@@ -125,7 +125,7 @@ try {
     run(['init']); run(['mcp', 'install', '--client', 'claude']);
     put(join(env.CODEX_HOME, 'config.toml'), codexOriginal + '\n[mcp_servers.runweft]\ncommand=' + JSON.stringify(join(nativeRoot, 'bin', 'runweft'))
         + '\nargs=' + JSON.stringify(['--home', home, 'mcp', 'serve', '--client', 'codex']) + '\n[mcp_servers.runweft.env]\nRUNWEFT_MCP_MANAGED="1"\n');
-    for (const directory of [join(user, '.agents', 'skills', 'runweft'), join(user, '.codex', 'skills', 'runweft'), join(user, '.claude', 'skills', 'runweft')]) cpSync(join(nativeStage, 'skills/runweft'), directory, { recursive: true });
+    for (const directory of [join(user, '.agents', 'skills', 'runweft-kit'), join(user, '.codex', 'skills', 'runweft-kit'), join(user, '.claude', 'skills', 'runweft-kit')]) cpSync(join(nativeStage, 'skills/runweft-kit'), directory, { recursive: true });
     const cold = snapshot(home), configs = snapshot(env.CODEX_HOME);
     assert.equal(run(['uninstall']).applied, false); assert.equal(run(['uninstall', '--yes', '--dry-run']).applied, false);
     assert.deepEqual(snapshot(home), cold); assert.deepEqual(snapshot(env.CODEX_HOME), configs);
@@ -167,7 +167,7 @@ try {
     check('real control APIs stop current and recovered session substitutes, both Runners and Hub; npm failure retains data and program');
     const result = await uninstallAsync(undefined, { env: { ...env, npm_config_dry_run: 'true', NPM_CONFIG_DRY_RUN: 'true' } });
     assert.equal(result.applied, true); assert(!existsSync(home) && !existsSync(cli) && !existsSync(nativeRoot) && !existsSync(join(prefix, 'lib/node_modules/runweft')));
-    for (const directory of [join(user, '.agents/skills/runweft'), join(user, '.codex/skills/runweft'), join(user, '.claude/skills/runweft')]) assert(!existsSync(directory));
+    for (const directory of [join(user, '.agents/skills/runweft-kit'), join(user, '.codex/skills/runweft-kit'), join(user, '.claude/skills/runweft-kit')]) assert(!existsSync(directory));
     for (const [index, file] of keepFiles.entries()) assert.deepEqual(readFileSync(file), kept[index]);
     assert.equal(readFileSync(join(env.CODEX_HOME, 'config.toml'), 'utf8').trim(), codexOriginal.trim());
     assert.deepEqual(JSON.parse(readFileSync(join(env.CLAUDE_CONFIG_DIR, '.claude.json'), 'utf8')), claudeOriginal);

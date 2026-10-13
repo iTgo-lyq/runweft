@@ -31,11 +31,11 @@ test('release freeze rejects dirty, tracked and untracked package changes but al
     writeFileSync(join(root, 'src/new.ts'), 'export {};\n');
     expect(() => assertFrozenCandidate({ source }, root)).toThrow('Untracked package');
     rmSync(join(root, 'src/new.ts'));
-    mkdirSync(join(root, '.agents/skills/runweft'), { recursive: true });
-    writeFileSync(join(root, '.agents/skills/runweft/SKILL.md'), 'Product Skill\n');
+    mkdirSync(join(root, '.agents/skills/runweft-kit'), { recursive: true });
+    writeFileSync(join(root, '.agents/skills/runweft-kit/SKILL.md'), 'Product Skill\n');
     expect(() => assertFrozenCandidate({ source }, root)).toThrow('Untracked package');
-    git('add', '.agents/skills/runweft'); git('commit', '-qm', 'Product Skill');
+    git('add', '.agents/skills/runweft-kit'); git('commit', '-qm', 'Product Skill');
     const skillSource = { revision: git('rev-parse', 'HEAD'), dirty: false };
-    writeFileSync(join(root, '.agents/skills/runweft/SKILL.md'), 'Changed Skill\n');
+    writeFileSync(join(root, '.agents/skills/runweft-kit/SKILL.md'), 'Changed Skill\n');
     expect(() => assertFrozenCandidate({ source: skillSource }, root)).toThrow('inputs changed');
 });

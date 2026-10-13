@@ -83,7 +83,7 @@ try {
     assert(guide.includes('workspace prepare')); assert(guide.includes('workspace release'));
     assert(guide.includes('task result fetch')); assert(guide.includes('task result release'));
     assert(guide.includes('hub connect')); assert(guide.includes('/hub'));
-    assert(readFileSync(join(platformDirectory, 'skills/runweft/SKILL.md'), 'utf8').includes('hub connect begin/complete'));
+    assert(readFileSync(join(platformDirectory, 'skills/runweft-kit/SKILL.md'), 'utf8').includes('hub connect begin/complete'));
     if (!publicRegistry) {
         assert(requests.includes('/runweft'));
         assert(requests.some(path => path.endsWith(`${platformName}-${index.version}.tgz`)));

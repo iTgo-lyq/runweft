@@ -1,9 +1,9 @@
 ---
-name: runweft
+name: runweft-kit
 description: 安装、升级和卸载 Runweft，连接 Hub 身份与空间，登记机器及 Codex/Claude runtime，维护中心 Agent、仓库和个人选择，通过 MCP 委派、续接、停止及取回代码/附件，诊断连接和执行问题。用户提到 Runweft 接入、协作 Agent、Hub 后台或任务维护时使用；不用于修改原生模型凭据或配置其他产品。
 ---
 
-# Runweft
+# Runweft Kit
 
 让用户通过对话完成操作，你负责 CLI 与验证；用户只在自己的浏览器处理身份保存、选择空间和确认连接。复用既有安装与连接，不从头重建环境。
 

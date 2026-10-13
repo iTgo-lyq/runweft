@@ -46,7 +46,7 @@ try {
         copyFileSync('hapi/shared/tools/tunwg/LICENSE', join(directory, 'TUNWG-LICENSE'));
         copyFileSync(source, join(directory, 'hapi-source.tar.gz'));
         copyFileSync('docs/usage.md', join(directory, 'README.md'));
-        cpSync('.agents/skills/runweft', join(directory, 'skills/runweft'), { recursive: true });
+        cpSync('.agents/skills/runweft-kit', join(directory, 'skills/runweft-kit'), { recursive: true });
         writeFileSync(join(directory, 'SOURCES.txt'), sourceInfo);
         writeFileSync(join(directory, 'package.json'), JSON.stringify({
             name, version: pkg.version, description: `Runweft and HAPI executables for ${platform.id}`, repository,
@@ -61,7 +61,7 @@ try {
     copyFileSync('scripts/npm-launcher.cjs', join(main, 'bin', 'runweft.cjs'));
     chmodSync(join(main, 'bin', 'runweft.cjs'), 0o755);
     copyFileSync('docs/usage.md', join(main, 'README.md'));
-    cpSync('.agents/skills/runweft', join(main, 'skills/runweft'), { recursive: true });
+    cpSync('.agents/skills/runweft-kit', join(main, 'skills/runweft-kit'), { recursive: true });
     writeFileSync(join(main, 'package.json'), JSON.stringify({ name: 'runweft', version: pkg.version, repository,
         description: 'One CLI for HAPI execution and Runweft collaboration', bin: { runweft: 'bin/runweft.cjs' },
         files: ['bin', 'skills', 'README.md'], engines: { node: '>=20' },
@@ -73,8 +73,8 @@ try {
         if (result.exitCode !== 0) throw new Error(`Cannot record release source: git ${args.join(' ')}`);
         return result.stdout.toString().trim();
     }
-    const skillFile = `runweft-skill-${pkg.version}.tgz`;
-    await command(['tar', '-czf', join(output, skillFile), '-C', '.agents/skills', 'runweft']);
+    const skillFile = `runweft-kit-${pkg.version}.tgz`;
+    await command(['tar', '-czf', join(output, skillFile), '-C', '.agents/skills', 'runweft-kit']);
     const skill = { tarball: skillFile, sha256: hash(join(output, skillFile)), sha512: hash(join(output, skillFile), 'sha512', 'base64') };
     writeFileSync(join(output, 'index.json'), JSON.stringify({ version: pkg.version, product: 'hub-console-v1', skill,
         source: { revision: git(['rev-parse', 'HEAD']), dirty: git(['status', '--porcelain']) !== '' },

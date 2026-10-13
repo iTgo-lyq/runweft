@@ -1,4 +1,0 @@
-interface:
-  display_name: "Runweft"
-  short_description: "通过对话安装连接 Hub、配置协作 Agent，并安全委派和维护任务"
-  default_prompt: "使用 $runweft 帮我接入指定 Hub，配置执行工具并完成第一次委派。"

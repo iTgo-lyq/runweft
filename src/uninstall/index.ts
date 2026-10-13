@@ -47,9 +47,9 @@ function connections(home: string) {
 }
 function skills(c: ResolvedConfig, installation: Installation) {
     const user = c.env.HOME || homedir();
-    const candidates = [...new Set([join(user, '.agents', 'skills', 'runweft'), join(c.env.CODEX_HOME || join(user, '.codex'), 'skills', 'runweft'),
-        join(c.env.CLAUDE_CONFIG_DIR || join(user, '.claude'), 'skills', 'runweft')].map(path => resolve(path)))];
-    const packaged = new Set(treeFiles(join(dirname(dirname(installation.executable)), 'skills', 'runweft')));
+    const candidates = [...new Set([join(user, '.agents', 'skills', 'runweft-kit'), join(c.env.CODEX_HOME || join(user, '.codex'), 'skills', 'runweft-kit'),
+        join(c.env.CLAUDE_CONFIG_DIR || join(user, '.claude'), 'skills', 'runweft-kit')].map(path => resolve(path)))];
+    const packaged = new Set(treeFiles(join(dirname(dirname(installation.executable)), 'skills', 'runweft-kit')));
     return candidates.filter(path => {
         const stat = lstatSync(path, { throwIfNoEntry: false });
         if (!stat) return false;
@@ -60,7 +60,7 @@ function skills(c: ResolvedConfig, installation: Installation) {
             const document = header && parseDocument(header[1]!);
             if (document && !document.errors.length) name = document.get('name') as string;
         } catch { /* Not a known product Skill. */ }
-        if (name !== 'runweft' || treeFiles(path).some(file => !packaged.has(file))) throw new RunweftError('uninstall_skill_unknown', '同名 Skill 目录包含未知用户内容，未删除。', `检查 ${path}，保留其中用户内容后重试。`);
+        if (name !== 'runweft-kit' || treeFiles(path).some(file => !packaged.has(file))) throw new RunweftError('uninstall_skill_unknown', '同名 Skill 目录包含未知用户内容，未删除。', `检查 ${path}，保留其中用户内容后重试。`);
         return true;
     });
 }
