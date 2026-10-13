@@ -18,7 +18,7 @@ HAPI 固定版本和协议见[执行兼容](../execution/spec.md)。构建检查
 
 包验证检查集合、版本、平台/架构、程序执行位、许可、匹配源码文件集和每个 Git blob、README、Skill 和 hash。`test:packages` 直接运行本机平台的默认 Hub/相邻 HAPI 服务；`test:install` 通过专用 registry 验证安装/重装/卸载、数据和原生 MCP 配置保留，不公开发布。模型与网页验收记录实际安装平台程序及相邻 HAPI 的 realpath/hash，不用源码 gateway 替代默认服务。
 
-普通CI共用一次checkout/依赖/工具，核心保留实际Codex配置检查；按真实Git差异选择access/storage/web/本机service，未知路径、新分支或缺少base保守全选；已有base的Git差异读取失败则报错。tag/手动候选完整执行根/Node/四组无模型验证和四平台安装及完整卸载，不按diff跳过。
+普通CI共用一次checkout/依赖/工具，核心保留实际Codex配置检查；按真实Git差异选择access/storage/web/本机service，未知路径、新分支或缺少base保守全选；已有base的Git差异读取失败则报错。正式发布完整执行根/Node/四组无模型验证和四平台安装及完整卸载，不按diff跳过。
 
 正式候选必须 `source.dirty=false`。冻结后按 `scripts/fixtures/release-inputs.mjs` 的固定包输入检查已跟踪与未跟踪变化；源码、Skill、包内使用说明、package/lock/HAPI及指定构建脚本变化即重建。仅验收脚本和未打入包的项目记录变化可保留同候选，程序源码归档仍取索引revision，后续验收提交独立记录。
 
@@ -28,13 +28,15 @@ HAPI 固定版本和协议见[执行兼容](../execution/spec.md)。构建检查
 
 五包绑定GitHub仓库 `iTgo-lyq/runweft` 的 `npm-publish.yml`，environment留空，同时允许npm publish与Allow npm dist-tag。托管runner使用Node24/npm11.21.0、id-token:write及npm audience `npm:registry.npmjs.org`，不保存长期npm token；OIDC token不打印或持久化。私有仓库支持发布，当前无自动provenance。
 
-版本入口接受规范不可变tag：稳定 `vX.Y.Z`、预发行 `vX.Y.Z-beta.N`，整数无前导零且N非负，源码版本必须匹配。main/codex普通推送不发布npm；手动release-tag留空只预演，main显式输入已有tag可恢复原源码。当前控制提交运行检查，独立checkout原tag及固定HAPI构建一次；固定packageInputs与tag必须一致。
+版本入口接受规范不可变tag：稳定 `vX.Y.Z`、预发行 `vX.Y.Z-beta.N`，整数无前导零且N非负，源码版本必须匹配。main/codex普通推送不发布npm；手动参数全部留空只预演，main显式输入已有tag可恢复原源码。当前控制提交运行检查，独立checkout原tag及固定HAPI构建一次；固定packageInputs与tag必须一致。
 
-稳定正式发布在基础检查、四平台构建/包内容及 service-package 通过后，同一 beta job 以 --tag=beta 依次上传四平台和主包；主包等待四平台公开确认。access/storage/web 从公共 npm 下载同一候选，在三个独立 Linux job 中与四平台安装并行，全部成功后才晋级。空参数预检和 X.Y.Z-beta.N 预发行构建仍在上传前完成四组，预检不上传。上传前输出原候选描述，绑定 tag/source、HAPI、完整 manifest、五包 SHA-512 和程序 SHA-256，并记录 latestBefore。已有 beta 不得倒退，上传期间 latest 须保持基线。稳定版本的 beta 是等待完整验收的公开候选；精确版本可以安装，失败不能覆盖同版本。
+稳定正式发布在基础检查、四平台构建/包内容及 service-package 通过后，同一 beta job 以 --tag=beta 依次上传四平台和主包；主包等待四平台公开确认。access/storage/web 从公共 npm 下载同一候选，按固定用例分片在独立 Linux job 中与四平台安装并行，原有用例必须恰好覆盖一次，全部成功后才晋级。空参数预检和 X.Y.Z-beta.N 预发行构建仍在上传前完成四组，预检不上传。上传前输出原候选描述，绑定 tag/source、HAPI、完整 manifest、五包 SHA-512 和程序 SHA-256，并记录 latestBefore。已有 beta 不得倒退，上传期间 latest 须保持基线。稳定版本的 beta 是等待完整验收的公开候选；精确版本可以安装，失败不能覆盖同版本。
 
-Linux x64/arm64、macOS x64/arm64四个托管job重新读取五包公共元数据，下载主包与本平台tarball并核验SHA-512，从公共npm安装精确版本到专用prefix/cache；核对Runweft/HAPI程序SHA-256，验证MCP目录、无Bun服务与信号、重装、缺依赖诊断、npm卸载保留。每个job还用原平台tarball验证8组完整卸载：Hub/双连接Runner/登记会话停止、预览与拒绝、删除失败保留及重试、Skill/MCP/数据/备份删除和其他配置/凭据/项目保留、独立包/PATH链接自删除。控制程序在第一次安装前另存整包，测试PATH不含模型客户端；会话为登记到真实HAPI的控制测试进程。稳定版 Linux x64 同时运行真实网页 DOM 精确版本安装，核对配对程序、README 和五份 Skill 的内容。工作流与晋级脚本均要求 beta、四平台安装及所需公共集成整体成功；失败、取消或非预期跳过均阻止晋级。稳定版本复查五包后先更新平台latest、最后主包latest，X.Y.Z-beta.N保持beta。部分晋级可幂等续跑，不倒退或改动外部推进的标签。
+Linux x64/arm64、macOS x64/arm64均必须完成公共安装和完整卸载，两项可在独立托管job运行，每条路径重新读取五包公共元数据，下载主包与本平台tarball并核验SHA-512。公共安装从npm安装精确版本到专用prefix/cache，核对Runweft/HAPI程序SHA-256，验证MCP目录、无Bun服务与信号、重装、缺依赖诊断、npm卸载保留。每个平台还用原平台tarball验证8组完整卸载：Hub/双连接Runner/登记会话停止、预览与拒绝、删除失败保留及重试、Skill/MCP/数据/备份删除和其他配置/凭据/项目保留、独立包/PATH链接自删除。控制程序在第一次安装前另存整包，测试PATH不含模型客户端；会话为登记到真实HAPI的控制测试进程。稳定版 Linux x64 同时运行真实网页 DOM 精确版本安装，核对配对程序、README 和五份 Skill 的内容。工作流与晋级脚本均要求 beta、四平台安装及所需公共集成整体成功；失败、取消或非预期跳过均阻止晋级。稳定版本复查五包后先更新平台latest、最后主包latest，X.Y.Z-beta.N保持beta。部分晋级可幂等续跑，不倒退或改动外部推进的标签。
 
 公共候选下载的五包元数据与主包/平台 tarball 共享十分钟预算，单请求及完整流受剩余时间限制。传播 404、408、429、5xx 和明确网络中断可重试并尊重 Retry-After；鉴权、410、地址、manifest 和摘要错误直接失败。完整 SHA-512 校验后才接纳临时下载，失败清理部分文件；确定性验收不循环重跑。
+
+手动 `verify-run-id` 可在验收分支只读复验原公开候选，与发布/恢复参数互斥。必须取得同仓库原发行run的候选描述和成功上传前证据，当前固定包输入仍一致，并复核全部公开摘要；运行全部公共集成分片、四平台双路径及稳定版网页安装，跳过构建、上传、晋级和官网部署。工作流条件与上传/晋级入口均拒绝验证模式的写操作，不将验证run当作原上传证据。
 
 工作流串行且不中途取消。集成、安装或晋级失败只重跑失败 job，复用原成功 beta 输出与 npm 原包。beta job 失败但五包全部公开时，从原 attempt 日志取原候选描述、上传及成功的上传前检查证据，不重新打包；所有已有候选恢复（含预发行）重新运行三组公共集成和四平台安装。修正后工作流可从 main 填写 release-tag 和原 source-run-id 恢复，包输入仍须等于原 tag。部分公开、未知上传、无法取得原日志直接停止，使用新版本处理；仅无公开版本且此前未开始上传可重建。
 

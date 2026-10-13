@@ -3,8 +3,8 @@
   "id": "release-validation-efficiency",
   "title": "缩短发行验收等待并保留完整门禁",
   "size": "medium",
-  "status": "active",
-  "stage": "execution",
+  "status": "completed",
+  "stage": "close",
   "branch": "codex/release-validation-efficiency",
   "confirmations": {
     "requirement": {
@@ -43,5 +43,28 @@
       "commitTitle": "release-validation-efficiency T3: finalize review and prepare 1.1.6"
     }
   },
-  "closure": {}
+  "closure": {
+    "verification": {
+      "result": "passed",
+      "at": "2026-10-13T09:15:12.330Z",
+      "summary": "整体需求/矩阵/失败边界与同候选计时已核对；iclaude三轮独立复核无未解决P0-P2。完整预检38370399338、公共只读38372185710和最新实现CI38373458796均成功；本地根264、Node64、版本/网页与文档检查通过。新版本真实发布按用户授权在合入后另记实际证据。"
+    },
+    "acceptance": {
+      "result": "accepted",
+      "at": "2026-10-13T09:15:12.412Z",
+      "summary": "按用户明确合入指令验收交付；所有实施和复核验证已通过，随后归档合入 main 并新发1.1.6测试。",
+      "source": "用户：做完和 iclaude 一起复核，验证通过后合入 main，进行正式发布测试。"
+    },
+    "specs": {
+      "result": "synced",
+      "at": "2026-10-13T09:15:12.534Z",
+      "summary": "release spec校正固定分片和四平台双路径描述，补充严格冻结原候选的只读公共验收；性能数值与实现细节保留于Change/发行记录。"
+    },
+    "archive": {
+      "result": "done",
+      "at": "2026-10-13T09:15:12.611Z",
+      "summary": "实施、同候选测量、托管预检、公共矩阵和iclaude复核均完成，按用户明确授权归档后合入 main 并另行正式发布1.1.6计时。",
+      "path": "docs/project/archive/2026-10-13-release-validation-efficiency"
+    }
+  }
 }
