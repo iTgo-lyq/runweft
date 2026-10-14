@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "id": "release-1-1-8",
+  "title": "准备 Runweft 1.1.8 正式发布",
+  "size": "small",
+  "status": "active",
+  "stage": "requirement",
+  "branch": "codex/release-1-1-8",
+  "confirmations": {},
+  "tasks": {
+    "T1": {
+      "title": "冻结版本与安装说明并验证发布准备",
+      "status": "todo"
+    }
+  },
+  "closure": {}
+}
