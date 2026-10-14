@@ -2,14 +2,14 @@
 
 Runweft 为 Codex 和 Claude Code 提供 Hub 集中配置、任务委派、本地共享/独立 worktree、远端独立 worktree，以及附件和 Git 成果回收。执行基于配套 HAPI 内置适配。用户通过对话交给 Agent 安装和操作，在 Web 维护有权使用的资源、查看本人任务。
 
-本文配套 Runweft 1.1.7。通过公共 npm 主包选择四个平台依赖；官网安装版本见 `release.json`，程序来源与验证范围以对应发行记录为准。
+本文配套 Runweft 1.1.8。通过公共 npm 主包选择四个平台依赖；官网安装版本见 `release.json`，程序来源与验证范围以对应 [GitHub Actions 发布运行](https://github.com/iTgo-lyq/runweft/actions/workflows/npm-publish.yml)为准。
 
 ## 通过 npm 安装
 
 支持 macOS arm64/x64、glibc Linux arm64/x64。安装需要 Node.js 20+ 和 npm；运行任务需要已登录的 Codex 或 Claude Code，Git 操作需要 Git 2.31+。LFS/子模块需在相关机器具备工具与对象访问条件。
 
 ```sh
-npm install -g runweft@1.1.7 --registry=https://registry.npmjs.org/ --include=optional &&
+npm install -g runweft@1.1.8 --registry=https://registry.npmjs.org/ --include=optional &&
 runweft --version
 ```
 
@@ -29,7 +29,7 @@ Claude Code 使用 `--agent claude-code`。先核对已有同名 Skill，不同�
 
 把下面这段话交给正在使用的 Agent：
 
-> 通过 npm 安装 runweft@1.1.7，从 https://github.com/iTgo-lyq/runweft-kit 安装名为 runweft-kit 的 Skill 并按其说明接入。程序安装和升级用 npm，完整卸载按 Skill 的维护说明执行。帮我连接指定 Hub；没有 Hub 时先询问是否在本机启动。保留其他 MCP 和模型配置，身份通过浏览器确认，不向我索要 token。分别登记机器和执行工具，创建代码评审 Agent，再在当前项目完成一次只读委派。
+> 通过 npm 安装 runweft@1.1.8，从 https://github.com/iTgo-lyq/runweft-kit 安装名为 runweft-kit 的 Skill 并按其说明接入。程序安装和升级用 npm，完整卸载按 Skill 的维护说明执行。帮我连接指定 Hub；没有 Hub 时先询问是否在本机启动。保留其他 MCP 和模型配置，身份通过浏览器确认，不向我索要 token。分别登记机器和执行工具，创建代码评审 Agent，再在当前项目完成一次只读委派。
 
 安装后 Skill 名为 `runweft-kit`；使用 `$runweft-kit` 可显式调用。工程内已有 `.agents/skills/runweft-kit/` 时直接复用。发现用途相同的其他名称副本时，先备份已有修改到扫描目录之外，经确认替换后仅保留新入口，避免重复加载。Skill 与 MCP 分别安装。下面是 Agent 使用的工程参考，不要求用户逐条手工执行。
 
