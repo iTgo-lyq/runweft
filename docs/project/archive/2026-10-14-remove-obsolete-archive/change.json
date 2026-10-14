@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "id": "remove-obsolete-archive",
+  "title": "删除旧工程归档并标记失效引用",
+  "size": "small",
+  "status": "completed",
+  "stage": "close",
+  "branch": "codex/remove-obsolete-archive",
+  "confirmations": {},
+  "tasks": {
+    "T1": {
+      "title": "删除旧归档并补注失效引用",
+      "status": "done",
+      "verification": "用户手动删除远端后，所有者身份按原名和仓库 ID 查询均为 404；本地旧仓库不存在；五文件已标注失效且原验收 JSON 数据不变，文档、工作流、diff 校验通过。"
+    }
+  },
+  "closure": {
+    "verification": {
+      "result": "passed",
+      "at": "2026-10-14T04:09:17.633Z",
+      "summary": "Agent 自查通过：原名和固定仓库 ID 均为 404，本地旧目录不存在，五文件失效补注完整、原验收 JSON 未改；文档和工作流校验通过。"
+    },
+    "acceptance": {
+      "result": "accepted",
+      "at": "2026-10-14T04:09:17.704Z",
+      "summary": "Agent 自验收通过：用户指定的远端与本地旧仓库均已删除，五文件已补注失效，当前两个仓库正常，Git 历史未改写。",
+      "source": "用户明确删除及补注指令；small 自验收规则"
+    },
+    "specs": {
+      "result": "not_needed",
+      "at": "2026-10-14T04:09:17.769Z",
+      "summary": "仅一次旧工程清理与历史引用补注，无产品能力或长期契约变化。"
+    },
+    "archive": {
+      "result": "done",
+      "at": "2026-10-14T04:09:17.835Z",
+      "summary": "删除已验证，历史引用已补注，保留原始 Git 历史。",
+      "path": "docs/project/archive/2026-10-14-remove-obsolete-archive"
+    }
+  }
+}
