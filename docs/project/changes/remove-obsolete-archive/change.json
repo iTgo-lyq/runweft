@@ -4,14 +4,19 @@
   "title": "删除旧工程归档并标记失效引用",
   "size": "small",
   "status": "active",
-  "stage": "requirement",
+  "stage": "execution",
   "branch": "codex/remove-obsolete-archive",
   "confirmations": {},
   "tasks": {
     "T1": {
       "title": "删除旧归档并补注失效引用",
-      "status": "todo"
+      "status": "blocked",
+      "reason": "本地删除和五文件补注已完成；GitHub API 删除返回 403，用户选择手动删除远端，等待完成后复核。"
     }
   },
-  "closure": {}
+  "closure": {},
+  "waitingFor": {
+    "kind": "dependency",
+    "summary": "等待用户在 GitHub 设置页完成已授权的旧归档仓库删除，再复核关闭与合入。"
+  }
 }

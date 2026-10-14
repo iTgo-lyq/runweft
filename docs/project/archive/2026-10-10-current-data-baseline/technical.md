@@ -11,6 +11,8 @@
 
 ## 实施
 
+> 引用已失效（2026-10-14）：下列 `/home/tiger/workspace/runweft-archive/.dev-smoke` 和旧仓库 origin 仅保留为 2026-10-10 的清理记录；旧工程归档已停用，本地旧仓库已删除，不再作为现存目录或可用远端。
+
 1. 根据目录实际归属生成固定绝对清理清单：`/home/tiger/workspace/runweft/.dev-smoke`、`/home/tiger/workspace/runweft-archive/.dev-smoke`、`/home/tiger/.runweft`，以及本次实际列出的`/tmp/runweft-*`、`/tmp/rw-collab-*`和`/tmp/rw-t6`测试目录。历史仓库origin为`github.com/iTgo-lyq/runweft-archive.git`；两仓库均无注册在清理范围中的worktree。临时目录按前缀、实际测试内容和当前UID核对，记录根inode/dev并在删除前重查；拒绝符号链接、挂载点、非白名单路径、跟踪文件和源码根，不沿符号链接递归。空的`/tmp/rw-t6-active`测试标记同时删除。
 2. 保存用户原生配置/凭据原件的内存摘要，记录目标目录占用、路径、相关PID及启动身份；不输出原件或秘密。停止时再次核对PID启动时间与路径，向目标进程发送TERM并有界等待，必要时只对相同身份的残留PID发送KILL。不使用名称通配kill或误杀独立HAPI。
 3. 扫描`/proc`的cwd、exe、特定数据路径环境变量和文件描述符。目录仍被进程使用时停止删除并定位；无占用后逐一删除清单目录。清理是用户已授权的不可逆删除，不再保留整份测试环境备份；历史验收摘要保留在已跟踪归档。
