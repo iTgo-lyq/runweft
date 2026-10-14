@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "id": "smoke-artifact-lifecycle",
+  "title": "验收临时现场与证据生命周期治理",
+  "size": "medium",
+  "status": "active",
+  "stage": "requirement",
+  "branch": "codex/smoke-artifact-lifecycle",
+  "confirmations": {},
+  "tasks": {
+    "T1": {
+      "title": "消除验收对预存父目录的依赖",
+      "status": "todo"
+    },
+    "T2": {
+      "title": "按成功与消费者边界回收验收现场",
+      "status": "todo"
+    },
+    "T3": {
+      "title": "将双宿主 Kit 安装检查迁入正式验收",
+      "status": "todo"
+    },
+    "T4": {
+      "title": "限定本轮证据输入并完成集成验证",
+      "status": "todo"
+    }
+  },
+  "closure": {},
+  "waitingFor": {
+    "kind": "confirmation",
+    "summary": "已按用户指示完成一次性历史清理和 AGENTS 提示删除；完整需求、技术方案与四步计划已准备，等待审阅确认后实施。用户要求本轮报告技术方案，未将启动指令记录为完整阶段确认。"
+  }
+}
