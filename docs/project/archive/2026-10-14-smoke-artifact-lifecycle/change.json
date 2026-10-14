@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "id": "smoke-artifact-lifecycle",
+  "title": "清理无用的 .dev-smoke 历史产物",
+  "size": "small",
+  "status": "completed",
+  "stage": "close",
+  "branch": "codex/smoke-artifact-lifecycle",
+  "confirmations": {},
+  "tasks": {
+    "T5": {
+      "title": "完成历史产物清理与临时目录提示删除",
+      "status": "done",
+      "verification": "35 项删除路径全部不存在；仅三个保留条目、占用 20480 bytes；AGENTS 提示已删；相对 main 仅 AGENTS 和清理记录。文档、工作流、diff 校验通过，删除时链接与保留边界已核对。"
+    }
+  },
+  "closure": {
+    "verification": {
+      "result": "passed",
+      "at": "2026-10-14T09:37:34.606Z",
+      "summary": "small 自查通过：35 项历史路径删除、三个例外保留、AGENTS 提示移除；仅清理及记录，无产品改造。文档、工作流、diff 和提交 hook 通过，T5 已提交推送。"
+    },
+    "acceptance": {
+      "result": "accepted",
+      "at": "2026-10-14T09:37:34.676Z",
+      "summary": "用户明确要求将当前 Change 收窄为历史清理并提交归档合码，按该范围验收。",
+      "source": "本轮用户原话：先把当前的change收敛到只清理无用 .dev-smoke 吧。先提交归档合码。"
+    },
+    "specs": {
+      "result": "not_needed",
+      "at": "2026-10-14T09:37:34.747Z",
+      "summary": "一次性开发历史产物清理与 AGENTS 提示删除，不改变产品行为、共享契约或长期架构，无需修改 Specs。"
+    },
+    "archive": {
+      "result": "done",
+      "at": "2026-10-14T09:37:34.815Z",
+      "summary": "按用户指示归档已完成的一次性清理；保留三个例外，测试与脚本重构另立任务。",
+      "path": "docs/project/archive/2026-10-14-smoke-artifact-lifecycle"
+    }
+  },
+  "rework": {
+    "at": "2026-10-14T09:36:29.449Z",
+    "reason": "用户明确收窄当前 Change，仅交付已授权的一次性清理并归档合码；未开始的测试与脚本重构另立任务。",
+    "approach": "按用户明确指令收窄为已授权的一次性清理；移除尚未开始的重构任务，保留原 id 与 Git 历史。"
+  }
+}
