@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "id": "test-workflow-redesign",
+  "title": "重构测试与工程辅助流程",
+  "size": "large",
+  "status": "active",
+  "stage": "requirement",
+  "branch": "codex/test-workflow-redesign",
+  "confirmations": {},
+  "tasks": {},
+  "closure": {}
+}
