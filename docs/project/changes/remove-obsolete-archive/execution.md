@@ -2,7 +2,7 @@
 
 ## T1 删除旧归档并补注失效引用
 
-2026-10-14 核对 GitHub 目标为 `iTgo-lyq/runweft-archive`，ID `1377135554`，私有且已归档。删除请求返回 HTTP 403；当前 GitHub CLI 凭据范围为 `gist, read:org, repo, workflow`，缺少 `delete_repo`。用户选择在 GitHub 设置页手动删除并通知 Agent，目前远端删除等待完成后复核。
+2026-10-14 核对 GitHub 目标为 `iTgo-lyq/runweft-archive`，ID `1377135554`，私有且已归档。删除请求返回 HTTP 403；当前 GitHub CLI 凭据范围为 `gist, read:org, repo, workflow`，缺少 `delete_repo`。用户选择在 GitHub 设置页手动删除。后续以所有者 `iTgo-lyq` 身份查询 `repos/iTgo-lyq/runweft-archive` 和 `repositories/1377135554`，两者均返回 HTTP 404，确认远端已删除；当前 Runweft 与 Runweft Kit 仍可正常读取。
 
 本地目标 `/home/tiger/workspace/runweft-archive` 的 origin 与远端一致，工作区干净，仅注册自身 worktree。删除前复查真实路径、设备与 inode 身份、挂载点和 `/proc` 中的 cwd/exe/fd，无占用后删除；随后确认原路径不存在。未创建备份，未改写 Git 历史。
 

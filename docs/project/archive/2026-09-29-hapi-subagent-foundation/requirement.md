@@ -109,5 +109,5 @@ Codex 和 Claude Code 作为内置执行目标，由 HAPI 管理机器路由、�
 ## 协作资源
 
 - [HAPI REST 契约](https://hapi.run/docs/api/client-contract/rest)（读取 2026-09-28）：已有消息、审批、中断与恢复入口，尚不能据此证明全部可靠轮次语义。
-- [旧 Runweft 快照（引用已失效）](https://github.com/iTgo-lyq/runweft-archive/tree/0cbfa01f522488b2ede60e47adc1117698b54748)（读取 2026-09-28；2026-10-14 旧工程归档停用）：仅保留当时的调查记录，不再作为可访问的证据来源，不继承旧功能完成状态与认证结论。
+- [旧 Runweft 快照（引用已失效）](https://github.com/iTgo-lyq/runweft-archive/tree/0cbfa01f522488b2ede60e47adc1117698b54748)（读取 2026-09-28；2026-10-14 旧仓库已删除）：仅保留当时的调查记录，不再作为可访问的证据来源，不继承旧功能完成状态与认证结论。
 - [HAPI 插件提案 #653](https://github.com/tiann/hapi/issues/653)与[实现 PR #695](https://github.com/tiann/hapi/pull/695)（读取 2026-09-28）：不采用其插件方案或作为交付依赖，证据保留在 Research。

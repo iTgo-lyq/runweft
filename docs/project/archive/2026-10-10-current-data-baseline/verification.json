@@ -32,7 +32,7 @@
       "path": "/home/tiger/workspace/runweft-archive/.dev-smoke",
       "status": "已失效",
       "date": "2026-10-14",
-      "reason": "旧工程归档已停用，本地旧仓库已删除；removedDirectories 中的原路径仅保留为 2026-10-10 的清理记录，不再代表现存目录。"
+      "reason": "GitHub 旧工程归档及本地旧仓库均已删除；removedDirectories 中的原路径仅保留为 2026-10-10 的清理记录，不再代表现存目录。"
     }
   ],
   "removedEmptyMarker": "/tmp/rw-t6-active",

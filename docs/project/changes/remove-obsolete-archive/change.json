@@ -10,13 +10,9 @@
   "tasks": {
     "T1": {
       "title": "删除旧归档并补注失效引用",
-      "status": "blocked",
-      "reason": "本地删除和五文件补注已完成；GitHub API 删除返回 403，用户选择手动删除远端，等待完成后复核。"
+      "status": "done",
+      "verification": "用户手动删除远端后，所有者身份按原名和仓库 ID 查询均为 404；本地旧仓库不存在；五文件已标注失效且原验收 JSON 数据不变，文档、工作流、diff 校验通过。"
     }
   },
-  "closure": {},
-  "waitingFor": {
-    "kind": "dependency",
-    "summary": "等待用户在 GitHub 设置页完成已授权的旧归档仓库删除，再复核关闭与合入。"
-  }
+  "closure": {}
 }

@@ -66,4 +66,4 @@
 
 - [Claude 环境变量](https://code.claude.com/docs/en/env-vars)、[Hooks](https://code.claude.com/docs/en/hooks)、[MCP](https://code.claude.com/docs/en/mcp)（读取 2026-09-29）：stdio 会话身份、角色事件与工具列表更新有公开入口，但需处理连接和原生子会话边界。
 - [Claude 会话 API](https://code.claude.com/docs/en/agent-sdk/sessions)、[Codex App Server](https://learn.chatgpt.com/docs/app-server)（读取 2026-09-29）：提供读取与恢复能力；优先经 HAPI 已有实现使用。
-- [旧工程 Gateway（引用已失效）](https://github.com/iTgo-lyq/runweft-archive/blob/0cbfa01f522488b2ede60e47adc1117698b54748/apps/runweft/src/gateway.ts)（重读 2026-09-29；2026-10-14 旧工程归档停用）：仅保留当时对交互及历史身份验证的调查记录，不再作为可访问的证据来源；不迁移执行架构。差异见 [Research](research.md)。
+- [旧工程 Gateway（引用已失效）](https://github.com/iTgo-lyq/runweft-archive/blob/0cbfa01f522488b2ede60e47adc1117698b54748/apps/runweft/src/gateway.ts)（重读 2026-09-29；2026-10-14 旧仓库已删除）：仅保留当时对交互及历史身份验证的调查记录，不再作为可访问的证据来源；不迁移执行架构。差异见 [Research](research.md)。
