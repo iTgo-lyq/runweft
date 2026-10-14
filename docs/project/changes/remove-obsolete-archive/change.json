@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "id": "remove-obsolete-archive",
+  "title": "删除旧工程归档并标记失效引用",
+  "size": "small",
+  "status": "active",
+  "stage": "requirement",
+  "branch": "codex/remove-obsolete-archive",
+  "confirmations": {},
+  "tasks": {
+    "T1": {
+      "title": "删除旧归档并补注失效引用",
+      "status": "todo"
+    }
+  },
+  "closure": {}
+}
