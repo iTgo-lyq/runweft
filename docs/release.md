@@ -71,11 +71,7 @@ bun run test:native <已安装CLI> all <前次evidence.json>
 
 四平台托管安装不代替用户 Mac 实机、Mac/arm64 模型、物理跨机/WAN 或生产 TLS 实测；同机多 Runner 不等于物理远端。规范 `X.Y.Z-beta.N` 的发布/不晋级与官网 Beta 跳过只有[本地夹具证据](project/archive/2026-10-02-npm-beta-publishing/acceptance.md)，稳定版本上传 beta 再晋级不等于已经实际发布该类预发行版本。
 
-[发布提速验收](project/archive/2026-10-13-release-throughput/acceptance.md)记录本地验证和分支预览 CI；[1.1.5 正式发行实测](releases/1.1.5.md)补充新并行四平台发布、真实官网 dispatch、故障定向恢复及实际耗时。该次 npm 晋级为 28 分 28 秒，含官网修复和恢复的完整流程为 35 分 42 秒；单次实测不保证后续公开传播与排队时间。
-
-[1.1.6 正式发行实测](releases/1.1.6.md)覆盖计时器修正、重复验收清理和实测分片后的完整正式发布：上传前阶段同口径 7:23 → 5:06，公共验收 8:30 → 2:33；本轮 npm 元数据等待 15:21，npm 晋级 25:32，含官网旧内容校验失败与定向恢复的完整时间 30:27。原发布 run 保留 failure，官网恢复 run 成功；各项优化、外部等待和失败恢复分开记录，不能将单次差值全部归因于脚本。
-
-[1.1.7 正式发行实测](releases/1.1.7.md)记录仓库公开后原 tag 的成功发布：npm 与官网全部就绪 17:19，含证据汇总 17:45；官网在第 2:05 完成并行验收，没有尾部等待。上传前 3:21、npm 上传及公开确认 10:06（其中阻塞可见性等待 8:46）、公共四平台矩阵 2:58。全部既有验收保留，两平台裁剪方案未实施；runner 环境与 npm 传播同时变化，不将全部提速归因于并行。
+[发布提速验收](project/archive/2026-10-13-release-throughput/acceptance.md)和[验收优化记录](project/archive/2026-10-13-release-validation-efficiency/execution.md)保留专项开发证据。各次正式发布的实际结果、耗时和失败恢复从 [GitHub Actions](https://github.com/iTgo-lyq/runweft/actions/workflows/npm-publish.yml) 查询，见[发布证据与排查](#发布证据与排查)。
 
 ## npm 发布与恢复
 
@@ -98,4 +94,20 @@ gh workflow run npm-publish.yml --repo iTgo-lyq/runweft --ref main \
 
 官网短暂旧摘要在每地址三分钟预算内重读，最终仍须完全匹配。官网失败只恢复官网，不重发 npm；触发或上传结果未知时先查 Actions/Pages，不盲目重发，也不用旧生产提交回退网站。已保存上传回执且静态文件未变时，使用 `gh workflow run website-pages.yml --ref main -f verify-run-id=<原官网run-id>` 只复验原部署。若 npm 最终失败，官网可能领先直到定向恢复完成，整体不能报告成功。
 
-发布 summary 汇总所有 attempt 和关联官网 run 的候选、验收、重试及 job 排队/运行时长，继承成功 job 不重复计时。时间字段或日志缺失明确标记，日志暂不可取时仅恢复 summary。Agent 复核实际证据后整理发行记录，不把 runner 运行时长推断为计费额度。
+## 发布证据与排查
+
+发布证据由 CI 自动保存在 [npm publishing 工作流](https://github.com/iTgo-lyq/runweft/actions/workflows/npm-publish.yml)的日志和 Actions Summary。按 tag 找到运行，先查看各 job 结果和 `summary` 汇总，再沿关联 run/job 链接排查官网或专项验收。发布后无需 Agent 编写版本报告，也无需额外提交；仓库不再维护 `docs/releases/`，既有报告可从 Git 历史查询。
+
+`summary` 汇总所有 attempt 和关联官网 run 的候选、验收、重试及 job 排队/运行时长，继承成功 job 不重复计时。Summary 显示运行列表与证据数量，`summary` job 日志中的 `RUNWEFT_RELEASE_SUMMARY` 是结构化摘要，逐条 `RUNWEFT_RELEASE_EVIDENCE` 包含候选描述、脱敏验收、公共读取重试和晋级结果。时间字段或日志缺失明确标记，汇总时自身未结束的时间仍为未知；日志暂不可取时仅恢复 summary，不重发 npm，也不把 runner 运行时长推断为计费额度。
+
+可通过 CLI 定位运行并读取原始 job 日志；`gh run view --log` 未显示内容时使用 REST 接口：
+
+```sh
+gh run list --repo iTgo-lyq/runweft --workflow npm-publish.yml
+gh run view <run-id> --repo iTgo-lyq/runweft
+gh api 'repos/iTgo-lyq/runweft/actions/runs/<run-id>/jobs?per_page=100' \
+  --jq '.jobs[] | select(.name == "summary") | {id, html_url}'
+gh api repos/iTgo-lyq/runweft/actions/jobs/<job-id>/logs
+```
+
+仓库 Actions 保留期在 2026-10-14 核对为 **90 天**，以 Settings → Actions → General 的实际配置为准。GitHub 会按[留存策略](https://github.blog/changelog/2026-10-01-actions-retention-now-covers-checks-runs-and-statuses/)清理过期运行、日志等数据；这些记录用于保留期内排查，不保证永久可用。需要跨保留期的专项分析时，在对应 Change 中按需记录结论与必要证据，不将每次发布的完整记录复制入库。

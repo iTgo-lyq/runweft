@@ -19,5 +19,5 @@ MODIFIED：成功的验收及时退出；失败仍有超时、强制终止与非
 
 ## 协作资源
 
-- [1.1.5 发布记录](../../../releases/1.1.5.md)，2026-10-13 读取；上次同候选时序基线。
+- [1.1.5 发布记录](https://github.com/iTgo-lyq/runweft/blob/564bef2ac2667a339c38f2fa24feb7ed3704612c/docs/releases/1.1.5.md)，2026-10-13 读取；上次同候选时序基线。
 - iclaude（本机 Claude Code 入口），2026-10-13；已进行两轮只读审计，本次再次独立复核。原始证据保留于开发环境 .dev-smoke/release-audit。
