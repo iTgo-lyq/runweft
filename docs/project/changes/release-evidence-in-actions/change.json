@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "id": "release-evidence-in-actions",
+  "title": "发布证据由 GitHub Actions 留存",
+  "size": "small",
+  "status": "active",
+  "stage": "requirement",
+  "branch": "codex/release-evidence-in-actions",
+  "confirmations": {},
+  "tasks": {
+    "T1": {
+      "title": "取消版本报告入库并明确 CI 排查入口",
+      "status": "todo"
+    }
+  },
+  "closure": {}
+}
