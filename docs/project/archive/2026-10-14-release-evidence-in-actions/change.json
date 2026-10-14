@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "id": "release-evidence-in-actions",
+  "title": "发布证据由 GitHub Actions 留存",
+  "size": "small",
+  "status": "completed",
+  "stage": "close",
+  "branch": "codex/release-evidence-in-actions",
+  "confirmations": {},
+  "tasks": {
+    "T1": {
+      "title": "取消版本报告入库并明确 CI 排查入口",
+      "status": "done",
+      "verification": "文档检查 338 文件、852 本地链接零错误；工作流校验 53 个 Change 通过；工作区及暂存差异检查通过；实际 GitHub summary 日志含 159 条证据且 missingLogs=0，固定历史引用读取成功；仅改文档并删除六份版本报告。",
+      "commitTitle": "release-evidence-in-actions T1: keep release diagnostics in Actions"
+    }
+  },
+  "closure": {
+    "verification": {
+      "result": "passed",
+      "at": "2026-10-14T07:26:24.502Z",
+      "summary": "Agent 自查完整差异：删除六份版本报告，手册改用现有 Actions 证据并明确 90 天边界；实际远端日志和固定历史链接读取成功，文档/工作流/差异检查通过，发布实现零变更。"
+    },
+    "acceptance": {
+      "result": "accepted",
+      "at": "2026-10-14T07:26:24.575Z",
+      "summary": "Agent 自验收通过：当前报告已删除，操作手册取消发布后补写提交，提供 GitHub 排查与保留期限，159 条真实 CI 证据可读取；发行 Spec 在下一关闭步骤同步。",
+      "source": "用户明确要求先解决第一个问题；SpecTrail small 自验收并归档规则。"
+    },
+    "specs": {
+      "result": "synced",
+      "at": "2026-10-14T07:26:24.833Z",
+      "summary": "发行 Spec 与已验证的 CI 实现及新留存约定对齐：Actions 日志/Summary 为排查入口，取消每次发布的仓库报告与额外提交。"
+    },
+    "archive": {
+      "result": "done",
+      "at": "2026-10-14T07:26:24.904Z",
+      "summary": "small Change 自验收通过，文档和流程校验通过，归档留存约定调整；日常发布报告已从源码树删除。",
+      "path": "docs/project/archive/2026-10-14-release-evidence-in-actions"
+    }
+  }
+}
