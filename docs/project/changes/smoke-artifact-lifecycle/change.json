@@ -1,33 +1,22 @@
 {
   "schemaVersion": 1,
   "id": "smoke-artifact-lifecycle",
-  "title": "验收临时现场与证据生命周期治理",
-  "size": "medium",
+  "title": "清理无用的 .dev-smoke 历史产物",
+  "size": "small",
   "status": "active",
   "stage": "requirement",
   "branch": "codex/smoke-artifact-lifecycle",
   "confirmations": {},
   "tasks": {
-    "T1": {
-      "title": "消除验收对预存父目录的依赖",
-      "status": "todo"
-    },
-    "T2": {
-      "title": "按成功与消费者边界回收验收现场",
-      "status": "todo"
-    },
-    "T3": {
-      "title": "将双宿主 Kit 安装检查迁入正式验收",
-      "status": "todo"
-    },
-    "T4": {
-      "title": "限定本轮证据输入并完成集成验证",
+    "T5": {
+      "title": "完成历史产物清理与临时目录提示删除",
       "status": "todo"
     }
   },
   "closure": {},
-  "waitingFor": {
-    "kind": "confirmation",
-    "summary": "用户要求先重新梳理测试分层和脚本成本；现状调查已补入 Research。原目录治理方案待重新评估方向，尚未确认完整需求、技术与计划，不进入实施。"
+  "rework": {
+    "at": "2026-10-14T09:36:29.449Z",
+    "reason": "用户明确收窄当前 Change，仅交付已授权的一次性清理并归档合码；未开始的测试与脚本重构另立任务。",
+    "approach": "按用户明确指令收窄为已授权的一次性清理；移除尚未开始的重构任务，保留原 id 与 Git 历史。"
   }
 }
