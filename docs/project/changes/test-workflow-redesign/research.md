@@ -103,7 +103,7 @@
 | 当前成员 | 决策与职责去向 |
 | --- | --- |
 | `smoke-lifecycle.ts`、`smoke-deadline.ts` | 保留必要的关闭/等待错误语义，就近保留普通辅助函数，确实跨套件复用再提取；不建设资源管理框架 |
-| `smoke-preflight.ts`、`installed-binaries.mjs`、`installed-binaries.d.mts` | 按构建与候选输入分离；构建一致性归 build，安装位置探测归 install，浏览器检查只由 web 消费 |
+| `smoke-preflight.ts`、`installed-binaries.mjs`、`installed-binaries.d.mts` | 配对程序/候选读取由固定测试和 dev:env 共用普通函数；浏览器检查只由 web 消费；preflight 不算环境启动或业务通过 |
 | `release-inputs.mjs`、`release-inputs.d.mts`、`hapi-source-archive.mjs` | 生产构建/发行共享契约，移出测试 fixtures 到平铺 scripts；保持来源和候选校验 |
 | `integration-cases.ts` | 删除旧脚本清单及为旧 shard 结构服务的断言；suite 选择使用现有测试框架，CI 范围只选择套件 |
 | `collaboration-package.mjs`、`collaboration-package.d.mts` | 删除跨入口交接格式/解析；有效的候选一致性与当前记录验证进入 native 生命周期/所属契约测试 |
@@ -112,7 +112,7 @@
 | `mcp-cut.mjs`、`mcp-probe.mjs`、`claude-observer.mjs`、`codex-catalog.ts` | 保留证明真实宿主调用/断线/发现所需的最小探针，归 native；不扩展为新的执行适配器 |
 | `mcp-install.mjs`、`mcp-install.d.mts`、`service-version-probe.mjs` | install 就近辅助，覆盖原生配置与安装服务诊断 |
 | `mcp-protocol.ts` | CLI stdio/auth 接线归 integration；协议规则归 core；不绑定资源治理长链 |
-| `native-file-smoke.ts`、`native-user-smoke.ts`、`task-results-probe.ts` | 名称虽含 native，实际无模型领域检查合入相应 integration；安装层只保留部署边界 |
+| `native-file-smoke.ts`、`native-user-smoke.ts`、`task-results-probe.ts` | 无模型业务断言归 integration；其中隔离 Hub、身份/Runner 与关闭的通用准备拆出供固定测试和 dev:env 直接调用；安装层只保留部署边界 |
 | `task-smoke.ts`、`fixture-round.ts`、`non-git-smoke-project.ts` | 实际复用的任务/当前记录/非 Git 场景准备就近保留，合并重复现场创建；不保留旧 .dev-smoke 路径假设 |
 
 `.d.mts` 是跨 Bun/Node 类型边界的一部分，不单独按数量删除；是否仍需声明由最终模块导出决定，不为少几个文件改写整个工程语言体系。
@@ -157,3 +157,18 @@
 - [HAPI 专项](../../../../scripts/smoke-hapi-session-and-shutdown.ts) 同时包含无模型停机/认证和真实 Claude 长路径两轮会话延续；[execution](../../../../scripts/smoke-execution.ts) 还有 Codex 共享宿主兄弟会话停止隔离。它们不能整包认作重复。
 - [官网恢复](../../../../website/recover.mjs) 仍按 `.dev-smoke/website-pages` 的固定路径读取日志报告；[报告汇总](../../../../scripts/report-evidence.mjs) 递归扫描目录。因此移除目录依赖须联动当前证据生产和恢复逻辑，不能只改测试输出位置。
 - [打包](../../../../scripts/package.ts) 从 scripts 复制 npm launcher 到包内 `bin/runweft.cjs`；[候选来源](../../../../scripts/fixtures/release-inputs.mjs) 含这个旧源路径。移到 src 只改变源码归属，但两个当前消费者要同步处理。
+
+## 环节与前置命令补充调查
+
+用户指出仅分目录仍无法回答“何时运行哪个入口，哪些只负责启动”。复核现有命令和函数后，对技术方案作如下补充；`dev:env` 是拟新增入口，不是当前可执行命令，也不属于上述 87 个现有文件。
+
+| 当前事实 | 设计含义 |
+| --- | --- |
+| [package.json](../../../../package.json) 的 dev 只是 `bun src/cli.ts`；[服务命令](../../../../src/service-commands.ts) 已有 start/serve/status/stop 与 runner start/stop | 产品启动能力已经存在；开发 dev 命令本身不创建隔离验收环境。新入口仅包装隔离准备和生命周期，不另写服务/runtime |
+| [使用说明](../../../usage.md) 明确首次 start 只启动 Hub，不自动建立身份/Runner；停止 Runner 也不等于停止任务 | dev:env 默认只起 Hub，--runner 才额外准备专用身份/连接；退出需确认本次任务和进程停止，不能只执行 stop 后删目录 |
+| [native-user-smoke](../../../../scripts/fixtures/native-user-smoke.ts) 已有独立 Hub、身份、机器、Runner 与 close；[task-smoke](../../../../scripts/fixtures/task-smoke.ts) 进一步绑定模型配置、Agent 与会话关闭 | 拆分通用准备与业务场景，复用前者到薄环境入口；不把 task/native 整段测试直接包装成 setup 命令 |
+| [model-homes](../../../../scripts/fixtures/model-homes.ts) 会读取来源配置，部分上层还修改副本中的 MCP 列表 | 自由启动默认使用空隔离原生目录，不能无条件运行当前模型 fixture；固定 native 的显式模型准备留在该验收路径 |
+| [发行操作](../../../release.md) 当前通过 KEEP_INSTALL 保留安装现场，后续拿 installedBinary 接着验 | 目标改为测试与环境准备各自独立：test:install 给固定结果，dev:env --candidate 给可操作环境；共用安装函数，不复用测试现场 |
+| [官网说明](../../../../website/README.md) 已有 build/serve 与 test/verify 的分离 | 保留此现成区分；serve 是预览前置，verify 是固定检查，不新增根包装器 |
+
+固定回归、交互验收与发行工作流的完整入口表见 [技术方案](technical.md#在什么环节执行什么)。后续实现时更新当前操作文档和 package 入口；本轮不把拟定参数写成已实现能力。

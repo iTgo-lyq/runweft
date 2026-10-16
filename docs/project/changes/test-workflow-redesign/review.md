@@ -78,10 +78,22 @@
 
 **修订与复核**：安装驱动用 Node，程序在 checkout 外只用候选；两种形态验证自己的部署保障，所选宿主缺失失败。五个职责交付都连同调用方切换并删除旧入口，CI 选择表同步；不单独交付空目录、兼容 alias 或没有消费者的新框架。
 
+## 用户反馈后的操作环节复核
+
+### R12 固定测试入口没有解决灵活验收的环境准备
+
+**证据/问题**：用户指出上一版仍无法明确各环节运行什么、哪些是固定测试、哪些是验收前置启动。[package.json](../../../../package.json) 的 dev 只是源码 CLI；[产品服务命令](../../../../src/service-commands.ts) 已有启动/关闭能力，但隔离 Hub/Runner 的工程准备分散在 [native-user-smoke](../../../../scripts/fixtures/native-user-smoke.ts) 等辅助里。现有安装流程使用 KEEP_INSTALL 留现场，测试成功与供后续操作混在一起。把 test:native 的 case 选择称作“灵活验收”也不准确：它仍有固定断言。
+
+**修订**：技术方案首先按实际环节列入口、前置和完成含义，再分别定义固定检查与薄环境入口。test/core、tools、integration、install、native 都是固定测试；新增 dev:env 只负责明确输入、隔离 Hub/可选 Runner、就绪和前台生命周期。--candidate 在私有位置安装后提供同样环境，不调用 test:install 留现场。默认空原生配置，不自动调模型。官网沿用自己的 serve；build/package、scope/report、publish/recover/sync 各自区分产物准备、协调和工程操作。
+
+**反例复核与取舍**：固定测试直接调用普通准备函数，不启动 dev:env 子命令；dev:env 不反向导入业务测试，不包含断言/case/seed 注册，不新建 up/down 控制协议。现有 product stop 保留原生会话，因此清理还需确认本次任务/宿主退出；未知保留现场。浏览器/CLI 操作在 ready 后由本次需求决定，准备成功只说明环境就绪。新增一个环境入口有多个实际消费者的准备逻辑为依据；不为每个场景再造启动脚本，也不将当前模型 fixture 原样包装以免默认读取凭据。
+
+**实施验证**：除固定回归外，覆盖独立启动、另一操作窗口可用、退出/中断/准备失败后的关闭，以及 ready 不生成业务通过结论。目标参数尚未实现，当前文档只在 Change 中说明，不冒充现有产品命令。
+
 ## 收敛结果与实现验证界限
 
-[技术方案](technical.md) 已吸收以上反例：三个测试目录、平铺 scripts、src launcher、单 TS 配置、两个验收入口、按 case 复验、显式证据与当前恢复闭环。舍弃全排列、跨命令现场协议、递归扫描、多层目录和预建公共框架；保留有证据的产品保障。
+[技术方案](technical.md) 已吸收以上反例：三个测试目录、平铺 scripts、src launcher、单 TS 配置、两个固定验收入口、一个独立环境启动入口、按 case 复验、显式证据与当前恢复闭环。舍弃全排列、跨命令现场协议、递归扫描、多层目录和预建公共框架；保留有证据的产品保障，并明确每个操作环节的入口与完成含义。
 
 本轮实际验证仅覆盖文档/流程一致性与清单完整性；没有执行产品测试、真实模型或新 CI 工作流，也未证明性能收益。实现阶段按技术方案的反例和同候选成本指标验收，不以本次三轮自审替代运行结果。
 
-2026-10-16 校验：`node scripts/check-docs.mjs` 检查 346 份文档、900 个本地链接，0 错误；`node scripts/check-workflow.mjs` 校验 56 个 Change 通过；`git diff --check` 通过。对当前文件清单逐项比对，87 个 scripts 文件与 55 个 test 文件在 Research 中均有去向，无漏项。此次文档交付使用实际提交 hook 再检查暂存内容。
+2026-10-16 补充操作环节后的校验：`node scripts/check-docs.mjs` 检查 346 份文档、912 个本地链接，0 错误；`node scripts/check-workflow.mjs` 校验 56 个 Change 通过；`git diff --check` 通过。对当前文件清单逐项比对，87 个 scripts 文件与 55 个 test 文件在 Research 中均有去向，无漏项。此次文档交付使用实际提交 hook 再检查暂存内容。
