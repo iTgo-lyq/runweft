@@ -2,7 +2,7 @@
 
 ## 基线与任务授权
 
-用户已授权启动独立重构任务，与 traex（`openrouter-4o` / `xhigh`）多轮共同评估，并明确不保留旧测试数据、格式与逻辑的兼容层。前置清理 Change 已归档合入 main；这是先后工作安排，不声明代码交付依赖。
+用户已授权启动独立重构任务，并明确不保留旧测试数据、格式与逻辑的兼容层。2026-10-16 用户取消 traex 参与，改由主 Agent 多轮自审，要求 launcher 放 src、减少目录与抽象。前置清理 Change 已归档合入 main；这是先后工作安排，不声明代码交付依赖。
 
 当前基线 `94f36a25776c59a87fb3d83cf4448d28411c66ec`。下述统计与 CI 实证来自前期 `76e53ef` 调查，两者产品/测试/工作流代码相同，只有清理文档和状态变化。本轮尚未执行新的产品或模型验收。
 
@@ -67,7 +67,7 @@
 剩余问题有四层：测试层级没有独立执行入口；重集成聚合了较多业务回归与专项边界；CI 范围选择及新分支基线处理偏粗；现场所有权与回收规则不一致。`.dev-smoke` 的积累是最后一层的直接结果，前面几层决定它持续生成的规模。
 
 
-## 当前脚本去向清单
+## 当前脚本去向清单（2026-10-16 收敛）
 
 以下为设计去向，不是已执行删除。名称相对 `scripts/`；一行合并列出同职责成员，并覆盖全部 87 个文件。删除长入口不等于删除其独立产品保障；替代覆盖尚未落实时不得将其记为完成。最终职责与取舍见 [Technical](technical.md)。
 
@@ -84,30 +84,30 @@
 | `smoke-install.mjs`、`smoke-uninstall.mjs`、`smoke-service.mjs` | 安装验收中的安装/卸载/服务 case；共用候选与部署函数，保留两种部署形态的独立边界 |
 | `smoke-native.ts`、`smoke-collaboration.ts`、`smoke-shared-package.ts`、`smoke-worktree-package.mjs`、`smoke-remote-package.ts`、`smoke-execution.ts` | 合并 native case 生命周期；删除交接文件协议、stdout 抓路径、多命令清理所有权与 expanded 笛卡尔全排列 |
 | `smoke-task-controls.ts`、`smoke-reconstruction.ts` | 保留两种 runtime 的真实控制/重建保障，归 native 定向 case；非模型状态分支下沉 |
-| `smoke-hapi-session-and-shutdown.ts` | 拆分 Runweft 接线与 HAPI 内部保障；前者归 integration/native，后者归独立 fork；不在覆盖未落实时删除唯一保障 |
+| `smoke-hapi-session-and-shutdown.ts` | 无模型的随包 HAPI 停机/断连/认证/重启保障归 integration，Claude 长路径两轮延续归 native；删除混合入口，不要求先改 fork/pin |
 
 ### 19 个其他顶层脚本
 
 | 当前成员 | 决策与职责去向 |
 | --- | --- |
-| `build.ts`、`build-hapi.ts`、`hapi-source.ts`、`package.ts`、`platforms.ts` | 保留构建/候选职责，归 scripts/build；共享实际公共逻辑，保留独立操作 |
-| `npm-launcher.cjs` | 随包运行的交付资产，归 packaging；安装验收覆盖行为 |
+| `build.ts`、`build-hapi.ts`、`hapi-source.ts`、`package.ts`、`platforms.ts` | 保留平铺 scripts 中的构建/候选职责；共享实际公共逻辑，保留独立操作 |
+| `npm-launcher.cjs` | 移至 src/npm-launcher.cjs；包内 bin/runweft.cjs 不变，安装验收覆盖行为 |
 | `verify-packages.mjs` | 包内容验证归安装验收，共用构建的候选读取；删除旧独立转发入口 |
-| `npm-publish.mjs`、`npm-read.mjs`、`npm-release.mjs`、`release-finish.mjs`、`release-space.mjs` | 保留发布、读取、恢复、收尾与资源保障的实际语义，归 scripts/release；聚合共同判定，避免万能命令 |
-| `check-docs.mjs`、`check-workflow.mjs`、`check-runweft-kit.mjs`、`check-npm-trust.mjs`、`ci-scope.mjs` | 保留明确检查职责，归 scripts/check；scope 在依赖准备前执行 |
-| `report-evidence.mjs` | 删除递归历史目录扫描；当前报告的显式列表汇总归 scripts/release，由 CI 直接传入 |
-| `sync-runweft-kit.sh` | 保留独立 Kit 分发流程，归 scripts/release；与官网 DOM 验证解绑 |
+| `npm-publish.mjs`、`npm-read.mjs`、`npm-release.mjs`、`release-finish.mjs`、`release-space.mjs` | 保留发布、读取、恢复、收尾与资源保障的实际语义，留在平铺 scripts；聚合共同判定，避免万能命令 |
+| `check-docs.mjs`、`check-workflow.mjs`、`check-runweft-kit.mjs`、`check-npm-trust.mjs`、`ci-scope.mjs` | 保留明确检查职责，留在平铺 scripts；scope 在依赖准备前执行 |
+| `report-evidence.mjs` | 删除递归历史目录扫描；当前报告的显式列表汇总留在平铺 scripts，由 CI 直接传入 |
+| `sync-runweft-kit.sh` | 保留独立 Kit 分发流程，留在平铺 scripts；与官网 DOM 验证解绑 |
 
 ### 32 个 fixture 文件
 
 | 当前成员 | 决策与职责去向 |
 | --- | --- |
-| `smoke-lifecycle.ts`、`smoke-deadline.ts` | 保留必要的关闭/等待错误语义，收敛进少量跨套件 support；不建设资源管理框架 |
+| `smoke-lifecycle.ts`、`smoke-deadline.ts` | 保留必要的关闭/等待错误语义，就近保留普通辅助函数，确实跨套件复用再提取；不建设资源管理框架 |
 | `smoke-preflight.ts`、`installed-binaries.mjs`、`installed-binaries.d.mts` | 按构建与候选输入分离；构建一致性归 build，安装位置探测归 install，浏览器检查只由 web 消费 |
-| `release-inputs.mjs`、`release-inputs.d.mts`、`hapi-source-archive.mjs` | 生产构建/发行共享契约，移出测试 fixtures 归 scripts/build；保持来源和候选校验 |
+| `release-inputs.mjs`、`release-inputs.d.mts`、`hapi-source-archive.mjs` | 生产构建/发行共享契约，移出测试 fixtures 到平铺 scripts；保持来源和候选校验 |
 | `integration-cases.ts` | 删除旧脚本清单及为旧 shard 结构服务的断言；suite 选择使用现有测试框架，CI 范围只选择套件 |
 | `collaboration-package.mjs`、`collaboration-package.d.mts` | 删除跨入口交接格式/解析；有效的候选一致性与当前记录验证进入 native 生命周期/所属契约测试 |
-| `hub-console-smoke.ts`、`hub-console-tasks.ts`、`hub-console-history.ts` | web 就近辅助，合并重复启动和数据准备；真实历史保持明确证据输入 |
+| `hub-console-smoke.ts`、`hub-console-tasks.ts`、`hub-console-history.ts` | web 就近辅助，合并重复启动和数据准备；真实历史页面进入 N1/N2 的现场生命周期，在最终清理前消费真实数据库/历史；普通 UI 使用当前样本 |
 | `model-homes.ts`、`codex-model.ts`、`native-host.ts`、`native-preflight.ts` | native 就近辅助，保留隔离配置和宿主关闭诊断；移除无关浏览器准备及重复跨命令检查 |
 | `mcp-cut.mjs`、`mcp-probe.mjs`、`claude-observer.mjs`、`codex-catalog.ts` | 保留证明真实宿主调用/断线/发现所需的最小探针，归 native；不扩展为新的执行适配器 |
 | `mcp-install.mjs`、`mcp-install.d.mts`、`service-version-probe.mjs` | install 就近辅助，覆盖原生配置与安装服务诊断 |
@@ -119,6 +119,41 @@
 
 ### 6 个工程测试与其他归属
 
-`npm-release.test.mjs`、`npm-publish.test.mjs`、`release-space.test.mjs`、`release-finish.test.mjs`、`skill-sync.test.mjs` 与被测 release 模块相邻；`ci-scope.test.mjs` 与 check 模块相邻。保留发布副作用、候选、失败/恢复和范围选择等可出错分支，移除只复刻旧路径、目录数量或旧报告格式的断言。根测试中测试辅助设施的回归随真实所属设施归位，不为旧框架保留兼容。
+`npm-release.test.mjs`、`npm-publish.test.mjs`、`release-space.test.mjs`、`release-finish.test.mjs`、`skill-sync.test.mjs`、`ci-scope.test.mjs` 继续留在现有 scripts/tests，不为分类搬成多个子目录。保留发布副作用、候选、失败/恢复和范围选择等可出错分支，移除只复刻旧路径、目录数量或旧报告格式的断言。根测试中测试辅助设施的回归随真实所属设施归位，不为旧框架保留兼容。
 
 官网/原型验证留在各自目录，SpecTrail 工具及其测试留在 Skill，HAPI 内部测试留在 fork。根 package 命令与工作流统一调用其明确入口，不通过根 test 自动递归发现所有子项目。
+
+## 根测试及辅助文件的去向
+
+下表覆盖当前 43 个测试文件、12 个辅助文件；是按保障划分的去向，不要求按整文件机械搬移。特别是文件名含 native 不代表调用真实模型，需看实际 fixture。core 可保留真实本机 HTTP、SQLite、小型子进程及必要 Git 操作；大量文件/恢复长链才进入专项集成。
+
+| 当前测试成员 | 去向 |
+| --- | --- |
+| `config.test.ts`、`execution.test.ts`、`proxy.test.ts` | core：配置、执行协议与错误语义、本机网关组件；共享 HAPI 类型不带入运行环境 |
+| `hub-access.test.ts`、`hub-agent-resolution.test.ts`、`hub-agents.test.ts`、`hub-resources.test.ts`、`hub-resource-dispatch.test.ts`、`hub-sockets.test.ts`、`hub.test.ts` | core：权限/治理/原子性及本机协议组件；真实 HAPI 接线另由 integration 承担 |
+| `hub-delegation.test.ts`、`hub-delegation-native.test.ts`、`hub-console.test.ts` | core 保留替身协议、任务/权限和页面接口契约；这些文件并不因名字含 native/console 就进入模型/浏览器层 |
+| `hub-repositories.test.ts`、`remote.test.ts`、`remote-tasks.test.ts`、`task-results.test.ts`、`task-workspaces.test.ts` | 规则、状态和小型真实 Git 在 core；实际传输/大量文件/工作区恢复与现有 smoke 合入 integration，删重复组合 |
+| `task-records.test.ts`、`task-rounds.test.ts`、`tasks.test.ts`、`tasks-mcp.test.ts`、`tasks-overview.test.ts` | core 的当前格式、轮次、MCP、概览和幂等保障；不将有效协议替身全部换为重型原生调用 |
+| `artifact-mcp.test.ts`、`artifacts.test.ts`、`task-files.test.ts`、`task-outputs.test.ts` | 实际 HAPI Store/ArtifactService/路由及 CLI 接线归 integration/files，能独立证明的规则留 core；与领域 smoke 合并准备和重复断言 |
+| `cli.test.ts`、`hub-connect.test.ts`、`hub-consumers.test.ts`、`hub-resource-cli.test.ts`、`mcp.test.ts`、`service-commands.test.ts`、`state.test.ts` | 编译 CLI 调用进 integration，配置/状态/协议规则留 core；删除测试内部编译，消费显式构建产物 |
+| `mcp-install.test.ts`、`uninstall.test.ts` | 配置编辑/拒绝/原子回滚规则留 core；真实宿主 catalog 和安装包/自卸载行为合入 acceptance/install，缺所选宿主不再 skip |
+| `release-inputs.test.ts` | 候选冻结/源码干净判定归 scripts/tests，复用 Node 工具测试入口，不建新的测试体系 |
+| `website-build.test.ts` | 归 website 自身验证，根 core 不再替官网启动构建 |
+| `acceptance-fixtures.test.ts`、`fixture-cleanup.test.ts`、`smoke-deadline.test.ts`、`smoke-lifecycle.test.ts` | 保留无模型的候选拒绝、关闭竞态、超时和失败清理等行为回归在 core；真实 HAPI 启动断言进 integration，删除旧交接格式/旧 smoke 入口断言 |
+| `integration-cases.test.ts` | 删除随旧清单/shard runner 消失的实现镜像；实际超时/清理保障由仍存在的行为测试承担 |
+
+| 当前辅助成员 | 去向 |
+| --- | --- |
+| `compiled-cli.ts`、`preload.ts` | 消费者切到显式构建后删除，同时取消 bunfig 的全局编译清理 preload |
+| `helpers.ts`、`fixture-cleanup.ts` | 收敛为现有小型公共辅助；保留确实不同的创建/回收语义，移除固定 .dev-smoke 根；不新增 support 目录 |
+| `hub-resources-fixture.ts`、`hub-delegation-fixture.ts`、`native-fixture.ts`、`task-native-fixture.ts`、`hub-workspace-fixture.ts`、`remote-fixture.ts`、`remote-native-fixture.ts`、`workspaces-fixture.ts` | 随实际使用的 core/integration 文件就近保留普通组件替身和数据准备；共用部分按真实消费者提取，删除长链重复的环境搭建，不造全局 fixture 注册中心 |
+
+## 2026-10-16 定向复核新增事实
+
+本轮重新读取源码，并复算文件数/行数，与上面的 87 个 scripts 文件、43 个根测试及 12 个辅助统计一致；没有执行模型或产品回归。三轮方案修订详见 [Review](review.md)。
+
+- [compiled-cli](../../../../test/compiled-cli.ts) 已共享一次编译，而 [开发工作流](../../../../.github/workflows/checks.yml) 后续还跑 build；优化对象是两阶段重复，不是每文件重复编译。根 [tsconfig](../../../../tsconfig.json) 已是单项目，隔离运行成本不要求再拆多个项目。
+- [原生历史页面](../../../../scripts/fixtures/hub-console-history.ts) 消费真实数据库、历史与身份现场；[shared 消费者](../../../../scripts/smoke-shared-package.ts) 先验历史页面再重启 Runner。新设计保持这些实质边界，不能把一个结果摘要当作完整可重建现场。
+- [HAPI 专项](../../../../scripts/smoke-hapi-session-and-shutdown.ts) 同时包含无模型停机/认证和真实 Claude 长路径两轮会话延续；[execution](../../../../scripts/smoke-execution.ts) 还有 Codex 共享宿主兄弟会话停止隔离。它们不能整包认作重复。
+- [官网恢复](../../../../website/recover.mjs) 仍按 `.dev-smoke/website-pages` 的固定路径读取日志报告；[报告汇总](../../../../scripts/report-evidence.mjs) 递归扫描目录。因此移除目录依赖须联动当前证据生产和恢复逻辑，不能只改测试输出位置。
+- [打包](../../../../scripts/package.ts) 从 scripts 复制 npm launcher 到包内 `bin/runweft.cjs`；[候选来源](../../../../scripts/fixtures/release-inputs.mjs) 含这个旧源路径。移到 src 只改变源码归属，但两个当前消费者要同步处理。

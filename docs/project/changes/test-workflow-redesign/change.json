@@ -8,9 +8,5 @@
   "branch": "codex/test-workflow-redesign",
   "confirmations": {},
   "tasks": {},
-  "closure": {},
-  "waitingFor": {
-    "kind": "dependency",
-    "summary": "指定 traex openrouter-4o/xhigh 的两种只读评审调用长时间未返回实质意见，已停止；待该服务可用或用户明确选择替代模型后完成多轮评估。技术草稿已准备，尚未进入实施。"
-  }
+  "closure": {}
 }
