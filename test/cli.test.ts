@@ -31,13 +31,3 @@ test('CLI produces machine-readable success and actionable failure without secre
     writeFileSync(join(home, 'config.yaml'), 'server: [invalid');
     expect(JSON.parse(cli(binary, home, 'config', 'path').stdout).path).toBe(join(home, 'config.yaml'));
 });
-
-test('resource CLI requires an explicit Hub connection', async () => {
-    const binary = await compiledCli(), home = fixture('resource-cli', cleanupOwner.resources);
-    for (const group of ['machine', 'runtime', 'agent', 'repository']) {
-        const result = cli(binary, home, group, 'list');
-        expect(result.status).toBe(1);
-        expect(JSON.parse(result.stderr).error.code).toBe('hub_connection_required');
-        expect(result.stdout).toBe('');
-    }
-});

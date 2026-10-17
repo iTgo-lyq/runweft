@@ -1,7 +1,6 @@
 import { afterEach, expect, test } from 'bun:test';
 import { hubDelegationFixture } from './hub-delegation-fixture';
 import { until } from './helpers';
-import { parseReport } from '../src/tasks/reports';
 
 const cleanups: (() => Promise<void> | void)[] = [];
 afterEach(async () => { for (const cleanup of cleanups.splice(0).reverse()) await cleanup(); });
@@ -145,11 +144,6 @@ test('Claude rejects steer; permissions and targeted interruption affect only th
     const cancelled = await until(() => h.post('read', { id: first.agent_id }), value => value.status === 'interrupted');
     expect(cancelled.inputs[0].observation).toMatchObject({ phase: 'interrupted', source: 'control' }); expect(h.calls.interrupt).toBe(1);
     expect(cancelled.stop).toBe('stopped');
-});
-
-test('report format is optional and malformed output never becomes a false execution failure', () => {
-    expect(parseReport('normal text')).toBeUndefined(); expect(parseReport('```runweft-report\n{broken}\n```')).toBeUndefined();
-    expect(parseReport('```runweft-report\n{"summary":"ok","changes":[],"tests":["one"],"remaining":"none"}\n```')).toEqual({ summary: 'ok', changes: '', tests: 'one', remaining: 'none' });
 });
 
 test('Claude report pagination does not return a second unbounded copy through native facts', async () => {

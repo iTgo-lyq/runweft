@@ -14,8 +14,7 @@ import { ArtifactService } from '../hapi/hub/src/artifacts/service';
 import { createArtifactRoutes } from '../hapi/hub/src/web/routes/artifacts';
 import { createAuthMiddleware, type WebAppEnv } from '../hapi/hub/src/web/middleware/auth';
 import { ArtifactClient } from '../src/artifacts/client';
-import { HapiClient, hapiEnvironment, fetchResponse } from '../src/hapi';
-import { loadConfig } from '../src/config';
+import { HapiClient } from '../src/hapi';
 
 const cleanup: Array<() => Promise<void>> = [];
 afterEach(async () => { for (const close of cleanup.splice(0)) await close(); });
@@ -59,22 +58,6 @@ async function fixture() {
         loseResponse: () => { loseUploadResponse = true; }, uploads: () => uploads };
 }
 describe('artifact client and CLI', () => {
-    test('a non-JSON proxy 413 explains body limits instead of reporting a JSON parse failure', async () => {
-        const server = Bun.serve({ port: 0, hostname: '127.0.0.1', fetch: () => new Response('<html>too large</html>', { status: 413 }) });
-        try { await expect(fetchResponse(`http://127.0.0.1:${server.port}/content`)).rejects.toMatchObject({ code: 'request_too_large', status: 413,
-            hint: expect.stringContaining('代理') }); }
-        finally { await server.stop(true); }
-    });
-    test('server configuration controls hosted limits without overriding a connected remote Hub', async () => {
-        const { root, home } = await fixture();
-        await writeFile(join(home, 'config.yaml'), 'server:\n  artifacts:\n    maxFileMiB: 3\n    namespaceQuotaGiB: 2\n');
-        const config = loadConfig(home, { HAPI_ARTIFACT_MAX_FILE_BYTES: 'unrelated-inherited-value' });
-        const hosted = hapiEnvironment(config, { home: join(root, 'hosted'), url: 'http://localhost:3210', port: 3211 });
-        expect(hosted.HAPI_ARTIFACT_MAX_FILE_BYTES).toBe(String(3 * 1024 * 1024));
-        expect(hosted.HAPI_ARTIFACT_NAMESPACE_QUOTA_BYTES).toBe(String(2 * 1024 * 1024 * 1024));
-        const connected = hapiEnvironment(config, { home: join(root, 'client'), url: 'http://localhost:3210' });
-        expect(connected.HAPI_ARTIFACT_MAX_FILE_BYTES).toBeUndefined();
-    });
     test('publishes, queries and downloads through HTTP; protects existing files and references', async () => {
         const { root, cli, service } = await fixture();
         const source = join(root, '需求 brief.txt'), target = join(root, 'download.txt'), requestId = randomUUID();
@@ -129,16 +112,5 @@ describe('artifact client and CLI', () => {
         await writeFile(source, 'changed');
         await expect(client.upload(source, requestId)).rejects.toMatchObject({ code: 'artifact_request_conflict' });
         expect(uploads()).toBe(1);
-    });
-    test('handles empty files and rejects a directory without reserving an object', async () => {
-        const { root, client } = await fixture();
-        const source = join(root, 'empty'), target = join(root, 'empty-copy'); await writeFile(source, '');
-        const empty = await client.upload(source, randomUUID());
-        await client.download(empty.id, target); expect((await readFile(target)).length).toBe(0);
-        await expect(client.upload(root, randomUUID())).rejects.toMatchObject({ code: 'artifact_not_file' });
-        const pipe = join(root, 'named-pipe');
-        expect(Bun.spawnSync(['mkfifo', pipe]).exitCode).toBe(0);
-        await expect(client.upload(pipe, randomUUID())).rejects.toMatchObject({ code: 'artifact_not_file' });
-        expect((await client.list()).artifacts).toHaveLength(1);
     });
 });

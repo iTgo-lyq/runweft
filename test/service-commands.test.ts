@@ -5,7 +5,6 @@ import { spawn } from 'node:child_process';
 import { chmodSync, existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fixture } from './helpers';
-import { requireRunweft } from '../src/services';
 import { browserAddress } from '../src/service-commands';
 
 const cleanupOwner = fixtureCleanup([]), cleanups = cleanupOwner.resources;
@@ -49,13 +48,6 @@ if (process.argv[2] === 'wait') {
         expect(() => process.kill(nativePid, 0)).toThrow();
     } finally { child.kill('SIGKILL'); await ended; }
 }, 10_000);
-
-test('a plain HAPI or unrelated Hub produces an actionable deployment diagnosis', async () => {
-    const server = Bun.serve({ hostname: '127.0.0.1', port: 0, fetch: () => Response.json({ error: 'Unauthorized' }, { status: 401 }) });
-    try {
-        await expect(requireRunweft(`http://127.0.0.1:${server.port}`)).rejects.toMatchObject({ code: 'runweft_unavailable' });
-    } finally { await server.stop(true); }
-});
 
 test('open uses public Hub entry and never puts a credential in browser arguments', async () => {
     const server = Bun.serve({ hostname: '127.0.0.1', port: 0, fetch: () => Response.json({ service: 'runweft', protocolVersion: 1 }) });

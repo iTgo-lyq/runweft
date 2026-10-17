@@ -11,7 +11,6 @@ import { IdentityConnection } from '../src/hub/connect/client';
 import { connectionOrigin } from '../src/hub/connect/types';
 import { MachineConnection } from '../src/hub/resources/connection';
 import { HubResourceClient } from '../src/hub/resources/client';
-import { fixture } from './helpers';
 import { hubResourceFixture } from './hub-resources-fixture';
 
 const cleanupOwner = fixtureCleanup([]), cleanups = cleanupOwner.resources;
@@ -36,15 +35,6 @@ async function cli(home: string, url: string, args: string[]) {
     const [exit, stdout, stderr] = await Promise.all([child.exited, new Response(child.stdout).text(), new Response(child.stderr).text()]);
     return { exit, stdout, stderr, result: stdout.trim() ? JSON.parse(stdout) : undefined, error: stderr.trim() ? JSON.parse(stderr).error : undefined };
 }
-
-test('fresh connection diagnostics distinguish an unselected Hub from an insecure origin', () => {
-    const home = fixture('unselected-hub', cleanups);
-    try { new IdentityConnection(home, undefined as unknown as string); throw new Error('expected missing Hub rejection'); }
-    catch (error: any) { expect(error.code).toBe('hub_connection_required'); expect(error.hint).toContain('hub --url'); }
-    try { new IdentityConnection(home, 'http://remote.example'); throw new Error('expected insecure Hub rejection'); }
-    catch (error: any) { expect(error.code).toBe('hub_connect_https_required'); }
-    expect(existsSync(join(home, 'connections'))).toBe(false);
-});
 
 test('compiled CLI begins once, confirms encrypted identity and space, saves 0600 files and uses connection without printing credentials', async () => {
     const h = await hubResourceFixture(cleanups), home = join(h.home, 'client'), c = new IdentityConnection(home, h.url);

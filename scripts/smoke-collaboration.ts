@@ -20,14 +20,10 @@ const longWait = process.env.RUNWEFT_SMOKE_LONG_WAIT === '1';
 const remote = process.env.RUNWEFT_SMOKE_REMOTE === '1';
 // Two remote rounds include model-driven approvals and fetches; this bounds the whole host, not an MCP request.
 const hostTimeoutMs = remote ? 900_000 : 420_000;
-const controls = process.env.RUNWEFT_SMOKE_CONTROLS === '1';
-const disconnectRequested = process.env.RUNWEFT_SMOKE_DISCONNECT === '1';
 const worktree = remote || process.env.RUNWEFT_SMOKE_WORKSPACE === 'worktree';
 const retryFinish = process.env.RUNWEFT_SMOKE_RETRY_FINISH === '1';
-assert(!controls || selected, 'Control acceptance selects one explicit combination');
-assert(!controls || !worktree, 'Shared controls and independent workspace acceptance are separate cases');
 assert(!retryFinish || (selected && worktree), 'Finish repair selects one worktree combination');
-assert(!remote || (!controls && !retryFinish), 'Remote matrix uses the existing separate native control/finish-repair evidence');
+assert(!remote || !retryFinish, 'Remote matrix uses the existing separate native control/finish-repair evidence');
 const cases = (['local', 'hub'] as const).filter(mode => !remote || mode === 'hub').flatMap(mode => (['codex', 'claude'] as const).flatMap(host => (['codex', 'claude'] as const).map(flavor => ({ mode, host, flavor, id: `${mode}-${host}-${flavor}` }))));
 assert(!selected || cases.some(item => item.id === selected), 'RUNWEFT_SMOKE_CASE must name a mode-host-runtime combination');
 mkdirSync('.dev-smoke', { recursive: true });
@@ -44,7 +40,7 @@ function quote(value: string) { return `'${value.replaceAll("'", "'\\''")}'`; }
 const wrapper = join(root, 'claude-observer');
 function nativeConfig(args: string[]) { assert.equal(spawnSync('codex', ['mcp', ...args], { env, stdio: 'pipe' }).status, 0); }
 const evidence: { [key: string]: any; cases: any[]; cleanupErrors: string[] } = {
-    kind: 'collaboration-current', ownedRoot, root, evidenceDir, executable, candidate: { binaries, hapiRevision: pkg.hapi.revision, entry: 'compiled CLI + compiled serve + actual HAPI/Runner' }, selected, controls, worktree, remote, retryFinish, startedAt: new Date().toISOString(), success: false, cases: [], cleanupErrors: [],
+    kind: 'collaboration-current', ownedRoot, root, evidenceDir, executable, candidate: { binaries, hapiRevision: pkg.hapi.revision, entry: 'compiled CLI + compiled serve + actual HAPI/Runner' }, selected, worktree, remote, retryFinish, startedAt: new Date().toISOString(), success: false, cases: [], cleanupErrors: [],
 };
 const save = () => writeFileSync(join(evidenceDir, 'evidence.json'), JSON.stringify(evidence, (key, value) => key === 'message' && typeof value === 'string' ? { omitted: true, length: value.length } : value, 2), { mode: 0o600 });
 let hapi: HapiHttp | undefined, constructorCleanupUncertain = false;
@@ -70,15 +66,13 @@ async function until<T>(read: () => Promise<T> | T, check: (value: T) => boolean
     throw new Error(`Timed out: ${label}`);
 }
 
-// Only private test registrations gain the environment override and transport proxy.
+// Only private test registrations gain the environment override.
 // Native Codex otherwise drops GIT_CEILING_DIRECTORIES from MCP's inherited env.
-function instrument(home: string, cutLog: string, disconnect: boolean) {
+function instrument(home: string) {
     const installed = cli(home, ['mcp', 'install', '--client', 'all']);
     if (installed.backupPath) { assert(installed.backupPath.startsWith(join(home, 'backups', 'mcp') + '/')); mcpBackups.add(installed.backupPath); }
     assert(cli(home, ['mcp', 'check', '--client', 'all']).ok);
-    const patch = (entry: any) => ({ ...entry,
-        ...(disconnect ? { command: process.execPath, args: [resolve('scripts/fixtures/mcp-cut.mjs'), entry.command, ...entry.args] } : {}),
-        env: { ...entry.env, GIT_CEILING_DIRECTORIES: root, ...(disconnect ? { RUNWEFT_SMOKE_CUT_LOG: cutLog } : {}) } });
+    const patch = (entry: any) => ({ ...entry, env: { ...entry.env, GIT_CEILING_DIRECTORIES: root } });
     const before = readFileSync(codexPath, 'utf8'), config = Bun.TOML.parse(before) as any;
     writeFileSync(codexPath, replaceCodexMcp(before, codexMcpDefinition(patch(config.mcp_servers.runweft)), true));
     const claude = JSON.parse(readFileSync(claudePath, 'utf8')); claude.mcpServers.runweft = patch(claude.mcpServers.runweft);
@@ -143,11 +137,7 @@ async function runCase(spec: typeof cases[number], home: string) {
     }
     const definition = join(root, `${id}-agent.json`); writeFileSync(definition, JSON.stringify({ name: id, repositoryId, runtimeId: targetRunner.runtimes[flavor].id }));
     const agent = cli(home, ['agent', 'create', '--request-id', crypto.randomUUID(), '--file', definition], cwd).agent;
-    const cutLog = join(root, `${id}-cut.jsonl`);
-    // Transport-cut acceptance is an explicit separate probe, not a third round on every main case.
-    const disconnect = process.env.RUNWEFT_SMOKE_DISCONNECT === '1';
-    assert(!disconnect || (!worktree && !!selected), 'Disconnect probe requires one explicit shared case');
-    instrument(home, cutLog, disconnect);
+    instrument(home);
     if (!worktree) assert.notEqual(spawnSync('git', ['-C', cwd, 'rev-parse', '--show-toplevel'], { env, stdio: 'pipe' }).status, 0);
     const memoryBoundary = flavor === 'claude' && worktree ? ' MEMORY 标记仅保留在当前原生会话上下文，不使用持久记忆；不查询、创建、读取或写入 cwd 外任何 persistent memory 目录或文件，不创建 claude-home 或 memory 文件。' : '';
     const helper = join(root, `${id}-child-boundary.mjs`), proof = join(root, `${id}-child-boundary.json`);
@@ -166,10 +156,6 @@ console.log("CHILD_BOUNDARY_OK: spawn/send both denied; proof saved by acceptanc
         : `这是专用非 Git 共享目录验收。在当前目录只调用一次 keep_probe 的 probe_report，然后把文件 ${file} 的完整内容写成 ${marker} 加一个换行。记住 ${memory}，不要将此记忆标记写入任何文件。不要调用其他子代理。最终简短报告 SHARED_DONE。`) + (filesCase && !remote ? ' 读取本轮 input.txt 附件，在报告中原样包含附件文本。' : '');
     const nextMessage = (remote ? '这是第二轮远端任务：只列必要本轮文件，只允许对子任务 prepared cwd 内只读目录列表，不写入或重定向，不探索父工程或外部目录。回忆上一轮要求记住且不写入文件的 MEMORY_ 标记。读取本轮新的 input.txt 附件，将 round2.txt 写成附件全文加换行，将 round2.bin 写为附件原文重复 1024 次（UTF-8，不加换行）。不修改其他文件、不提交、不委派。报告完整附件文本、原记忆标记和 RESUME_DONE；最终结构化 runweft-report 的 summary 必须原样包含 RESUME_DONE、上一轮原 MEMORY 标记及本轮 input.txt 附件全文。' + memoryBoundary
         : '这是下一轮纯报告任务：回忆上一轮明确要求记住、但不写入文件的标记，原样输出该标记和 RESUME_DONE。不修改文件。' + memoryBoundary) + (filesCase && !remote ? ' 可读取本轮新的 input.txt 附件并在报告原样包含文本；不改动任何工程文件。' : '');
-    const controlSteps = `${flavor === 'codex'
-        ? '4. send_input(mode=next,message="先运行 sleep 30，再回复 SLOW_DONE，不修改文件、不委派。")。read_agent 直到该轮 inputs[0].observation.phase=accepted；然后恰好一次 send_input(mode=steer,round_id=该活跃轮次,message="本轮追加：最终报告必须包含 MCP_STEER_OK。")。wait 到 completed 后 read_agent 读取这轮报告。'
-        : '4. 用第二轮 round_id 调用一次 send_input(mode=steer,message="验证不支持 steer")；预期返回 steer_unsupported。不要重试或改成其他任务。'}
-5. send_input(mode=next,message="运行 sleep 60，再回复 INTERRUPT_LATE，不修改文件、不委派。")。read_agent 直到这个新 round 的 inputs[0].observation.phase=accepted，然后立即 interrupt_agent(id,round_id=这个新轮次)。wait 到 interrupted，最后 read_agent 读取中断事实，再回复 CONTROLS_DONE。不要批准这轮 sleep，也不要自动再派生或重跑。`;
     const prompt = `你是专用 Runweft 协作验收主会话。只使用 runweft MCP 工具，不用 shell、内置 subagent 或其他 MCP。按顺序完成：
 1. list_agent_definitions，${filesCase ? 'upload_artifact 上传 input-first.txt，' : ''}调用一次 spawn_agent，agent_type=${agent.id}${worktree ? '，workspace_mode=worktree，base_ref=runweft-smoke-base' : ''}${filesCase ? '，inputs=[{artifactId:刚上传对象ID,name:"input.txt"}]，outputs=[{name:"result.txt",relativePath:"result.txt"}]' : ''}，message 必须原样照抄、不得补充上下文：${JSON.stringify(firstMessage)}。
 2. wait 等待该任务，每次 timeout_ms=30000；needs_attention 时 read_agent，respond_to_permission 只批准执行上述 child-boundary helper、只读其精确路径 ${helper} 或证明文件 ${proof}，以及${remote ? '读取本轮输入、asset.bin、子模块、工程指令/skill；在子任务 cwd 内生成约定的 result.txt/result.bin/round2.txt/round2.bin（可用 Python 或 shell），并只读这些本轮约定输出文件验证结果；仅对子任务 prepared cwd 内做只读目录列表，不得父工程或外部目录、不得写入或重定向；只读 Git 查询及 keep_probe/project_probe 调用' : worktree ? '读取本轮 input.txt 附件、对子任务 cwd 内 result.txt 的读写、工程指令/skill 读取、当前目录的只读 Git 检查以及 keep_probe/project_probe 调用' : `对 ${file} 的读写、当前 cwd 查询或 keep_probe 调用`}，其余停止并报告。${retryFinish ? '本夹具首轮 Git hook 会失败一次：read_agent 确认 git.status=needs_attention 且 native_status 为 completed 后，调用恰好一次 retry_finish，id/round_id 使用该首轮，然后继续 wait，不能重发任务或再次 spawn。' : ''}直到 completed，必须 read_agent 读取第一轮结果。
@@ -177,9 +163,9 @@ ${remote ? '2.1 首轮调用一次 fetch_result，接受后继续；测试控制
 3. ${filesCase ? 'upload_artifact 上传 input-next.txt。' : ''}调用一次 send_input，mode=next${filesCase ? `，inputs=[{artifactId:新上传对象ID,name:"input.txt"}]，outputs=[{name:"${remote ? 'round2.txt' : 'result.txt'}",relativePath:"${remote ? 'round2.txt' : 'result.txt'}"}]` : ''}，message 必须完整照抄这段，不能附加记忆标记或其他上下文：${JSON.stringify(nextMessage)}。继续 wait 到 completed，再 read_agent，确认包含 RESUME_DONE。
 ${remote ? '3.1 第二轮调用一次 fetch_result；再用 download_artifact 将该轮 read_agent 的 artifacts.manifest 首项 artifactId 下载为 downloaded.txt，overwrite=true。不要合码。' : ''}
 ${longWait ? '3.2 用第二轮 read_agent 的 revision 调用一次 wait，timeout_ms=65000，after_revision={该 agent_id:该 revision}。必须等到 timed_out=true。' : ''}
-${controls ? controlSteps : disconnect ? '4. 再 send_input 一次，mode=next，message="DISCONNECT_PROBE：请只运行 sleep 20，结束后回复 DISCONNECT_DONE，不修改文件、不委派。"。收到接受结果后调用 wait。该工具连接会被测试程序主动断开；出现传输错误后不要重试、不要再次派生、不要取消任务，直接结束回复 DISCONNECTED。后续由独立测试操作者收尾。' : '4. 完成后回复 MATRIX_DONE。'}
+4. 完成后回复 MATRIX_DONE。
 只允许一次 spawn_agent。next 只排上述轮次，不修改 agent 定义。`;
-    const item: any = { ...spec, cwd, file, marker, memory, contextMarker, skillMarker, inputMarkers, baseline, parentState, disconnect, controls, worktree, retryFinish, clientHome: home, targetHome: remote ? targetHome : home, sourceMachineId: sourceRunner.machineId, targetMachineId: targetRunner.machineId, repositoryId, agentId: agent.id, calls: [], inventories: {}, approvals: [], phases: [{ phase: 'host_start', at: Date.now() }] }; evidence.cases.push(item);
+    const item: any = { ...spec, cwd, file, marker, memory, contextMarker, skillMarker, inputMarkers, baseline, parentState, worktree, retryFinish, clientHome: home, targetHome: remote ? targetHome : home, sourceMachineId: sourceRunner.machineId, targetMachineId: targetRunner.machineId, repositoryId, agentId: agent.id, calls: [], inventories: {}, approvals: [], phases: [{ phase: 'host_start', at: Date.now() }] }; evidence.cases.push(item);
     const calls = new Map<string, any>(), roundFacts = new Map<string, any>();
     const args = host === 'codex' ? ['exec', '--json', '--skip-git-repo-check', prompt]
         : ['-p', '--output-format', 'stream-json', '--verbose', '--tools', '', '--allowedTools', 'mcp__runweft__*', '--max-turns', remote ? '60' : '40', prompt];
@@ -237,12 +223,6 @@ ${controls ? controlSteps : disconnect ? '4. 再 send_input 一次，mode=next�
                 }
             } catch (error) { item.inventoryLastError = String(error); }
         }
-        // After the intentional transport cut, an explicit test operator can approve this one sleep.
-        if (disconnect && existsSync(cutLog)) for (const [requestId, request] of Object.entries(current.permissions ?? {}) as [string, any][]) {
-            assert.equal(request.tool, 'Bash'); assert.equal(request.arguments.command.trim(), 'sleep 20');
-            cli(home, ['task', 'permission', current.agent_id, '--round', current.round_id, '--request', requestId, '--decision', 'approved'], cwd);
-            item.approvals.push(requestId);
-        }
     }
     try {
         while (!done) { await Promise.race([exited, Bun.sleep(750)]); await observe(); }
@@ -260,9 +240,9 @@ ${controls ? controlSteps : disconnect ? '4. 再 send_input 一次，mode=next�
             assert.equal(spawned[0].args.workspace_mode, 'worktree'); assert.equal(spawned[0].args.base_ref, 'runweft-smoke-base');
             assert.equal(spawned[0].args.message, firstMessage, 'Parent rewrote the project-context probe');
         }
-        const sends = item.calls.filter((call: any) => call.name === 'send_input'); assert.equal(sends.length, controls ? flavor === 'codex' ? 4 : 3 : disconnect ? 2 : 1);
+        const sends = item.calls.filter((call: any) => call.name === 'send_input'); assert.equal(sends.length, 1);
         assert.equal(sends[0].args.message, nextMessage, 'Parent rewrote the memory-only continuation');
-        const current = await until(async () => { await observe(); return cli(home, ['task', 'show', accepted.agent_id], cwd); }, value => value.status === (controls ? 'interrupted' : 'completed'), `${id} finish`);
+        const current = await until(async () => { await observe(); return cli(home, ['task', 'show', accepted.agent_id], cwd); }, value => value.status === 'completed', `${id} finish`);
         if (remote) for (const round of current.rounds) await until(() => cli(home, ['task', 'show', accepted.agent_id, '--round', round.id], cwd), value => { if (value.code.fetch?.status === 'failed') throw new Error('Fixed result fetch failed'); return value.code.fetch?.status === 'available'; }, 'fixed round fetch');
         const first = cli(home, ['task', 'show', accepted.agent_id, '--round', accepted.round_id], cwd);
         const next = sends[0].results.find((value: any) => value.accepted), second = cli(home, ['task', 'show', accepted.agent_id, '--round', next.round_id], cwd);
@@ -286,7 +266,7 @@ ${controls ? controlSteps : disconnect ? '4. 再 send_input 一次，mode=next�
         assert.equal(readFileSync(resultFile, 'utf8'), marker + '\n');
         if (!worktree) assert.deepEqual(readdirSync(cwd), ['result.txt']);
         assert.equal(statSync(resultFile).mtimeMs, item.firstMtime, 'Pure-report continuation changed the result file');
-        for (const detail of controls ? [first, second] : [first, second, current]) {
+        for (const detail of [first, second, current]) {
             assert.equal(detail.status, 'completed'); assert.equal(detail.stop, 'stopped'); assert.equal(detail.finish, 'complete'); assert.equal(detail.cwd, worktree ? first.cwd : cwd);
             if (worktree) { assert.equal(detail.git.status, 'sealed'); assert.equal(detail.git.base_commit, baseline); }
             assert.equal(detail.inputs.length, 1); assert.equal(detail.inputs[0].observation.phase, 'completed'); assert.equal(detail.inputs[0].observation.source, 'native');
@@ -361,34 +341,9 @@ ${controls ? controlSteps : disconnect ? '4. 再 send_input 一次，mode=next�
             assert(existsSync(first.cwd)); assert.equal(current.git.retained, 'retained');
             item.integration = { before: parentState!.head, after: git('rev-parse', 'HEAD'), resultRef };
         }
-        if (controls) {
-            const interrupts = item.calls.filter((call: any) => call.name === 'interrupt_agent'); assert.equal(interrupts.length, 1);
-            assert.equal(interrupts[0].args.round_id, current.round_id);
-            assert.equal(current.stop, 'stopped'); assert.equal(current.finish, 'complete');
-            assert.equal(current.inputs[0].observation.phase, 'interrupted');
-            const before = reads.find((value: any) => value.round_id === current.round_id && value.inputs?.[0]?.observation?.phase === 'accepted'); assert(before);
-            assert.equal(before.inputs[0].observation.executionId, current.inputs[0].observation.executionId);
-            assert(reads.some((value: any) => value.round_id === current.round_id && value.status === 'interrupted'));
-            await until(() => alive(current.host_pid), value => !value, 'interrupted host exits', 10_000);
-            const steer = sends.find((call: any) => call.args.mode === 'steer'); assert(steer);
-            if (flavor === 'codex') {
-                const acceptance = steer.results.find((value: any) => value.accepted); assert(acceptance);
-                const detail = cli(home, ['task', 'show', accepted.agent_id, '--round', acceptance.round_id], cwd); item.steered = detail;
-                assert.equal(detail.status, 'completed'); assert.equal(detail.inputs.length, 2); assert(detail.report.text.includes('MCP_STEER_OK'));
-                assert.equal(detail.inputs.find((input: any) => input.id === acceptance.input_id).steer.status, 'steered');
-                assert(detail.inputs.every((input: any) => input.observation?.phase === 'completed'));
-            } else assert(steer.results.some((value: any) => value.error?.code === 'steer_unsupported'));
-        }
-        if (disconnect) {
-            const cut = lines(cutLog); assert.equal(cut.length, 1); item.cut = cut[0];
-            assert.equal(cut[0].agentId, accepted.agent_id); assert.equal(cut[0].roundId, current.round_id);
-            assert(current.report.text.includes('DISCONNECT_DONE')); assert.equal(current.rounds.length, 3);
-            assert(current.updated_at > cut[0].at, 'Task was already complete before transport closed');
-            assert(!alive(cut[0].pid)); assert(!alive(cut[0].childPid));
-        }
         if (remote) item.rounds = current.rounds.map((record: any) => ({ roundId: record.id, view: cli(home, ['task', 'show', accepted.agent_id, '--round', record.id], cwd) }));
         item.success = true;
-        console.log(`PASS ${id}: ${remote ? 'remote automatic preparation, two-round inputs/outputs and Git/LFS edits, native MCP fetch, offline CLI recovery and explicit merge' : worktree ? 'prepared Git edit, project context/skill/MCP, sealed results and operator cherry-pick' : 'shared edit'}, memory resume${remote ? '' : ', pure report'}, MCP filtering, native stop${disconnect ? ', real host transport cut' : controls ? ', MCP steer/interrupt' : ''}${retryFinish ? ', native MCP retry_finish' : ''}`);
+        console.log(`PASS ${id}: ${remote ? 'remote automatic preparation, two-round inputs/outputs and Git/LFS edits, native MCP fetch, offline CLI recovery and explicit merge' : worktree ? 'prepared Git edit, project context/skill/MCP, sealed results and operator cherry-pick' : 'shared edit'}, memory resume${remote ? '' : ', pure report'}, MCP filtering, native stop${retryFinish ? ', native MCP retry_finish' : ''}`);
     } finally {
         item.calls = [...calls.values()]; item.roundFacts = [...roundFacts.values()]; item.hostTimedOut = watchdog.state.timedOut;
         if (!done) { child.kill('SIGTERM'); await exited; } watchdog.close();
@@ -401,7 +356,7 @@ try {
     models = modelHomes(root, env); fixture = await nativeUserSmoke(root, executable, env);
     nativeClaude = models.nativeClaude ?? undefined; assert(nativeClaude && Bun.which('codex'));
     Object.assign(evidence, { serverHome: fixture.server, url: fixture.url, ownerId: fixture.user.identity.id, spaceId: fixture.space, codexModel: models.codexModel,
-        nativeHomes: { codex: env.CODEX_HOME, claude: env.CLAUDE_CONFIG_DIR }, cleanupOwner: remote ? 'remote-package' : worktree && selected ? 'worktree-package' : selected && !controls && !disconnectRequested ? 'shared-package' : 'producer' });
+        nativeHomes: { codex: env.CODEX_HOME, claude: env.CLAUDE_CONFIG_DIR }, cleanupOwner: remote ? 'remote-package' : worktree && selected ? 'worktree-package' : selected ? 'shared-package' : 'producer' });
 writeFileSync(wrapper, `#!/bin/sh\nexec ${quote(process.execPath)} ${quote(resolve('scripts/fixtures/claude-observer.mjs'))} "$@"\n`, { mode: 0o700 });
 Object.assign(env, { GIT_CEILING_DIRECTORIES: root,
     HAPI_CLAUDE_PATH: wrapper, RUNWEFT_SMOKE_CLAUDE: nativeClaude, RUNWEFT_SMOKE_CLAUDE_LOG: claudeLog });
@@ -425,7 +380,7 @@ prefs.mcpServers = { keep_probe: { type: 'stdio', ...probe } }; writeFileSync(cl
 finally {
     const attempt = async (action: () => void | Promise<void>) => { try { await action(); } catch (error) { evidence.cleanupErrors.push(String(error)); } };
     let safe = !constructorCleanupUncertain;
-    for (const log of [probeLog, claudeLog, ...evidence.cases.flatMap(item => [join(root, `${item.id}-cut.jsonl`), join(root, `${item.id}-project-probe.jsonl`)])]) try {
+    for (const log of [probeLog, claudeLog, ...evidence.cases.flatMap(item => [join(root, `${item.id}-project-probe.jsonl`)])]) try {
         for (const value of lines(log)) for (const pid of [value.pid, value.childPid]) if (pid) pids.add(pid);
     } catch (error) { safe = false; evidence.cleanupErrors.push(String(error)); }
     evidence.runners = [];
@@ -441,7 +396,7 @@ finally {
     if (models) { try { await models.waitHosts(pids); } catch (error) { safe = false; evidence.cleanupErrors.push(String(error)); } await attempt(() => models!.verify()); if (safe) await attempt(() => models!.remove()); }
     if (safe) for (const path of mcpBackups) await attempt(() => rmSync(path, { force: true }));
     evidence.mcpBackups = [...mcpBackups];
-    const handoff = evidence.success && !evidence.cleanupErrors.length && (remote || (!!selected && !controls && !disconnectRequested));
+    const handoff = evidence.success && !evidence.cleanupErrors.length && (remote || !!selected);
     evidence.handoff = handoff;
     if (safe && !handoff) {
         for (const runner of evidence.runners) for (const file of [runner.paths.identityConnection, runner.paths.machineConnection, runner.paths.pendingConnection, join(runner.paths.hapiClient, 'settings.json')]) await attempt(() => rmSync(file, { force: true }));

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { packageNames, publishCandidate, checkManifest, releaseChannel, compareReleaseVersions, assertReleaseForward, npmPublishArgs } from '../npm-publish.mjs';
+import { packageNames, publishCandidate, checkManifest, npmPublishArgs } from '../npm-publish.mjs';
 import { checkNpmTrust } from '../check-npm-trust.mjs';
 
 const index = { version: '1.2.0', source: { revision: 'a'.repeat(40) } };
@@ -104,30 +104,6 @@ test('an OIDC rejection reports only the package and status, never a response to
             { ok: false, status: 403, json: async () => { throw new Error('Never read rejected response'); } },
     ), /npm OIDC HTTP 403/);
     assert.equal(calls, 2);
-});
-
-test('release channels reject noncanonical stable and Beta versions', () => {
-    assert.equal(releaseChannel('1.2.0'), 'latest');
-    assert.equal(releaseChannel('0.0.0-beta.0'), 'beta');
-    for (const bad of ['1.2.0-beta', '1.2.0-beta.-1', '1.2.0-beta.01', '01.2.0', '1.2.0-rc.1', '1.2.0-alpha.1', '1.2.0+build', '1.2.0-beta.1.extra']) {
-        assert.throws(() => releaseChannel(bad), /canonical integers/);
-    }
-});
-
-test('version ordering compares numeric Beta sequences and stable precedence', () => {
-    for (const [next, previous] of [['1.2.0-beta.10', '1.2.0-beta.2'], ['1.2.0', '1.2.0-beta.999'],
-        ['1.2.1-beta.0', '1.2.0'], ['2.0.0-beta.0', '1.99.99'], ['1.2.123456789012345678901', '1.2.123456789012345678900']]) {
-        assert.equal(compareReleaseVersions(next, previous), 1);
-        assert.equal(compareReleaseVersions(previous, next), -1);
-        assert.equal(compareReleaseVersions(next, next), 0);
-    }
-});
-
-test('Beta advances beyond both beta and latest; stable ignores a newer beta channel', () => {
-    assert.throws(() => assertReleaseForward('1.1.1-beta.9', { latest: '1.1.1' }, 'runweft'), /latest/);
-    assert.throws(() => assertReleaseForward('1.2.0-beta.2', { latest: '1.1.1', beta: '1.2.0-beta.10' }, 'runweft'), /beta/);
-    assertReleaseForward('1.2.0-beta.10', { latest: '1.1.1', beta: '1.2.0-beta.10' }, 'runweft');
-    assertReleaseForward('1.2.0', { latest: '1.1.1', beta: '2.0.0-beta.1' }, 'runweft');
 });
 
 const config = { userConfig: 'isolated/npmrc', globalConfig: 'isolated/global', cache: 'isolated/cache' };

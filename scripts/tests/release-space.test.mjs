@@ -4,15 +4,7 @@ import { spawn } from 'node:child_process';
 import { once } from 'node:events';
 import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { ensureReleaseSpace, measureReleaseSpace, releaseReserveBytes } from '../release-space.mjs';
-
-test('space reserve avoids cleanup when sufficient and stops as soon as the reserve is restored', () => {
-    const clean = [];
-    assert.deepEqual(ensureReleaseSpace({ available: () => releaseReserveBytes, clean: path => clean.push(path) }).cleaned, []);
-    let free = releaseReserveBytes - 1;
-    const result = ensureReleaseSpace({ available: () => free, clean: path => { clean.push(path); free += 1024; } });
-    assert.deepEqual(clean, ['/usr/share/dotnet']); assert(result.afterBytes >= releaseReserveBytes);
-});
+import { ensureReleaseSpace, measureReleaseSpace } from '../release-space.mjs';
 
 test('insufficient space and cleanup failure stop the release rather than continuing optimistically', () => {
     const clean = [];

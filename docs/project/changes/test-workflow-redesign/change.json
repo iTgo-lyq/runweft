@@ -32,7 +32,9 @@
     },
     "T2": {
       "title": "删除已确认的低价值测试和不可达分支",
-      "status": "todo"
+      "status": "done",
+      "verification": "删除 24 个低价值测试块、不可达控制/断连分支及 mcp-cut；定向 Bun 40/40、Node 工具 50/50、类型/文档/流程/diff 检查通过。",
+      "commitTitle": "test-workflow-redesign T2: remove low-value tests and unreachable probes"
     },
     "T3": {
       "title": "用真实接线试点 Bun 集成与关闭语义",

@@ -1,17 +1,6 @@
 import { expect, test } from 'bun:test';
 import { resolve } from 'node:path';
-import { withSmokeDeadline } from '../scripts/fixtures/smoke-deadline';
 import { stopSmokeProcess } from '../scripts/fixtures/smoke-lifecycle';
-
-test('smoke deadlines preserve rejection and run the timeout action only on expiry', async () => {
-    const failure = new Error('original failure');
-    let expired = false;
-    await expect(withSmokeDeadline(Promise.reject(failure), 20, () => { expired = true; return 1; })).rejects.toBe(failure);
-    await Bun.sleep(30);
-    expect(expired).toBe(false);
-    expect(await withSmokeDeadline(new Promise<boolean>(() => {}), 10, () => false)).toBe(false);
-    await expect(withSmokeDeadline(new Promise<void>(() => {}), 10, () => { throw new Error('deadline'); })).rejects.toThrow('deadline');
-});
 
 test('successful smoke shutdown and failed operations leave no deadline keeping the process alive', async () => {
     const program = `

@@ -23,16 +23,6 @@ function refuse(root: string, path: string, code: string) {
         expect(files(root)).toEqual(before);
     }
 }
-test('fresh state has only the current schema and reopens without changing stored identities', () => {
-    const { root, path } = location(); const db = openState(path);
-    expect(db.query('PRAGMA user_version').get()).toEqual({ user_version: STATE_SCHEMA_VERSION });
-    expect(db.query('PRAGMA journal_mode').get()).toEqual({ journal_mode: 'wal' });
-    expect(db.query("SELECT name FROM sqlite_schema WHERE name IN ('machine_registrations', 'runtime_registrations')").all()).toEqual([]);
-    db.query('INSERT INTO hub_users VALUES (?, ?, ?, ?)').run('owner', 'Owner', 'digest', 1); db.close();
-    expect(statSync(path).mode & 0o777).toBe(0o600);
-    const reopened = openState(path); expect(reopened.query('SELECT id, tokenDigest FROM hub_users').get()).toEqual({ id: 'owner', tokenDigest: 'digest' }); reopened.close();
-    expect(readdirSync(root).filter(name => name.startsWith('.state-create-'))).toEqual([]);
-});
 test('format validation accepts freshly closed empty WAL databases without changing original files', () => {
     for (const kind of ['hub', 'client'] as const) {
         const { root, path } = location(), db = openState(path, kind);
@@ -90,16 +80,6 @@ test('service start, serve and restart reject an unsupported database before cha
         const [code, out, err] = await Promise.all([child.exited, new Response(child.stdout).text(), new Response(child.stderr).text()]);
         expect(code).toBe(1); expect(out + err).toContain('state_format_unsupported'); expect(files(root)).toEqual(before);
     }
-    }
-});
-
-test('config accepts the documented current shorthand but rejects explicit other versions without rewriting', () => {
-    const { root } = location(), path = join(root, 'config.yaml');
-    writeFileSync(path, 'mode: local\n'); const shorthand = files(root);
-    expect(loadConfig(root, {}).config.schemaVersion).toBe(1); expect(files(root)).toEqual(shorthand);
-    for (const version of [0, 2]) {
-        writeFileSync(path, `schemaVersion: ${version}\nmode: local\n`); const before = files(root);
-        expect(() => loadConfig(root, {})).toThrow('schemaVersion'); expect(files(root)).toEqual(before);
     }
 });
 

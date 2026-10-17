@@ -7,7 +7,6 @@ import { agentSnapshot } from '../src/hub/delegation/context';
 import type { AgentSnapshot, Parent, TaskBundle } from '../src/tasks/types';
 import type { TaskOverview } from '../src/tasks/query';
 import type { RuntimeRecord } from '../src/hub/resources/types';
-import { pendingCode } from '../src/tasks/results';
 
 const cleanups: (() => Promise<void> | void)[] = [];
 afterEach(async () => { for (const cleanup of cleanups.splice(0).reverse()) await cleanup(); });
@@ -108,42 +107,6 @@ test('overview distinguishes unknown, absent execution, stopped sessions and del
     expect(all.items.slice(0, 2).map(item => item.id)).toContain(delivered.agent_id);
 });
 
-test('remote code publication, recovery refs and released results stay separate from execution', async () => {
-    const h = await overviewFixture({ fetch: () => undefined });
-    await h.register(); const remote = await h.register();
-    const task = seed(h, remote, parent('/source', 'parent', h.machineId), { worktree: true, edit: b => {
-        completed(b);
-        const round = b.rounds[0];
-        round.code = { ...pendingCode(), status: 'needs_attention', error: { code: 'upload_failed', message: 'Upload failed' } };
-        round.git = { status: 'sealed', attempted: true, result: { environmentId: b.task.id, roundId: round.id, baseCommit: 'a'.repeat(40), startHead: 'a'.repeat(40),
-            resultHead: 'b'.repeat(40), resultRef: `refs/hapi/workspaces/${b.task.id}/rounds/${round.id}`, partial: false, fileCount: 1, paths: ['PRIVATE FILE'], sealedAt: 1 } };
-    } });
-    expect((await get(h)).items[0]).toMatchObject({ status: 'completed', code: { status: 'needs_attention', storage: 'center', next: { action: 'retry_result' }, error: { code: 'upload_failed' } } });
-    const bundle = h.gateway.delegation.coordinator.store.require(h.namespace, task.agent_id), round = bundle.rounds[0];
-    round.code!.status = 'available'; delete round.code!.error;
-    h.gateway.delegation.coordinator.store.save(bundle.task, round, []);
-    expect((await get(h)).items[0].code).toMatchObject({ status: 'available', ref: null, next: { action: 'fetch_result' } });
-    round.resultFetch = { id: crypto.randomUUID(), requestId: crypto.randomUUID(), status: 'available', ref: `refs/hapi/results/${bundle.task.id}/${round.id}` };
-    h.gateway.delegation.coordinator.store.save(bundle.task, round, []);
-    expect((await get(h)).items[0].code).toMatchObject({ ref: round.resultFetch.ref, next: { action: 'review' } });
-    round.codeRetention = { state: 'released', createdAt: 1, completedAt: 2, discardPending: false, unpublished: false, references: [], copies: [] };
-    h.gateway.delegation.coordinator.store.save(bundle.task, round, []);
-    const released = (await get(h)).items[0];
-    expect(released).toMatchObject({ status: 'completed', code: { status: 'released', ref: null, next: null } });
-    expect(JSON.stringify(released)).not.toContain('PRIVATE FILE');
-});
-
-test('overview selects the earliest unfinished round instead of a queued continuation', async () => {
-    const h = await overviewFixture({ fetch: () => undefined });
-    const runtime = await h.register(), owner = parent('/p', 'parent', runtime.machineId);
-    const accepted = seed(h, runtime, owner, { edit: b => { b.rounds[0].phase = 'running'; } });
-    h.gateway.delegation.coordinator.store.append(h.namespace, owner, crypto.randomUUID(), { id: accepted.agent_id, message: 'PRIVATE QUEUED', mode: 'next' }, h.gateway.delegation.coordinator.store.require(h.namespace, accepted.agent_id).task.agent);
-    expect((await get(h)).items[0]).toMatchObject({ round: 1, phase: 'running', round_id: accepted.round_id });
-    const bundle = h.gateway.delegation.coordinator.store.require(h.namespace, accepted.agent_id); completed(bundle);
-    h.gateway.delegation.coordinator.store.save(bundle.task, bundle.rounds[0], bundle.inputs.filter(input => input.roundId === bundle.rounds[0].id));
-    expect((await get(h)).items[0]).toMatchObject({ round: 2, phase: 'queued' });
-});
-
 test('offline/unknown inventory preserves execution facts and query never probes or writes state', async () => {
     let failInventory = false;
     const h = await overviewFixture({ fetch: req => failInventory && new URL(req.url).pathname === '/api/machines' ? new Response('', { status: 503 }) : undefined });
@@ -190,19 +153,6 @@ test('inventory timeout is bounded and retains persisted task data', async () =>
         expect(result.inventory.available).toBe(false); expect(result.total).toBe(1); expect(result.items[0].machine.online).toBeNull();
     } finally { release?.(); }
 }, 6000);
-
-test('thousand-task query returns a bounded page without execution or state writes', async () => {
-    const h = await overviewFixture({ fetch: () => undefined });
-    const runtime = await h.register();
-    for (let i = 0; i < 1000; i++) seed(h, runtime, parent(`/p/${i % 10}`, `parent-${i}`));
-    h.nativeCalls.length = 0;
-    const started = performance.now(), all = await get(h, '?limit=100');
-    const elapsed = performance.now() - started;
-    expect(all.total).toBe(1000); expect(all.pages).toBe(10); expect(all.items.length).toBe(100);
-    expect(elapsed).toBeLessThan(5000);
-    expect(h.nativeCalls.every(call => call.method === 'GET' && ['/health', '/api/machines'].includes(call.path))).toBe(true);
-    console.info(`Task overview: 1000 tasks, page of 100, ${elapsed.toFixed(1)}ms`);
-}, 15_000);
 
 test('inventory failure after membership withdrawal never becomes a successful read degradation', async () => {
     let entered!: () => void, release!: () => void, hang = false;

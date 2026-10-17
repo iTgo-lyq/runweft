@@ -10,23 +10,6 @@ import { createIdentityToken } from '../src/hub/store';
 const cleanups: (() => void | Promise<void>)[] = [];
 afterEach(async () => { for (const cleanup of cleanups.splice(0).reverse()) await cleanup(); });
 
-test('space permissions describe allowed roles, last owner protection and invitations without exposing secrets', async () => {
-    const fixture = await hubResourceFixture(cleanups), space = fixture.a.personalSpace.id;
-    const owner = fixture.hub.permissions(fixture.a.identity.id, space);
-    expect(owner).toMatchObject({ rename: true, inviteRoles: ['member', 'admin'], leave: false });
-    expect(owner.members[fixture.a.identity.id]).toEqual({ roles: ['owner'], remove: false });
-    expect(owner.members[fixture.b.identity.id]).toEqual({ roles: ['member', 'admin', 'owner'], remove: true });
-    const admin = fixture.hub.permissions(fixture.b.identity.id, space);
-    expect(admin).toMatchObject({ rename: true, inviteRoles: ['member'], leave: true });
-    expect(admin.members[fixture.a.identity.id]).toEqual({ roles: [], remove: false });
-    const invitation = fixture.hub.invite(fixture.a.identity.id, space, 'admin');
-    expect(fixture.hub.permissions(fixture.b.identity.id, space).invitations[invitation.invitation.id]).toEqual({ revoke: false });
-    const response = await fetch(`${fixture.url}/api/runweft/hub/spaces/${space}/permissions`, { headers: { authorization: `Bearer ${fixture.a.token}` } });
-    expect(response.status).toBe(200);
-    expect(JSON.stringify(await response.json())).not.toContain(invitation.token);
-    expect(() => fixture.hub.permissions(fixture.c.identity.id, space)).toThrow();
-});
-
 test('native browser reauthentication preserves exact JWT scope and lifetime, refusing credential substitution', async () => {
     const fixture = await hubResourceFixture(cleanups), space = fixture.a.personalSpace.id;
     const token = await fixture.auth(fixture.a.token, space);

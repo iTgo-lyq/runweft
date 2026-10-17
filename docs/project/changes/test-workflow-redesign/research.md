@@ -109,7 +109,7 @@
 | `collaboration-package.mjs`、`collaboration-package.d.mts` | 删除跨入口交接格式/解析；有效的候选一致性与当前记录验证进入 native 生命周期/所属契约测试；关闭后凭据会删除，旧格式不保证独立重跑后半段 |
 | `hub-console-smoke.ts`、`hub-console-tasks.ts`、`hub-console-history.ts` | web 只留主要用户路径和真实权限接线，删除展示字段/角色按钮排列；真实历史页面消费精简后的 N1/N5 现场，普通 UI 使用当前样本 |
 | `model-homes.ts`、`codex-model.ts`、`native-host.ts`、`native-preflight.ts` | native 就近辅助，保留隔离配置和宿主关闭诊断；移除无关浏览器准备及重复跨命令检查 |
-| `mcp-cut.mjs`、`mcp-probe.mjs`、`claude-observer.mjs`、`codex-catalog.ts` | 保留证明真实宿主调用/断线/发现所需的最小探针，归 native；不扩展为新的执行适配器 |
+| `mcp-probe.mjs`、`claude-observer.mjs`、`codex-catalog.ts` | 保留证明真实宿主调用/发现所需的最小探针，归 native；`mcp-cut.mjs` 随第五轮确认的不可达 DISCONNECT 分支删除，不扩展为新的执行适配器 |
 | `mcp-install.mjs`、`mcp-install.d.mts`、`service-version-probe.mjs` | install 就近辅助，覆盖原生配置与安装服务诊断 |
 | `mcp-protocol.ts` | CLI stdio/auth 接线归 integration；协议规则归 core；不绑定资源治理长链 |
 | `native-file-smoke.ts`、`native-user-smoke.ts`、`task-results-probe.ts` | 无模型业务断言归 integration；其中隔离 Hub、身份/Runner 与关闭的通用准备拆出供固定测试和 dev:env 直接调用；安装层只保留部署边界 |

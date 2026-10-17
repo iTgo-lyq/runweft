@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { readFileSync } from 'node:fs';
 import { parse } from 'yaml';
-import { assertReleaseResults, collectReleaseEvidence, dispatchWebsite, jobTiming, selectWebsiteRelease, websiteRunName } from '../release-finish.mjs';
+import { assertReleaseResults, collectReleaseEvidence, dispatchWebsite, selectWebsiteRelease, websiteRunName } from '../release-finish.mjs';
 import { packageNames } from '../npm-publish.mjs';
 
 const env = { GITHUB_REPOSITORY: 'owner/repo', GH_TOKEN: 'fixture-token', GITHUB_RUN_ID: '10', GITHUB_RUN_ATTEMPT: '2' };
@@ -56,25 +56,6 @@ test('unknown dispatch, mismatched run, failure and timeout never resend or repo
         assert.equal(posts, 1); assert(!records.some(item => item.status === 'success'));
     }
     assert.throws(() => websiteRunName('1.2.0-beta.1', '10', '2'));
-});
-
-test('summary retains original attempts and derives actual queue/runtime without inventing unknown times', async () => {
-    const started = '2026-10-12T10:00:02Z', completed = '2026-10-12T10:00:05Z';
-    const job = { id: 1, name: 'beta', status: 'completed', conclusion: 'success', created_at: '2026-10-12T10:00:00Z',
-        started_at: started, completed_at: completed, labels: ['ubuntu-24.04'] };
-    assert.equal(jobTiming(job, 1).queuedMs, 2000); assert.equal(jobTiming(job, 1).runningMs, 3000);
-    const result = await collectReleaseEvidence({ ...env, WEBSITE_RUN_ID: '20' }, {
-        request: async url => {
-            if (url.endsWith('/actions/runs/10')) return Response.json({ id: 10, run_attempt: 2, path: '.github/workflows/npm-publish.yml' });
-            if (url.endsWith('/actions/runs/20')) return Response.json({ id: 20, run_attempt: 1, path: run.path });
-            const id = url.includes('/runs/20/') ? 3 : url.includes('/attempts/2/') ? 2 : 1;
-            return Response.json({ total_count: 1, jobs: [{ ...job, id, ...(id === 2 ? { name: 'summary', status: 'in_progress', completed_at: null } : {}) }] });
-        }, readLog: async () => 'unrelated log\nRUNWEFT_PUBLIC_READ={"name":"runweft:tarball","attempt":2,"elapsedMs":5,"success":true}\n',
-    });
-    assert.equal(result.runs.length, 2); assert.equal(result.runs[0].jobs.length, 2);
-    assert.equal(result.runnerMs['ubuntu-24.04'], 6000);
-    assert.deepEqual(result.unknownJobTimes, [2]); assert.equal(result.records.length, 2);
-    assert.equal(jobTiming({ ...job, created_at: undefined }, 1).queuedMs, null);
 });
 
 test('website starts independently while final summary joins all release gates and read-only recovery cannot upload', () => {
@@ -159,22 +140,6 @@ test('summary skips intentionally skipped jobs and marks unavailable started-job
         reads++; if (reads === 4) assert.equal(404, 200); return 'RUNWEFT_PUBLIC_READ={"success":true}';
     } });
     assert.deepEqual(recovered.missingLogs, []); assert.equal(recovered.records.length, 1);
-});
-
-test('failed-only reruns do not count retained jobs with new GitHub IDs twice', async () => {
-    let logs = 0;
-    const result = await collectReleaseEvidence(env, {
-        request: async url => {
-            if (url.endsWith('/actions/runs/10')) return Response.json({ id: 10, run_attempt: 2, path: '.github/workflows/npm-publish.yml' });
-            const replay = url.includes('/attempts/2/');
-            return Response.json({ total_count: 1, jobs: [{ id: replay ? 2 : 1, name: 'beta', labels: ['linux'],
-                status: 'completed', conclusion: 'success', created_at: replay ? '2026-10-12T10:10:00Z' : '2026-10-12T10:00:00Z',
-                started_at: '2026-10-12T10:00:01Z', completed_at: '2026-10-12T10:00:04Z' }] });
-        }, readLog: async () => { logs++; return ''; },
-    });
-    assert.equal(result.runnerMs.linux, 3000); assert.equal(logs, 1);
-    assert.equal(result.runs[0].jobs[1].reusedFromJobId, 1);
-    assert.deepEqual(result.unknownJobTimes, []);
 });
 
 test('summary includes failed website runs from every release attempt before a successful retry', async () => {

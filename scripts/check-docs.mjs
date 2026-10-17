@@ -2,7 +2,7 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, extname, relative, resolve } from 'node:path';
 
-// Current docs validate files and headings; archives validate local file targets only.
+// Current docs validate files and headings; archive links may reference their archived Git tree.
 const root = process.cwd();
 const documents = [...new Set(execFileSync('git', ['ls-files', '-z', '--cached', '--others', '--exclude-standard', '--', '*.md'], { encoding: 'utf8' }).split('\0'))]
     .filter(file => file && !/^(\.agents\/skills\/spec-trail\/|hapi\/)/.test(file) && existsSync(file));
@@ -32,6 +32,15 @@ function anchors(file) {
 }
 let checked = 0;
 const errors = [];
+const archiveRevisions = new Map();
+function existedAtArchive(document, target) {
+    if (!archiveRevisions.has(document)) archiveRevisions.set(document,
+        execFileSync('git', ['log', '--no-renames', '--diff-filter=A', '-1', '--format=%H', '--', document], { encoding: 'utf8' }).trim());
+    const revision = archiveRevisions.get(document);
+    if (!revision) return false;
+    try { execFileSync('git', ['cat-file', '-e', `${revision}:${relative(root, target)}`], { stdio: 'ignore' }); return true; }
+    catch { return false; }
+}
 for (const document of documents.sort()) {
     const body = withoutFences(readFileSync(document, 'utf8'));
     const archived = document.startsWith('docs/project/archive/');
@@ -42,9 +51,9 @@ for (const document of documents.sort()) {
         const target = path ? resolve(dirname(document), decodeURIComponent(path)) : resolve(document);
         const line = body.slice(0, match.index).split('\n').length;
         checked++;
-        if (!existsSync(target)) errors.push(`${document}:${line}: missing file ${href}`);
+        if (relative(root, target).startsWith('..')) errors.push(`${document}:${line}: local link leaves repository ${href}`);
+        else if (!existsSync(target) && !(archived && existedAtArchive(document, target))) errors.push(`${document}:${line}: missing file ${href}`);
         else if (!archived && fragment && extname(target) === '.md' && !anchors(target).has(decodeURIComponent(fragment))) errors.push(`${document}:${line}: missing heading ${href}`);
-        else if (relative(root, target).startsWith('..')) errors.push(`${document}:${line}: local link leaves repository ${href}`);
     }
 }
 for (const error of errors) console.error(error);
