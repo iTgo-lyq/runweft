@@ -4,7 +4,7 @@
   "title": "重构测试与工程辅助流程",
   "size": "large",
   "status": "active",
-  "stage": "close",
+  "stage": "execution",
   "branch": "codex/test-workflow-redesign",
   "confirmations": {
     "requirement": {
@@ -101,17 +101,16 @@
       "status": "done",
       "verification": "范围 Node 3/3、报告/超时 Bun 3/3、实际 rename 后失败清理探针、类型/文档/流程/diff 通过；独立隔离评审复核 04ee54d..adee9a5，R26–R28 均解决，无新实质问题，见 review.md。",
       "commitTitle": "test-workflow-redesign T13: finish review fixes and tolerate a single content newline"
+    },
+    "T14": {
+      "title": "修复外部验收发现的 CI、生命周期、冻结绑定与证据偏差",
+      "status": "doing"
     }
   },
-  "closure": {
-    "verification": {
-      "result": "passed",
-      "at": "2026-10-17T04:11:00.532Z",
-      "summary": "13 项任务均已验证并提交推送。最终 core 8、integration 247、工程/官网 Node 71、HAPI 31、四平台双布局安装、浏览器/原型和真实模型八项通过，显式模型集合校验通过；完整/定向 CI 成功，净减 2225 行，手册实走与失败定向复验完成。独立上下文隔离 subagent 覆盖 28ab4a2 起完整差异及验收，复核实现至 c26cc91、最终证据至 ff71d2d；R26–R28 已解决，无实质遗漏或虚报。细节见 execution.md/review.md，尚待人工验收。"
-    }
-  },
-  "waitingFor": {
-    "kind": "confirmation",
-    "summary": "实施、独立评审与整体验证完成，测试验收手册和规模/失败/成功证据已交付。按 large Change 关闭顺序等待用户对整体结果人工验收，再同步 Specs 与归档。"
+  "closure": {},
+  "rework": {
+    "at": "2026-10-17T07:58:23.449Z",
+    "reason": "用户转交独立人工验收：CI 基线/漏选、失败现场、冻结依赖、缺客户端静默跳过及文档/证据偏差已复核成立，原整体验证结论不足以关闭。",
+    "approach": "保留现有需求/技术/计划确认，追加 T14 修正已确认范围；补关键反例和实际验证，纠正证据与覆盖取舍，再独立评审及整体验收。"
   }
 }
