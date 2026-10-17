@@ -20,7 +20,7 @@ export async function controls(f: NativeFixture, flavor: Flavor) {
         const file = join(f.root, `${flavor}-${decision}.txt`);
         const action = flavor === 'codex'
             ? `使用 exec_command，sandbox_permissions=require_escalated，执行 python3 -c 'from pathlib import Path; Path("${file}").write_text("APPROVAL_PROBE")'，justification 说明专用目录审批验证。`
-            : `使用 Write 工具向 ${file} 写入 APPROVAL_PROBE，不使用 Bash。`;
+            : `使用 Write 工具向 ${file} 写入一行 APPROVAL_PROBE，末尾换行可选，不使用 Bash。`;
         const message = `唯一任务：${action} 被拒绝时不重试、不换工具。不委派。然后回复 FINISHED。`;
         const accepted = cli(['task', taskId ? 'send' : 'spawn', taskId || agent.id, '--message', message]); taskId = accepted.agent_id;
         const handled = new Set<string>();
@@ -39,7 +39,7 @@ export async function controls(f: NativeFixture, flavor: Flavor) {
         assert.equal(result.status, flavor === 'claude' && decision === 'denied' ? 'interrupted' : 'completed');
         assert(handled.size > 0); permissions += handled.size;
         assert.equal(existsSync(file), decision === 'approved');
-        if (decision === 'approved') assert.equal(readFileSync(file, 'utf8'), 'APPROVAL_PROBE');
+        if (decision === 'approved') assert.match(readFileSync(file, 'utf8'), /^APPROVAL_PROBE(?:\r?\n)?$/);
     }
     if (flavor === 'codex') {
         const slow = cli(['task', 'send', taskId, '--message', '运行 sleep 20，结束后回复 SLOW_DONE，不修改文件、不委派。']);

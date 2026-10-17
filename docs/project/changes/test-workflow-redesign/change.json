@@ -94,7 +94,9 @@
     },
     "T13": {
       "title": "修复独立评审发现的范围、报告与凭据清理边界",
-      "status": "doing"
+      "status": "done",
+      "verification": "范围 Node 3/3、报告/超时 Bun 3/3、实际 rename 后失败清理探针、类型/文档/流程/diff 通过；独立隔离评审复核 04ee54d..adee9a5，R26–R28 均解决，无新实质问题，见 review.md。",
+      "commitTitle": "test-workflow-redesign T13: finish review fixes and tolerate a single content newline"
     }
   },
   "closure": {}
