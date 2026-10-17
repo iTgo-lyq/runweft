@@ -1,36 +1,50 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { mkdtempSync, mkdirSync, writeFileSync, renameSync, rmSync } from 'node:fs';
+import { join } from 'node:path';
+import { tmpdir } from 'node:os';
 import { spawnSync } from 'node:child_process';
-import { integrationGroups } from '../ci-scope.mjs';
+import { changedFiles, selectChecks, verifyJobs } from '../ci-scope.mjs';
 
-test('ordinary changes select affected integration; unknown product and build paths cannot skip it', () => {
-    assert.deepEqual(integrationGroups(['test/tasks.test.ts', 'docs/release.md', 'scripts/tests/npm-publish.test.mjs']), []);
-    assert.deepEqual(integrationGroups(['src/hub/native-page.ts']), ['web']);
-    assert.deepEqual(integrationGroups(['packages/prototype/src/app.js', '.githooks/pre-commit', 'scripts/check-workflow.mjs', 'scripts/check-docs.mjs']), []);
-    assert.deepEqual(integrationGroups(['packages/prototype/src/app.js', 'src/hub/tasks-page.ts']), ['web']);
-    assert.deepEqual(integrationGroups(['src/hub/access/api.ts', 'src/tasks/store.ts']), ['access', 'storage', 'web', 'service']);
-    for (const file of ['package.json', 'hapi', 'src/new-module.ts', 'scripts/new-check.mjs', 'src/hub/delegation/service.ts', 'src/hub/resources/api.ts', 'src/hub/repositories/commands.ts']) {
-        assert.deepEqual(integrationGroups([file]), ['access', 'storage', 'web', 'service']);
+test('scope separates docs and subprojects, selects changed tests, and fails closed for shared changes', () => {
+    assert.equal(selectChecks(['docs/release.md', 'AGENTS.md']).checks, false);
+    for (const [path, check] of [['website/build.mjs', 'website'], ['packages/prototype/verify.mjs', 'prototype'], ['.agents/skills/runweft-kit/SKILL.md', 'kit']]) {
+        const scope = selectChecks([path]); assert.equal(scope[check], true); assert.equal(scope.core, false); assert.deepEqual(scope.groups, []);
+    }
+    assert.equal(selectChecks(['test/tasks.test.ts', 'test/compiled-cli.ts']).core, true);
+    assert.equal(selectChecks(['scripts/tests/npm-publish.test.mjs']).tools, true);
+    assert.deepEqual(selectChecks(['src/hub/native-page.ts']).groups, ['web']);
+    for (const file of ['hapi', 'bun.lock', 'src/unknown.ts', '.github/workflows/checks.yml', 'scripts/ci-scope.mjs']) {
+        const scope = selectChecks([file]); assert.equal(scope.install, true); assert.equal(scope.prototype, true);
+        assert.deepEqual(scope.groups, ['access', 'storage', 'web', 'service']); assert(scope.native.includes('R-codex'));
     }
 });
 
-test('scope command reads a real Git diff and refuses an unavailable base instead of reporting no checks', () => {
-    mkdirSync('.dev-smoke', { recursive: true });
-    const root = mkdtempSync(resolve('.dev-smoke/ci-scope-')), output = join(root, 'output');
-    const git = (...args) => {
-        const result = spawnSync('git', args, { cwd: root, encoding: 'utf8' });
-        assert.equal(result.status, 0, result.stderr); return result.stdout.trim();
-    };
+test('real Git comparison handles first push, merge base, moves, deletions and uncommitted consumers', () => {
+    const cwd = mkdtempSync(join(tmpdir(), 'runweft-scope-'));
+    const git = (...args) => { const r = spawnSync('git', args, { cwd, encoding: 'utf8' }); assert.equal(r.status, 0, r.stderr); return r.stdout.trim(); };
+    const write = (name, body) => writeFileSync(join(cwd, name), body);
     try {
-        git('init', '-q'); git('config', 'user.name', 'CI fixture'); git('config', 'user.email', 'ci@example.invalid'); git('config', 'commit.gpgsign', 'false');
-        writeFileSync(join(root, 'README.md'), 'fixture'); git('add', '.'); git('commit', '-qm', 'base'); const base = git('rev-parse', 'HEAD');
-        writeFileSync(join(root, 'package.json'), '{}'); git('add', '.'); git('commit', '-qm', 'package'); const head = git('rev-parse', 'HEAD');
-        const run = value => spawnSync(process.execPath, [resolve('scripts/ci-scope.mjs')], { cwd: root,
-            env: { ...process.env, CI_BASE: value, CI_HEAD: head, GITHUB_OUTPUT: output }, encoding: 'utf8' });
-        assert.equal(run(base).status, 0);
-        assert.equal(readFileSync(output, 'utf8').trim(), 'groups=["access","storage","web","service"]');
-        assert.notEqual(run('f'.repeat(40)).status, 0);
-    } finally { rmSync(root, { recursive: true, force: true }); }
+        git('init', '-qb', 'main'); git('config', 'user.name', 'Fixture'); git('config', 'user.email', 'fixture@example.invalid'); git('config', 'commit.gpgsign', 'false');
+        write('README.md', 'base'); git('add', '.'); git('commit', '-qm', 'base'); const base = git('rev-parse', 'HEAD');
+        git('checkout', '-qb', 'feature'); write('README.md', 'docs'); git('commit', '-qam', 'docs');
+        const first = changedFiles({ cwd, base: '0'.repeat(40), defaultBranch: 'main' });
+        assert.equal(first.base, base); assert.equal(selectChecks(first.files).checks, false);
+        git('checkout', 'main'); write('package.json', '{}'); git('add', '.'); git('commit', '-qm', 'other'); git('checkout', 'feature');
+        assert.deepEqual(changedFiles({ cwd, base: 'main', mergeBase: true }).files, ['README.md']);
+        mkdirSync(join(cwd, 'test')); renameSync(join(cwd, 'README.md'), join(cwd, 'test/helper.ts')); git('add', '.'); git('commit', '-qm', 'move');
+        assert.deepEqual(changedFiles({ cwd, base }).files, ['README.md', 'test/helper.ts']);
+        write('new.ts', 'untracked'); rmSync(join(cwd, 'test/helper.ts'));
+        assert.deepEqual(changedFiles({ cwd, base: 'HEAD', workingTree: true }).files, ['new.ts', 'test/helper.ts']);
+        assert.throws(() => changedFiles({ cwd, base: 'missing-ref' }), /Cannot determine scope/);
+        assert.equal(selectChecks(changedFiles({ cwd, defaultBranch: 'missing-ref' }).files).install, true);
+    } finally { rmSync(cwd, { recursive: true, force: true }); }
+});
+
+test('aggregate refuses failed, cancelled, missing or skipped required jobs', () => {
+    const scope = selectChecks(['test/tasks.test.ts']);
+    const jobs = { scope: { result: 'success' }, checks: { result: 'success' }, prototype: { result: 'skipped' } };
+    verifyJobs(scope, jobs);
+    for (const result of ['failure', 'cancelled', 'skipped', undefined]) assert.throws(() => verifyJobs(scope, { ...jobs, checks: { result } }), /did not succeed/);
+    assert.throws(() => verifyJobs(scope, { ...jobs, scope: { result: 'failure' } }));
 });

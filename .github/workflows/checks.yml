@@ -13,9 +13,38 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  core:
+  scope:
     # Same-repository codex branches already receive the push check.
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository || !startsWith(github.event.pull_request.head.ref, 'codex/')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      selection: ${{ steps.scope.outputs.selection }}
+      checks: ${{ steps.scope.outputs.checks }}
+      core: ${{ steps.scope.outputs.core }}
+      tools: ${{ steps.scope.outputs.tools }}
+      kit: ${{ steps.scope.outputs.kit }}
+      prototype: ${{ steps.scope.outputs.prototype }}
+      groups: ${{ steps.scope.outputs.groups }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '24'
+      - id: scope
+        env:
+          CI_BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+          CI_HEAD: ${{ github.sha }}
+          CI_DEFAULT_BRANCH: origin/${{ github.event.repository.default_branch }}
+        run: node scripts/ci-scope.mjs
+      - run: node scripts/check-workflow.mjs && node scripts/check-docs.mjs
+
+  checks:
+    needs: scope
+    if: needs.scope.outputs.checks == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 35
     env:
@@ -24,8 +53,6 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          submodules: true
-          fetch-depth: 0
           persist-credentials: false
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
@@ -34,27 +61,27 @@ jobs:
         with:
           bun-version: '1.4.2'
       - run: bun install --frozen-lockfile
-      - name: Validate SpecTrail workflow and Change records
-        run: node scripts/check-workflow.mjs && node scripts/check-docs.mjs && node scripts/check-runweft-kit.mjs
-      - run: bun install --frozen-lockfile
+      - if: needs.scope.outputs.core == 'true' || needs.scope.outputs.groups != '[]'
+        run: git submodule update --init hapi
+      - if: needs.scope.outputs.kit == 'true'
+        run: node scripts/check-runweft-kit.mjs
+      - if: needs.scope.outputs.core == 'true' || needs.scope.outputs.groups != '[]'
+        run: bun install --frozen-lockfile
         working-directory: hapi
       - name: Install Codex for the real native configuration tests
+        if: needs.scope.outputs.core == 'true' || needs.scope.outputs.groups != '[]'
         run: |
           mkdir -p "$CODEX_HOME" "$CLAUDE_CONFIG_DIR"
           npm install --prefix .dev-smoke/native-tools --ignore-scripts --registry=https://registry.npmjs.org/ @openai/codex@0.159.2
           .dev-smoke/native-tools/node_modules/.bin/codex --version
           echo "$GITHUB_WORKSPACE/.dev-smoke/native-tools/node_modules/.bin" >> "$GITHUB_PATH"
-      - run: bun run typecheck && bun run test
-      - run: node --test ./scripts/tests/*.test.mjs
+      - if: needs.scope.outputs.core == 'true'
+        run: bun run typecheck && bun run test
+      - if: needs.scope.outputs.tools == 'true'
+        run: node --test ./scripts/tests/*.test.mjs
       - run: go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.12
-      - id: scope
-        env:
-          CI_BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
-          CI_HEAD: ${{ github.sha }}
-        run: node scripts/ci-scope.mjs
-
       - name: Install Claude for integration discovery only
-        if: steps.scope.outputs.groups != '[]'
+        if: needs.scope.outputs.groups != '[]'
         run: |
           mkdir -p "$CODEX_HOME" "$CLAUDE_CONFIG_DIR"
           npm install --prefix .dev-smoke/native-tools --ignore-scripts --registry=https://registry.npmjs.org/ @anthropic-ai/claude-code@2.1.283
@@ -62,14 +89,14 @@ jobs:
           .dev-smoke/native-tools/node_modules/.bin/codex --version
           .dev-smoke/native-tools/node_modules/.bin/claude --version
           echo "$GITHUB_WORKSPACE/.dev-smoke/native-tools/node_modules/.bin" >> "$GITHUB_PATH"
-      - if: contains(fromJSON(steps.scope.outputs.groups), 'web')
+      - if: contains(fromJSON(needs.scope.outputs.groups), 'web')
         run: bunx playwright install --with-deps chromium
-      - if: steps.scope.outputs.groups != '[]'
+      - if: needs.scope.outputs.groups != '[]'
         run: bun run build:hapi && bun run build
       - name: Run selected local integration groups
-        if: steps.scope.outputs.groups != '[]'
+        if: needs.scope.outputs.groups != '[]'
         env:
-          CI_GROUPS: ${{ steps.scope.outputs.groups }}
+          CI_GROUPS: ${{ needs.scope.outputs.groups }}
         run: |
           node --input-type=module <<'NODE'
           import { spawnSync } from 'node:child_process';
@@ -88,7 +115,8 @@ jobs:
         run: node scripts/report-evidence.mjs
 
   prototype:
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository || !startsWith(github.event.pull_request.head.ref, 'codex/')
+    needs: scope
+    if: needs.scope.outputs.prototype == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     defaults:
@@ -105,3 +133,24 @@ jobs:
       - run: bun install --frozen-lockfile
       - run: bunx playwright install --with-deps chromium
       - run: bun run build && bun run test
+
+  result:
+    needs: [scope, checks, prototype]
+    if: always() && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository || !startsWith(github.event.pull_request.head.ref, 'codex/'))
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '24'
+      - env:
+          SCOPE: ${{ needs.scope.outputs.selection }}
+          RESULTS: ${{ toJSON(needs) }}
+        run: |
+          node --input-type=module <<'NODE'
+          import { verifyJobs } from './scripts/ci-scope.mjs';
+          verifyJobs(JSON.parse(process.env.SCOPE), JSON.parse(process.env.RESULTS));
+          NODE

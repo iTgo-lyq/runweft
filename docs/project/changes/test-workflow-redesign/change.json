@@ -26,7 +26,9 @@
   "tasks": {
     "T1": {
       "title": "按改动选择 CI 检查与依赖",
-      "status": "doing"
+      "status": "done",
+      "verification": "Node 工具测试 56/56、scope 真实 Git 与汇总反例、actionlint、文档/流程和 diff 检查通过；实际文档差异选择无产品检查，Actions 结果后续读取。",
+      "commitTitle": "test-workflow-redesign T1: select checks before preparing dependencies"
     },
     "T2": {
       "title": "删除已确认的低价值测试和不可达分支",
