@@ -4,7 +4,7 @@
   "title": "重构测试与工程辅助流程",
   "size": "large",
   "status": "active",
-  "stage": "execution",
+  "stage": "close",
   "branch": "codex/test-workflow-redesign",
   "confirmations": {
     "requirement": {
@@ -103,5 +103,15 @@
       "commitTitle": "test-workflow-redesign T13: finish review fixes and tolerate a single content newline"
     }
   },
-  "closure": {}
+  "closure": {
+    "verification": {
+      "result": "passed",
+      "at": "2026-10-17T04:11:00.532Z",
+      "summary": "13 项任务均已验证并提交推送。最终 core 8、integration 247、工程/官网 Node 71、HAPI 31、四平台双布局安装、浏览器/原型和真实模型八项通过，显式模型集合校验通过；完整/定向 CI 成功，净减 2225 行，手册实走与失败定向复验完成。独立上下文隔离 subagent 覆盖 28ab4a2 起完整差异及验收，复核实现至 c26cc91、最终证据至 ff71d2d；R26–R28 已解决，无实质遗漏或虚报。细节见 execution.md/review.md，尚待人工验收。"
+    }
+  },
+  "waitingFor": {
+    "kind": "confirmation",
+    "summary": "实施、独立评审与整体验证完成，测试验收手册和规模/失败/成功证据已交付。按 large Change 关闭顺序等待用户对整体结果人工验收，再同步 Specs 与归档。"
+  }
 }
