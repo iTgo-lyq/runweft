@@ -2,7 +2,7 @@
 
 ## 结论与边界
 
-对应 [需求](requirement.md)、[现状与完整去向清单](research.md) 和 [三轮自审](review.md)。按用户 2026-10-16 的调整，停止依赖外部评审；launcher 放现有 `src/`，由主 Agent 完成职责、反例和流程三轮评估。本文交付可评审方案，代码尚未重构，流程确认以 `change.json` 为准。
+对应 [需求](requirement.md)、[现状与完整去向清单](research.md) 和 [评审记录](review.md)。方案已吸收三轮自审、操作环节补充及 2026-10-17 Claude 第四轮评审的逐项核对。launcher 放现有 `src/`，保持目录和抽象克制。本文交付可评审方案，代码尚未重构，流程确认以 `change.json` 为准。
 
 主要问题是验证成本混合、同一职责被多条长链重复承担、CI 在准备环境后才选范围，以及跨脚本现场交接；文件数量不是直接删除依据。采用三层测试、平铺工程脚本、单入口拥有现场。只保留有独立保障的回归和有真实消费者的辅助函数，不建设新测试框架。
 
@@ -15,15 +15,15 @@
 | 首次准备仓库 / 依赖或 pin 变化 | 初始化 HAPI submodule、安装固定依赖；需要真实程序时运行 `build:hapi` | 环境准备；只证明依赖/构建可用。HAPI 构建缺失或 pin 改变才重建 |
 | 编码中的规则/组件回归 | `test`；修改工程工具则运行 `test:tools`；提交前按范围运行 `typecheck` | 固定测试/静态检查；无需先启动一个验收环境 |
 | 文档、Change、Skill 或工作流改动 | `check-docs.mjs`、`check-workflow.mjs`、`check-runweft-kit.mjs`、工作流 lint，按实际改动选择 | 固定检查；不启动产品或模型 |
-| 修改 CLI、Hub 接线、文件/Git 或页面后 | `build:hapi`（需要时）→ `build` → 选定 `test:integration` 文件/用例 | 固定集成；测试自行创建环境、断言和关闭，web 才准备浏览器 |
+| 修改 CLI、Hub 接线、文件/Git 或页面后 | 用 scope 选择文件；CLI 对替身的测试可自行共享编译，真实服务测试才准备 `build:hapi`/`build` 并传 `--bin` | 固定集成；测试自行创建环境、断言和关闭，web 才准备浏览器 |
 | 针对本次需求做交互/临时验收、故障复现 | 准备匹配的 CLI/HAPI → `dev:env` → 在该环境使用产品 CLI/API、Playwright 或本次临时检查 | 启动环境 + 灵活验收；启动只表示 ready，由当前需求的实际结果判定是否通过 |
 | 验证安装包、launcher、服务或卸载 | `package --platform …`（发行时 `--all`）→ `test:install --candidate …` | 前者产生候选，后者是固定安装测试；无需先运行 `dev:env` |
 | 回归真实 Codex/Claude 调用/控制/恢复 | 准备明确候选与专用原生配置 → `test:native --candidate … --case …` | 显式授权后执行的固定测试；preflight 仅检查前置，不等于模型验收通过 |
-| 临时体验/排查某个候选包 | 明确候选 → `dev:env --candidate …` → 当前需求的操作 | 仅在隔离位置安装并启动该候选，不先跑一遍安装测试来获得环境 |
+| 临时体验/排查某个候选包 | 明确候选 → `dev:env start --candidate …` → 当前需求的操作 | 仅在隔离位置安装并启动该候选，不先跑一遍安装测试来获得环境 |
 | 官网预览 / 官网固定验证 | `website/build.mjs` → `website/serve.mjs` 供自由查看；固定验证另跑 `website/publish.test.mjs`、`website/verify.mjs --browser-only` 等 | serve 是前置启动，verify/test 才是固定检查；官网不需要 Runweft Hub |
 | 原型预览 / 原型固定验证 | `bun run --cwd packages/prototype build` 后用静态 HTTP 服务预览 dist；`bun run --cwd packages/prototype test` 执行固定检查 | 原型当前无独立 serve 脚本，可用 `python3 -m http.server` 绑定本机并指定该 dist；不新增根包装脚本 |
 | 正式发行、恢复或分发 | 既有发行工作流调 `npm-release`/`npm-read`/`release-finish`；官网工作流调 publish/recover；Kit 工作流调 sync | 工程操作；分别消费固定验收结果并产生发布/恢复事实，不能用灵活验收代替必需 gate |
-| CI 自动选择与结果汇总 | `ci-scope` 在准备前选择固定检查；`report-evidence` 在检查后消费明确报告列表 | 范围选择与证据整理，不是测试，也不负责环境启动 |
+| 本地/CI 选择与结果汇总 | 共用 `ci-scope --base <ref> --head <ref>` 选择文件与依赖；`report-evidence` 在检查后消费明确报告列表 | 范围选择与证据整理，不是测试，也不负责环境启动 |
 
 这些环节不是每次都串行跑一遍。日常改规则可以只跑 core；固定集成不依赖 `dev:env`，固定原生测试不依赖安装测试留下的现场。正式发行依门禁决定先后，多个检查消费同一个候选，环境各自拥有。
 
@@ -34,11 +34,12 @@ src/
   npm-launcher.cjs         # 随 npm 包交付的启动入口，其余产品源码照常
 test/
   core/                    # 规则、状态、协议组件；可用 SQLite/本机 HTTP
-  integration/             # 平铺 hub-*/files-*/workspace-*/web-* 等测试文件
+  integration/             # CLI/Hub/文件/Git/web；包含共享 CLI 编译与局部 preload
   acceptance/              # install.mjs、native.ts 及就近辅助文件
   helpers.ts               # 已有的小型公共辅助，仅保留真实跨套件复用
 scripts/
-  dev-env.ts               # 灵活验收的隔离环境启动；只准备，不执行业务断言
+  dev-env.ts               # 灵活验收环境 start/stop；不执行业务断言
+  test-integration.ts      # 只规范输入并调用一次 bun test，转发原生过滤/分片参数
   build*.ts、package.ts…   # 构建/打包；以下均是文件组，不是新增子目录
   check-*.mjs、ci-scope.mjs
   npm-*.mjs、release-*.mjs、report-evidence.mjs、sync-runweft-kit.sh
@@ -63,13 +64,17 @@ hapi/                      # 固定版本 submodule，内部测试归独立 fork
 | --- | --- | --- |
 | `bun run test` | 根依赖、pin 的共享源码；显式运行 `test/core` | 规则与隔离组件；不编译 CLI，不要求 HAPI 构建、原生宿主、浏览器或模型 |
 | `bun run test:tools` | Node；运行 `scripts/tests/*.test.mjs` | 工程工具有实际分支的决策、失败和恢复；不真实发布 |
-| `RUNWEFT_TEST_BIN=<CLI> bun run test:integration` | 指向已构建且相邻 HAPI 匹配的 CLI；web 才需浏览器 | 实际接线、传输、Git/工作区和 Hub UI；无模型 |
+| `bun run test:integration [--bin <CLI>] -- <文件/原生测试参数>` | CLI 对替身测试可省略 --bin 并共享一次 CLI 编译；实际 HAPI/Runner 接线必须传匹配程序，web 才需浏览器 | CLI 子进程、真实接线、传输、Git/工作区和 Hub UI；无模型 |
 | `bun run test:install --candidate <目录> --case <case或all> --report <文件>` | 明确的不可变候选；宿主配置 case 需对应程序 | 包内容、两种部署形态、服务/信号、配置与卸载；无模型 |
 | `bun run test:native --candidate <目录> --case <case或all> --report <文件>` | 明确候选、专用原生配置与已授权模型 | 真实 MCP 调用、成果、控制、重建、历史及重启后不重放 |
 
-core/integration 使用 Bun 原生测试发现与文件、测试名过滤，不再用清单启动一串 smoke 子脚本。integration 在入口检查显式构建输入，缺失/不匹配就失败，不在测试里偷偷编译。现有 `compiledCli()` 已按进程缓存一次；重构消除的是根测试编译与后续集成构建的重复，并删除不再需要的全局 preload/编译生命周期，而非声称修复“每文件编译”。
+core/integration 使用 Bun 原生测试发现、文件和测试名过滤，不再启动一串 smoke 子脚本。现有 `compiledCli()` 每进程共享一次，第四轮本地编译测量约 0.2 秒；保留这项低成本能力及 suite 收尾，将 helper/preload 限定在 integration。CLI 对本机替身或内嵌组件的测试不因此增加真实 HAPI 构建要求；传入 --bin 时只读使用该程序，不重新编译。真实 HAPI/Runner 测试要求显式匹配的二进制对，缺失就失败。
 
-安装和模型验收确需候选、平台、case 与报告参数，保留两个直接场景入口 `test/acceptance/install.mjs`、`native.ts`；使用简单函数和有限 case 表，不抽象成全项目 runner。安装执行器直接用 Node 运行，跨平台验收不要求 Bun。被测程序的运行资产全部来自候选，在 checkout 之外执行，不能补载开发依赖。
+`scripts/test-integration.ts` 只解析 --bin 并调用一次 Bun 测试进程，将其余文件、--test-name-pattern、--shard 等原生参数原样转发；不保存用例清单、调度子脚本或重试。现成程序统一使用 --bin，发行包集合使用 --candidate，两者是不同输入类型；测试内部可以传环境变量，但不再把三个不同的程序参数暴露给使用者。
+
+先用一个有 HTTP、子进程和清理的 smoke 试点 Bun 化，验证 setup 失败、测试超时、信号和 suite 收尾后再批量迁入。初始不启用 --parallel/--isolate，避免改变现有共享模块与编译生命周期；使用 Bun 原生 --shard=N/M 分文件分片，各片独立准备与关闭。普通集成 case 默认 120 秒，确需更长的工作区/传输 case 显式给上限并计入准备和收尾；不让框架默认 5 秒截断长链。使用 --timings <文件> --update-timings 收集时间供分片调优，不建历史耗时服务。--no-orphans 仅作 Bun 子进程兜底，不能替代对 detached 服务的实际关闭核验。
+
+安装和模型验收确需候选、平台、case 与报告参数，保留两个直接场景入口 `test/acceptance/install.mjs`、`native.ts`；使用简单函数和有限 case 表，不抽象成全项目 runner。安装执行器直接用 Node 运行是目标，当前 cli-install CI 安装了 Bun，不能视作已证明无 Bun 依赖。实现后四平台安装步骤只准备 Node/npm 和必要系统工具，浏览器验证另准备自己的依赖；另验收驱动与程序均无法访问 Bun 的安装/卸载路径。被测程序运行资产全部来自候选，在 checkout 之外执行。
 
 保留一个根 `tsconfig.json` 和独立 `bun run typecheck`。它检查产品、所有 TS 测试与工具，涉及 HAPI 实现的类型仍需要 pin 源码及相应依赖；不承诺全量类型检查零 HAPI 依赖。低成本 `test` 可独立执行；为隔离测试执行成本不另建多个 TS 项目。
 
@@ -83,19 +88,21 @@ core/integration 使用 Bun 原生测试发现与文件、测试名过滤，不�
 
 | 调用方式（目标接口） | 准备什么 | 刻意留给本次验收的部分 |
 | --- | --- | --- |
-| `dev:env --bin <已构建CLI>` | 配对程序核对、独立目录、空原生配置、本机 Hub 与就绪检查 | 创建/连接身份、页面操作、业务数据和具体断言 |
+| `dev:env start --bin <已构建CLI>` | 配对程序核对、独立目录、空原生配置、本机 Hub 与就绪检查 | 创建/连接身份、页面操作、业务数据和具体断言 |
 | 上述命令加 `--runner` | 另建专用测试身份/空间、机器连接和一个本机 Runner；必要身份保存在受限文件 | runtime/Agent/仓库登记、任务执行、成果等业务操作；不默认安装原生程序或调用模型 |
-| `dev:env --candidate <候选目录>`，可加 `--runner` | 先在私有 prefix 安装当前平台候选，再启动同样的隔离环境 | 此次候选体验或故障复现；不跑固定安装/卸载矩阵 |
+| `dev:env start --candidate <候选目录>`，可加 `--runner` | 先在私有 prefix 安装当前平台候选，再启动同样的隔离环境 | 此次候选体验或故障复现；不跑固定安装/卸载矩阵 |
 
 `--bin` 与 `--candidate` 二选一且必须明确；入口不隐式编译、不下载未知版本、不切换正在使用的候选。只监听本机，默认仅 Hub，需要 Runner 才启动。没有通用 profile、场景 DSL、业务数据 seed 或一串 `--run-xxx-test` 开关。多机器、特殊 Git 仓库等通过现有产品 CLI 或当前用例自己配置；只有重复出现的通用准备再提取函数。
 
 启动后提供无秘密 URL、程序来源/摘要、专用 home 路径及指向该环境的 CLI 调用方式；专用 `HOME`、`CODEX_HOME`、`CLAUDE_CONFIG_DIR` 等只作用于本次进程和显式操作该环境的命令，清除会覆盖目标的继承配置。默认不复制开发者原生凭据；需要模型时按既有授权显式准备专用配置，再执行对应操作。浏览器/CLI 可以使用本次受限身份文件，不在终端打印 token，也不改变产品的登录/鉴权逻辑。
 
-入口前台持有生命周期，Agent 可以把它作为一个持续运行的终端进程；另一个操作窗口开展验收。正常结束或 Ctrl+C 时停止本次拥有的任务、Runner/Hub，再清理已确认不在使用的目录；不能把产品 `stop` 等同于已停止所有原生会话。外部操作启动了未能确认停止的宿主时，保留现场并报告清理失败。进程被强杀时只按明确现场定位诊断，不扫描或接管旧目录。不增加后台 daemon、up/down/status 控制协议或跨运行恢复格式。
+`dev:env start` 复用产品的后台启动，环境目录作为明确句柄，ready 后返回，并打印 `dev:env stop --dir <本次目录>`。不再承诺前台包装、Ctrl+C 或 Agent 超时能够回收 detached 子进程。程序使用核对后的私有副本，目录中的一份当前登记仅保存来源摘要与固定资源路径；业务与进程状态继续以产品自身记录和 API 为准，不另建进程注册表或测试断点格式。
 
-终端的 `ready` 和干净退出只说明环境可用、已回收，**不生成业务验收 passed 报告**。本次需求的操作、判断及必要证据由 Agent/人工或临时检查负责，写入对应 Change 的验收记录。固定测试不会消费这样的交互现场；重跑固定测试时仍创建自己的环境。
+`stop` 只接受本入口创建且归属可核对的目录。先核对该私有环境的会话/宿主状态：仍活跃或未知时保留环境并明确列出待处理项，由操作方通过产品命令结束自己启动的任务；不根据“看起来属于本次验收”去停止外部任务。已确认无活跃会话后再停 Runner/Hub，核对进程退出并删除本次目录。服务停止不等于原生宿主停止；API 不可用或无法证明归属也不猜测成功。正常准备失败由 start 回收已创建资源，关闭不确定则保留句柄供定向诊断。强杀 start/操作终端后由显式 stop 处理，不扫描/接管历史现场。
 
-两类入口复用的是普通函数：配对程序/候选读取、安装到私有位置、隔离目录、Hub/Runner 启停与资源关闭。setup 函数不包含任务完成、成果内容、页面文案等业务断言；就绪/版本不匹配作为准备失败抛错。Bun 集成/native 与 `dev:env` 直接调用这些函数，互不启动对方命令；Node 安装测试复用适用的候选/安装函数，不为复用强改运行时。函数在实际所属 scripts 模块内导出，入口使用 main guard，导入不自动启动环境，也不反向导入 test 文件。
+`ready` 只说明环境可用，stop 成功只说明已回收，**两者都不生成业务验收 passed 报告**。本次需求的操作、判断及必要证据由 Agent/人工或临时检查负责，写入对应 Change。固定测试不消费这样的交互现场；测试创建的任务则由该 case 保存明确 ID 并负责停止，不能混用自由操作环境的所有权假设。
+
+两类入口复用的是普通函数：配对程序/候选读取、安装到私有位置、专用身份/Runner 连接初始化、隔离目录与资源关闭。优先从现有脚本抽出候选私有安装和测试身份初始化这两个重复点，再以 dev:env 包装；仅 Hub 的 init/config/start 继续复用现有 CLI。setup 函数不包含任务完成、成果内容、页面文案等业务断言；就绪/版本不匹配作为准备失败抛错。Bun 集成/native 与 `dev:env` 直接调用这些函数，互不启动对方命令；Node 安装测试复用适用的候选/安装函数，不为复用强改运行时。函数在实际所属 scripts 模块内导出，入口使用 main guard，导入不自动启动环境，也不反向导入 test 文件。
 
 现有 `bun run dev` 仍是从源码执行产品 CLI，例如带 `--home` 的 init/start/status/stop，不自动创建隔离环境。产品已有 `runweft ... start/serve/runner start` 是底层启动能力；`dev:env` 只是复用它们省去工程验收反复写目录、端口、连接和清理代码。官网则直接用现有 `website/serve.mjs`，不包进这一入口。
 
@@ -103,11 +110,11 @@ core/integration 使用 Bun 原生测试发现与文件、测试名过滤，不�
 
 以下为重构后的调用界面示例，固定测试用的构建产物与临时环境不会互相接管。
 
-**开发一个 Hub 功能，跑固定回归：**先跑 `test`，需要真实接线时准备匹配的 HAPI 并 `build`，再设置 `RUNWEFT_TEST_BIN` 运行对应 integration 文件/测试名。用例自己启动、断言和停止；无需运行 `dev:env`。
+**开发一个 Hub 功能，跑固定回归：**先跑 `test`；CLI 对替身的集成可共享编译，只有真实接线才准备匹配的 HAPI 并 `build`，再以 --bin 运行对应 integration 文件/测试名。用例自己启动、断言和停止；无需运行 `dev:env`。
 
-**对该功能做自由验收：**准备同一对二进制，运行 `dev:env --bin … --runner`；得到环境后按当前需求操作 CLI/API 或用 Playwright 检查页面。遇到尚无固定用例的新场景可以现场编写临时检查。操作结束关闭环境，实际结果记入 Change；发现值得长期防回归的问题，再将最小断言归入合适的固定测试层，不把整段现场流程存成新的 smoke 入口。
+**对该功能做自由验收：**准备同一对二进制，运行 `dev:env start --bin … --runner`；得到环境后按当前需求操作 CLI/API 或用 Playwright 检查页面。遇到尚无固定用例的新场景可以现场编写临时检查。操作结束显式 stop 环境，实际结果记入 Change；发现值得长期防回归的问题，再将最小断言归入合适的固定测试层，不把整段现场流程存成新的 smoke 入口。
 
-候选安装也是两条独立路径：`package → test:install` 得到固定安装结果；`package → dev:env --candidate …` 得到可操作环境。删除旧 `KEEP_INSTALL` 作为获取后续环境的做法；测试失败的诊断留存仍按失败规则处理。
+候选安装也是两条独立路径：`package → test:install` 得到固定安装结果；`package → dev:env start --candidate …` 得到可操作环境。删除旧 `KEEP_INSTALL` 作为获取后续环境的做法；测试失败的诊断留存仍按失败规则处理。
 
 ## 保障分配与删除原则
 
@@ -121,11 +128,20 @@ core/integration 使用 Bun 原生测试发现与文件、测试名过滤，不�
 | service/install/uninstall/verify-packages 重复准备 | 合入 install 的直接 case；tarball/symlink 与 npm launcher 各保留启动、信号、路径和卸载，不各重跑完整领域回归 |
 | HAPI session/shutdown 大入口 | 无模型的正常停机、Hub 不应答/断连、认证失败、机器标识重用、锁/端口释放进入 integration；Claude 长非 Git 路径两轮记忆/会话延续进入 native |
 | execution 与 collaboration/controls 重复 | 删除独立 execution 入口；丢响应不重复执行、过期 interrupt 拒绝、审批实际文件效果、Codex 同宿主兄弟会话停止隔离和恢复记忆进入对应 core/native case |
+| realtime 独有的 SSE 回放/可见性、撤销时背压、RPC 改路由拒绝 | 留在 integration/hub-realtime 的真实接线；与机器过期合并准备，不能用普通权限单测替代 |
+| access 的进行中上传/背压下载撤销、残留字节和日志秘密检查 | 留在 integration/files-access；小数据权限排列可下沉，中途撤销必须真实流传输 |
+| Hub 身份/邀请 token 的日志、状态库/WAL 扫描 | 留在 integration/web-identity 的写入与失败探测后，保留明确扫描对象与秘密值；不只检查报告脱敏 |
+| connect 浏览器 WebCrypto 加密及原点绑定 | 留在 integration/web-connect 的真实浏览器链；HTTP/连接状态规则下沉不替代加密交接 |
+| 实际 Codex/Claude 版本和工具发现 | 配置/catalog 归 install，真实 Runner 发现接线归 integration/hub-resources；所选工具缺失失败，发现不冒充模型执行 |
 | 旧 smoke 清单、shard 数量、交接格式和兼容测试 | 删除；辅助函数仍有关闭竞态、超时或失败语义时保留有意义的行为测试 |
 
 不为“纯单元”再拆一层，core 可用真实 SQLite、文件、本机 HTTP 和必要的小子进程。真实接线只补足低层证明不了的边界；下沉时用有代表性的权限绕过、错误重发或字节损坏故障证明替代测试会失败，不能仅凭存在 mock 就删除保障，也不建设全套 mutation 平台。
 
-机器过期优先使用已有可控时间接口；若必须改产品公共 API 才能消除那一次真实等待，保留必要等待，不为测试提速扩产品接口。HAPI 生命周期虽涉及 HAPI，但随包交付的进程契约由本仓集成验证；不要求先改 fork/pin 才能收敛本次脚本，HAPI 内部单元覆盖仍归 fork。
+删除 collaboration 中无当前调用方的 CONTROLS/DISCONNECT 分支；控制保障由独立 C case 承担。result-export 与 repository-import 复用一次无副作用基线准备，各断言从独立工作副本开始；resources/configuration 共用 setup，access/prune 的 owner 清理及 MCP 安装只在其所属层保留一份完整保障。不因两份脚本文本相似就共享可变状态或删去不同失败边界。
+
+当前没有可注入的机器过期时钟，HAPI 45 秒过期为常量；将 realtime/resources 的两次等待收敛到一次真实过期/路由拒绝专项，保留应验证的边界，不为提速扩产品 API。关闭 helper 的宽限时间可以作为测试参数注入，保留 SIGTERM 被忽略后 SIGKILL 且验收失败的回归，测试不必真等 5 秒。
+
+HAPI 内部测试的代码所有权属于 fork，但当前 fork Actions 运行及 pin 的 check-run 都为 0，不能假定已经覆盖。本仓在 pin、相关接入协议或这项检查自身变化时，使用 pin 自带 Vitest 配置定向执行 CLI 的 repositories/artifacts/workspaces 三个 manager.test.ts；这是明确文件集合，不运行 HAPI 全套测试、不修改 fork。其现有 globalSetup 会启动源码 Hub，单独 job/临时目录准备 HAPI 依赖、Git/LFS，并记录实际 pin；不把它放进默认 core。发行固定执行同集合。首次补齐这项门禁并通过后，才允许凭替代证据下沉对应长链；真实 Runner 的 Git/LFS/字节接线依然保留，不能仅凭内部测试存在就缩小数据到失去边界。
 
 ## 原生验收：有限覆盖、单个 case 完整收尾
 
@@ -146,9 +162,32 @@ core/integration 使用 Bun 原生测试发现与文件、测试名过滤，不�
 
 删除 producer/consumer 的跨命令交接 JSON、consumed 所有权协议、stdout 正则抓取文件路径和多套清理器；上下文只在当前进程的函数间传递。保留的是产品实际停机/重启边界，不保存新的工程断点续跑协议。
 
-**复验的明确取舍**：单个 case 是最小重跑单位，不再接管旧现场只跑后半段。若模型完成后验收失败，诊断并确认停机后，可显式用新现场重跑该 case，可能再次消耗模型；用充分 preflight 和低层回归降低此成本。未知执行/停机状态先定位，不能自动重试或重复发送。不同 case 的成功结果可以通过显式报告复用，但要求候选、验收实现、模型选择、宿主/runtime 版本及相关非秘密配置指纹一致；只复用结论，不复用运行现场。
+**复验单位**：单个 case 是最小重跑单位，不接管旧现场只跑后半段。当前 consumer 在确认停机后也会删除连接凭据，因此原有格式并不保证失败后可独立重跑后半段；前稿把这写成已存在能力的损失不准确。模型阶段完成后失败，仍需诊断、确认停机，再显式用新现场重跑该 case。未知状态不能自动重发。
 
-完整集合由入口/发行工作流固定选择，汇总核对必需 case、指纹和结果；缺项、冲突、未知格式拒绝。新报告显式引用被复验的失败结果，保留首次失败与后续结果，不能靠历史目录扫描或随意拼报告得出全量成功。
+同一候选下结果复用匹配候选摘要、干净的产品/测试 commit、宿主/runtime 版本及明确的模型/effort 选择；产品 commit 覆盖 src，构建输入包含 HAPI pin。排除凭据、token、Claude 用户状态文件与会话缓存，不对 auth.json/.credentials.json 做“不能刷新”的 hash 断言。源配置保护只核对工具不应修改的静态配置字段；模型使用专用副本，允许副本正常更新认证/状态。复用仅引用已成功结论，首次失败单列保留。
+
+完整集合由 native 入口固定，报告校验核对必需 case、指纹和结果；缺项、冲突、未知格式拒绝。新报告显式引用被复验的失败结果，不靠历史目录扫描或随意拼报告得出全量成功。
+
+### 日常原生范围与发行绑定
+
+scope 输出下表的建议集合，普通 CI 不因此调用模型。选择来源不明或跨多类边界时取并集，无法判定则建议全部；调用仍须明确授权。
+
+| 改动类型 | 原生 case 建议 |
+| --- | --- |
+| Codex 宿主 MCP/配置接入 | N1、N3、N5 |
+| Claude 宿主 MCP/配置接入 | N2、N4、N6 |
+| Codex 执行、控制、恢复 | N1、N4、N6、C-codex、R-codex |
+| Claude 执行、控制、恢复/长路径 | N2、N3、N5、C-claude、R-claude |
+| worktree/remote、原生文件成果链 | N3–N6；纯无模型传输实现先跑相应集成，不自动调用模型 |
+| 原生历史页面接线 | N1、N2；仅布局/样式走 web 固定检查 |
+| 身份/native 映射、HAPI pin、共享执行协议、无法归类影响 | 全部 N1–N6、C-codex/C-claude、R-codex/R-claude |
+| 普通文档、工程工具且不触及以上边界 | 无；正式发行另按固定集合 |
+
+删除 expanded 后，以这张风险表替代隐式全排列触发。正式程序发行前必需集合为六条 N 加四条 C/R，冻结最终产品与验收代码后运行；报告不反向提交改变本次 tag 源码。新增具体兼容故障优先补现有 case 的断言，只有无法表达的独立路径才另评估用例。
+
+本次选择**源码与构建输入绑定**，不假定本地 package 与 tag 后 CI 重建具有相同二进制摘要。native 报告保留实际受测包摘要，并记录 source commit、packageInputs 内容摘要、HAPI pin、Bun/构建参数和平台、验收 commit。发行 Agent 在推 tag 前执行 native 入口的只读 `--verify-report <文件> --source <冻结commit>` 校验，核对完整集合和这些输入，保留其结果；缺失则不能宣称完成发行前验收。npm CI 继续核对自己的 source commit/构建输入，并对实际公开候选执行固定安装与集成，不把本地 native 报告当作该公开二进制的模型证明。
+
+边界明确：模型报告由发行 Agent 本地核对，当前发布 CI 不消费本地报告，也不是强制执行模型门禁的系统；本 Change 不新建模型凭据托管或报告上传服务。若要求“公开包逐字节模型验收且由 CI 强制阻止晋级”，需另选 beta 候选模型门禁的交付。本方案报告的是冻结源码级模型保障与公开候选安装/集成保障，二者分开表述。
 
 ## 工程脚本、launcher 与发布恢复
 
@@ -158,9 +197,23 @@ core/integration 使用 Bun 原生测试发现与文件、测试名过滤，不�
 
 发布保留 npm 信任校验、候选绑定、部分写入后的明确失败和当前恢复能力。`npm-release`、`npm-read`、`release-finish`、空间检查等仍有独立用途，只合并真实重复判定，不造万能发布 CLI。未知外部写入先查询远端，恢复不能通过重新构建/重发冒充核验成功。
 
-`report-evidence` 改为只接收调用方显式传入的报告列表，不递归扫描任何目录。沿用现有 CI 日志渠道；通用日志信封包含当前版本、明确 `kind` 和该领域报告，领域负载不强制归一。官网 check/prepare/deployment 证据按类型识别，`website/recover` 同步改读，仍核对 run/job/attempt、source commit、站点及文件摘要和实际上传回执。删除以 `.dev-smoke/website-pages/*.json` 为身份的旧解析，不保留 fallback。现有发行专用标记有独立语义的继续保留，不为统一外观重写全部发行格式。
+`report-evidence` 仅改为接收显式文件列表，沿用当前 `RUNWEFT_CI_EVIDENCE={path,report}` 日志信封和发行专用标记，不新建 kind/version 信封或统一负载。官网当前 check/prepare/deployment 的 path 是恢复协议标识，继续使用同一标识；调用方可显式传“现有日志标识 → 本次物理文件”，收集器不据日志 path 查磁盘。这样实际文件迁入 runner 临时目录后，旧发布记录和当前记录仍由同一个现行解析器读取，不增加兼容分支，也不要求格式切换时作废在途恢复。
 
-报告格式错误、必需证据缺失或冲突必须失败。日志不可得时不能猜测发布成功或自动再次发布。官网及 npm 当次恢复是必须保留的实际保障，与已淘汰的测试记录兼容区分。切换必须覆盖当前生产者、工作流和消费者，同一版本闭环；旧工程记录明确不支持继续恢复。
+官网 publish/recover/verify-live 的文件读写改为接收本次显式目录，日志里的稳定标识不变。`.dev-smoke/website-pages/...` 这一现有协议字符串保留为明确例外，不再是执行目录依赖；若将来要更名，应另行评估，不纳入此次测试架构清理。格式错误、缺失或冲突证据继续失败，仍核对 run/job/attempt、source commit、站点/文件摘要与上传回执，日志不可得不能猜测成功或重发。源码/包输入改变仍遵守原有候选冻结约束，不承诺任意旧候选跨源码变化恢复。
+
+`.dev-smoke` 的非测试用途也需要明确所有者；CI 以本次 run/attempt/job 唯一根 `${RUNNER_TEMP}/runweft/<run>-<attempt>-<job>` 作为短期工作根，各步骤只消费明确输出：
+
+| 当前用途 | 改造后的固定位置/所有者 |
+| --- | --- |
+| native-tools、ci-codex、ci-claude | job 根的 tools/、config/；依赖准备步骤创建，job 收尾关闭相关进程再回收 |
+| release-source 源码检出 | job 根的 source/；通过 Git 创建固定 revision 检出并准备 pin，不依赖仓库内隐藏目录；构建 job 负责移除 |
+| npm-publish/npm-release、下载候选、npm cache/prefix | job 根的 release/；来源/工作路径由 release prepare 输出，候选只读传下游，job 收尾释放 |
+| release-space 采样与汇总 | job 根的 reports/；测量步骤写，显式汇总后清理；空间测量针对真实构建所在文件系统 |
+| website-pages 的 prepare/deployment/check/browser/recovery | job 根的 website/；publish/recover/verify-live 共用显式目录，report-evidence 输出现行协议标识后回收 |
+| uninstall-ci 与跨平台安装报告 | job 根的 reports/；安装临时工作区另由 case 关闭，报告先汇总再删 |
+| Kit export | 独立系统临时目录；sync 的退出处理负责删除，不把分发导出当测试 fixture |
+
+本地对应操作用调用方指定的工作/报告位置或本次 mkdtemp；不能只将泄漏从仓库移到 /tmp。每项先补创建者、关闭与删除路径，再迁目录；CI 的 always 收尾不能掩盖原失败。历史归档只保留事实，不继续作为执行路径。
 
 官网和原型验证留在所属工程；Kit 结构/安装/独立 Agent 场景验收留在 Kit 分发流程，官网只验证页面和下载契约。`.dev-smoke/verify-kit-install.py` 的有效断言并入正式 Kit 验证后删除；用户唯一 issue 草稿和来源不明密钥文件不作为工程垃圾处置，也不成为新架构依赖。
 
@@ -169,6 +222,20 @@ core/integration 使用 Bun 原生测试发现与文件、测试名过滤，不�
 沿用现有工作流体系，开发检查形成轻量 scope → 按需 checks/prototype → 最终汇总。checks 内按条件执行 core、tools、integration、当前平台安装等步骤，不为每个测试文件建 job。官网与 Kit 保留各自工作流/入口，更新触发条件，避免在两个工作流重复跑同一检查；不通过本次改造触发部署或分发。
 
 scope 只 checkout 所需历史并使用 Node，不初始化 HAPI 或安装产品依赖。PR 比较目标分支 merge-base 与 head；正常 push 使用已验证的 before/head；新分支零 SHA 使用远端默认分支 merge-base。没有可信基线则保守选择完整开发检查；工作流执行错误本身不能被解释为空集合。
+
+本地与 CI 共用 `node scripts/ci-scope.mjs --base origin/main --head HEAD` 的同一映射；本地加 --working-tree 合入未提交/未跟踪路径。输出固定检查、integration 文件集合、HAPI 构建/浏览器/宿主依赖、安装范围与 native 建议集合。native 建议仅供显式验收选择，不能作为自动执行指令。按以下少量规则取并集，测试/辅助文件变化直接选自身及消费者：
+
+| 路径责任 | integration 的目标文件组及特殊准备 |
+| --- | --- |
+| src/cli、命令解析、mcp/stdio、service-commands | cli-*.test.ts；对替身检查不构建 HAPI；真实服务语义另选 hub-lifecycle |
+| src/hub/access、resources、sockets/proxy | hub-access、hub-resources、hub-realtime；页面授权接线另选 web，需实际 HAPI |
+| src/hub/agents、delegation、repositories | hub-configuration、hub-delegation；涉及工作区绑定加 workspace；影响界面则加 web |
+| src/artifacts、tasks 的文件/成果、remote/repository/workspace | files-*、workspace-*；Git/LFS 和真实传输依赖由这些文件声明 |
+| Hub 页面/静态资源 | web-*；准备浏览器，包含真实 WebCrypto/日志扫描 |
+| 通用 state/config/hapi/execution、pin、共享锁文件 | 全部无模型集成；pin/接入协议变化另选 HAPI 三个 manager 测试 |
+| 仅 CLI 编译 helper / integration preload | 全部 CLI 消费者；不因编译 helper 变化强制构建 HAPI |
+
+这里的组是平铺文件命名规则，不是新的场景注册中心。实现迁移时把当前源路径与落地文件名同步写入 ci-scope 的唯一映射；本地手选文件仍可更窄，但不能称作完整 scope 验证。发行按全部领域文件集使用 Bun --shard=N/M，不保留 RUNWEFT_SMOKE_SHARD 或旧 integration-cases 列表；汇总按预定分片集合确认无缺项。
 
 | 改动 | 选择与准备 |
 | --- | --- |
@@ -183,30 +250,40 @@ scope 只 checkout 所需历史并使用 Node，不初始化 HAPI 或安装产�
 
 路径规则保持少量显式职责映射，不建依赖图分析器。重命名取旧/新路径并集，删除按旧路径选择。普通源码改动选不到保障需可解释，未知变化不能静默跳过。scope 与最终汇总始终执行，选中的检查失败/取消/缺结果都判失败，未选择明确显示未执行；汇总在前序失败时也运行。
 
-发行门禁固定于候选及支持平台，不受开发 diff 裁剪。全平台安装与发行规定的集成集合必须完成；真实模型按明确 case 集合和授权单独执行。开发 CI 不跑模型，也不为纯文档准备全量运行环境。
+发行的 CI 门禁固定于公开候选及支持平台，不受开发 diff 裁剪。全平台安装、领域集成和 HAPI 指定测试必须完成；原生完整集合由发行 Agent 在冻结源码上单独执行/核对，见上面的绑定边界，不假称现有 CI 读取了模型证据。开发 CI 不跑模型，也不为纯文档准备全量运行环境。
 
 ## 现场与证据的最小机制
 
-创建现场的入口负责退出状态和回收。使用系统/runner 临时目录，候选只读，报告输出位置显式传入；报告不能放进即将删除的运行目录。无需 `.dev-smoke` 预先存在，也不把它换个名字继续做仓库内历史现场仓库。
+固定测试的创建入口负责结果和回收；自由环境按上述显式 start/stop 规则管理。使用系统/runner 临时目录，候选只读，报告输出位置显式传入；报告不能放进即将删除的运行目录。本仓自有流程无需 `.dev-smoke` 预先存在，也不把它换个名字继续做仓库内历史现场仓库；pin 内部测试自有的临时实现仍归 HAPI，不在根仓改写。
 
-保留少量普通函数处理创建、等待和逆序关闭：资源创建成功即登记，setup 中途失败也回收；一个关闭失败仍继续关闭其他资源，重复/并发 close 共享本次关闭结果。只清理本次创建并记录的根，不接受任意用户路径或跟随 symlink 删除外部目标。若各环境关闭语义不同，就近保留，不抽象为资源池/生命周期框架。
+保留少量普通函数处理创建、等待和逆序关闭：资源创建成功即登记，setup 中途失败也回收；一个关闭失败仍继续关闭其他资源，重复/并发 close 共享本次关闭结果（这是拟新增语义；当前 closeSmoke 只 splice 并逆序关闭）。只清理本次创建并记录的根，不接受任意用户路径或跟随 symlink 删除外部目标。若各环境关闭语义不同，就近保留，不抽象为资源池/生命周期框架。
 
-成功必须同时满足断言和确认停机，随后释放大目录。失败保留必要诊断；确认停机后移除临时模型配置/凭据，仍活跃或停机未知时判失败并保留权限受限现场待诊断，不盲删。报告不含凭据、原始配置、完整 prompt、源码或原生历史正文，只记录需要的标识与摘要。CI 只上传/打印明确的脱敏报告，不将整个失败现场当附件。
+固定验收成功必须同时满足断言和确认停机，随后释放大目录。失败保留必要诊断；确认停机后移除临时模型配置/凭据，仍活跃或停机未知时判失败并保留权限受限现场待诊断，不盲删。报告不含凭据、原始配置、完整 prompt、源码或原生历史正文，只记录需要的标识与摘要。CI 只上传/打印明确的脱敏报告，不将整个失败现场当附件。
 
-core/tools 沿用测试框架输出。需要跨步骤消费的 integration/acceptance 记录最少的 kind/version、候选和验证输入标识、case、结果、阶段、清理结果及必要摘要；不为所有函数加 reporter。结果先写到独立位置再释放现场，清理失败要反映为失败，不能只打印警告。显式结果复用不等于保留缓存、进程或现场。
+core/tools 沿用测试框架输出。integration/acceptance 按实际消费者记录候选和验证输入、case、结果、阶段、清理结果；不改现行发布信封、不为所有函数加 reporter。被删除的 native 交接格式没有读取方，直接删除；当前发布协议继续保持同一格式。结果先写到独立位置再释放现场，清理失败要反映为失败，不能只打印警告。显式结果复用不等于保留缓存、进程或现场。
 
 ## 集成顺序与验收
 
-实施沿五个职责交付推进：默认测试边界与早期 CI 选择 → 无模型领域集成及共用环境准备/dev:env → 候选安装与 launcher（接通 dev:env 的候选输入）→ 原生单 case 生命周期 → 工程证据/官网/Kit 消费者闭环及遗留清理。每个交付连同所属调用方和验证一起切换，删除相应旧入口；不做只有新目录、长期双轨调用的中间成品。CI 的范围表随各交付同步更新。具体任务在方案确认后按 large Change 形成计划。
+交付先后按收益与覆盖依赖安排，每项连同当前调用方和验证切换，不先搬空目录：
+
+1. **独立修 CI 范围**：merge-base、新分支与 scope 前移、本地同映射、测试路径不漏选、汇总不假绿；这一项不依赖测试目录重排。
+2. **补实际覆盖与试点**：接入 pin 的三个 HAPI manager 门禁；删除不可达 CONTROLS/DISCONNECT；以 hub-configuration 试点 Bun 测试的超时、进程和失败清理。试点通过才替换旧编排/分片。
+3. **原生范围与单 case 生命周期**：先落实源码/候选证据边界和 N/C/R 触发表，再移除 expanded 与交接协议；保留历史页面、实际重启和原生独有保障。
+4. **默认/集成去重及安装边界**：CLI 编译 helper 保留在集成，逐领域归并并证明替代；落实两种安装形态、无 Bun 验收和 src launcher；根目录泄漏与静态配置指纹同归属修复。
+5. **公共准备与自由环境**：前几项沉淀候选私有安装、身份/Runner 初始化函数，再实现薄 dev:env start/stop；不先建一套环境平台要求所有测试迁入。
+6. **工程路径和显式收集**：逐项迁移 CI/发行/官网/Kit 工作位置，沿用当前发布日志协议，删除目录扫描及旧执行入口；生产者和当前消费者一并切换。
+
+证据格式改写不在本 Change。第 2–5 项有归属交叉时合并对应最小交付，不为编号硬拆；large 的具体任务在技术方案确认后建立。尤其不提前删除交接、分片或长链，再等待未来补替代实现。
 
 实施时至少验证：
 
-1. 空 `.dev-smoke`、无 HAPI 构建/宿主/浏览器的环境可跑 core；集成/验收缺必需输入时明确失败。测试内无构建兜底，安装程序不从 checkout 补载资产。
+1. 空 `.dev-smoke`、无 HAPI 构建/宿主/浏览器可跑 core；CLI 对替身的集成可共享编译且不要求 HAPI 二进制；真实接线缺所需 --bin 则失败。安装在无法访问 Bun 的环境完成，程序不从 checkout 补载资产。
 2. 原有独立保障在新层能抓住真实故障，尤其权限撤销、不重放、字节/Git、进程信号、兄弟会话隔离、长路径延续和真实历史页面；选取必要的故障注入，不为每个 helper 编写镜像测试。
 3. 文档、新分支、重命名/删除、测试 helper、共享 pin、scope 自身变更的选择反例；所选检查失败/缺结果不能绿色通过。
 4. 同一候选的两种安装形态与全发行平台；发布成功/部分写入/日志缺失/冲突证据的决策；官网当前恢复仍只核验而不重传。
 5. setup 失败、断言失败、超时、关闭失败/未知和重复关闭；无残留活进程时可释放现场，报告仍可读取；旧格式/错指纹/缺 case 拒绝，首次失败保留。
-6. 当前调用方全部切换；删除旧 smoke 命令、交接解析与 `.dev-smoke` 活跃依赖，不改写历史归档，不新增临时脚本提示词。
-7. dev:env 单独就绪、可在该环境操作、正常退出/启动失败/中断的资源关闭；默认不触碰原生凭据或调用模型；ready 不产生验收 passed。固定测试无需依赖 dev:env 进程或上一测试留下的现场。官网 serve 与固定 verify 也分别验证自身职责。
+6. 当前调用方全部切换；删除旧 smoke 命令、交接解析与 `.dev-smoke` 文件系统依赖；保留官网现行日志标识这一明确例外，不改写历史归档，不新增临时脚本提示词。
+7. dev:env 独立 start 后可操作，显式 stop 核验归属和停止状态；准备失败可清理，活跃/未知会话拒绝删除，强杀入口后能按明确句柄诊断。默认不触碰原生凭据或调用模型；ready 不产生验收 passed。固定测试不依赖 dev:env 或上一测试现场。
+8. pin 的三项 HAPI 测试确实执行且失败能阻断；原生报告源 commit/构建输入不匹配、缺 case、凭据刷新/状态文件变化分别得到正确结果，不能把源码级结果说成公开包同摘要验收。
 
 比较同候选、同保障集合的首次运行：依赖准备次数、CLI/HAPI 构建次数、浏览器与模型启动次数、总工作时间、墙钟时间、峰值和残留磁盘。已观察的 8 分 52 秒文档 CI 是具体浪费实例，不是收益承诺；本轮只完成源码评估与方案校验，性能和行为结果必须由实现验收补齐。

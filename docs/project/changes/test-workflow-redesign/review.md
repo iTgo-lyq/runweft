@@ -4,7 +4,7 @@
 
 2026-10-14 的 iclaude/traex 调用未产生有效架构意见。traex 两次正式调用分别等待约 26 分钟、20 分钟后终止；登录及 `openrouter-4o` / `xhigh` 请求配置已核对，但不等于完成评审。具体调用历史保存在此前 Git 提交；不将等待计作评审轮数。
 
-2026-10-16 用户明确取消外部协作，要求主 Agent 自行多轮评估、launcher 放 src、减少目录与抽象。以下为三轮源码自审，既非外部独立意见，也非实现验收。当前实现未修改；每项“复核”指修订后的设计与源码证据核对，产品行为、性能及失败注入仍需实施后验证。
+2026-10-16 用户明确取消外部协作，要求主 Agent 自行多轮评估、launcher 放 src、减少目录与抽象。R1–R12 为当时的自审与修订记录，既非外部独立意见，也非实现验收；被第四轮推翻的前提在 R13–R22 的主 Agent 处理中纠正，最终方案以当前 Technical 为准。当前实现未修改；每项“复核”指修订后的设计与源码证据核对，产品行为、性能及失败注入仍需实施后验证。
 
 2026-10-17 用户要求不默认认可现方案重新评审，结果记为[第四轮](#第四轮重新评审)；由 Claude Code 会话依据源码、本地测量和 GitHub 记录完成，不是人工评审，也未修改实现或技术方案。
 
@@ -92,7 +92,7 @@
 
 **实施验证**：除固定回归外，覆盖独立启动、另一操作窗口可用、退出/中断/准备失败后的关闭，以及 ready 不生成业务通过结论。目标参数尚未实现，当前文档只在 Change 中说明，不冒充现有产品命令。
 
-## 收敛结果与实现验证界限
+## 第四轮前的收敛记录与验证界限
 
 [技术方案](technical.md) 已吸收第一至第三轮及 R12 的反例：三个测试目录、平铺 scripts、src launcher、单 TS 配置、两个固定验收入口、一个独立环境启动入口、按 case 复验、显式证据与当前恢复闭环。舍弃全排列、跨命令现场协议、递归扫描、多层目录和预建公共框架；保留有证据的产品保障，并明确每个操作环节的入口与完成含义。
 
@@ -112,11 +112,15 @@
 
 **建议**：方案中明确二选一：fork 启用 CI 并要求 pin 通过；或在 pin 变化时由本仓 CI 运行这些 HAPI 测试文件。解决前，真实 Runner 上的 Git、LFS 与字节链路不能改为小数据或下沉。
 
+**主 Agent 核对与处理（2026-10-17）**：采纳覆盖缺口，选择由本仓对 pin 定向运行 repositories/artifacts/workspaces 三个 manager 测试；不要求先改 fork，也不运行 HAPI 全套。已通过 API 独立确认 fork runs 与 pin check-runs 都为 0。补读发现它们使用 Vitest 且 globalSetup 启动源码 Hub，故安排独立准备和临时根；未执行通过前不据此裁掉真实 Runner 的字节/Git/LFS 保障。代码所有权归 fork 不再被表述为已有 CI 覆盖。
+
 ### R14 dev:env 的前台所有权与产品实现冲突
 
 **证据/问题**：[services](../../../../src/services.ts) 的 `start()` 以 detached 方式启动 serve 后 unref，`stop()` 只发 SIGTERM 并返回 `sessionsPreserved`；[runner](../../../../src/runner.ts) 的 `runner start` 启动 HAPI 后台进程。入口被强杀、终端关闭或 Agent 工具超时后，Hub 与 Runner 仍会存活；“停止本次拥有的任务”也缺少来源，任务由外部操作经产品 API 创建。仅 Hub 模式用产品 `--home` 下的 init、config set port、start 三条命令即可完成。真实缺口有两处：Runner 身份初始化（产品没有创建身份的 CLI，8 个脚本文件共 13 处直接调用未鉴权的 `/api/runweft/hub/identities` 再写 identity.json），以及候选包私有安装（[smoke-install](../../../../scripts/smoke-install.mjs) 前段可复用，install、native、dev:env 三方需要）。
 
 **建议**：先把这两个普通函数抽出来，供 integration 与 native 使用，dev:env 再作为薄包装。生命周期二选一：serve 和 Runner `start-sync` 作为非 detached 子进程运行（现有 smoke 已使用 start-sync）；或以环境目录为句柄提供显式 stop，经产品 API 核对会话，状态未知就保留现场。删除停止外部任务、保证外部宿主退出等无法兑现的承诺。
+
+**主 Agent 核对与处理（2026-10-17）**：采纳所有权问题，选用显式目录句柄的 dev:env start/stop。start 返回 ready，stop 核对本私有环境的会话和进程；活跃或未知时保留现场，不承诺停止外部任务。先提取候选安装与身份初始化普通函数，再做包装。补充准确性：产品 stop 不仅发送 SIGTERM，还等待托管服务退出；缺口是其 sessionsPreserved 语义以及后台进程不受包装终端寿命约束。
 
 ### R15 原生证据与发行候选的绑定未定义
 
@@ -124,11 +128,15 @@
 
 **建议**：确认绑定方式：绑定源码 commit 与构建输入，或在已上传的不可变 beta 上执行 native 后再晋级。同时补充改动类型到 N/C/R case 的触发表，以及发版必需的 case 集合。
 
+**主 Agent 核对与处理（2026-10-17）**：采纳绑定与触发规则缺失，选定冻结 source commit/packageInputs/HAPI pin/Bun 与构建参数的源码级绑定。实际受测包摘要继续记录，但不要求 tag 重建字节一致。发行 Agent 在推 tag 前用 native 的只读报告校验模式核对完整 N1–N6 加 C/R 集合；当前发布 CI 不读取本地报告，公开候选仅声明 CI 实际完成的安装/集成保障。Technical 明确了这一自动化边界，以及宿主、执行、工作区、历史、pin 到 N/C/R 的触发表；没有暗建模型凭据或报告上传平台。
+
 ### R16 环节表缺少选择规则
 
 **证据/问题**：环节表只列出入口，“修改 CLI、Hub 接线…→选定 test:integration 文件/用例”没有路径到测试文件的映射；[ci-scope](../../../../scripts/ci-scope.mjs) 是唯一现成的映射，但只在 CI 使用。发行分片依赖 `RUNWEFT_SMOKE_SHARD` 与 [integration-cases](../../../../scripts/fixtures/integration-cases.ts)，删除后的替代没有写；Bun 已提供 `--shard=N/M` 和 `--timings`。依赖描述也有出入：core 需要 hapi 依赖安装，[artifacts 测试](../../../../test/artifacts.test.ts)等 4 个文件从 `hapi/hub/node_modules` 导入 Hono 和 HAPI Store；[cli-install](../../../../.github/workflows/cli-install.yml) 实际安装了 Bun，“安装验收不需要 Bun”未被 CI 证明；三个入口分别用环境变量、`--candidate`、`--bin` 指定程序。
 
 **建议**：让 scope 成为本地与 CI 共用的映射，可在本地对 main 运行；写明分片方式、单文件超时和是否使用 `--isolate`；统一指定程序的参数。
+
+**主 Agent 核对与处理（2026-10-17）**：采纳。本地与 CI 共用 ci-scope 的 base/head 与可选 working-tree 规则，输出明确文件/依赖/原生建议；列出领域到平铺测试文件组映射。分片使用 Bun --shard，--timings 搭配 --update-timings；初始不启用 parallel/isolate，普通集成 case 默认 120 秒，长专项显式上限。程序统一 --bin、包集合 --candidate；一个薄入口只转发到一次 bun test。core 目标与当前根测试依赖分开说明；Node-only 安装须新增实际无 Bun 环境证明，当前 CI 不算该证据。
 
 ### R17 删除编译 helper 会让假 HAPI 测试依赖 HAPI 构建
 
@@ -136,11 +144,15 @@
 
 **建议**：保留测试自行编译，只按文件位置分出；17 个 smoke 改写为 bun:test 之前，先用一个文件试点，验证进程隔离、长等待超时和失败清理。
 
+**主 Agent 核对与处理（2026-10-17）**：采纳主要建议，撤回删除 compiledCli/preload 的决定；保留共享一次 CLI 编译，局部放在 integration，显式 --bin 可替代编译。CLI 对替身/内嵌组件的测试不强制 HAPI 二进制；实际服务接线才需要配对程序。以 hub-configuration 试点超时、失败和清理再迁其余 smoke。补充：artifacts 等确有内嵌 HAPI Store/路由，不能说所有使用 compiledCli 的断言都只涉及假实现；但这不影响“无需 HAPI 可执行文件”的结论。
+
 ### R18 只有 smoke 覆盖、去向表未列出的保障
 
 **证据/问题**：以下保障没有对应的根测试：[realtime](../../../../scripts/smoke-hub-realtime.ts) 的 SSE 回放、可见性与撤销时背压，以及 HAPI 将 RPC 改路由到另一台机器时的拒绝；[access](../../../../scripts/smoke-hub-access.ts) 的传输中途撤销和日志扫描；[smoke-hub](../../../../scripts/smoke-hub.ts) 的日志与 WAL 秘密扫描；[connect](../../../../scripts/smoke-hub-connect.ts) 的浏览器 WebCrypto；真实 codex/claude 的版本发现。
 
 **建议**：在去向表中逐项写明归属；下沉时用故障注入证明替代测试会失败。
+
+**主 Agent 核对与处理（2026-10-17）**：采纳并逐项写入 Technical 的保障去向：SSE 回放/可见性/背压撤销和 RPC 改路由拒绝归 hub-realtime；传输撤销/部分字节归 files-access；日志与状态库/WAL 秘密扫描归 web-identity；真实 WebCrypto 归 web-connect；实际工具版本发现归 hub-resources，安装 catalog 归 install。下沉需故障反例证明，不以目录清单有名称当作覆盖完成。
 
 ### R19 仍可删除或合并的重复
 
@@ -153,11 +165,15 @@
 
 **建议**：随对应交付删除；smoke 只保留跨边界断言；宽限时间改为可注入，或删除该测试。
 
+**主 Agent 核对与处理（2026-10-17）**：采纳不可达分支删除与准备去重。已核对当前入口会清除 CONTROLS/DISCONNECT 且没有其他活跃调用方；C/R 保障单独保留。导出/导入、资源/配置等复用只读基线和 setup，断言仍用独立工作副本，不因文本相似而共享可变现场。关闭宽限时间可注入短值，保留忽略 SIGTERM 后强杀仍判失败的回归；不采用直接删掉该有意义测试的建议。
+
 ### R20 证据格式改写会阻断在途发布的恢复
 
 **证据/问题**：发行恢复的做法是从最新 main 恢复原 tag 和原 run；[website/recover](../../../../website/recover.mjs) 按精确路径识别旧日志。main 改用新信封并拒绝旧格式后，切换前开始、尚未完成的发布将无法恢复。`.dev-smoke` 还承担多项非测试用途：CI 工具与原生配置目录、release-source 检出、发布工作目录、官网证据和 uninstall-ci；其中官网证据由 [website/publish](../../../../website/publish.mjs) 写入，recover 按路径读取。技术方案只把 `.dev-smoke` 当作测试现场。
 
 **建议**：最小改法是让 report-evidence 改为接收显式文件列表，日志标记保持不变。若仍要改格式，就单独交付，并以“切换时没有需要恢复的在途发布”为前提。逐项列出 `.dev-smoke` 的非测试用途并固定其路径。
+
+**主 Agent 核对与处理（2026-10-17）**：采纳最小改法，取消本 Change 的 kind/version 信封重写。report-evidence 接收显式物理文件，沿用当前 path/report 信封及官网稳定标识，现行恢复无需双解析；物理目录从日志身份分离。补齐 CI 工具/配置、发布源码检出、候选/cache/prefix、空间记录、官网和卸载报告、Kit 导出的固定位置与所有者。协议中的 .dev-smoke/website-pages 字符串是明确保留的当前标识，不再用作磁盘读取路径。
 
 ### R21 复用指纹、清理与时间前提
 
@@ -171,10 +187,18 @@
 
 **建议**：指纹由候选摘要、干净的测试 commit、宿主与 runtime 版本、模型选择组成，不包含凭据和 Claude 状态文件；“源配置未改变”只核对配置文件。迁移临时目录前，先让每个根目录都有所有者并会被删除。两次机器过期等待合并为一次。
 
+**主 Agent 核对与处理（2026-10-17）**：采纳。复用指纹包含候选、干净产品/测试 commit、宿主/runtime 版本和模型选择，排除凭据与 Claude 状态；源配置检查仅静态字段，允许副本认证刷新。先补每个安装/解包/service/fixture 根的回收，再迁临时目录。承认当前无机器过期时钟、closeSmoke 无关闭 Promise；方案分别保留一次真实过期等待、为工程 helper 新增并发关闭共享结果。修正 R5 的能力比较：当前关闭会删凭据，原状也不保证可重跑 consumer 后半段。
+
 ### R22 交付顺序
 
 **证据/问题**：run 38535122829（新分支、文档改动）中，零 SHA 导致选中全部集成组，集成 355 秒、构建 19 秒、Playwright 23 秒等合计约 400 秒；scope 之前的 hapi 安装、Codex 安装、typecheck 与测试、actionlint 合计约 115 秒。这两项修复都不需要调整目录，技术方案却把 CI 范围选择与默认测试边界调整放在同一个首个交付中。
 
 **建议**：先交付 CI 修复（merge-base 基线、scope 前移、不再忽略 test 路径）；再删除死代码（expanded、交接协议、CONTROLS/DISCONNECT，integration-cases 改用 `--shard`）；再补充 native 触发与候选绑定规则，并实现单 case 生命周期；再做 smoke 去重和缺口归属（需先解决 R13）；然后抽出公共函数并实现薄 dev:env；证据格式改写作为可选项单独交付。
 
-**复验结论**：R13–R22 尚未修订进技术方案；阶段确认前逐项修订，并在对应条目补充复核。
+**主 Agent 核对与处理（2026-10-17）**：采纳 CI 独立先行，Technical 改为六个职责交付顺序。未直接采纳先删交接/分片再改生命周期：它们在当前代码仍有消费者，必须与替代一起切换；不可达分支可先删。HAPI 指定门禁与一个 Bun 试点先于领域裁剪，公共函数有真实复用后再做 dev:env。证据格式改写移出本次范围，保留物理路径与显式收集的必要改造。
+
+**评审提交时结论**：R13–R22 尚未修订进技术方案，需逐项处理。
+
+**处理结果**：已逐项补充主 Agent 核对与取舍，并同步 Technical、Requirement、Research；这是方案修订，不是实现通过或阶段确认。HAPI 指定测试、无 Bun 安装、进程清理与新增范围规则尚待实现验收。第四轮根测试/构建耗时仍归属 Claude 的实测；本 Agent 本轮只复核源码、CLI 帮助和 GitHub 记录，没有重跑产品或模型矩阵。
+
+本次方案校验：文档检查 346 文件、944 个本地链接，0 错误；workflow 校验 56 个 Change 通过；git diff --check 通过。Research 仍覆盖当前 87 个 scripts 与 55 个 test 文件；R13–R22 均有处理意见。流程阶段与确认未改写，实现和后续验收仍未开始。

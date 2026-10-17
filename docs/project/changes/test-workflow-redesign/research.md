@@ -4,7 +4,7 @@
 
 用户已授权启动独立重构任务，并明确不保留旧测试数据、格式与逻辑的兼容层。2026-10-16 用户取消 traex 参与，改由主 Agent 多轮自审，要求 launcher 放 src、减少目录与抽象。前置清理 Change 已归档合入 main；这是先后工作安排，不声明代码交付依赖。
 
-当前基线 `94f36a25776c59a87fb3d83cf4448d28411c66ec`。下述统计与 CI 实证来自前期 `76e53ef` 调查，两者产品/测试/工作流代码相同，只有清理文档和状态变化。本轮尚未执行新的产品或模型验收。
+当前基线 `94f36a25776c59a87fb3d83cf4448d28411c66ec`。下述初始统计与 CI 实证来自前期 `76e53ef` 调查，两者产品/测试/工作流代码相同，只有清理文档和状态变化。前期调查未新增产品/模型验收；2026-10-17 Claude 的根测试与编译测量见第四轮评审，本 Agent 未重复执行。
 
 ## 已核实的现状
 
@@ -29,7 +29,7 @@
 
 [此前分层设计](../../archive/2026-10-03-test-backbone-slimming/technical.md)明确把根测试定义为“核心快测”，允许真实 SQLite/HTTP 和必要的编译 CLI。当前并非完全没有设计，而是这些不同成本的检查仍合在 `bun run test` 下，缺少独立的纯规则快测入口。
 
-43 个根测试文件中，9 个直接调用共享 `compiledCli()`，18 个直接出现子进程调用，12 个直接创建 HTTP/Socket 设施；集合交叉，且没有计入 helper 间接启动，不能相加当作不同测试数量。CLI 编译已按进程缓存一次，并非每个文件重复编译。
+43 个根测试文件中，9 个直接调用共享 `compiledCli()`，18 个直接出现子进程调用，12 个直接创建 HTTP/Socket 设施；集合交叉，且没有计入 helper 间接启动，不能相加当作不同测试数量。CLI 编译已按进程缓存一次，并非每个文件重复编译；第四轮测量该编译约 0.2 秒，决定保留而不要求所有 CLI 测试先构建 HAPI。
 
 例如 [artifact 测试](../../../../test/artifacts.test.ts)直接导入 HAPI Store、ArtifactService、路由和认证中间件，启动服务并执行编译 CLI；[卸载测试](../../../../test/uninstall.test.ts)建立包目录并执行自卸载。这些是有价值的组件/系统回归，但不能视为无外部准备的函数级测试。[MCP 安装测试](../../../../test/mcp-install.test.ts)两项还依赖本机 Codex，缺少时跳过；CI 因而必须安装 Codex。
 
@@ -106,7 +106,7 @@
 | `smoke-preflight.ts`、`installed-binaries.mjs`、`installed-binaries.d.mts` | 配对程序/候选读取由固定测试和 dev:env 共用普通函数；浏览器检查只由 web 消费；preflight 不算环境启动或业务通过 |
 | `release-inputs.mjs`、`release-inputs.d.mts`、`hapi-source-archive.mjs` | 生产构建/发行共享契约，移出测试 fixtures 到平铺 scripts；保持来源和候选校验 |
 | `integration-cases.ts` | 删除旧脚本清单及为旧 shard 结构服务的断言；suite 选择使用现有测试框架，CI 范围只选择套件 |
-| `collaboration-package.mjs`、`collaboration-package.d.mts` | 删除跨入口交接格式/解析；有效的候选一致性与当前记录验证进入 native 生命周期/所属契约测试 |
+| `collaboration-package.mjs`、`collaboration-package.d.mts` | 删除跨入口交接格式/解析；有效的候选一致性与当前记录验证进入 native 生命周期/所属契约测试；关闭后凭据会删除，旧格式不保证独立重跑后半段 |
 | `hub-console-smoke.ts`、`hub-console-tasks.ts`、`hub-console-history.ts` | web 就近辅助，合并重复启动和数据准备；真实历史页面进入 N1/N2 的现场生命周期，在最终清理前消费真实数据库/历史；普通 UI 使用当前样本 |
 | `model-homes.ts`、`codex-model.ts`、`native-host.ts`、`native-preflight.ts` | native 就近辅助，保留隔离配置和宿主关闭诊断；移除无关浏览器准备及重复跨命令检查 |
 | `mcp-cut.mjs`、`mcp-probe.mjs`、`claude-observer.mjs`、`codex-catalog.ts` | 保留证明真实宿主调用/断线/发现所需的最小探针，归 native；不扩展为新的执行适配器 |
@@ -135,7 +135,7 @@
 | `hub-repositories.test.ts`、`remote.test.ts`、`remote-tasks.test.ts`、`task-results.test.ts`、`task-workspaces.test.ts` | 规则、状态和小型真实 Git 在 core；实际传输/大量文件/工作区恢复与现有 smoke 合入 integration，删重复组合 |
 | `task-records.test.ts`、`task-rounds.test.ts`、`tasks.test.ts`、`tasks-mcp.test.ts`、`tasks-overview.test.ts` | core 的当前格式、轮次、MCP、概览和幂等保障；不将有效协议替身全部换为重型原生调用 |
 | `artifact-mcp.test.ts`、`artifacts.test.ts`、`task-files.test.ts`、`task-outputs.test.ts` | 实际 HAPI Store/ArtifactService/路由及 CLI 接线归 integration/files，能独立证明的规则留 core；与领域 smoke 合并准备和重复断言 |
-| `cli.test.ts`、`hub-connect.test.ts`、`hub-consumers.test.ts`、`hub-resource-cli.test.ts`、`mcp.test.ts`、`service-commands.test.ts`、`state.test.ts` | 编译 CLI 调用进 integration，配置/状态/协议规则留 core；删除测试内部编译，消费显式构建产物 |
+| `cli.test.ts`、`hub-connect.test.ts`、`hub-consumers.test.ts`、`hub-resource-cli.test.ts`、`mcp.test.ts`、`service-commands.test.ts`、`state.test.ts` | 编译 CLI 调用进 integration，配置/状态/协议规则留 core；保留一次共享 CLI 编译，实际 HAPI 接线才要求显式匹配二进制 |
 | `mcp-install.test.ts`、`uninstall.test.ts` | 配置编辑/拒绝/原子回滚规则留 core；真实宿主 catalog 和安装包/自卸载行为合入 acceptance/install，缺所选宿主不再 skip |
 | `release-inputs.test.ts` | 候选冻结/源码干净判定归 scripts/tests，复用 Node 工具测试入口，不建新的测试体系 |
 | `website-build.test.ts` | 归 website 自身验证，根 core 不再替官网启动构建 |
@@ -144,18 +144,18 @@
 
 | 当前辅助成员 | 去向 |
 | --- | --- |
-| `compiled-cli.ts`、`preload.ts` | 消费者切到显式构建后删除，同时取消 bunfig 的全局编译清理 preload |
-| `helpers.ts`、`fixture-cleanup.ts` | 收敛为现有小型公共辅助；保留确实不同的创建/回收语义，移除固定 .dev-smoke 根；不新增 support 目录 |
+| `compiled-cli.ts`、`preload.ts` | 随 CLI 消费者移到 integration 并保留；preload 仅由集成入口启用，core 不加载编译生命周期 |
+| `helpers.ts`、`fixture-cleanup.ts` | 收敛为小型辅助，先补齐每个根的所有者与关闭/删除，再移除固定 .dev-smoke 根；不新增 support 目录 |
 | `hub-resources-fixture.ts`、`hub-delegation-fixture.ts`、`native-fixture.ts`、`task-native-fixture.ts`、`hub-workspace-fixture.ts`、`remote-fixture.ts`、`remote-native-fixture.ts`、`workspaces-fixture.ts` | 随实际使用的 core/integration 文件就近保留普通组件替身和数据准备；共用部分按真实消费者提取，删除长链重复的环境搭建，不造全局 fixture 注册中心 |
 
 ## 2026-10-16 定向复核新增事实
 
 本轮重新读取源码，并复算文件数/行数，与上面的 87 个 scripts 文件、43 个根测试及 12 个辅助统计一致；没有执行模型或产品回归。三轮方案修订详见 [Review](review.md)。
 
-- [compiled-cli](../../../../test/compiled-cli.ts) 已共享一次编译，而 [开发工作流](../../../../.github/workflows/checks.yml) 后续还跑 build；优化对象是两阶段重复，不是每文件重复编译。根 [tsconfig](../../../../tsconfig.json) 已是单项目，隔离运行成本不要求再拆多个项目。
+- [compiled-cli](../../../../test/compiled-cli.ts) 已共享一次编译，而 [开发工作流](../../../../.github/workflows/checks.yml) 后续还跑 build；两阶段存在重复，但第四轮测量证明编译仅约 0.2 秒，收益不足以抵偿强制引入 HAPI 构建；因此保留轻量编译辅助。根 [tsconfig](../../../../tsconfig.json) 已是单项目，隔离运行成本不要求再拆多个项目。
 - [原生历史页面](../../../../scripts/fixtures/hub-console-history.ts) 消费真实数据库、历史与身份现场；[shared 消费者](../../../../scripts/smoke-shared-package.ts) 先验历史页面再重启 Runner。新设计保持这些实质边界，不能把一个结果摘要当作完整可重建现场。
 - [HAPI 专项](../../../../scripts/smoke-hapi-session-and-shutdown.ts) 同时包含无模型停机/认证和真实 Claude 长路径两轮会话延续；[execution](../../../../scripts/smoke-execution.ts) 还有 Codex 共享宿主兄弟会话停止隔离。它们不能整包认作重复。
-- [官网恢复](../../../../website/recover.mjs) 仍按 `.dev-smoke/website-pages` 的固定路径读取日志报告；[报告汇总](../../../../scripts/report-evidence.mjs) 递归扫描目录。因此移除目录依赖须联动当前证据生产和恢复逻辑，不能只改测试输出位置。
+- [官网恢复](../../../../website/recover.mjs) 仍按 `.dev-smoke/website-pages` 的固定路径读取日志报告；[报告汇总](../../../../scripts/report-evidence.mjs) 递归扫描目录。因此移除物理目录依赖须联动生产和消费的工作目录；第四轮采纳更小方案，保留现行日志信封与 path 协议标识，只显式传入报告文件。
 - [打包](../../../../scripts/package.ts) 从 scripts 复制 npm launcher 到包内 `bin/runweft.cjs`；[候选来源](../../../../scripts/fixtures/release-inputs.mjs) 含这个旧源路径。移到 src 只改变源码归属，但两个当前消费者要同步处理。
 
 ## 环节与前置命令补充调查
@@ -164,11 +164,26 @@
 
 | 当前事实 | 设计含义 |
 | --- | --- |
-| [package.json](../../../../package.json) 的 dev 只是 `bun src/cli.ts`；[服务命令](../../../../src/service-commands.ts) 已有 start/serve/status/stop 与 runner start/stop | 产品启动能力已经存在；开发 dev 命令本身不创建隔离验收环境。新入口仅包装隔离准备和生命周期，不另写服务/runtime |
-| [使用说明](../../../usage.md) 明确首次 start 只启动 Hub，不自动建立身份/Runner；停止 Runner 也不等于停止任务 | dev:env 默认只起 Hub，--runner 才额外准备专用身份/连接；退出需确认本次任务和进程停止，不能只执行 stop 后删目录 |
+| [package.json](../../../../package.json) 的 dev 只是 `bun src/cli.ts`；[服务命令](../../../../src/service-commands.ts) 已有 start/serve/status/stop 与 runner start/stop | 产品启动能力已经存在；开发 dev 命令本身不创建隔离验收环境。新入口仅包装隔离准备和显式 start/stop，不另写服务/runtime；不把产品后台进程当作前台子进程 |
+| [使用说明](../../../usage.md) 明确首次 start 只启动 Hub，不自动建立身份/Runner；停止 Runner 也不等于停止任务 | dev:env 默认只起 Hub，--runner 才额外准备专用身份/连接；显式 stop 先核对会话/宿主，无活跃且归属明确才回收，不能推断外部任务所有权 |
 | [native-user-smoke](../../../../scripts/fixtures/native-user-smoke.ts) 已有独立 Hub、身份、机器、Runner 与 close；[task-smoke](../../../../scripts/fixtures/task-smoke.ts) 进一步绑定模型配置、Agent 与会话关闭 | 拆分通用准备与业务场景，复用前者到薄环境入口；不把 task/native 整段测试直接包装成 setup 命令 |
 | [model-homes](../../../../scripts/fixtures/model-homes.ts) 会读取来源配置，部分上层还修改副本中的 MCP 列表 | 自由启动默认使用空隔离原生目录，不能无条件运行当前模型 fixture；固定 native 的显式模型准备留在该验收路径 |
-| [发行操作](../../../release.md) 当前通过 KEEP_INSTALL 保留安装现场，后续拿 installedBinary 接着验 | 目标改为测试与环境准备各自独立：test:install 给固定结果，dev:env --candidate 给可操作环境；共用安装函数，不复用测试现场 |
+| [发行操作](../../../release.md) 当前通过 KEEP_INSTALL 保留安装现场，后续拿 installedBinary 接着验 | 目标改为测试与环境准备各自独立：test:install 给固定结果，dev:env start --candidate 给可操作环境；共用安装函数，不复用测试现场 |
 | [官网说明](../../../../website/README.md) 已有 build/serve 与 test/verify 的分离 | 保留此现成区分；serve 是预览前置，verify 是固定检查，不新增根包装器 |
 
 固定回归、交互验收与发行工作流的完整入口表见 [技术方案](technical.md#在什么环节执行什么)。后续实现时更新当前操作文档和 package 入口；本轮不把拟定参数写成已实现能力。
+
+
+## 2026-10-17 第四轮复核补充
+
+用户提供评审提交 151d5cc。主 Agent 重新读取相关源码与固定 Bun 帮助，并使用 GitHub API 核对 fork；本轮没有再次运行 264 项根测试、integration 或模型。第四轮的 71.44 秒根测试、0.2 秒 CLI 编译和 CI 时长均归属 Claude 的实测记录，不能算作本 Agent 重测。
+
+- API `repos/iTgo-lyq/hapi/actions/runs?per_page=1` 返回 total_count=0；pin `8f774b9413fd483bc163cc06425d7646f10a7c92` 的 check-runs 也为 0。不能把 fork 目录里的测试视为正在执行的门禁。
+- pin 的 CLI repositories/artifacts/workspaces manager 测试实际使用 Vitest；repositories 有真实 Git bundle/fsck、workspaces 有真实 LFS。其 globalSetup 还启动源码 Hub并使用固定临时配置名，故需独立 job/临时根与源码依赖，不能说成只运行纯函数或直接用 Bun 原生 runner 执行。测试文件及其内部产物仍归 HAPI，根仓不复制/改写。
+- services.start 使用 detached/unref；services.stop 会等待托管服务关闭，但返回 sessionsPreserved，不能证明原生会话退出。runner start 同样后台化。dev:env 改显式目录句柄与 stop，不承诺终端关闭自动回收，不替外部操作猜测任务所有权。
+- Bun 1.4.2 本机帮助确认 --shard、--timings/--update-timings、--isolate、--parallel、--no-orphans；--timings 是耗时文件输入，配合 --update-timings 才写测量。无计划增加自制分片调度。
+- cli-install 当前实际安装 Bun；Node-only 是重构验收目标而非已有 CI 事实。9 个 compiledCli 消费者不要求真实 HAPI 二进制，但其中有文件使用内嵌 HAPI Store/路由，不能一概说其所有边界都是假 HAPI。
+- 当前发布 workflow 从 tag 重建并不读取 native 证据。本方案明确选择冻结源码/构建输入绑定、由发行 Agent 本地核对；公开包的摘要与安装/集成由 CI 自己核对。没有声称形成 CI 强制的公开包模型门禁。
+- 已核对 SSE 撤销/回放/RPC 改路由、传输中撤销、日志/数据库/WAL 秘密扫描、浏览器 WebCrypto 与实际版本发现的独有检查；逐项归属见 Technical，不以一般权限回归替代。
+- 现行日志 path 同时是官网恢复协议标识，因此沿用其单一格式；物理工作目录与标识分离。CI 工具/配置、release-source、候选/缓存、空间采样、官网与卸载报告、Kit 导出的所有者/位置见 Technical，不再统称测试现场。
+- 当前 modelHomes 比较认证文件 hash、native 指纹包括 Claude 状态，closeSmoke 没有共享关闭结果；这些均是要改的行为。目录迁移前补全安装 prefix/cache/services、包解包、service 与无 cleanups fixture 的根所有权。机器过期无可注入时钟，保留一次真实等待；关闭宽限时间仅在工程 helper 中参数化。
