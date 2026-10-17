@@ -88,7 +88,8 @@ export async function collaboration(f: NativeFixture, id: string) {
             if (tasks.length) {
                 const current = cli(['task', 'show', tasks[0].agent_id]);
                 if (current.host_pid) f.pids.add(current.host_pid);
-                assert(!['unknown', 'failed', 'needs_attention'].includes(current.status), 'Native task failed or became unknown');
+                assert(!['unknown', 'failed'].includes(current.status), 'Native task failed or became unknown');
+                assert(current.status !== 'needs_attention' || current.attention?.code === 'permission_required', 'Native task needs non-permission attention');
                 if (id === 'N1' && !inventory && current.phase === 'running' && current.native_session_id) {
                     try { const found = await codexCatalog(cli(['paths']).hapiClient, current.session_id, current.native_session_id, current.host_pid);
                         if (found.some(s => s.name === 'keep_probe' && s.tools.includes('probe_report'))) inventory = found;

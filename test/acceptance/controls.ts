@@ -26,7 +26,8 @@ export async function controls(f: NativeFixture, flavor: Flavor) {
         const handled = new Set<string>();
         await until(() => {
             const current = cli(['task', 'show', taskId]);
-            assert(!['unknown', 'failed', 'needs_attention'].includes(current.status));
+            assert(!['unknown', 'failed'].includes(current.status), `Native task ${current.status}`);
+            assert(current.status !== 'needs_attention' || current.attention?.code === 'permission_required', 'Native task needs non-permission attention');
             for (const [id, request] of Object.entries(current.permissions ?? {}) as [string, any][]) {
                 if (handled.has(id)) continue;
                 assert(JSON.stringify(request.arguments).includes(file), 'Unexpected permission target'); handled.add(id);
