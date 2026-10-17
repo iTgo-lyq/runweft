@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync } from 'node:fs';
 import { basename, join } from 'node:path';
 import { createHash } from 'node:crypto';
 import { getProjectPath } from '../../hapi/cli/src/claude/utils/path';
@@ -30,8 +30,10 @@ export async function recovery(f: NativeFixture, flavor: Flavor, longPath = fals
     } else {
         // Only this completed case's native history moves aside. Product business records stay in place.
         f.stopRunners();
-        for (const name of flavor === 'codex' ? ['sessions', 'archived_sessions', 'session_index.jsonl'] : ['projects']) {
-            const path = join(nativeHome, name); if (existsSync(path)) renameSync(path, path + '.retained');
+        renameSync(nativeHome, nativeHome + '.retained'); mkdirSync(nativeHome, { mode: 0o700 });
+        for (const name of flavor === 'codex' ? ['config.toml', 'auth.json'] : ['settings.json', '.credentials.json', '.claude.json']) {
+            const retained = join(nativeHome + '.retained', name);
+            if (existsSync(retained)) { copyFileSync(retained, join(nativeHome, name)); rmSync(retained); }
         }
         cli(['runner', 'start']);
     }
@@ -42,7 +44,7 @@ export async function recovery(f: NativeFixture, flavor: Flavor, longPath = fals
     } else {
         assert.equal(second.resume.outcome, 'missing'); assert.equal(second.reconstruction.reason, 'native_session_missing');
         assert.deepEqual(second.reconstruction.source_round_ids, [first.round_id]); assert.notEqual(second.native_session_id, first.native_session_id);
-        const retained = original.replace(/\/(sessions|archived_sessions|projects)\//, '/$1.retained/');
+        const retained = original.replace(nativeHome + '/', nativeHome + '.retained/');
         assert.equal(createHash('sha256').update(readFileSync(retained)).digest('hex'), before);
         const transcript = readFileSync(history(flavor === 'codex' ? join(nativeHome, 'sessions') : join(nativeHome, 'projects'), second.native_session_id), 'utf8');
         const users = transcript.trim().split('\n').map(line => JSON.parse(line)).filter(event => flavor === 'codex'
