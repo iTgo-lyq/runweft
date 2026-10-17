@@ -4,9 +4,65 @@
   "title": "重构测试与工程辅助流程",
   "size": "large",
   "status": "active",
-  "stage": "requirement",
+  "stage": "plan",
   "branch": "codex/test-workflow-redesign",
-  "confirmations": {},
-  "tasks": {},
-  "closure": {}
+  "confirmations": {
+    "requirement": {
+      "at": "2026-10-17T02:06:44.108Z",
+      "summary": "用户确认删除低价值和重复测试、保留核心跨模块契约与少量关键 E2E、交付完整测试验收手册，并按现有 Change 推进重构。",
+      "source": "2026-10-17 用户：可以，就按这个方向，走 change 流程推进重构。重点删除低价值和重复测试，保留核心跨模块契约和少量关键 E2E，最后交付完整的测试验收手册。"
+    },
+    "technical": {
+      "at": "2026-10-17T02:06:44.233Z",
+      "summary": "用户认可第五轮收敛方案：直接裁剪非核心覆盖，核心契约集中验证，原生五项主集合和按影响执行专项，精简脚本与生命周期，沿用现行发布协议并交付操作手册。",
+      "source": "2026-10-17 用户：可以，就按这个方向，走 change 流程推进重构。重点删除低价值和重复测试，保留核心跨模块契约和少量关键 E2E，最后交付完整的测试验收手册。"
+    }
+  },
+  "tasks": {
+    "T1": {
+      "title": "按改动选择 CI 检查与依赖",
+      "status": "todo"
+    },
+    "T2": {
+      "title": "删除已确认的低价值测试和不可达分支",
+      "status": "todo"
+    },
+    "T3": {
+      "title": "用真实接线试点 Bun 集成与关闭语义",
+      "status": "todo"
+    },
+    "T4": {
+      "title": "集中核心契约并切换默认与集成入口",
+      "status": "todo"
+    },
+    "T5": {
+      "title": "收敛候选安装、启动与卸载验收",
+      "status": "todo"
+    },
+    "T6": {
+      "title": "缩减浏览器与原型验收到核心用户路径",
+      "status": "todo"
+    },
+    "T7": {
+      "title": "提供独立的灵活验收环境入口",
+      "status": "todo"
+    },
+    "T8": {
+      "title": "明确工程工作目录与报告消费",
+      "status": "todo"
+    },
+    "T9": {
+      "title": "将原生验收收敛为单 case 生命周期",
+      "status": "todo"
+    },
+    "T10": {
+      "title": "交付完整测试验收手册与整体验证结果",
+      "status": "todo"
+    }
+  },
+  "closure": {},
+  "waitingFor": {
+    "kind": "confirmation",
+    "summary": "需求与第五轮技术方案已按用户授权确认；完整 Plan 已定义 T1–T10，待用户确认整体计划后进入 execution，后续按计划逐项实施无需逐任务审批。"
+  }
 }
