@@ -229,9 +229,13 @@ export async function verifyDeployment(target, {
 }
 
 async function save(name, value) {
-  await mkdir('.dev-smoke/website-pages', { recursive: true });
-  await writeFile(`.dev-smoke/website-pages/${name}.json`, JSON.stringify(value, null, 2) + '\n');
+  assert(process.env.RUNWEFT_WORK_DIR, 'Set RUNWEFT_WORK_DIR');
+  const directory = resolve(process.env.RUNWEFT_WORK_DIR, 'website'), file = join(directory, name + '.json');
+  await mkdir(directory, { recursive: true });
+  await writeFile(file, JSON.stringify(value, null, 2) + '\n');
+  await outputs({ [name + '-report']: file });
 }
+
 async function summary(text) { if (process.env.GITHUB_STEP_SUMMARY) await appendFile(process.env.GITHUB_STEP_SUMMARY, `${text}\n`); }
 async function outputs(values) {
   if (process.env.GITHUB_OUTPUT) await appendFile(process.env.GITHUB_OUTPUT, Object.entries(values).map(([key, value]) => `${key}=${value}\n`).join(''));
@@ -239,6 +243,7 @@ async function outputs(values) {
 
 async function main() {
   const env = process.env;
+  assert(env.RUNWEFT_WORK_DIR, 'Set RUNWEFT_WORK_DIR');
   const directory = resolve('dist/website');
   switch (process.argv[2]) {
     case 'eligibility': {
@@ -267,7 +272,7 @@ async function main() {
     }
     case 'prepare': {
       const target = deploymentTarget(env);
-      if (target.mode === 'check') { await outputs({ deploy: false }); await summary('此事件/分支仅检查，未部署。'); break; }
+      if (target.mode === 'check') { await save('prepare', { deployed: false, ...target }); await outputs({ deploy: false }); await summary('此事件/分支仅检查，未部署。'); break; }
       const missing = ['CLOUDFLARE_ACCOUNT_ID', 'CLOUDFLARE_API_TOKEN'].filter(key => !env[key]);
       if (missing.length) {
         await outputs({ deploy: false });
@@ -281,7 +286,7 @@ async function main() {
       if (env.RELEASE_VERSION) assert.equal((await validateSite(directory)).release.version, env.RELEASE_VERSION);
       const project = await ensurePagesProject({ accountId: env.CLOUDFLARE_ACCOUNT_ID, apiToken: env.CLOUDFLARE_API_TOKEN, projectName: env.CLOUDFLARE_PAGES_PROJECT || 'runweft' });
       await validateSite(directory);
-      const toolDirectory = join(env.RUNNER_TEMP, 'runweft-pages-tools');
+      const toolDirectory = resolve(env.RUNWEFT_WORK_DIR, 'tools', 'pages');
       await mkdir(toolDirectory, { recursive: true });
       await writeFile(join(toolDirectory, 'package.json'), JSON.stringify({ name: 'runweft-pages-tools', private: true }));
       await save('prepare', { deployed: false, ...target, ...project });
@@ -290,11 +295,11 @@ async function main() {
     }
     case 'verify': {
       const site = await validateSite(directory);
-      const prepared = JSON.parse(await readFile('.dev-smoke/website-pages/prepare.json', 'utf8'));
+      const prepared = JSON.parse(await readFile(resolve(env.RUNWEFT_WORK_DIR, 'website/prepare.json'), 'utf8'));
       const target = { url: env.PAGES_DEPLOYMENT_URL, subdomain: prepared.subdomain,
         mode: prepared.mode, pagesEnvironment: env.PAGES_ENVIRONMENT, site };
       const { deployment } = deploymentReference(target);
-      const recovery = env.VERIFY_RUN_ID ? JSON.parse(await readFile('.dev-smoke/website-pages/recovery.json', 'utf8')) : null;
+      const recovery = env.VERIFY_RUN_ID ? JSON.parse(await readFile(resolve(env.RUNWEFT_WORK_DIR, 'website/recovery.json'), 'utf8')) : null;
       if (recovery) {
         assert.equal(String(recovery.sourceRunId), env.VERIFY_RUN_ID);
         assert.equal(deployment.href, recovery.url, '复验 URL 必须与原上传回执一致。');

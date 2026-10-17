@@ -48,14 +48,13 @@ jobs:
     if: needs.scope.outputs.checks == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 35
-    env:
-      CODEX_HOME: ${{ github.workspace }}/.dev-smoke/ci-codex
-      CLAUDE_CONFIG_DIR: ${{ github.workspace }}/.dev-smoke/ci-claude
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
           persist-credentials: false
+      - name: Prepare this job’s private working directory
+        run: node scripts/prepare-ci.mjs ${{ strategy.job-index }}
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: '24'
@@ -73,9 +72,9 @@ jobs:
       - if: fromJSON(needs.scope.outputs.selection).clients
         run: |
           mkdir -p "$CODEX_HOME" "$CLAUDE_CONFIG_DIR"
-          npm install --prefix .dev-smoke/native-tools --ignore-scripts --registry=https://registry.npmjs.org/ @openai/codex@0.159.2 @anthropic-ai/claude-code@2.1.283
-          node .dev-smoke/native-tools/node_modules/@anthropic-ai/claude-code/install.cjs
-          echo "$GITHUB_WORKSPACE/.dev-smoke/native-tools/node_modules/.bin" >> "$GITHUB_PATH"
+          npm install --prefix "$RUNWEFT_WORK_DIR/tools/native" --ignore-scripts --registry=https://registry.npmjs.org/ @openai/codex@0.159.2 @anthropic-ai/claude-code@2.1.283
+          node "$RUNWEFT_WORK_DIR/tools/native/node_modules/@anthropic-ai/claude-code/install.cjs"
+          echo "$RUNWEFT_WORK_DIR/tools/native/node_modules/.bin" >> "$GITHUB_PATH"
       - if: fromJSON(needs.scope.outputs.selection).typecheck
         run: bun run typecheck
       - if: needs.scope.outputs.core == 'true'
@@ -102,9 +101,9 @@ jobs:
         if: fromJSON(needs.scope.outputs.selection).managers
         run: bunx vitest run src/runner/artifacts/manager.test.ts src/runner/repositories/manager.test.ts src/runner/workspaces/manager.test.ts
         working-directory: hapi/cli
-      - name: Keep sanitized integration evidence in logs
-        if: always()
-        run: node scripts/report-evidence.mjs
+      - name: Remove this job’s prepared tools after successful checks
+        if: success()
+        run: rm -rf -- "$RUNWEFT_WORK_DIR"
 
   prototype:
     needs: scope

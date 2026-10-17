@@ -1,3 +1,4 @@
+import { tmpdir } from 'node:os';
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { createHash } from 'node:crypto';
@@ -168,7 +169,7 @@ test('prerelease recovery reads original successful gates for rerun-all and main
 });
 
 test('public integration extracts the bound archive and rejects either changed program', () => {
-    const directory = mkdtempSync(resolve('.dev-smoke/unpack-candidate-'));
+    const directory = mkdtempSync(join(tmpdir(), 'unpack-candidate-'));
     const release = descriptor(), entry = release.packages.find(item => item.name === 'runweft-linux-x64');
     const source = join(directory, 'fixture'); mkdirSync(join(source, 'package/bin'), { recursive: true });
     mkdirSync(join(directory, 'tarballs'));
@@ -263,7 +264,7 @@ test('registry visibility retries only reads; corrupted download refuses install
         pause: async () => { pauses++; missing = false; },
     });
     assert.equal(reads, 10); assert.equal(pauses, 5);
-    const directory = mkdtempSync(resolve('.dev-smoke/public-candidate-test-'));
+    const directory = mkdtempSync(join(tmpdir(), 'public-candidate-test-'));
     const downloads = [];
     try {
         await downloadRelease(release, directory, { platform: 'linux-x64', read: async entry => publicManifest(entry),
@@ -323,7 +324,7 @@ test('HTTP candidate reads retry propagation, throttling and interrupted bodies 
         } else res.end(bytes);
     });
     await new Promise(done => server.listen(0, '127.0.0.1', done));
-    const directory = mkdtempSync(resolve('.dev-smoke/public-retry-'));
+    const directory = mkdtempSync(join(tmpdir(), 'public-retry-'));
     try {
         await downloadRelease(release, directory, { platform: 'linux-x64', now: () => clock,
             pause: async ms => { waits.push(ms); clock += ms; }, record: item => records.push(item),
@@ -340,7 +341,7 @@ test('HTTP candidate reads retry propagation, throttling and interrupted bodies 
 test('candidate errors and one shared deadline cannot leave a partial archive or an installation index', async () => {
     const release = descriptor();
     for (const scenario of ['auth', 'gone', 'hash', 'url', 'retry-after', 'shared-budget', 'body-timeout']) {
-        const directory = mkdtempSync(resolve('.dev-smoke/public-refusal-'));
+        const directory = mkdtempSync(join(tmpdir(), 'public-refusal-'));
         let clock = 0, reads = 0, downloads = 0;
         const options = { platform: 'linux-x64', timeoutMs: 5000, now: () => clock,
             pause: async ms => { clock += ms; },
@@ -375,4 +376,18 @@ test('candidate errors and one shared deadline cannot leave a partial archive or
             }
         } finally { clearInterval(keepAlive); rmSync(directory, { recursive: true, force: true }); }
     }
+});
+
+test('explicit report collection rejects absent/conflicting evidence and keeps website recovery IDs independent of disk paths', async () => {
+    const { collectEvidence } = await import('../report-evidence.mjs');
+    const directory = mkdtempSync(join(tmpdir(), 'runweft-evidence-'));
+    try {
+        const file = join(directory, 'deployment.json'); writeFileSync(file, JSON.stringify({ success: false, uploaded: true }));
+        assert.deepEqual(collectEvidence([file], true), [{ path: '.dev-smoke/website-pages/deployment.json', report: { success: false, uploaded: true } }]);
+        assert.throws(() => collectEvidence([]));
+        assert.throws(() => collectEvidence([file, join(directory, 'missing.json')]));
+        assert.throws(() => collectEvidence([file, file], true), /duplicate/);
+        const child = spawnSync(process.execPath, ['scripts/report-evidence.mjs', file, join(directory, 'missing.json')], { encoding: 'utf8' });
+        assert.notEqual(child.status, 0); assert.equal(child.stdout, '', 'No partial success envelope on missing later report');
+    } finally { rmSync(directory, { recursive: true, force: true }); }
 });

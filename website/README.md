@@ -81,7 +81,7 @@ HTML/CSS/JS 提供对应 MIME type 和 UTF-8，SVG 使用 image/svg+xml，两张
 ```sh
 node --test ./website/publish.test.mjs
 node website/build.mjs
-node website/publish.mjs check
+RUNWEFT_WORK_DIR=/本次操作目录 node website/publish.mjs check
 ```
 
 最后一步访问公共 npm；API/路由失败路径用专用夹具测试。当前产品行为见[官网规格](../docs/project/specs/website/spec.md)，生产部署和匿名安装证据见[发行归档](../docs/project/archive/2026-10-12-npm-uninstall-release/acceptance.md)。[正式官网](https://runweft.pages.dev/)随 main 更新，固定构建验收使用唯一部署 URL。
@@ -90,14 +90,14 @@ node website/publish.mjs check
 
 ```sh
 bunx playwright install chromium --only-shell
-node website/verify.mjs
+node website/verify.mjs --report /tmp/runweft-website.json
 ```
 
 仅修改官网内容、已发布程序与 Skill 保持不变时，可显式只验收网页：
 
 ```sh
 node website/build.mjs
-node website/verify.mjs --browser-only
+node website/verify.mjs --browser-only --report /tmp/runweft-website.json
 ```
 
 该模式保留 DOM 命令、安装失败短路和全部浏览器检查，跳过再次下载/安装已发布 npm 包，证据标注 scope 与 install.skipped；不能作为新的平台安装证明。默认不加参数仍执行真实 npm 安装。
@@ -106,7 +106,7 @@ node website/verify.mjs --browser-only
 
 程序安装命令从实际页面 DOM 获取；Kit 命令仅检查页面内容和复制，安装验收由 Kit 正式入口负责。安装使用独立 HOME、npm prefix/userconfig/globalconfig/cache，清除继承的 npm 配置与认证环境变量，PATH 仅含本次安装、Node/npm/npx 和系统工具。失败 npm 夹具确认不继续运行旧程序；公共 registry 实际安装核对入口归属、精确版本、README 和全部六个包内 Skill 文件字节；不重复执行公开 Kit 安装。稳定发布的 Linux x64 job 传入原 descriptor，另核对 Runweft/HAPI 两程序摘要。不改用户 MCP/Skill，不启动模型。该检查不代表 Mac/arm64 实机运行。
 
-本次服务和浏览器在结束时关闭；证据与截图、专用安装留在 `.dev-smoke/website-*/`，不提交。
+本次服务和浏览器在结束时关闭；报告位置由 `--report` 指定，截图保存在其旁边。成功后删除专用安装根；失败保留报告所列根供诊断。发布/恢复/在线检查由调用者提供 `RUNWEFT_WORK_DIR`，物理报告在其 `website/` 下；日志中的旧路径字符串仅为恢复协议 ID。CI 在本次 run/attempt/job 的临时根操作，成功记录证据后回收，失败交由该一次性 runner 收尾。
 
 ## HAPI 官方截图
 

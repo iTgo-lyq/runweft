@@ -69,3 +69,11 @@ T5 四平台复验：Actions [38997618984](https://github.com/iTgo-lyq/runweft/a
 实走仅 Hub 的后台启动、HTTP 访问、停止及重复停止；带 Runner 的启动、外来目录拒绝、损坏 Runner 状态拒绝、真实活跃进程登记后的拒绝，以及显式结束该进程后正常停止，均通过。本次反例是仓库外一次性验收驱动，没有沉淀第二套进程框架或测试镜像；没有调用模型。
 
 T7 候选路径使用冻结候选 `b9b8006` 实际启动后台 Hub，启动进程退出后 HTTP 仍可访问，显式 stop 确认回收。失败 HAPI 替身返回退出码 7，产品 start 明确失败，dev:env 确认进程退出并删除其专用根。最初一次性残留探针误把同时运行的另一候选环境计入；改为只核对失败命令返回的自身根后通过，未扫描删除任何其他根。类型检查、npm-release 工具 17/17、文档/流程/diff 通过；一次测试文件名输入错误没有计入通过结果。
+
+## T8 明确工程工作目录与报告消费
+
+工程消费者已改为显式 `RUNWEFT_WORK_DIR`，发行冻结源码显式 `RELEASE_SOURCE`；CI 使用 run/attempt/job/slot 临时根，source 通过本地 Git object clone 后检出冻结 commit 到仓库外，工具、配置、公共候选及报告各在本次根下。成功收尾并输出证据后删除根；失败保留至一次性 runner 结束。Kit 使用系统临时导出且 EXIT trap 回收。没有扫描或删除旧 `.dev-smoke` 或未知用户目录。
+
+report-evidence 仅消费显式文件列表，一次校验后输出原 `RUNWEFT_CI_EVIDENCE={path,report}`；官网生产者返回明确报告路径，最终收集沿用旧 `.dev-smoke/website-pages/...` 作为协议 ID，恢复不改。发行标记、原先 prepublication step 显示名和读回契约保留。普通集成直接使用 Bun 输出，删除无报告来源的全目录扫描步骤。官网本地浏览器验收新增必填 `--report`，服务/浏览器全部关闭后，成功回收私有安装，失败保留诊断根；报告和截图在根外。
+
+实际验证：Node 工程/官网 71/71、actionlint、类型、文档/流程/diff 通过；真实官网 browser-only 成功且私有根已回收；错误浏览器路径的失败报告为 false，服务全部关闭且明确保留根，本次探针随后回收该已停根。CI 根与 slot 绑定、非法 slot 拒绝、仓库外冻结 checkout 源码干净通过。缺失/重复证据反例与官网只读恢复/上传失败留回执均通过。首次 actionlint 拒绝 job-env 使用 runner context，改为 13 行共享 CI 准备入口；两处工具测试原先依赖输出全字节/最后一步位置，改为核对实际门禁值，复验通过。未执行发布、部署、OIDC 交换或远端 Kit 同步；原生旧链的剩余物理依赖留 T9 整体移除。

@@ -20,8 +20,7 @@ if [[ $(git -C "$distribution_root" branch --show-current) != main ]]; then
   exit 1
 fi
 
-mkdir -p "$source_root/.dev-smoke"
-skill_export=$(mktemp -d "$source_root/.dev-smoke/runweft-kit-export-XXXXXX")
+skill_export=$(mktemp -d "${TMPDIR:-/tmp}/runweft-kit-export-XXXXXX")
 trap 'rm -rf -- "$skill_export"' EXIT
 # Publish the committed Skill tree, never working-tree edits or other source files.
 git -C "$source_root" archive "$source_commit:.agents/skills/runweft-kit" |

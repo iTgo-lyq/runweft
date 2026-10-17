@@ -34,9 +34,6 @@ jobs:
       contents: read
       actions: read
       id-token: write
-    env:
-      CODEX_HOME: ${{ github.workspace }}/.dev-smoke/ci-codex
-      CLAUDE_CONFIG_DIR: ${{ github.workspace }}/.dev-smoke/ci-claude
     outputs:
       release: ${{ steps.prepared.outputs.release || steps.published.outputs.release }}
       publish: ${{ steps.prepared.outputs.publish }}
@@ -50,6 +47,8 @@ jobs:
           submodules: true
           fetch-depth: 0
           persist-credentials: false
+      - name: Prepare this job’s private working directory
+        run: node scripts/prepare-ci.mjs ${{ strategy.job-index }}
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: '24'
@@ -78,11 +77,11 @@ jobs:
         if: steps.prepared.outputs.build == 'true'
         run: |
           mkdir -p "$CODEX_HOME" "$CLAUDE_CONFIG_DIR"
-          npm install --prefix .dev-smoke/native-tools --ignore-scripts --registry=https://registry.npmjs.org/ @openai/codex@0.159.2 @anthropic-ai/claude-code@2.1.283
-          node .dev-smoke/native-tools/node_modules/@anthropic-ai/claude-code/install.cjs
-          .dev-smoke/native-tools/node_modules/.bin/codex --version
-          .dev-smoke/native-tools/node_modules/.bin/claude --version
-          echo "$GITHUB_WORKSPACE/.dev-smoke/native-tools/node_modules/.bin" >> "$GITHUB_PATH"
+          npm install --prefix "$RUNWEFT_WORK_DIR/tools/native" --ignore-scripts --registry=https://registry.npmjs.org/ @openai/codex@0.159.2 @anthropic-ai/claude-code@2.1.283
+          node "$RUNWEFT_WORK_DIR/tools/native/node_modules/@anthropic-ai/claude-code/install.cjs"
+          "$RUNWEFT_WORK_DIR/tools/native/node_modules/.bin/codex" --version
+          "$RUNWEFT_WORK_DIR/tools/native/node_modules/.bin/claude" --version
+          echo "$RUNWEFT_WORK_DIR/tools/native/node_modules/.bin" >> "$GITHUB_PATH"
       - if: steps.prepared.outputs.build == 'true'
         run: bun run typecheck && bun run test
       - if: steps.prepared.outputs.build == 'true'
@@ -91,28 +90,29 @@ jobs:
         run: bunx playwright install --with-deps chromium
       - name: Check out exact tag source for packaging
         if: steps.prepared.outputs.build == 'true'
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          ref: ${{ steps.prepared.outputs.source-ref }}
-          path: .dev-smoke/release-source
-          submodules: true
-          persist-credentials: false
+        env:
+          SOURCE_REVISION: ${{ steps.prepared.outputs.source-ref }}
+        run: |
+          git clone --no-hardlinks --no-checkout "$GITHUB_WORKSPACE" "$RUNWEFT_WORK_DIR/source"
+          git -C "$RUNWEFT_WORK_DIR/source" checkout --detach "$SOURCE_REVISION"
+          git -C "$RUNWEFT_WORK_DIR/source" submodule update --init hapi
       - if: steps.prepared.outputs.build == 'true'
         run: bun install --frozen-lockfile
-        working-directory: .dev-smoke/release-source
+        working-directory: ${{ env.RUNWEFT_WORK_DIR }}/source
       - if: steps.prepared.outputs.build == 'true'
         run: bun install --frozen-lockfile
-        working-directory: .dev-smoke/release-source/hapi
+        working-directory: ${{ env.RUNWEFT_WORK_DIR }}/source/hapi
       - if: steps.prepared.outputs.build == 'true'
         run: node "$GITHUB_WORKSPACE/scripts/release-space.mjs" measure bun run package --all
-        working-directory: .dev-smoke/release-source
+        working-directory: ${{ env.RUNWEFT_WORK_DIR }}/source
       - name: Check every model-free integration group on the frozen candidate
+        id: validation
         if: steps.prepared.outputs.build == 'true'
         env:
-          CANDIDATE: .dev-smoke/release-source/dist/packages
+          CANDIDATE: ${{ env.RUNWEFT_WORK_DIR }}/source/dist/packages
           INLINE_INTEGRATION: ${{ steps.prepared.outputs.inline-integration }}
         run: |
-          node test/acceptance/install.mjs --candidate "$CANDIDATE" --case all --report "$RUNNER_TEMP/install.json"
+          node test/acceptance/install.mjs --candidate "$CANDIDATE" --case all --report "$RUNWEFT_WORK_DIR/reports/install.json"
           if [ "$INLINE_INTEGRATION" = true ]; then
             bun run test:integration --bin "$CANDIDATE/runweft-linux-x64/bin/runweft" --
           fi
@@ -124,12 +124,16 @@ jobs:
         if: steps.prepared.outputs.build == 'true'
         env:
           SOURCE_REVISION: ${{ steps.prepared.outputs.source-ref }}
+          RELEASE_SOURCE: ${{ env.RUNWEFT_WORK_DIR }}/source
           PUBLISH_RELEASE: ${{ steps.prepared.outputs.publish }}
           VERIFY_ONLY: ${{ steps.prepared.outputs.verify-only }}
         run: node scripts/npm-release.mjs beta
       - name: Keep sanitized validation in logs
-        if: always()
-        run: node scripts/report-evidence.mjs
+        if: always() && steps.validation.outcome != 'skipped'
+        run: node scripts/report-evidence.mjs "$RUNWEFT_WORK_DIR/reports/install.json"
+      - name: Remove successful job inputs
+        if: success()
+        run: rm -rf -- "$RUNWEFT_WORK_DIR"
 
   integration:
     needs: beta
@@ -141,14 +145,14 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     env:
-      CODEX_HOME: ${{ github.workspace }}/.dev-smoke/ci-codex
-      CLAUDE_CONFIG_DIR: ${{ github.workspace }}/.dev-smoke/ci-claude
       RELEASE_DESCRIPTOR: ${{ needs.beta.outputs.release }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           submodules: true
           persist-credentials: false
+      - name: Prepare this job’s private working directory
+        run: node scripts/prepare-ci.mjs ${{ strategy.job-index }}
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: '24'
@@ -161,9 +165,9 @@ jobs:
       - name: Install clients for configuration and discovery only
         run: |
           mkdir -p "$CODEX_HOME" "$CLAUDE_CONFIG_DIR"
-          npm install --prefix .dev-smoke/native-tools --ignore-scripts --registry=https://registry.npmjs.org/ @openai/codex@0.159.2 @anthropic-ai/claude-code@2.1.283
-          node .dev-smoke/native-tools/node_modules/@anthropic-ai/claude-code/install.cjs
-          echo "$GITHUB_WORKSPACE/.dev-smoke/native-tools/node_modules/.bin" >> "$GITHUB_PATH"
+          npm install --prefix "$RUNWEFT_WORK_DIR/tools/native" --ignore-scripts --registry=https://registry.npmjs.org/ @openai/codex@0.159.2 @anthropic-ai/claude-code@2.1.283
+          node "$RUNWEFT_WORK_DIR/tools/native/node_modules/@anthropic-ai/claude-code/install.cjs"
+          echo "$RUNWEFT_WORK_DIR/tools/native/node_modules/.bin" >> "$GITHUB_PATH"
       - run: bunx playwright install --with-deps chromium
       - name: Download immutable public candidate
         id: candidate
@@ -178,9 +182,9 @@ jobs:
           SHARD: ${{ matrix.shard }}
           CANDIDATE_BINARY: ${{ steps.programs.outputs.binary }}
         run: bun run test:integration --bin "$CANDIDATE_BINARY" -- --shard "$SHARD"
-      - name: Keep sanitized integration evidence in logs
-        if: always()
-        run: node scripts/report-evidence.mjs
+      - name: Remove successful job inputs
+        if: success()
+        run: rm -rf -- "$RUNWEFT_WORK_DIR"
 
   install:
     needs: beta
@@ -205,6 +209,8 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      - name: Prepare this job’s private working directory
+        run: node scripts/prepare-ci.mjs ${{ strategy.job-index }}
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: '24'
@@ -218,6 +224,9 @@ jobs:
           VALIDATION_MODE: ${{ needs.beta.outputs.validation-mode }}
           VERIFY_ONLY: ${{ needs.beta.outputs.verify-only }}
         run: node scripts/npm-release.mjs promote
+      - name: Remove successful job inputs
+        if: success()
+        run: rm -rf -- "$RUNWEFT_WORK_DIR"
 
   website:
     if: inputs.verify-run-id == '' && (github.event_name == 'push' || inputs.release-tag != '')
@@ -233,6 +242,8 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
+      - name: Prepare this job’s private working directory
+        run: node scripts/prepare-ci.mjs ${{ strategy.job-index }}
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: '24'
@@ -243,6 +254,9 @@ jobs:
           RELEASE_TAG: ${{ github.event_name == 'push' && github.ref_name || inputs.release-tag }}
           VERIFY_RUN_ID: ${{ inputs.verify-run-id }}
         run: node scripts/release-finish.mjs website
+      - name: Remove successful job inputs
+        if: success()
+        run: rm -rf -- "$RUNWEFT_WORK_DIR"
 
   summary:
     needs: [beta, integration, install, promote, website]
@@ -256,6 +270,8 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      - name: Prepare this job’s private working directory
+        run: node scripts/prepare-ci.mjs ${{ strategy.job-index }}
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: '24'
@@ -265,3 +281,6 @@ jobs:
           WEBSITE_RUN_ID: ${{ needs.website.outputs.run-id }}
           RELEASE_RESULTS: ${{ toJSON(needs) }}
         run: node scripts/release-finish.mjs summary
+      - name: Remove successful job inputs
+        if: success()
+        run: rm -rf -- "$RUNWEFT_WORK_DIR"

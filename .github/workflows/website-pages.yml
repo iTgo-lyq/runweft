@@ -9,6 +9,9 @@ on:
       - 'package.json'
       - 'docs/usage.md'
       - 'scripts/npm-publish.mjs'
+      - 'scripts/npm-release.mjs'
+      - 'scripts/report-evidence.mjs'
+      - 'scripts/prepare-ci.mjs'
       - '.github/workflows/website-pages.yml'
   pull_request:
     paths:
@@ -16,6 +19,9 @@ on:
       - 'package.json'
       - 'docs/usage.md'
       - 'scripts/npm-publish.mjs'
+      - 'scripts/npm-release.mjs'
+      - 'scripts/report-evidence.mjs'
+      - 'scripts/prepare-ci.mjs'
       - '.github/workflows/website-pages.yml'
   workflow_dispatch:
     inputs:
@@ -62,6 +68,8 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      - name: Prepare this job’s private working directory
+        run: node scripts/prepare-ci.mjs ${{ strategy.job-index }}
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: '24'
@@ -117,6 +125,7 @@ jobs:
             --commit-hash=${{ github.sha }}
             --commit-dirty=true
       - name: Verify unique deployment URL
+        id: verified
         if: steps.prepare.outputs.deploy == 'true' || steps.recovered.outputs.verify == 'true'
         env:
           PAGES_DEPLOYMENT_URL: ${{ steps.recovered.outputs.url || steps.pages.outputs.deployment-url }}
@@ -129,10 +138,23 @@ jobs:
       - if: steps.prepare.outputs.deploy == 'true' || steps.recovered.outputs.verify == 'true'
         run: bun install --frozen-lockfile
       - name: Verify deployed pages at desktop and mobile sizes
+        id: browser
         if: steps.prepare.outputs.deploy == 'true' || steps.recovered.outputs.verify == 'true'
         run: |
           bunx playwright install --with-deps chromium
           node website/verify-live.mjs
       - name: Keep sanitized deployment evidence and file hashes in logs
         if: always()
-        run: node scripts/report-evidence.mjs .dev-smoke/website-pages
+        env:
+          STEP_RESULTS: ${{ toJSON(steps) }}
+        run: |
+          node --input-type=module <<'NODE'
+          import { spawnSync } from 'node:child_process';
+          const files = Object.values(JSON.parse(process.env.STEP_RESULTS)).flatMap(step =>
+            Object.entries(step.outputs ?? {}).filter(([key]) => key.endsWith('-report')).map(([, file]) => file));
+          const child = spawnSync('node', ['scripts/report-evidence.mjs', '--website', ...files], { stdio: 'inherit' });
+          process.exit(child.status ?? 1);
+          NODE
+      - name: Remove successful job inputs
+        if: success()
+        run: rm -rf -- "$RUNWEFT_WORK_DIR"

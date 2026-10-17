@@ -1,3 +1,4 @@
+import { tmpdir } from 'node:os';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { spawn } from 'node:child_process';
@@ -35,11 +36,10 @@ test('sampling failure waits for the command to finish and cannot report a succe
 });
 
 test('measurement SIGTERM reaches the owned command and writes a failed report even if the child exits zero', async () => {
-    mkdirSync('.dev-smoke', { recursive: true });
-    const root = mkdtempSync(resolve('.dev-smoke/space-signal-'));
+    const root = mkdtempSync(join(tmpdir(), 'space-signal-'));
     const wrapper = spawn(process.execPath, ['scripts/release-space.mjs', 'measure', process.execPath, '-e',
         "process.on('SIGTERM',()=>process.exit(0)); console.log(process.pid); setInterval(()=>{},1000)"],
-    { env: { ...process.env, GITHUB_WORKSPACE: root }, stdio: ['ignore', 'pipe', 'pipe'] });
+    { env: { ...process.env, RUNWEFT_WORK_DIR: root }, stdio: ['ignore', 'pipe', 'pipe'] });
     const closed = once(wrapper, 'close'); let pid;
     const kill = id => { if (id) try { process.kill(id, 'SIGKILL'); } catch {} };
     const watchdog = setTimeout(() => { kill(wrapper.pid); kill(pid); }, 5000);
@@ -48,7 +48,7 @@ test('measurement SIGTERM reaches the owned command and writes a failed report e
         pid = Number(String(chunk).trim()); assert(Number.isSafeInteger(pid) && pid > 0);
         wrapper.kill('SIGTERM'); const [code] = await closed; assert.equal(code, 1);
         assert.throws(() => process.kill(pid, 0), { code: 'ESRCH' });
-        const directory = join(root, '.dev-smoke/release-space');
+        const directory = join(root, 'reports/space');
         const evidence = JSON.parse(readFileSync(join(directory, readdirSync(directory)[0], 'evidence.json')));
         assert.equal(evidence.success, false); assert.equal(evidence.exitCode, 1);
     } finally {

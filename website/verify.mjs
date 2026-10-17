@@ -1,22 +1,26 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { createReadStream } from 'node:fs';
-import { mkdir, mkdtemp, readFile, readdir, realpath, stat, symlink, writeFile } from 'node:fs/promises';
-import { dirname, join, resolve } from 'node:path';
+import { mkdir, mkdtemp, readFile, readdir, realpath, rm, stat, symlink, writeFile } from 'node:fs/promises';
+import { basename, dirname, join, resolve } from 'node:path';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { chromium } from 'playwright';
+import { tmpdir } from 'node:os';
+import { parseArgs } from 'node:util';
 import { serveSite } from './serve.mjs';
 import { assertDescriptor } from '../scripts/npm-release.mjs';
 import { assertCandidateBinaries } from '../scripts/installed-binaries.mjs';
 
 const run = promisify(execFile);
-const browserOnly = process.argv.includes('--browser-only');
-assert(process.argv.slice(2).every(arg => arg === '--browser-only'), 'Usage: node website/verify.mjs [--browser-only]');
+const { values } = parseArgs({ options: { 'browser-only': { type: 'boolean' }, report: { type: 'string' } } });
+assert(values.report, 'Usage: node website/verify.mjs [--browser-only] --report file');
+const browserOnly = Boolean(values['browser-only']), report = resolve(values.report);
 const repository = resolve(import.meta.dirname, '..');
 const output = join(repository, 'dist/website');
-await mkdir(join(repository, '.dev-smoke'), { recursive: true });
-const evidenceRoot = await mkdtemp(join(repository, '.dev-smoke/website-'));
+await mkdir(dirname(report), { recursive: true });
+const evidenceRoot = await mkdtemp(join(tmpdir(), 'runweft-website-'));
+const screenshot = name => join(dirname(report), basename(report, '.json') + '-' + name + '.png');
 const evidence = { root: evidenceRoot, scope: browserOnly ? 'browser' : 'browser-and-npm-install', success: false, checks: [], layouts: [], pageErrors: [], networkErrors: [] };
 const servers = [];
 let browser;
@@ -197,18 +201,24 @@ try {
   assert.equal((await fetch(started.url, { method: 'POST' })).status, 405);
   check('Preview root and method boundaries hold');
 
-  await page.setViewportSize({ width: 1440, height: 1000 }); await page.goto(started.url); await page.screenshot({ path: join(evidenceRoot, 'home-desktop.png') });
-  await page.locator('#install').scrollIntoViewIfNeeded(); await page.screenshot({ path: join(evidenceRoot, 'install-desktop.png') });
-  await page.goto(started.url + 'guide.html'); await page.screenshot({ path: join(evidenceRoot, 'guide-desktop.png') });
-  await page.setViewportSize({ width: 390, height: 1050 }); await page.goto(started.url); await page.screenshot({ path: join(evidenceRoot, 'home-mobile.png') });
-  await page.goto(started.url + 'guide.html'); await page.screenshot({ path: join(evidenceRoot, 'guide-mobile.png') });
+  await page.setViewportSize({ width: 1440, height: 1000 }); await page.goto(started.url); await page.screenshot({ path: screenshot('home-desktop') });
+  await page.locator('#install').scrollIntoViewIfNeeded(); await page.screenshot({ path: screenshot('install-desktop') });
+  await page.goto(started.url + 'guide.html'); await page.screenshot({ path: screenshot('guide-desktop') });
+  await page.setViewportSize({ width: 390, height: 1050 }); await page.goto(started.url); await page.screenshot({ path: screenshot('home-mobile') });
+  await page.goto(started.url + 'guide.html'); await page.screenshot({ path: screenshot('guide-mobile') });
   assert.deepEqual(evidence.pageErrors, []); assert.deepEqual(evidence.networkErrors, []);
   evidence.success = true;
 } catch (error) {
   evidence.error = error.stack || String(error); console.error(evidence.error); process.exitCode = 1;
 } finally {
-  if (browser) await browser.close();
-  for (const server of servers) await new Promise(resolve => { server.close(resolve); server.closeAllConnections(); });
-  await writeFile(join(evidenceRoot, 'evidence.json'), JSON.stringify(evidence, null, 2) + '\n');
-  console.log(`Website evidence: ${join(evidenceRoot, 'evidence.json')}`);
+  const closed = await Promise.allSettled([
+    browser?.close(), ...servers.map(server => new Promise((resolve, reject) => {
+      server.close(error => error ? reject(error) : resolve()); server.closeAllConnections();
+    })),
+  ]);
+  evidence.cleanupErrors = closed.filter(result => result.status === 'rejected').map(result => String(result.reason));
+  if (evidence.cleanupErrors.length) { evidence.success = false; process.exitCode = 1; }
+  if (evidence.success) await rm(evidenceRoot, { recursive: true, force: true });
+  await writeFile(report, JSON.stringify(evidence, null, 2) + '\n');
+  console.log(`Website evidence: ${report}`);
 }

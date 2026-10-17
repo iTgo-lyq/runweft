@@ -54,7 +54,8 @@ async function main() {
     const [mode, ...command] = process.argv.slice(2);
     assert(['ensure', 'measure'].includes(mode), 'Usage: release-space.mjs ensure | measure <command...>');
     if (mode === 'ensure') assert.equal(command.length, 0);
-    const directory = resolve(process.env.GITHUB_WORKSPACE ?? '.', '.dev-smoke/release-space');
+    assert(process.env.RUNWEFT_WORK_DIR, 'Set RUNWEFT_WORK_DIR');
+    const directory = resolve(process.env.RUNWEFT_WORK_DIR, 'reports', 'space');
     mkdirSync(directory, { recursive: true });
     const file = join(mkdtempSync(join(directory, mode + '-')), 'evidence.json');
     const started = Date.now(), report = { mode, startedAt: new Date().toISOString(), success: false };

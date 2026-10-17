@@ -1,5 +1,8 @@
 # 打包与发行操作
 
+测试选择、灵活环境和失败复验见[测试验收手册](testing.md)。发行工程脚本使用调用者提供的 `RUNWEFT_WORK_DIR`；冻结源码另用 `RELEASE_SOURCE`。CI 自动按 run/attempt/job 准备，成功写入证据后回收，公开恢复仍只消费既有日志与候选。
+
+
 包与发布门禁见[发行规格](project/specs/release/spec.md)，官网操作见 [website/README](../website/README.md)。
 
 ## 产品 Skill 分发

@@ -60,7 +60,7 @@ Hub 页面变化选择 `web-identity`、`web-connect`、`web-console` 集成：�
 bunx playwright install chromium
 bun run test:integration --bin dist/runweft -- ./test/integration/web-console.test.ts
 node website/build.mjs
-node website/verify.mjs --browser-only
+node website/verify.mjs --browser-only --report /tmp/runweft-website.json
 (cd packages/prototype && bun run build && bun run test)
 ```
 
@@ -79,3 +79,16 @@ bun run dev:env stop --dir /返回的/runweft-env-目录
 `--bin` 使用显式程序及其相邻 HAPI 的私有副本；`--candidate` 使用已校验的候选私有安装。两者必须二选一，不自动编译或换包。默认只有 Hub，`--runner` 才登记并启动 Runner；身份和个人空间已准备好，返回 `identityFile` 供需要时读取并导入浏览器，不在终端打印 token。`cli`、`home`、`nativeHome` 分别说明专用程序、Runweft 数据与原生配置位置；后续命令带 `--home` 使用返回的数据根。
 
 启动命令退出后环境仍可使用。完成业务验收后运行返回的停止命令：核对目录/程序摘要和现有产品进程状态，活跃会话、MCP 客户端、未知进程或未确认结束的任务会拒绝删除并保留目录。先用此环境的 CLI/原生会话入口结束任务、修复状态，再定向停止；不猜 PID 强杀。确认全部进程退出后删除本次专用目录，重复停止已删除目录是空操作。业务结果需要留存时先保存到环境外。固定测试自行准备和清理，不调用此入口获取现场。
+
+## 工作目录与报告
+
+CI 的 `prepare-ci.mjs` 只创建本次 `${RUNNER_TEMP}/runweft/<run>-<attempt>-<job>-<slot>` 根并设置配置路径：原生工具在 `tools/`，空配置在 `config/`，发行冻结检出在 `source/`，公共候选在 `candidate/`，报告在 `reports/`，官网回执在 `website/`。完成各自收尾并写入日志后，成功 job 删除自己的根；失败保留到本次一次性 runner 结束，不扫描其他历史现场。
+
+本地发行/官网工程命令显式设置 `RUNWEFT_WORK_DIR`，冻结发行另设置 `RELEASE_SOURCE`；发布步骤和恢复权限仍以 [发行操作](release.md) 为准。模型与安装报告、官网 `--report` 文件都放在被测临时根之外。固定 Bun 集成直接使用测试输出和失败现场，不再扫描整个目录收集 JSON。
+
+```sh
+node scripts/report-evidence.mjs /明确的/install.json /明确的/native.json
+node scripts/report-evidence.mjs --website /本次目录/website/check.json /本次目录/website/deployment.json
+```
+
+收集器一次校验显式文件列表；空列表、缺失、坏 JSON 或重复标识均失败，不输出半份成功证据。官网 `.dev-smoke/website-pages/*.json` 仅保留为已有日志恢复协议的稳定 ID；物理目录和收集方式已独立。恢复不上传、不重发，也不从缺失/冲突回执推断成功。Kit 的 committed tree 导出由同步命令创建和退出时回收，安装和分发检查见正式 Kit 工具。

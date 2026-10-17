@@ -28,7 +28,7 @@ HAPI 固定版本和协议见[执行兼容](../execution/spec.md)。构建检查
 
 产品 Skill 在源码仓库 `.agents/skills/runweft-kit/` 维护，CI 单向分发到 `iTgo-lyq/runweft-kit` 的 `skills/runweft-kit/`；不导出程序源码、SpecTrail 或工程文档。main 上 Skill、同步入口或相关依赖变化触发 `sync-runweft-kit.yml`，也支持 main 手动触发；串行且不中途取消，每次读取最新 main 的确定提交，避免队列中的旧事件覆盖新内容。
 
-源码 checkout 不保留写凭据；公开目标使用专用可写 deploy key，私钥保存在源 Actions secret `RUNWEFT_KIT_SYNC_SSH_KEY`，不保存到仓库或日志。同步只从 `git archive <revision>:.agents/skills/runweft-kit` 导出已提交目录；临时导出放 `.dev-smoke/`。校验 Skill 元数据、完整引用和符号链接边界后，要求干净且在 main 的分发 checkout，仅更新 `skills/runweft-kit/`，删除失效文件并保留 README 等目标其他内容。内容一致不创建提交，变化提交记录源 revision；推送失败保留本地提交并报告失败，不推断公开目标已更新。
+源码 checkout 不保留写凭据；公开目标使用专用可写 deploy key，私钥保存在源 Actions secret `RUNWEFT_KIT_SYNC_SSH_KEY`，不保存到仓库或日志。同步只从 `git archive <revision>:.agents/skills/runweft-kit` 导出已提交目录。校验 Skill 元数据、完整引用和符号链接边界后，要求干净且在 main 的分发 checkout，仅更新 `skills/runweft-kit/`，删除失效文件并保留 README 等目标其他内容。内容一致不创建提交，变化提交记录源 revision；推送失败保留本地提交并报告失败，不推断公开目标已更新。
 
 公开 Skill 与 npm 程序分别更新，消费端实际操作按已安装 CLI 版本核对。公开仓库和安装验收不等同于 skills.sh 收录；平台索引与安装遥测结果需另行实际查询。操作及凭据入口见[产品 Skill 分发](../../../release.md#产品-skill-分发)。
 

@@ -72,7 +72,7 @@ test('website starts independently while final summary joins all release gates a
     assert.equal(publish.jobs.summary.if, 'always()');
     assert.equal(publish.jobs.summary.permissions.actions, 'read');
     assert(publish.jobs.summary.needs.includes('website'));
-    assert.equal(publish.jobs.summary.steps.at(-1).env.RELEASE_RESULTS, '${{ toJSON(needs) }}');
+    assert.equal(publish.jobs.summary.steps.find(step => step.run === 'node scripts/release-finish.mjs summary').env.RELEASE_RESULTS, '${{ toJSON(needs) }}');
     assert.match(site['run-name'], /release-version.*release-run-id.*release-attempt/);
     assert.match(site.jobs.website.steps.find(step => step.id === 'prepare').if, /publication.outputs.ready/);
     for (const id of ['prepare', 'pages']) assert.match(site.jobs.website.steps.find(step => step.id === id).if, /inputs.verify-run-id == ''/);

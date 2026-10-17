@@ -1,8 +1,11 @@
 import assert from 'node:assert/strict';
-import { readFile, writeFile } from 'node:fs/promises';
+import { appendFile, readFile, writeFile } from 'node:fs/promises';
 import { chromium } from 'playwright';
+import { resolve } from 'node:path';
+assert(process.env.RUNWEFT_WORK_DIR, 'Set RUNWEFT_WORK_DIR');
+const directory = resolve(process.env.RUNWEFT_WORK_DIR, 'website');
 
-const receipt = JSON.parse(await readFile('.dev-smoke/website-pages/deployment.json', 'utf8'));
+const receipt = JSON.parse(await readFile(resolve(directory, 'deployment.json'), 'utf8'));
 const selectedWidths = process.argv.slice(2).map(Number);
 assert(selectedWidths.every(width => [1440, 390].includes(width)), 'Usage: node website/verify-live.mjs [1440] [390]');
 const widths = selectedWidths.length ? [...new Set(selectedWidths)] : [1440, 390];
@@ -37,5 +40,7 @@ try {
 } finally {
   await browser.close();
   const suffix = selectedWidths.length ? '-' + widths.join('-') : '';
-  await writeFile('.dev-smoke/website-pages/browser' + suffix + '.json', JSON.stringify(evidence, null, 2) + '\n');
+  const file = resolve(directory, 'browser' + suffix + '.json');
+  await writeFile(file, JSON.stringify(evidence, null, 2) + '\n');
+  if (process.env.GITHUB_OUTPUT) await appendFile(process.env.GITHUB_OUTPUT, `browser-report=${file}\n`);
 }

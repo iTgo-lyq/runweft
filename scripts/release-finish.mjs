@@ -168,8 +168,10 @@ export async function collectReleaseEvidence(env, { request = fetch, readLog = d
 }
 
 function save(name, result) {
-    mkdirSync('.dev-smoke/npm-release', { recursive: true });
-    writeFileSync('.dev-smoke/npm-release/' + name + '.json', JSON.stringify(result, null, 2) + '\n');
+    assert(process.env.RUNWEFT_WORK_DIR, 'Set RUNWEFT_WORK_DIR');
+    const directory = resolve(process.env.RUNWEFT_WORK_DIR, 'reports');
+    mkdirSync(directory, { recursive: true });
+    writeFileSync(directory + '/' + name + '.json', JSON.stringify(result, null, 2) + '\n');
     const summary = name === 'summary' ? { ...result, records: result.records.length } : result;
     console.log('RUNWEFT_RELEASE_' + name.toUpperCase() + '=' + JSON.stringify(summary));
     if (name === 'summary') for (const record of result.records) console.log('RUNWEFT_RELEASE_EVIDENCE=' + JSON.stringify(record));

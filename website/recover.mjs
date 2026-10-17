@@ -65,9 +65,14 @@ export async function recoverDeployment(env, { site,
 
 async function main() {
   const result = await recoverDeployment(process.env);
-  await mkdir('.dev-smoke/website-pages', { recursive: true });
-  for (const name of ['check', 'recovery']) await writeFile(`.dev-smoke/website-pages/${name}.json`, JSON.stringify(result[name], null, 2) + '\n');
-  await writeFile('.dev-smoke/website-pages/prepare.json', JSON.stringify(result.prepared, null, 2) + '\n');
+  assert(process.env.RUNWEFT_WORK_DIR, 'Set RUNWEFT_WORK_DIR');
+  const directory = resolve(process.env.RUNWEFT_WORK_DIR, 'website');
+  await mkdir(directory, { recursive: true });
+  for (const [name, value] of Object.entries({ check: result.check, recovery: result.recovery, prepare: result.prepared })) {
+    const file = resolve(directory, name + '.json');
+    await writeFile(file, JSON.stringify(value, null, 2) + '\n');
+    if (process.env.GITHUB_OUTPUT) await appendFile(process.env.GITHUB_OUTPUT, `${name}-report=${file}\n`);
+  }
   if (process.env.GITHUB_OUTPUT) await appendFile(process.env.GITHUB_OUTPUT,
     `verify=true\nurl=${result.reference.url}\nenvironment=${result.reference.pagesEnvironment}\n`);
   console.log(JSON.stringify(result.recovery));

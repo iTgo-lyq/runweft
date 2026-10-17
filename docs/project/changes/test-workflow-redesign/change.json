@@ -68,7 +68,9 @@
     },
     "T8": {
       "title": "明确工程工作目录与报告消费",
-      "status": "todo"
+      "status": "done",
+      "verification": "Node 工程/官网 71/71，actionlint/类型/文档/流程/diff 通过；显式报告缺失/冲突、官网成功/失败收尾、CI 根归属与仓库外冻结检出实测通过；发布恢复协议未改变。",
+      "commitTitle": "test-workflow-redesign T8: own engineering directories and collect explicit evidence"
     },
     "T9": {
       "title": "将原生验收收敛为单 case 生命周期",

@@ -27,7 +27,8 @@ export async function checkNpmTrust(env, request = fetch, report = { packages: [
 }
 
 async function main() {
-    const root = resolve('.dev-smoke/npm-publish');
+    assert(process.env.RUNWEFT_WORK_DIR, 'Set RUNWEFT_WORK_DIR');
+    const root = resolve(process.env.RUNWEFT_WORK_DIR, 'reports');
     mkdirSync(root, { recursive: true });
     const report = { packages: [], success: false };
     try {
@@ -35,6 +36,7 @@ async function main() {
         console.log('Five npm packages: OIDC exchange authorized; no upload performed');
     } finally {
         writeFileSync(join(root, 'oidc.json'), JSON.stringify(report, null, 2));
+        console.log('RUNWEFT_CI_EVIDENCE=' + JSON.stringify({ path: join(root, 'oidc.json'), report }));
     }
 }
 

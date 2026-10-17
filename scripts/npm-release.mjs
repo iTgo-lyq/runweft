@@ -282,7 +282,8 @@ async function prepare(env) {
 }
 
 function npmRunner() {
-    const root = resolve('.dev-smoke/npm-release');
+    assert(process.env.RUNWEFT_WORK_DIR, 'Set RUNWEFT_WORK_DIR to this operation’s private directory');
+    const root = resolve(process.env.RUNWEFT_WORK_DIR, 'npm');
     mkdirSync(root, { recursive: true });
     const config = { userConfig: join(root, 'npmrc'), globalConfig: join(root, 'npmrc-global'), cache: join(root, 'npm-cache') };
     for (const path of [config.userConfig, config.globalConfig]) writeFileSync(path, '', { mode: 0o600 });
@@ -306,7 +307,8 @@ function npmRunner() {
 
 async function beta(env) {
     assert.notEqual(env.VERIFY_ONLY, 'true', 'Read-only verification cannot upload or promote packages');
-    const source = resolve(env.RELEASE_SOURCE || '.dev-smoke/release-source');
+    assert(env.RELEASE_SOURCE, 'Set RELEASE_SOURCE to the frozen source checkout');
+    const source = resolve(env.RELEASE_SOURCE);
     const { index, entries } = validateCandidate(join(source, 'dist/packages'), source);
     assert.equal(index.source.revision, env.SOURCE_REVISION, 'Candidate source differs from selected tag');
     const latestBefore = {};
@@ -346,7 +348,8 @@ async function main() {
         case 'beta': await beta(process.env); break;
         case 'download': {
             const release = JSON.parse(process.env.RELEASE_DESCRIPTOR);
-            const directory = await downloadRelease(release, resolve('.dev-smoke/npm-release/packages'), { record: item => report('PUBLIC_READ', item) });
+            assert(process.env.RUNWEFT_WORK_DIR, 'Set RUNWEFT_WORK_DIR');
+            const directory = await downloadRelease(release, resolve(process.env.RUNWEFT_WORK_DIR, 'candidate'), { record: item => report('PUBLIC_READ', item) });
             output({ directory }); break;
         }
         case 'unpack': {

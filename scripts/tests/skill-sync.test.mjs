@@ -1,3 +1,4 @@
+import { tmpdir } from 'node:os';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
@@ -14,8 +15,7 @@ const put = (root, path, body) => {
     mkdirSync(dirname(join(root, path)), { recursive: true }); writeFileSync(join(root, path), body);
 };
 function fixture(t) {
-    mkdirSync('.dev-smoke', { recursive: true });
-    const root = mkdtempSync(resolve('.dev-smoke/runweft skill sync-'));
+    const root = mkdtempSync(join(tmpdir(), 'runweft skill sync-'));
     t.after(() => rmSync(root, { recursive: true, force: true }));
     const source = join(root, 'source'), distribution = join(root, 'distribution'), remote = join(root, 'remote.git');
     git(root, 'init', '--bare', '-b', 'main', remote);
