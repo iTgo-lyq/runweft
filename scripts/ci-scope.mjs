@@ -26,7 +26,7 @@ export function selectChecks(files) {
         if (/^src\/hub\/(app|console|tasks-page|native-page|style|onboarding-page)/.test(file)) { scope.typecheck = true; select(/\/(web-|hub-console)/); continue; }
         if (/^src\/(tasks|artifacts|repositories)\//.test(file)) { scope.typecheck = true; select(/\/(task|remote|execution|workspace|files|artifact|web-)/); continue; }
         if (/^src\/mcp\//.test(file)) { scope.typecheck = true; select(/mcp|cli-consumers/); mainCases.forEach(c => native.add(c)); continue; }
-        if (file === 'hapi' || /protocol/.test(file) || ['scripts/ci-scope.mjs', '.github/workflows/checks.yml'].includes(file)) scope.managers = true;
+        if (file === 'hapi' || /protocol/.test(file) || ['src/hapi.ts', 'src/execution.ts', 'scripts/ci-scope.mjs', '.github/workflows/checks.yml'].includes(file)) scope.managers = true;
         // Shared inputs and unknown paths select every consumer rather than silently omit checks.
         scope.core = scope.tools = scope.kit = scope.prototype = scope.website = scope.install = scope.typecheck = true;
         select(/./);
@@ -36,7 +36,7 @@ export function selectChecks(files) {
     scope.native = [...native];
     scope.hapi = scope.typecheck || scope.managers || selected.size > 0;
     scope.build = scope.integration.some(file => /\/(files-(access|artifacts|inputs|outputs|prune)\.|hub-(configuration|lifecycle|.*-live)\.|web-|workspace-(export|import|results|preparation|delegation)\.)/.test(file));
-    scope.clients = scope.integration.some(file => /cli-mcp-install|hub-configuration|hub-resources-live|web-console/.test(file));
+    scope.clients = scope.integration.some(file => /cli-mcp-install|hub-configuration|hub-resources-live|hub-delegation-live|workspace-|web-console/.test(file));
     scope.browser = scope.integration.some(file => /\/web-/.test(file));
     scope.checks = scope.core || scope.tools || scope.kit || scope.hapi || scope.install;
     return scope;

@@ -193,6 +193,17 @@ test.each(['fetch', 'tasks'] as const)('workspace results through %s', async (mo
         await runnerAction(targetHome, 'restart'); assert.deepEqual((await call(evidence.targetMachineId, 'repositories', resultRequest)).operation, first);
         assert.deepEqual((await call(evidence.targetMachineId, 'repositories', request)).operation, imported);
         const resumed = await prepare(targetSource, sealed); assert.equal(readFileSync(join(resumed.workspace.cwd, 'note'), 'utf8'), 'retained checkpoint');
+        const otherFinishId = randomUUID(), removeId = randomUUID();
+        await call(evidence.targetMachineId, 'workspaces', { action: 'finalize', environmentId: b.request.environmentId, preparationId: b.request.preparationId, roundId: b.request.roundId, attemptId: otherFinishId });
+        const finishedB = await until(async () => (await call(evidence.targetMachineId, 'workspaces', { action: 'inspect', environmentId: b.request.environmentId })).workspace as ManagedWorkspace,
+            item => !['accepted', 'running'].includes(item.operations[`finalize:${b.request.roundId}:${otherFinishId}`]!.status));
+        assert(finishedB.results[b.request.roundId], JSON.stringify(finishedB.operations));
+        await call(evidence.targetMachineId, 'workspaces', { action: 'remove', environmentId: b.request.environmentId, attemptId: removeId, expectedHead: targetSource.baseCommit });
+        const removed = await until(async () => (await call(evidence.targetMachineId, 'workspaces', { action: 'inspect', environmentId: b.request.environmentId })).workspace as ManagedWorkspace,
+            item => !['accepted', 'running'].includes(item.operations[`remove:${removeId}`]!.status));
+        assert.equal(removed.status, 'removed', JSON.stringify(removed.operations)); assert(!existsSync(b.workspace.checkout));
+        assert.equal(readFileSync(join(resumed.workspace.cwd, 'note'), 'utf8'), 'retained checkpoint');
+        assert.equal(git(targetSource.commonDir, 'rev-parse', targetSource.baseRef), targetSource.baseCommit);
         writeFileSync(join(resumed.workspace.checkout, 'root.bin'), Buffer.from('partial second binary result\0'.repeat(1024))); rmSync(resumed.workspace.cwd, { recursive: true });
         const finishId = randomUUID(); await call(evidence.targetMachineId, 'workspaces', { action: 'finalize', environmentId: resumed.request.environmentId,
             preparationId: resumed.request.preparationId, roundId: resumed.request.roundId, attemptId: finishId, partial: true });
@@ -205,17 +216,6 @@ test.each(['fetch', 'tasks'] as const)('workspace results through %s', async (mo
         assert.equal(second.status, 'succeeded', JSON.stringify(second.error)); assert(second.sealed!.result.partial); evidence.resultExports.push(second);
         assert.equal(second.sealed!.result.startHead, first.sealed!.result.resultHead); assert.deepEqual(readFileSync(join(first.directory, first.snapshot!.repositories[0]!.file)), frozen);
         note('actual export-result HTTP response loss and Runner restart return one immutable receipt; the next partial round deletes its task cwd and exports from checkout root without changing the first result');
-        const otherFinishId = randomUUID(), removeId = randomUUID();
-        await call(evidence.targetMachineId, 'workspaces', { action: 'finalize', environmentId: b.request.environmentId, preparationId: b.request.preparationId, roundId: b.request.roundId, attemptId: otherFinishId });
-        const finishedB = await until(async () => (await call(evidence.targetMachineId, 'workspaces', { action: 'inspect', environmentId: b.request.environmentId })).workspace as ManagedWorkspace,
-            item => !['accepted', 'running'].includes(item.operations[`finalize:${b.request.roundId}:${otherFinishId}`]!.status));
-        assert(finishedB.results[b.request.roundId], JSON.stringify(finishedB.operations));
-        await call(evidence.targetMachineId, 'workspaces', { action: 'remove', environmentId: b.request.environmentId, attemptId: removeId, expectedHead: targetSource.baseCommit });
-        const removed = await until(async () => (await call(evidence.targetMachineId, 'workspaces', { action: 'inspect', environmentId: b.request.environmentId })).workspace as ManagedWorkspace,
-            item => !['accepted', 'running'].includes(item.operations[`remove:${removeId}`]!.status));
-        assert.equal(removed.status, 'removed', JSON.stringify(removed.operations)); assert(!existsSync(b.workspace.checkout));
-        assert.equal(readFileSync(join(resumed.workspace.cwd, 'note'), 'utf8'), 'retained checkpoint');
-        assert.equal(git(targetSource.commonDir, 'rev-parse', targetSource.baseRef), targetSource.baseCommit);
         const published: Array<{ operation: RepositoryOperation; transfer: ArtifactTransfer }> = [];
         for (const result of evidence.resultExports) {
             const captureId = randomUUID(), deliveryId = randomUUID();

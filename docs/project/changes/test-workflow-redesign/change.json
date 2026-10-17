@@ -44,7 +44,9 @@
     },
     "T4": {
       "title": "集中核心契约并切换默认与集成入口",
-      "status": "doing"
+      "status": "done",
+      "verification": "core 8、tools 50、无模型 integration 248 项均有通过证据；Bun 四分片覆盖 56 文件无缺项重复，首次失败与定向复验见 execution.md；HAPI managers 31、类型/文档/流程/actionlint/diff 通过。",
+      "commitTitle": "test-workflow-redesign T4: consolidate integration contracts and Bun entrypoints"
     },
     "T5": {
       "title": "收敛候选安装、启动与卸载验收",

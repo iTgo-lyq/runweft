@@ -14,6 +14,7 @@ test('scope separates docs and subprojects, selects changed tests, and fails clo
     assert(selectChecks(['test/integration/compiled-cli.ts']).integration.includes('test/integration/tasks.test.ts'));
     assert.deepEqual(selectChecks(['test/integration/tasks.test.ts']).integration, ['test/integration/tasks.test.ts']);
     assert.equal(selectChecks(['test/core/config.test.ts']).hapi, false);
+    assert.equal(selectChecks(['test/integration/workspace-preparation.test.ts']).clients, true);
     assert.equal(selectChecks(['scripts/tests/npm-publish.test.mjs']).tools, true);
     assert(selectChecks(['src/hub/native-page.ts']).integration.every(file => /web-|hub-console/.test(file)));
     for (const file of ['hapi', 'bun.lock', 'src/unknown.ts', '.github/workflows/checks.yml', 'scripts/ci-scope.mjs']) {
