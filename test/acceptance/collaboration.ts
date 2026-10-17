@@ -31,7 +31,7 @@ export async function collaboration(f: NativeFixture, id: string) {
     let baseline = '', parent: any, repositoryId = null;
     if (worktree) {
         git('init', '-q'); git('config', 'user.name', 'Acceptance'); git('config', 'user.email', 'acceptance@example.invalid'); git('config', 'commit.gpgsign', 'false');
-        writeFileSync(join(cwd, 'AGENTS.md'), `Only edit requested files. Include ${context} in the final report.\n`);
+        for (const name of ['AGENTS.md', 'CLAUDE.md']) writeFileSync(join(cwd, name), `Only edit requested files. Include ${context} in the final report.\n`);
         if (id === 'N4') {
             mkdirSync(join(cwd, '.agents/skills/context'), { recursive: true });
             writeFileSync(join(cwd, '.agents/skills/context/SKILL.md'), '---\nname: context\ndescription: Use when asked for context skill.\n---\nInclude SKILL_OK in the final report.\n');
@@ -138,5 +138,5 @@ export async function collaboration(f: NativeFixture, id: string) {
         }
         const history = id !== 'N4' ? await nativeHistory(f, second) : undefined;
         return { taskId: second.agent_id, rounds: 2, host, flavor, history, restarted: remote, calls: all.map(c => c.name), hostDiagnostics: watch.state };
-    } finally { if (!done) { child.kill('SIGTERM'); await exited; } watch.close(); }
+    } finally { if (!done) { child.kill('SIGTERM'); const kill = setTimeout(() => child.kill('SIGKILL'), 10_000); try { await exited; } finally { clearTimeout(kill); } } watch.close(); }
 }

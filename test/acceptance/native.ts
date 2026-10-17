@@ -12,7 +12,6 @@ import { nativeFixture, type Flavor } from './native-fixture';
 import { collaboration } from './collaboration';
 import { controls } from './controls';
 import { recovery } from './recovery';
-import pkg from '../../package.json';
 
 export const mainCases = ['N1', 'N4', 'N5', 'C-codex', 'C-claude'];
 const cases = [...mainCases, 'R-codex', 'R-claude', 'L-claude'];
@@ -33,14 +32,18 @@ export function verifyReports(files: string[], source: string, required: string[
         assert.equal(b.packageInputs, inputs); assert.equal(b.testInputs, tests);
         assert.equal(tree(b.source, packageInputs), inputs); assert.equal(tree(b.testSource, testInputs), tests);
         assert.deepEqual(b.hapi, JSON.parse(git('show', source + ':package.json')).hapi);
-        assert.equal(b.bun, pkg.packageManager.split('@')[1]); assert.equal(b.build, 'package-default');
+        assert.equal(b.bun, JSON.parse(git('show', source + ':package.json')).packageManager.split('@')[1]); assert.equal(b.build, 'package-default');
         assert.match(b.binaries.runweft, /^[a-f0-9]{64}$/); assert.match(b.binaries.hapi, /^[a-f0-9]{64}$/);
-        assert(b.archives.length === 2 && b.archives.every((v: any) => typeof v.name === 'string' && typeof v.sha512 === 'string'));
+        assert.match(b.platform, /^(linux|darwin)-(x64|arm64)$/);
+        assert.deepEqual(b.archives.map((v: any) => v.name), ['runweft', 'runweft-' + b.platform]);
+        assert(b.archives.every((v: any) => /^[A-Za-z0-9+/]{86}==$/.test(v.sha512)));
         const seen = new Set();
         for (const item of report.cases) {
             assert(cases.includes(item.id) && !seen.has(item.id), 'Unknown or duplicate case'); seen.add(item.id);
             if (!item.success) continue;
-            assert.deepEqual(item.cleanupErrors, []); assert(item.finishedAt && item.facts && item.versions && item.models);
+            assert.deepEqual(item.cleanupErrors, []); assert(Number.isFinite(Date.parse(item.finishedAt)) && item.facts && item.versions && item.models);
+            const flavors = item.id === 'N1' || item.id.endsWith('codex') ? ['codex'] : item.id.startsWith('N') ? ['codex', 'claude'] : ['claude'];
+            for (const flavor of flavors) assert(typeof item.versions[flavor] === 'string' && item.versions[flavor].length && typeof item.models[flavor]?.model === 'string' && item.models[flavor].model.length && typeof item.models[flavor].reasoningEffort === 'string' && item.models[flavor].reasoningEffort.length, 'Missing native version/model/effort');
             assert(!results.has(item.id), 'Conflicting successful case reports'); results.set(item.id, item);
         }
     }

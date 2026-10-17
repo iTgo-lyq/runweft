@@ -55,9 +55,9 @@ test('native entry rejects missing candidates and preserves failure receipts; re
     const pkg = JSON.parse(git('show', source + ':package.json'));
     const inputs = ['test/acceptance', 'test/integration/console-history.ts', 'test/preflight.ts', 'test/lifecycle.ts', 'scripts/candidate.mjs', 'scripts/installed-binaries.mjs', 'scripts/release-inputs.mjs', 'package.json', 'bun.lock'];
     const record = { kind: 'runweft-native-v1', binding: { source, testSource: source, packageInputs: hash(packageInputs), testInputs: hash(inputs), hapi: pkg.hapi,
-        bun: pkg.packageManager.split('@')[1], build: 'package-default', binaries: { runweft: 'a'.repeat(64), hapi: 'b'.repeat(64) },
-        archives: [{ name: 'runweft', sha512: 'fixture' }, { name: 'runweft-linux-x64', sha512: 'fixture' }] },
-        cases: [{ id: 'N1', success: true, cleanupErrors: [], finishedAt: 'fixture', facts: {}, models: {}, versions: {} }] };
+        bun: pkg.packageManager.split('@')[1], build: 'package-default', platform: 'linux-x64', binaries: { runweft: 'a'.repeat(64), hapi: 'b'.repeat(64) },
+        archives: [{ name: 'runweft', sha512: Buffer.alloc(64).toString('base64') }, { name: 'runweft-linux-x64', sha512: Buffer.alloc(64).toString('base64') }] },
+        cases: [{ id: 'N1', success: true, cleanupErrors: [], finishedAt: new Date().toISOString(), facts: {}, models: { codex: { model: 'fixture', reasoningEffort: 'high' } }, versions: { codex: 'fixture' } }] };
     const path = join(root, 'report.json'), save = () => writeFileSync(path, JSON.stringify(record)); save();
     expect(verifyReports([path], source, ['N1']).passed).toBe(true);
     expect(() => verifyReports([path], source, ['N1', 'N5'])).toThrow('N5');
