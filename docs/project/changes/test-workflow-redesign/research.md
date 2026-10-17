@@ -75,15 +75,15 @@
 
 | 当前成员 | 决策与职责去向 |
 | --- | --- |
-| `smoke-hub-access.ts`、`smoke-hub-realtime.ts`、`smoke-hub-resources.ts`、`smoke-hub-configuration.ts` | 合并为 Hub 接线套件；资源/权限异常组合下沉核心；MCP 配置移出资源长链 |
+| `smoke-hub-access.ts`、`smoke-hub-realtime.ts`、`smoke-hub-resources.ts`、`smoke-hub-configuration.ts` | 核心跨模块契约留集成；重复的普通参数、治理排列和配置检查删除，不自动下沉成更多单测；MCP 配置只在安装职责验证 |
 | `smoke-artifacts.ts`、`smoke-inputs.ts`、`smoke-outputs.ts`、`smoke-artifact-prune.ts`、`smoke-result-export.ts` | 合并文件/成果领域套件；fetch/tasks 仍有明确语义；大文件与持续传输按独立边界保留，不复制整条业务链 |
 | `smoke-repository-export.ts`、`smoke-repository-import.ts`、`smoke-workspace-preparation.ts` | 工作区/Git 套件；小数据负责主路径，大量文件/LFS/恢复分开验证 |
-| `smoke-hub-delegation-native.ts`、`smoke-hub-delegation-preparation.ts` | Hub 委派到真实 HAPI 的集成；规则排列下沉核心，不因名字含 native 就归付费模型层 |
+| `smoke-hub-delegation-native.ts`、`smoke-hub-delegation-preparation.ts` | Hub 委派到真实 HAPI 的核心接线；复杂状态由契约测试负责，删除重复规则排列；不因名字含 native 就归付费模型层 |
 | `smoke-hub.ts`、`smoke-hub-connect.ts`、`smoke-hub-console.ts` | 合并 web 套件；固定当前格式样本与真实历史验收分开 |
 | `smoke-integration.ts` | 删除“脚本启动脚本”的旧编排；用测试框架的 suite/用例选择与最薄准备入口替代 |
 | `smoke-install.mjs`、`smoke-uninstall.mjs`、`smoke-service.mjs` | 安装验收中的安装/卸载/服务 case；共用候选与部署函数，保留两种部署形态的独立边界 |
 | `smoke-native.ts`、`smoke-collaboration.ts`、`smoke-shared-package.ts`、`smoke-worktree-package.mjs`、`smoke-remote-package.ts`、`smoke-execution.ts` | 合并 native case 生命周期；删除交接文件协议、stdout 抓路径、多命令清理所有权与 expanded 笛卡尔全排列 |
-| `smoke-task-controls.ts`、`smoke-reconstruction.ts` | 保留两种 runtime 的真实控制/重建保障，归 native 定向 case；非模型状态分支下沉 |
+| `smoke-task-controls.ts`、`smoke-reconstruction.ts` | 精简两种 runtime 控制的模型轮次；重建改为相关原生变化的定向专项，普通发行不固定执行；核心未知/重建条件留确定性契约 |
 | `smoke-hapi-session-and-shutdown.ts` | 无模型的随包 HAPI 停机/断连/认证/重启保障归 integration，Claude 长路径两轮延续归 native；删除混合入口，不要求先改 fork/pin |
 
 ### 19 个其他顶层脚本
@@ -107,7 +107,7 @@
 | `release-inputs.mjs`、`release-inputs.d.mts`、`hapi-source-archive.mjs` | 生产构建/发行共享契约，移出测试 fixtures 到平铺 scripts；保持来源和候选校验 |
 | `integration-cases.ts` | 删除旧脚本清单及为旧 shard 结构服务的断言；suite 选择使用现有测试框架，CI 范围只选择套件 |
 | `collaboration-package.mjs`、`collaboration-package.d.mts` | 删除跨入口交接格式/解析；有效的候选一致性与当前记录验证进入 native 生命周期/所属契约测试；关闭后凭据会删除，旧格式不保证独立重跑后半段 |
-| `hub-console-smoke.ts`、`hub-console-tasks.ts`、`hub-console-history.ts` | web 就近辅助，合并重复启动和数据准备；真实历史页面进入 N1/N2 的现场生命周期，在最终清理前消费真实数据库/历史；普通 UI 使用当前样本 |
+| `hub-console-smoke.ts`、`hub-console-tasks.ts`、`hub-console-history.ts` | web 只留主要用户路径和真实权限接线，删除展示字段/角色按钮排列；真实历史页面消费精简后的 N1/N5 现场，普通 UI 使用当前样本 |
 | `model-homes.ts`、`codex-model.ts`、`native-host.ts`、`native-preflight.ts` | native 就近辅助，保留隔离配置和宿主关闭诊断；移除无关浏览器准备及重复跨命令检查 |
 | `mcp-cut.mjs`、`mcp-probe.mjs`、`claude-observer.mjs`、`codex-catalog.ts` | 保留证明真实宿主调用/断线/发现所需的最小探针，归 native；不扩展为新的执行适配器 |
 | `mcp-install.mjs`、`mcp-install.d.mts`、`service-version-probe.mjs` | install 就近辅助，覆盖原生配置与安装服务诊断 |
@@ -125,20 +125,20 @@
 
 ## 根测试及辅助文件的去向
 
-下表覆盖当前 43 个测试文件、12 个辅助文件；是按保障划分的去向，不要求按整文件机械搬移。特别是文件名含 native 不代表调用真实模型，需看实际 fixture。core 可保留真实本机 HTTP、SQLite、小型子进程及必要 Git 操作；大量文件/恢复长链才进入专项集成。
+下表覆盖当前 43 个测试文件、12 个辅助文件；结合第五轮的具体删除清单使用，不要求按整文件机械搬移或保留原断言。特别是文件名含 native 不代表调用真实模型；跨真实 HTTP/Store 的契约属于集成，core 仅保留复杂且核心的局部逻辑。
 
 | 当前测试成员 | 去向 |
 | --- | --- |
-| `config.test.ts`、`execution.test.ts`、`proxy.test.ts` | core：配置、执行协议与错误语义、本机网关组件；共享 HAPI 类型不带入运行环境 |
-| `hub-access.test.ts`、`hub-agent-resolution.test.ts`、`hub-agents.test.ts`、`hub-resources.test.ts`、`hub-resource-dispatch.test.ts`、`hub-sockets.test.ts`、`hub.test.ts` | core：权限/治理/原子性及本机协议组件；真实 HAPI 接线另由 integration 承担 |
-| `hub-delegation.test.ts`、`hub-delegation-native.test.ts`、`hub-console.test.ts` | core 保留替身协议、任务/权限和页面接口契约；这些文件并不因名字含 native/console 就进入模型/浏览器层 |
-| `hub-repositories.test.ts`、`remote.test.ts`、`remote-tasks.test.ts`、`task-results.test.ts`、`task-workspaces.test.ts` | 规则、状态和小型真实 Git 在 core；实际传输/大量文件/工作区恢复与现有 smoke 合入 integration，删重复组合 |
-| `task-records.test.ts`、`task-rounds.test.ts`、`tasks.test.ts`、`tasks-mcp.test.ts`、`tasks-overview.test.ts` | core 的当前格式、轮次、MCP、概览和幂等保障；不将有效协议替身全部换为重型原生调用 |
+| `config.test.ts`、`execution.test.ts`、`proxy.test.ts` | 删除普通配置正例/解析重复；保留配置写入拒绝。执行的未知/不重发、网关 HTTP/SSE/WS 真实接线留契约集成，局部复杂决策留 core |
+| `hub-access.test.ts`、`hub-agent-resolution.test.ts`、`hub-agents.test.ts`、`hub-resources.test.ts`、`hub-resource-dispatch.test.ts`、`hub-sockets.test.ts`、`hub.test.ts` | 跨身份/空间/机器的权限、CAS、异步撤权和实际出站 RPC 留契约集成；删除多层重复治理矩阵，局部并发不变式可留 core |
+| `hub-delegation.test.ts`、`hub-delegation-native.test.ts`、`hub-console.test.ts` | 留派发/授权/重启契约；删除权限展示矩阵和普通页面静态排列，web 只保留真实用户链 |
+| `hub-repositories.test.ts`、`remote.test.ts`、`remote-tasks.test.ts`、`task-results.test.ts`、`task-workspaces.test.ts` | 保留远端准备/封存/回执/释放的核心契约与独立故障；删除同一 Git/LFS 基线在多个长链重复搭建与 URL 同义排列；按边界合入 integration，不把真实协议全换成模型 |
+| `task-records.test.ts`、`task-rounds.test.ts`、`tasks.test.ts`、`tasks-mcp.test.ts`、`tasks-overview.test.ts` | 保留持久状态、不重放、MCP 接线、跨 owner 查询及未知状态；删除 report 格式、概览展示映射和无目标的千任务性能检查，身份/宿主排列集中到适配边界 |
 | `artifact-mcp.test.ts`、`artifacts.test.ts`、`task-files.test.ts`、`task-outputs.test.ts` | 实际 HAPI Store/ArtifactService/路由及 CLI 接线归 integration/files，能独立证明的规则留 core；与领域 smoke 合并准备和重复断言 |
 | `cli.test.ts`、`hub-connect.test.ts`、`hub-consumers.test.ts`、`hub-resource-cli.test.ts`、`mcp.test.ts`、`service-commands.test.ts`、`state.test.ts` | 编译 CLI 调用进 integration，配置/状态/协议规则留 core；保留一次共享 CLI 编译，实际 HAPI 接线才要求显式匹配二进制 |
 | `mcp-install.test.ts`、`uninstall.test.ts` | 配置编辑/拒绝/原子回滚规则留 core；真实宿主 catalog 和安装包/自卸载行为合入 acceptance/install，缺所选宿主不再 skip |
 | `release-inputs.test.ts` | 候选冻结/源码干净判定归 scripts/tests，复用 Node 工具测试入口，不建新的测试体系 |
-| `website-build.test.ts` | 归 website 自身验证，根 core 不再替官网启动构建 |
+| `website-build.test.ts` | 删除整文件；实际网站构建/发布元数据由 website/publish.test.mjs 和官网主路径负责，不迁一份相同测试 |
 | `acceptance-fixtures.test.ts`、`fixture-cleanup.test.ts`、`smoke-deadline.test.ts`、`smoke-lifecycle.test.ts` | 保留无模型的候选拒绝、关闭竞态、超时和失败清理等行为回归在 core；真实 HAPI 启动断言进 integration，删除旧交接格式/旧 smoke 入口断言 |
 | `integration-cases.test.ts` | 删除随旧清单/shard runner 消失的实现镜像；实际超时/清理保障由仍存在的行为测试承担 |
 
@@ -208,3 +208,59 @@
 - 因此净缩减依赖重复准备和真正重复回归的消除，不能由“删除 30 个 smoke 文件名”推算。dev:env、scope、原生报告核对、关闭及 HAPI 门禁会抵消部分收益；现有证据只支持小幅净减的预期，不支持确定比例或大幅减少的承诺。
 
 现行操作散在 AGENTS、docs/release.md、website/README 和原型/Kit 说明；技术方案已经覆盖大部分路径，但设计稿尚不能作为已验证操作手册。目标采用 docs/testing.md 作为总入口，专用发布/官网操作继续引用原文，避免另一套重复流程。具体结构与按手册实际执行的验证要求已进入 Technical 和 Requirement；本轮不创建冒充已实现命令的现行手册。
+
+## 第五轮：按核心契约与用户链路裁剪测试
+
+用户最新取舍是减少普通局部单测，重点保障跨模块约定，并精选核心 E2E。本轮由主 Agent 读取根 43 份测试的用例清单、具体删除候选正文、关键保留用例及 smoke/工具/网页/原型调用；用 TypeScript AST 定位测试块，未运行测试或真实模型，也尚未删除实现。对 AI 生成代码的信心是用户的风险偏好，不作为这些模块不会出错的事实依据。
+
+前稿把“已有独立断言”近似当作保留理由，导致大量测试只换位置。新的标准是：普通、非核心局部逻辑可不测；核心跨模块契约集中验证；端到端只做用户关键结果。复杂并发、未知执行不重发、权限撤销、数据/文件不误删及发布不可重复写入值得保留少量确定性测试，不依赖模型偶然触发异常。
+
+### 可直接删除的具体用例
+
+下表定位当前完整 test 块，不要求等量补测。文件相对仓库根；短标题对应当前用例开头，括号为块数。总计 **24 个块、272 行正文**，含块内空行和注释，不含可随之删除的 import/helper；这不是整个重构的净减预估。
+
+| 文件 | 删除的具体内容 | 判断依据 |
+| --- | --- | --- |
+| test/config.test.ts | defaults do not write data；sources match explicit home；rejects broken persisted config（3） | 默认值、配置来源标注和 YAML 错误排列；保留一次配置写入失败不覆盖原文件的检查，不再完整枚举普通配置读取 |
+| test/cli.test.ts | resource CLI requires an explicit Hub connection（1） | 四个命令重复同一前置错误；保留 CLI 的机器可读结果和秘密不外泄闭环 |
+| test/hub-connect.test.ts | fresh connection diagnostics（1） | 状态到诊断文本/代码的映射；真实加密连接及拒绝错误身份保留 |
+| test/hub-console.test.ts | space permissions describe allowed roles（1） | 主要重复 UI 权限 DTO/按钮矩阵；真实跨 owner/空间鉴权与秘密保护在所属契约负责 |
+| test/artifacts.test.ts | non-JSON proxy 413；server configuration controls hosted limits；handles empty files（3） | 错误说明、配置投影及普通空文件/目录参数；实际字节传输、配额失败、不重复上传和保护目标文件仍保留 |
+| test/service-commands.test.ts | a plain HAPI or unrelated Hub produces an actionable deployment diagnosis（1） | 诊断展示；真实启动、停止、退出码和参数接线保留 |
+| test/state.test.ts | fresh state has only the current schema；config accepts the documented current shorthand（2） | schema/默认配置实现镜像与正常重开重复；损坏/未知数据库拒绝且不改原文件、并发初始化、真实启动拒绝保留 |
+| test/task-rounds.test.ts | report format is optional（1） | 简单可选报告解析；任务是否完成仍由原生执行事实决定 |
+| test/tasks-overview.test.ts | remote code publication…stay separate from execution；selects the earliest unfinished round；thousand-task query（3） | 展示字段投影和未绑定产品容量目标的千任务耗时检查；保留跨 owner 查询、未知状态不假成功、只读与撤权契约 |
+| test/smoke-deadline.test.ts | smoke deadlines preserve rejection（1） | 普通 Promise 包装分支；真实子进程超时、强杀及不假通过仍保留 |
+| test/website-build.test.ts | npm website builds…（1，整文件删除） | 不再复制网站构建 fixture；website/publish.test 已运行实际构建并核对发布元数据，模板/转义/失败保留旧输出等边缘排列不迁移 |
+| scripts/tests/npm-publish.test.mjs | release channels reject noncanonical…；version ordering…；Beta advances beyond…（3） | 独立版本字符串比较排列；实际发布的错误 channel、版本倒退和 latest 不误动已有调用边界验证 |
+| scripts/tests/release-finish.test.mjs | summary retains original attempts and derives actual queue/runtime；failed-only reruns do not count retained jobs…（2） | 汇总耗时/去重展示，不影响晋级判定；实际 gate、未知发布、失败记录收集保留 |
+| scripts/tests/release-space.test.mjs | space reserve avoids cleanup when sufficient…（1） | 普通容量阈值正例；空间不足/清理失败阻止发行和信号/退出码透传保留 |
+
+另有 **6 个块、99 行正文**随旧机制一并删除：integration-cases.test 的四项，以及 acceptance-fixtures.test 中“current fixture writes two scoped rounds”和“native consumers publish their failure evidence”。旧 runner/交接仍在使用时不能先删其失败保障；切换后不再为旧清单、stdout 路径和交接 JSON 重建测试。剩余候选摘要拒绝、宿主超时与清理结果仍按真实行为保留。
+
+### 有价值的契约保留一处，删除其他层的完整复演
+
+| 当前重复区域 | 具体裁剪 | 保留的核心边界 |
+| --- | --- | --- |
+| hub-resources / hub-agents / hub-agent-resolution、hub-resource-cli、smoke-hub-resources / configuration、hub-console-smoke | 不再从 Store 到 HTTP、CLI、Runner、浏览器各重复 rename/register/share/block/恢复的全排列；CLI/浏览器各保留实际输入到结果的一条正常路径和一个相关失败 | 权限交集、CAS、异步探测期间撤权、真实出站 RPC 最后一次鉴权；实际版本/工具发现一次 |
+| tasks、hub-delegation、tasks-mcp、hub-consumers | 双宿主/双 runtime 的参数映射只集中在适配接线；状态机故障不再为相同适配参数重复展开 | 收据丢失不重派、队列/轮次原子性、重启恢复；MCP 身份、取消和 stdout 协议保持实际接线 |
+| task-files / outputs、remote / remote-tasks / task-results / task-workspaces 与 smoke 长链 | 合并相同阶段的 setup 和断言；一次核心故障只在实际拥有操作的层详测，上层验证绑定结果和副作用，不再复刻全故障矩阵 | 上传/下载/捕获/封存是不同副作用，不混为一项；未知回执、固定字节重试、跨任务引用及不误删各保留代表性反例 |
+| hub-repositories 的 canonical URL 大表、多个 HTTP 文件的非法字段表、tasks-overview 的过滤排列 | 删除同义格式、所有错误值和字段组合；保留真正改变来源身份的 remote、凭据剥离、跨 owner/空间伪造拒绝 | 仓库身份、真实 Git 观察及 API/CLI 序列化，非穷举字符串解析 |
+| native collaboration 与 worktree/remote 后继入口 | 删除 N2/N3/N6 重复主链、expanded、已不可达控制分支；去掉模型任务里的递归 LFS/子模块、65 秒空等及多层治理矩阵 | N1/N4/N5 的真实派发、两轮延续、工作区隔离和成果；N5 一次真实重启取回，历史消费 N1/N5 |
+| task-controls、execution、reconstruction、hapi-session-and-shutdown | 控制链去掉独立记忆启动轮及中心定义更新矩阵；删除独立 execution 入口；恢复/长路径改为相关改动专项，65 秒空等固定测试删除 | 两种 runtime 的批准/拒绝/中断固定验，Codex steer/兄弟隔离只在 C-codex 验；未知不重建由确定性契约负责，真实恢复专项仍有入口 |
+| Hub web 的 task/console 大 fixture | 删除逐字段展示、每个角色的按钮状态、每页完整错误/空态、多个宽度重复同一业务流程 | 身份连接的真实 WebCrypto、跨 owner 数据隔离、配置选择、任务到原生详情与撤权后访问失效；DB/WAL/日志秘密扫描仍有明确对象 |
+| website/verify.mjs | 六个宽度 × 三页改为桌面/手机两个宽度 × 三页；删除截图精确像素/原图尺寸、装饰示意图和 FAQ 的完整点击排列、重复无 JS 图片检查 | 首页到指南、准确版本的安装命令、复制/基本键盘操作、图片加载、无溢出和实际公开候选安装；Kit 安装归 Kit 自己负责 |
+| packages/prototype/verify.mjs | 删除每个页面在每个设备上重复完整 CRUD、角色治理和 error/empty/normal 演示矩阵 | 所有入口能加载、opaque iframe/无外部请求、主要导航/少量交互和桌面/手机展示；不把演示数据的业务行为当产品回归 |
+| npm-release/release-finish 的 workflow 结构断言 | 删步骤显示名、具体中间路径、固定分片数、是否出现某个 action 名称等实现镜像 | 必需平台/集成不能缺项，失败不能晋级，只读复验不能写入；这些是工作流与工具之间的真实契约 |
+
+72 MiB、超过 100 个对象、真实超时的成本不与代码行数混算。当前 artifacts/inputs/outputs 走不同传输路径，不能仅凭相同文件大小就声称重复；核心 Runner 字节和批量跨界留一次对应专项，普通业务使用小样本。此轮不新建额外压力测试体系，也不把付费 E2E 当作 Git/LFS 或权限穷举平台。
+
+### 保留范围与明确接受的覆盖损失
+
+保留的主要契约是：CLI/MCP → Hub 的身份与参数；Hub → HAPI/Runner 的授权与派发；任务状态 → 原生回执/重启恢复；文件/工作区 → 实际字节、Git 与引用生命周期；候选 → 安装/信号/卸载；发布状态 → 远端不可重复写入。局部核心状态测试是这些边界的补充，而非每个模块的标配。
+
+普通发行原生固定集合从 10 个缩为 5 个（N1/N4/N5、C-codex/C-claude），恢复等专项按改动追加；每条 N 仍是一个任务两轮，没有将删掉的链藏进剩余 case。公开平台安装仍覆盖四平台，但每平台只验包布局、启动/退出和卸载，不复演全部领域回归。Hub 浏览器主路径三条，官网主路径单独负责安装入口，均不追加每个字段/角色组合的 E2E。
+
+明确放弃所有真实模型宿主 × runtime × 工作区配对、65 秒宿主等待固定回归、普通展示/参数的穷举、原型完整业务模拟以及每次发行必跑全部恢复/长路径专项。剩余核心契约能降低漏改风险，但不宣称与旧套件等价覆盖。删除建议不依赖“AI 一定不会写错”这一无法证明的前提。
+
+这轮可精确定位的 30 个测试块共 371 行；重复集成、浏览器和 native 的重写量另计，尚不能把候选删除文件的总行数当净缩减，也不把固定模型 case 减半说成模型耗时或费用减半。手册须列出固定主集合与专项触发，记录实际运行的子集和未执行项。
