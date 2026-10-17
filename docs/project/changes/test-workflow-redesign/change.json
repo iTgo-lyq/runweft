@@ -50,11 +50,13 @@
     },
     "T5": {
       "title": "收敛候选安装、启动与卸载验收",
-      "status": "doing"
+      "status": "done",
+      "verification": "本机两种布局及候选 hash/平台/来源反例通过；Actions 38997618984 四平台全部安装 job 成功（八个安装生命周期）；首轮失败与定向修复见 execution.md。",
+      "commitTitle": "test-workflow-redesign T5: verify installation lifecycle on four platforms"
     },
     "T6": {
       "title": "缩减浏览器与原型验收到核心用户路径",
-      "status": "todo"
+      "status": "doing"
     },
     "T7": {
       "title": "提供独立的灵活验收环境入口",

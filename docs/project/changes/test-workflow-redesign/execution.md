@@ -51,3 +51,5 @@ T4 Actions 38996745344 的 scope/prototype、文档、类型、core、tools 均�
 实现检查点：launcher 移入 src；候选校验/私有安装与正式包输入、HAPI 源码归档校验归 scripts。一个 Node 入口按 npm/standalone 分别消费未改写候选，验证实际服务、信号、MCP 配置保全和完整卸载，删除旧 package/install/service/uninstall 四入口及 KEEP_INSTALL。HAPI 源码逐文件比对前移到打包阶段，四平台开发/发行安装复用同一入口。Node 工具 50/50、官网发布工具 20/20、类型/文档/流程/actionlint/diff 通过；此检查点用于冻结干净包输入，实际候选安装尚待以下验证记录，不提前宣称任务完成。
 
 T5 安装实测：冻结候选 `b9b8006` 的 Linux x64 npm / standalone 两种布局均通过（`/tmp/runweft-install-t5-retry1.json`）；实际无 Bun PATH、Hub/Runner、MCP 握手、版本不一致诊断、前台 SIGTERM、npm 删除失败后显式重试、完整卸载与外部配置保留均有证据，两根已删除且 cleanupErrors 为空。首次运行及四平台 CI 38997190450 的安装失败为 fixture 遗漏 `hub.url`，已补齐；失败也正确停机清理，不冒充成功。候选 hash、平台缺项、dirty 来源三种反例均在安装前拒绝。关闭失败的严格语义沿用 T3/T4 生命周期反例；修复后的四平台 CI 继续跟踪。
+
+T5 四平台复验：Actions [38997618984](https://github.com/iTgo-lyq/runweft/actions/runs/38997618984) 的 Linux x64/arm64、Darwin x64/arm64 安装 jobs 全部成功，每个平台均运行 npm 和 standalone 两种布局，共八个安装生命周期。该结论仅针对四个安装 jobs；此刻整个 development checks 尚在运行，未将其整体计为通过。
