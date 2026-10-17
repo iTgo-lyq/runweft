@@ -85,7 +85,7 @@ jobs:
       - if: fromJSON(needs.scope.outputs.selection).browser
         run: bunx playwright install --with-deps chromium
       - if: fromJSON(needs.scope.outputs.selection).build
-        run: bun run build
+        run: bun run build:hapi && bun run build
       - name: Run selected integration files in one Bun process
         if: needs.scope.outputs.integration != '[]'
         env:
