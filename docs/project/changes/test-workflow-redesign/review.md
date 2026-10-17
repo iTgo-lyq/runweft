@@ -6,6 +6,8 @@
 
 2026-10-16 用户明确取消外部协作，要求主 Agent 自行多轮评估、launcher 放 src、减少目录与抽象。以下为三轮源码自审，既非外部独立意见，也非实现验收。当前实现未修改；每项“复核”指修订后的设计与源码证据核对，产品行为、性能及失败注入仍需实施后验证。
 
+2026-10-17 用户要求不默认认可现方案重新评审，结果记为[第四轮](#第四轮重新评审)；由 Claude Code 会话依据源码、本地测量和 GitHub 记录完成，不是人工评审，也未修改实现或技术方案。
+
 ## 第一轮：职责与复杂度
 
 ### R1 不为职责标签逐层建目录
@@ -92,8 +94,87 @@
 
 ## 收敛结果与实现验证界限
 
-[技术方案](technical.md) 已吸收以上反例：三个测试目录、平铺 scripts、src launcher、单 TS 配置、两个固定验收入口、一个独立环境启动入口、按 case 复验、显式证据与当前恢复闭环。舍弃全排列、跨命令现场协议、递归扫描、多层目录和预建公共框架；保留有证据的产品保障，并明确每个操作环节的入口与完成含义。
+[技术方案](technical.md) 已吸收第一至第三轮及 R12 的反例：三个测试目录、平铺 scripts、src launcher、单 TS 配置、两个固定验收入口、一个独立环境启动入口、按 case 复验、显式证据与当前恢复闭环。舍弃全排列、跨命令现场协议、递归扫描、多层目录和预建公共框架；保留有证据的产品保障，并明确每个操作环节的入口与完成含义。
 
 本轮实际验证仅覆盖文档/流程一致性与清单完整性；没有执行产品测试、真实模型或新 CI 工作流，也未证明性能收益。实现阶段按技术方案的反例和同候选成本指标验收，不以本次三轮自审替代运行结果。
 
 2026-10-16 补充操作环节后的校验：`node scripts/check-docs.mjs` 检查 346 份文档、912 个本地链接，0 错误；`node scripts/check-workflow.mjs` 校验 56 个 Change 通过；`git diff --check` 通过。对当前文件清单逐项比对，87 个 scripts 文件与 55 个 test 文件在 Research 中均有去向，无漏项。此次文档交付使用实际提交 hook 再检查暂存内容。
+
+## 第四轮：重新评审
+
+本轮按用户指定的四个重点审查：各环节执行内容、固定测试与灵活验收的启动分离、可删减项与遗漏保障、现场复用/清理/复验。实际运行：`bun test ./test` 264 通过、0 失败，43 个文件，本地 71.44 秒，文件串行执行，各文件耗时之和约等于总时长；`bun build src/cli.ts --compile` 约 0.2 秒；Bun 1.4.2 的 `bun test --help` 确认有 `--shard`、`--timings`、`--isolate`、`--parallel`、`--no-orphans`；读取 run 38535122829 各步骤耗时及 HAPI fork 的 Actions 记录。未运行 integration、install、native 和 typecheck；其余结论来自源码阅读，推断处单独注明。
+
+结论：三层分层、删除跨命令交接和 expanded、scope 前移的方向成立；R13–R15 的前提与源码或实际记录不符，确认技术方案前需要修订。
+
+### R13 HAPI 内部测试没有在任何 CI 执行
+
+**证据/问题**：技术方案以“HAPI 内部单元覆盖仍归 fork”作为收缩真实链路的依据。[checks](../../../../.github/workflows/checks.yml) 在 hapi 目录只执行 `bun install`；fork 已启用 Actions，但 2026-10-17 经 GitHub API 查得运行总数为 0，pin 提交也没有运行记录。因此 `hapi/cli/src/runner/repositories/manager.test.ts`（真实 bundle 与 fsck）、`artifacts/manager.test.ts`、`workspaces/manager.test.ts` 等 Runner 侧契约没有 CI 保障；根测试中的 LFS 只有 [remote-native-fixture](../../../../test/remote-native-fixture.ts) 的假数据。
+
+**建议**：方案中明确二选一：fork 启用 CI 并要求 pin 通过；或在 pin 变化时由本仓 CI 运行这些 HAPI 测试文件。解决前，真实 Runner 上的 Git、LFS 与字节链路不能改为小数据或下沉。
+
+### R14 dev:env 的前台所有权与产品实现冲突
+
+**证据/问题**：[services](../../../../src/services.ts) 的 `start()` 以 detached 方式启动 serve 后 unref，`stop()` 只发 SIGTERM 并返回 `sessionsPreserved`；[runner](../../../../src/runner.ts) 的 `runner start` 启动 HAPI 后台进程。入口被强杀、终端关闭或 Agent 工具超时后，Hub 与 Runner 仍会存活；“停止本次拥有的任务”也缺少来源，任务由外部操作经产品 API 创建。仅 Hub 模式用产品 `--home` 下的 init、config set port、start 三条命令即可完成。真实缺口有两处：Runner 身份初始化（产品没有创建身份的 CLI，8 个脚本文件共 13 处直接调用未鉴权的 `/api/runweft/hub/identities` 再写 identity.json），以及候选包私有安装（[smoke-install](../../../../scripts/smoke-install.mjs) 前段可复用，install、native、dev:env 三方需要）。
+
+**建议**：先把这两个普通函数抽出来，供 integration 与 native 使用，dev:env 再作为薄包装。生命周期二选一：serve 和 Runner `start-sync` 作为非 detached 子进程运行（现有 smoke 已使用 start-sync）；或以环境目录为句柄提供显式 stop，经产品 API 核对会话，状态未知就保留现场。删除停止外部任务、保证外部宿主退出等无法兑现的承诺。
+
+### R15 原生证据与发行候选的绑定未定义
+
+**证据/问题**：[发行操作](../../../release.md)在打 tag 前对本地 `package --all` 候选执行 native；[npm-publish](../../../../.github/workflows/npm-publish.yml) 从 tag 重新构建候选，且不读取任何 native 证据。技术方案把候选纳入复用指纹，又称由发行工作流汇总核对必需 case，但两次构建的摘要能否一致没有验证，核对者和核对位置也未写明。删除 expanded 后，原有“身份/native 映射、HAPI/原生版本或 workspace 行为变化时扩展”的触发条件没有替代。
+
+**建议**：确认绑定方式：绑定源码 commit 与构建输入，或在已上传的不可变 beta 上执行 native 后再晋级。同时补充改动类型到 N/C/R case 的触发表，以及发版必需的 case 集合。
+
+### R16 环节表缺少选择规则
+
+**证据/问题**：环节表只列出入口，“修改 CLI、Hub 接线…→选定 test:integration 文件/用例”没有路径到测试文件的映射；[ci-scope](../../../../scripts/ci-scope.mjs) 是唯一现成的映射，但只在 CI 使用。发行分片依赖 `RUNWEFT_SMOKE_SHARD` 与 [integration-cases](../../../../scripts/fixtures/integration-cases.ts)，删除后的替代没有写；Bun 已提供 `--shard=N/M` 和 `--timings`。依赖描述也有出入：core 需要 hapi 依赖安装，[artifacts 测试](../../../../test/artifacts.test.ts)等 4 个文件从 `hapi/hub/node_modules` 导入 Hono 和 HAPI Store；[cli-install](../../../../.github/workflows/cli-install.yml) 实际安装了 Bun，“安装验收不需要 Bun”未被 CI 证明；三个入口分别用环境变量、`--candidate`、`--bin` 指定程序。
+
+**建议**：让 scope 成为本地与 CI 共用的映射，可在本地对 main 运行；写明分片方式、单文件超时和是否使用 `--isolate`；统一指定程序的参数。
+
+### R17 删除编译 helper 会让假 HAPI 测试依赖 HAPI 构建
+
+**证据/问题**：[compiled-cli](../../../../test/compiled-cli.ts) 只编译 src/cli.ts，实测约 0.2 秒；使用它的 9 个测试文件都对着假 HAPI 运行，不需要 HAPI 构建。改为必须通过 `RUNWEFT_TEST_BIN` 指向与 HAPI 匹配的构建，反而会增加 `build:hapi` 依赖。把它们移出默认 core 可让日常回归少约 35 秒（hub-resource-cli 13.2 秒、uninstall 5.7 秒、hub-consumers 5.1 秒等），但这不需要删除编译 helper。43 个根测试没有哪个文件耗时占主导，整体搬入 test/core 的价值有限。
+
+**建议**：保留测试自行编译，只按文件位置分出；17 个 smoke 改写为 bun:test 之前，先用一个文件试点，验证进程隔离、长等待超时和失败清理。
+
+### R18 只有 smoke 覆盖、去向表未列出的保障
+
+**证据/问题**：以下保障没有对应的根测试：[realtime](../../../../scripts/smoke-hub-realtime.ts) 的 SSE 回放、可见性与撤销时背压，以及 HAPI 将 RPC 改路由到另一台机器时的拒绝；[access](../../../../scripts/smoke-hub-access.ts) 的传输中途撤销和日志扫描；[smoke-hub](../../../../scripts/smoke-hub.ts) 的日志与 WAL 秘密扫描；[connect](../../../../scripts/smoke-hub-connect.ts) 的浏览器 WebCrypto；真实 codex/claude 的版本发现。
+
+**建议**：在去向表中逐项写明归属；下沉时用故障注入证明替代测试会失败。
+
+### R19 仍可删除或合并的重复
+
+**证据/问题**：
+
+- [smoke-collaboration](../../../../scripts/smoke-collaboration.ts) 的 CONTROLS 和 DISCONNECT 模式不可达：smoke-native 会删除对应环境变量，也没有其他地方设置。
+- [result-export](../../../../scripts/smoke-result-export.ts) 与 [repository-import](../../../../scripts/smoke-repository-import.ts) 的前置流程大体相同（抽查约 21 行差异），导出到导入的前置在每次 CI 中运行三遍；[resources](../../../../scripts/smoke-hub-resources.ts) 与 [configuration](../../../../scripts/smoke-hub-configuration.ts) 的 71 行骨架中 36 行有差异，主要是命名与类型；access 与 [artifact-prune](../../../../scripts/smoke-artifact-prune.ts) 都验证按 owner 清理；MCP 安装检查在 resources 和 install 中各跑一次。
+- workspace-preparation、hub-connect 和 artifacts 中的常规断言已由 [remote](../../../../test/remote.test.ts)、[hub-connect](../../../../test/hub-connect.test.ts)、[artifacts](../../../../test/artifacts.test.ts) 根测试覆盖。
+- [smoke-deadline 测试](../../../../test/smoke-deadline.test.ts)每次都真实等待 5 秒的 SIGKILL 宽限期。
+
+**建议**：随对应交付删除；smoke 只保留跨边界断言；宽限时间改为可注入，或删除该测试。
+
+### R20 证据格式改写会阻断在途发布的恢复
+
+**证据/问题**：发行恢复的做法是从最新 main 恢复原 tag 和原 run；[website/recover](../../../../website/recover.mjs) 按精确路径识别旧日志。main 改用新信封并拒绝旧格式后，切换前开始、尚未完成的发布将无法恢复。`.dev-smoke` 还承担多项非测试用途：CI 工具与原生配置目录、release-source 检出、发布工作目录、官网证据和 uninstall-ci；其中官网证据由 [website/publish](../../../../website/publish.mjs) 写入，recover 按路径读取。技术方案只把 `.dev-smoke` 当作测试现场。
+
+**建议**：最小改法是让 report-evidence 改为接收显式文件列表，日志标记保持不变。若仍要改格式，就单独交付，并以“切换时没有需要恢复的在途发布”为前提。逐项列出 `.dev-smoke` 的非测试用途并固定其路径。
+
+### R21 复用指纹、清理与时间前提
+
+**证据/问题**：
+
+- 当前 native 指纹包含 `~/.claude.json`，该文件会被 Claude 例行改写，复用基本落空；[model-homes](../../../../scripts/fixtures/model-homes.ts) 的 verify 对 auth.json 和 .credentials.json 求哈希，令牌刷新会让模型已经成功的 case 判为失败；指纹也没有覆盖 src。
+- 以下根目录从不删除：smoke-install 的 prefix、npm-cache、services，verify-packages 的解包目录，smoke-service 的根目录，uninstall 清理出错时的根目录，以及未传 cleanups 的 `helpers.fixture()` 目录。直接迁到系统临时目录只会让泄漏不可见。
+- src 中没有可注入的时钟，HAPI 的 45 秒机器过期是常量（`hapi/hub/src/sync/machineCache.ts`），realtime 和 resources 分别等待约 52 秒、60 秒；技术方案所说的“已有可控时间接口”并不存在。
+- [smoke-lifecycle](../../../../scripts/fixtures/smoke-lifecycle.ts) 的 closeSmoke 不共享关闭结果，方案描述的是需要新增的行为。
+- 删除交接的取舍成立：[collaboration-package](../../../../scripts/fixtures/collaboration-package.mjs) 在确认停机后关闭时会删除身份与机器连接文件，重跑读取这些文件即失败，现状本来就只能重跑整个 case。
+
+**建议**：指纹由候选摘要、干净的测试 commit、宿主与 runtime 版本、模型选择组成，不包含凭据和 Claude 状态文件；“源配置未改变”只核对配置文件。迁移临时目录前，先让每个根目录都有所有者并会被删除。两次机器过期等待合并为一次。
+
+### R22 交付顺序
+
+**证据/问题**：run 38535122829（新分支、文档改动）中，零 SHA 导致选中全部集成组，集成 355 秒、构建 19 秒、Playwright 23 秒等合计约 400 秒；scope 之前的 hapi 安装、Codex 安装、typecheck 与测试、actionlint 合计约 115 秒。这两项修复都不需要调整目录，技术方案却把 CI 范围选择与默认测试边界调整放在同一个首个交付中。
+
+**建议**：先交付 CI 修复（merge-base 基线、scope 前移、不再忽略 test 路径）；再删除死代码（expanded、交接协议、CONTROLS/DISCONNECT，integration-cases 改用 `--shard`）；再补充 native 触发与候选绑定规则，并实现单 case 生命周期；再做 smoke 去重和缺口归属（需先解决 R13）；然后抽出公共函数并实现薄 dev:env；证据格式改写作为可选项单独交付。
+
+**复验结论**：R13–R22 尚未修订进技术方案；阶段确认前逐项修订，并在对应条目补充复核。
