@@ -54,6 +54,7 @@ async function verify(layout) {
         run(['init']);
         const port = await freePort(); url = `http://127.0.0.1:${port}`;
         run(['config', 'set', 'server.port', String(port)]);
+        run(['config', 'set', 'hub.url', url]);
         assert(run(['start']).service.running);
         const identity = await (await fetch(url + '/api/runweft/hub/identities', { method: 'POST',
             headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: 'installation' }) })).json();
