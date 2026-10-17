@@ -4,7 +4,7 @@
   "title": "重构测试与工程辅助流程",
   "size": "large",
   "status": "active",
-  "stage": "execution",
+  "stage": "close",
   "branch": "codex/test-workflow-redesign",
   "confirmations": {
     "requirement": {
@@ -109,10 +109,20 @@
       "commitTitle": "test-workflow-redesign T14: record corrected acceptance evidence"
     }
   },
-  "closure": {},
+  "closure": {
+    "verification": {
+      "result": "passed",
+      "at": "2026-10-17T08:19:18.841Z",
+      "summary": "T14 修复外部验收七类问题；独立隔离 Agent 只读复核实现至 f41610e、最终文档与原始证据，无未解决实质问题。core 8、integration 248、Node 72、真实模型 8 项、冻结/失败反例、完整 CI 39016351111 四平台双布局均通过；最新净减 2135 行。待人工验收后实际同步 Specs，官网 README 小项留有部署授权的变更。"
+    }
+  },
   "rework": {
     "at": "2026-10-17T07:58:23.449Z",
     "reason": "用户转交独立人工验收：CI 基线/漏选、失败现场、冻结依赖、缺客户端静默跳过及文档/证据偏差已复核成立，原整体验证结论不足以关闭。",
     "approach": "保留现有需求/技术/计划确认，追加 T14 修正已确认范围；补关键反例和实际验证，纠正证据与覆盖取舍，再独立评审及整体验收。"
+  },
+  "waitingFor": {
+    "kind": "confirmation",
+    "summary": "T14 实现与最终证据已推送，等待用户重新验收；验收后同步受影响 Specs、归档，再按明确合入授权执行。"
   }
 }
