@@ -38,7 +38,7 @@
     },
     "T3": {
       "title": "用真实接线试点 Bun 集成与关闭语义",
-      "status": "todo"
+      "status": "doing"
     },
     "T4": {
       "title": "集中核心契约并切换默认与集成入口",
@@ -67,6 +67,12 @@
     "T10": {
       "title": "交付完整测试验收手册与整体验证结果",
       "status": "todo"
+    },
+    "T11": {
+      "title": "修复轻量文档校验的 submodule 隐含依赖",
+      "status": "done",
+      "verification": "无 HAPI/依赖的干净 checkout 文档与流程检查通过；本机 pin 源码 953 链接检查通过，actionlint/diff 通过；修复 run 38994958028 的 scope 前置失败。",
+      "commitTitle": "test-workflow-redesign T11: check docs without preparing external source"
     }
   },
   "closure": {}

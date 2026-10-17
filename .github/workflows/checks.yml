@@ -62,7 +62,7 @@ jobs:
           bun-version: '1.4.2'
       - run: bun install --frozen-lockfile
       - if: needs.scope.outputs.core == 'true' || needs.scope.outputs.groups != '[]'
-        run: git submodule update --init hapi
+        run: git submodule update --init hapi && node scripts/check-docs.mjs
       - if: needs.scope.outputs.kit == 'true'
         run: node scripts/check-runweft-kit.mjs
       - if: needs.scope.outputs.core == 'true' || needs.scope.outputs.groups != '[]'

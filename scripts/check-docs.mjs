@@ -31,6 +31,7 @@ function anchors(file) {
     headings.set(file, ids); return ids;
 }
 let checked = 0;
+let deferredSubmodule = 0;
 const errors = [];
 const archiveRevisions = new Map();
 function existedAtArchive(document, target) {
@@ -50,6 +51,8 @@ for (const document of documents.sort()) {
         const [path, fragment] = href.split('#');
         const target = path ? resolve(dirname(document), decodeURIComponent(path)) : resolve(document);
         const line = body.slice(0, match.index).split('\n').length;
+        // A gitlink is an external source tree. Document-only CI intentionally does not prepare it.
+        if (relative(root, target).startsWith('hapi/') && !existsSync(resolve(root, 'hapi/.git'))) { deferredSubmodule++; continue; }
         checked++;
         if (relative(root, target).startsWith('..')) errors.push(`${document}:${line}: local link leaves repository ${href}`);
         else if (!existsSync(target) && !(archived && existedAtArchive(document, target))) errors.push(`${document}:${line}: missing file ${href}`);
@@ -58,4 +61,5 @@ for (const document of documents.sort()) {
 }
 for (const error of errors) console.error(error);
 console.log(`Documentation: ${documents.length} files, ${checked} local links, ${errors.length} errors.`);
+if (deferredSubmodule) console.log(`Deferred ${deferredSubmodule} HAPI source links: submodule is not prepared; validate them when checking the pinned source.`);
 if (errors.length) process.exitCode = 1;
