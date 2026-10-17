@@ -27,6 +27,12 @@ export function verifyReports(files: string[], source: string, required: string[
     assert.equal(new Set(records.map(r => r.digest)).size, records.length, 'Duplicate reports');
     for (const { value: report } of records) {
         assert.equal(report.kind, 'runweft-native-v1');
+        assert.equal(typeof report.success, 'boolean', 'Unknown report outcome');
+        const start = Date.parse(report.startedAt), end = Date.parse(report.finishedAt);
+        assert(Number.isFinite(start) && Number.isFinite(end) && start <= end, 'Invalid report timestamps');
+        assert(Array.isArray(report.cases));
+        assert.equal(report.success, report.cases.every((item: any) => item.success === true), 'Contradictory report outcome');
+        assert(report.success ? !('error' in report) : Boolean(report.error), 'Contradictory report error');
         assert(report.binding && report.cases.length > 0, 'Missing execution evidence');
         const b = report.binding;
         assert.equal(b.packageInputs, inputs); assert.equal(b.testInputs, tests);
@@ -40,7 +46,12 @@ export function verifyReports(files: string[], source: string, required: string[
         const seen = new Set();
         for (const item of report.cases) {
             assert(cases.includes(item.id) && !seen.has(item.id), 'Unknown or duplicate case'); seen.add(item.id);
-            if (!item.success) continue;
+            assert.equal(typeof item.success, 'boolean', 'Unknown case outcome');
+            const itemStart = Date.parse(item.startedAt), itemEnd = Date.parse(item.finishedAt);
+            assert(Number.isFinite(itemStart) && Number.isFinite(itemEnd) && start <= itemStart && itemStart <= itemEnd && itemEnd <= end, 'Invalid case timestamps');
+            assert(Array.isArray(item.cleanupErrors), 'Missing cleanup outcome');
+            if (!item.success) { assert(item.error || item.cleanupErrors.length, 'Missing failure reason'); continue; }
+            assert(!('error' in item), 'Successful case has an error');
             assert.deepEqual(item.cleanupErrors, []); assert(Number.isFinite(Date.parse(item.finishedAt)) && item.facts && item.versions && item.models);
             const flavors = item.id === 'N1' || item.id.endsWith('codex') ? ['codex'] : item.id.startsWith('N') ? ['codex', 'claude'] : ['claude'];
             for (const flavor of flavors) assert(typeof item.versions[flavor] === 'string' && item.versions[flavor].length && typeof item.models[flavor]?.model === 'string' && item.models[flavor].model.length && typeof item.models[flavor].reasoningEffort === 'string' && item.models[flavor].reasoningEffort.length, 'Missing native version/model/effort');

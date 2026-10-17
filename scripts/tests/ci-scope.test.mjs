@@ -17,6 +17,13 @@ test('scope separates docs and subprojects, selects changed tests, and fails clo
     assert.equal(selectChecks(['test/integration/workspace-preparation.test.ts']).clients, true);
     assert.equal(selectChecks(['scripts/tests/npm-publish.test.mjs']).tools, true);
     assert(selectChecks(['src/hub/native-page.ts']).integration.every(file => /web-|hub-console/.test(file)));
+    assert.deepEqual(selectChecks(['src/hub/native-page.ts']).native, ['N1', 'N5']);
+    const recovery = selectChecks(['test/acceptance/recovery.ts']);
+    assert.deepEqual(recovery.integration, ['test/integration/acceptance-fixtures.test.ts']);
+    assert.deepEqual(recovery.native, ['R-codex', 'R-claude', 'L-claude']);
+    assert(!recovery.install && !recovery.prototype && !recovery.kit && !recovery.website && !recovery.build);
+    const install = selectChecks(['test/acceptance/install.mjs']);
+    assert(install.install); assert.deepEqual(install.native, []); assert(!install.prototype && !install.website);
     for (const file of ['hapi', 'bun.lock', 'src/unknown.ts', '.github/workflows/checks.yml', 'scripts/ci-scope.mjs']) {
         const scope = selectChecks([file]); assert.equal(scope.install, true); assert.equal(scope.prototype, true);
         assert(scope.integration.length > 20); assert(scope.native.includes('R-codex'));

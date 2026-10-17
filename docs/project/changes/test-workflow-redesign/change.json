@@ -91,6 +91,10 @@
       "status": "done",
       "verification": "移开已有 HAPI manifest 后 build:hapi 和 build 均成功；actionlint 通过。原 CI 38996745344 缺前置失败，远端复验待后续记录。",
       "commitTitle": "test-workflow-redesign T12: prepare HAPI before clean CI builds"
+    },
+    "T13": {
+      "title": "修复独立评审发现的范围、报告与凭据清理边界",
+      "status": "doing"
     }
   },
   "closure": {}

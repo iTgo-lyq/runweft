@@ -23,6 +23,20 @@ export function selectChecks(files) {
             if (all.includes(file)) selected.add(file); else select(/./); // shared helper or deleted test
             continue;
         }
+        if (file.startsWith('test/acceptance/')) {
+            scope.typecheck = true; select(/acceptance-fixtures/);
+            if (/\/(install|service-version)\.mjs$/.test(file)) scope.install = true;
+            else {
+                const affected = file.endsWith('/collaboration.ts') ? ['N1', 'N4', 'N5']
+                    : file.endsWith('/native-history.ts') ? ['N1', 'N5']
+                    : file.endsWith('/controls.ts') ? ['C-codex', 'C-claude']
+                    : file.endsWith('/recovery.ts') ? ['R-codex', 'R-claude', 'L-claude']
+                    : [...mainCases, 'R-codex', 'R-claude', 'L-claude'];
+                affected.forEach(c => native.add(c));
+            }
+            continue;
+        }
+        if (file === 'src/hub/native-page.ts') ['N1', 'N5'].forEach(c => native.add(c));
         if (/^src\/hub\/(app|console|tasks-page|native-page|style|onboarding-page)/.test(file)) { scope.typecheck = true; select(/\/(web-|hub-console)/); continue; }
         if (/^src\/(tasks|artifacts|repositories)\//.test(file)) { scope.typecheck = true; select(/\/(task|remote|execution|workspace|files|artifact|web-)/); continue; }
         if (/^src\/mcp\//.test(file)) { scope.typecheck = true; select(/mcp|cli-consumers/); mainCases.forEach(c => native.add(c)); continue; }

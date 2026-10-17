@@ -30,6 +30,7 @@ export async function recovery(f: NativeFixture, flavor: Flavor, longPath = fals
     } else {
         // Only this completed case's native history moves aside. Product business records stay in place.
         f.stopRunners();
+        for (const file of f.models.copies.filter(file => file.startsWith(nativeHome + '/'))) f.models.copies.push(file.replace(nativeHome + '/', nativeHome + '.retained/'));
         renameSync(nativeHome, nativeHome + '.retained'); mkdirSync(nativeHome, { mode: 0o700 });
         for (const name of flavor === 'codex' ? ['config.toml', 'auth.json'] : ['settings.json', '.credentials.json', '.claude.json']) {
             const retained = join(nativeHome + '.retained', name);
@@ -46,7 +47,7 @@ export async function recovery(f: NativeFixture, flavor: Flavor, longPath = fals
         assert.deepEqual(second.reconstruction.source_round_ids, [first.round_id]); assert.notEqual(second.native_session_id, first.native_session_id);
         const retained = original.replace(nativeHome + '/', nativeHome + '.retained/');
         assert.equal(createHash('sha256').update(readFileSync(retained)).digest('hex'), before);
-        const transcript = readFileSync(history(flavor === 'codex' ? join(nativeHome, 'sessions') : join(nativeHome, 'projects'), second.native_session_id), 'utf8');
+        const transcript = readFileSync(history(nativeHome, second.native_session_id), 'utf8');
         const users = transcript.trim().split('\n').map(line => JSON.parse(line)).filter(event => flavor === 'codex'
             ? event.type === 'response_item' && event.payload?.type === 'message' && event.payload.role === 'user'
             : event.type === 'user' && event.message?.role === 'user');

@@ -96,3 +96,9 @@ T9 第二批：N1（66.8s）、N4（85.9s）和 L-claude（32.3s）真实模型�
 实走冻结候选 c0daff9 的本机两种安装（/tmp/runweft-t10-install.json）通过；干净源码工作区按手册启动候选 Hub、访问返回 URL、停止及回收通过。一次外部探针误在已带 /hub 的返回 URL 后再次拼 /hub，修正探针后正常访问，无产品改动。用明确不存在的 CLI 触发集成前置失败，再只重跑 hub-configuration（4.69s）通过。core 8、Node 工程/官网 71、接线/验收边界 4、Kit 结构、文档/流程/diff 通过。一次手输报告校验 SHA 不存在被拒绝，改用实际 git rev-parse HEAD 后 N1/L-claude 两份报告核对通过。
 
 T9 R-claude 真实缺失重建通过；R-codex 首轮通过后，只移开 JSONL 而保留原生索引数据库，产品正确进入 resume unknown 并没有重发。本 fixture 改为完整移开自己的原生数据目录，仅复制当前配置/认证到空目录，再确认真正缺失；保留原始历史用于核对且移除留存目录中的配置/认证。该修正对应原方案的空原生 home 语义，不改变产品 unknown 行为。
+
+T9 后续控制：C-codex 86.5s、C-claude 35.6s 通过，分别四轮/三轮；Codex 另以一个原生共享宿主会话对验证关闭隔离，未新建独立入口。R-codex 第二次已完成 missing 重建，只因退出后的 JSONL 位于 archived_sessions 而探针仅查 sessions 失败，改查自身完整 nativeHome。N5 第二次的原生父宿主拒绝了任务 cwd 内 git status，首轮因此 interrupted 且无报告；保持断言失败，修正专用验收指令明确允许该只读检查，不修改产品审批行为。
+
+## T13 独立评审整改检查点
+
+R26–R28 已落实：精确范围、严格报告终态、搬移后凭据归属。Node scope 3/3、Bun 验收边界 3/3（25 expects）、类型/文档/流程/diff 通过，实际搬移后故障的两处凭据清理探针通过。没有增加测试框架或新增完整排列；最终冻结后的模型与独立增量复核继续记录。
