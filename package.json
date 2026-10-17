@@ -12,7 +12,7 @@
   "scripts": {
     "dev": "bun src/cli.ts",
     "typecheck": "tsc --noEmit",
-    "test": "bun test ./test",
+    "test": "bun test ./test/*.test.ts",
     "test:execution": "bun scripts/smoke-execution.ts",
     "test:install": "node scripts/smoke-install.mjs",
     "test:uninstall": "node scripts/smoke-uninstall.mjs",

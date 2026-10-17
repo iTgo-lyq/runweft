@@ -27,7 +27,7 @@ test('a smoke process ignoring SIGTERM is killed and remains a failed acceptance
     const child = Bun.spawn([process.execPath, '-e', "process.on('SIGTERM',()=>{}); console.log('ready'); setInterval(()=>{},1000)"], { stdout: 'pipe', stderr: 'ignore' });
     try {
         const reader = child.stdout.getReader(); await reader.read(); reader.releaseLock();
-        await expect(stopSmokeProcess(child)).rejects.toThrow('required SIGKILL');
+        await expect(stopSmokeProcess(child, 30)).rejects.toThrow('required SIGKILL');
         expect(child.signalCode).toBe('SIGKILL');
         expect(() => process.kill(child.pid, 0)).toThrow();
     } finally {

@@ -38,7 +38,9 @@
     },
     "T3": {
       "title": "用真实接线试点 Bun 集成与关闭语义",
-      "status": "doing"
+      "status": "done",
+      "verification": "真实 CLI/Gateway/Runner 试点 1/1（4.72s）、关闭/强杀/分片 8/8，新增真实 Bun 超时 owner hook 测试通过；类型/文档/流程/diff 通过，无模型。",
+      "commitTitle": "test-workflow-redesign T3: slim configuration integration and own cleanup"
     },
     "T4": {
       "title": "集中核心契约并切换默认与集成入口",

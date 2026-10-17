@@ -27,7 +27,8 @@ try {
         evidence.cases.push(item);
         const started = Date.now();
         try {
-            const child = Bun.spawn([script!.endsWith('.mjs') ? 'node' : process.execPath, resolve('scripts', script!), ...args], { stdio: ['ignore', 'inherit', 'inherit'] });
+            const command = script!.endsWith('.test.ts') ? [process.execPath, 'test', resolve('scripts', script!)] : [script!.endsWith('.mjs') ? 'node' : process.execPath, resolve('scripts', script!), ...args];
+            const child = Bun.spawn(command, { env: { ...process.env, RUNWEFT_TEST_BIN: script!.endsWith('.test.ts') ? args[0] : binary }, stdio: ['ignore', 'inherit', 'inherit'] });
             item.exitCode = await child.exited;
             assert.equal(item.exitCode, 0, `${id} failed; inspect its evidence before rerunning this case`);
         } finally { item.elapsedMs = Date.now() - started; }

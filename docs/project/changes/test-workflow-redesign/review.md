@@ -159,7 +159,7 @@
 **证据/问题**：
 
 - [smoke-collaboration](../../../../scripts/smoke-collaboration.ts) 的 CONTROLS 和 DISCONNECT 模式不可达：smoke-native 会删除对应环境变量，也没有其他地方设置。
-- [result-export](../../../../scripts/smoke-result-export.ts) 与 [repository-import](../../../../scripts/smoke-repository-import.ts) 的前置流程大体相同（抽查约 21 行差异），导出到导入的前置在每次 CI 中运行三遍；[resources](../../../../scripts/smoke-hub-resources.ts) 与 [configuration](../../../../scripts/smoke-hub-configuration.ts) 的 71 行骨架中 36 行有差异，主要是命名与类型；access 与 [artifact-prune](../../../../scripts/smoke-artifact-prune.ts) 都验证按 owner 清理；MCP 安装检查在 resources 和 install 中各跑一次。
+- [result-export](../../../../scripts/smoke-result-export.ts) 与 [repository-import](../../../../scripts/smoke-repository-import.ts) 的前置流程大体相同（抽查约 21 行差异），导出到导入的前置在每次 CI 中运行三遍；[resources](../../../../scripts/smoke-hub-resources.ts) 与 [configuration](https://github.com/iTgo-lyq/runweft/blob/28ab4a2/scripts/smoke-hub-configuration.ts) 的 71 行骨架中 36 行有差异，主要是命名与类型；access 与 [artifact-prune](../../../../scripts/smoke-artifact-prune.ts) 都验证按 owner 清理；MCP 安装检查在 resources 和 install 中各跑一次。
 - workspace-preparation、hub-connect 和 artifacts 中的常规断言已由 [remote](../../../../test/remote.test.ts)、[hub-connect](../../../../test/hub-connect.test.ts)、[artifacts](../../../../test/artifacts.test.ts) 根测试覆盖。
 - [smoke-deadline 测试](../../../../test/smoke-deadline.test.ts)每次都真实等待 5 秒的 SIGKILL 宽限期。
 

@@ -16,3 +16,13 @@ node scripts/ci-scope.mjs --base origin/main --head HEAD --working-tree
 普通文档执行文档与流程检查；未初始化 HAPI 时会明确列出未检查的外部源码链接，产品检查准备 pin 后再核验它们。原型和官网使用所属工程的验证，Kit 检查结构及分发工具。根测试、公共 helper、共享源码和工作流变更不会因被排除而漏验。`native` 是按改动给出的模型验收建议，开发 CI 不会自动调用模型；`install` 表示候选安装的影响范围。实际命令仍按当前入口使用，范围输出不代表检查已经执行。
 
 官网的验证与部署由其独立工作流负责，入口见 [官网说明](../website/README.md)；原型见 [包内说明](../packages/prototype/README.md)，候选、发布和恢复见 [发行操作](release.md)。
+
+## Hub 配置接线
+
+已构建匹配的 CLI/HAPI 后，可单独验证 CLI 到真实 Runner 的配置解析；只做版本发现，不调用模型。它自己创建并关闭本次环境，无需预先启动服务。
+
+```sh
+RUNWEFT_TEST_BIN="$PWD/dist/runweft" bun test ./test/integration/hub-configuration.test.ts
+```
+
+断言通过且 owner hook 确认关闭后才通过。未传程序、缺少原生 Codex 程序、超时或关闭失败会失败；停机未知时保留现场，不能把开始运行或打印 ready 当作成功。

@@ -21,3 +21,11 @@
 T1 的 Actions run 38994958028 在 scope 的文档检查失败：54 个历史/现行链接指向尚未初始化的 HAPI，checks/prototype 被跳过且 result 正确报错。没有把该 run 报作成功，也未初始化 HAPI 来维持文档-only 的隐藏依赖。
 
 文档检查现在明确报告未准备外部树的链接未验证，产品检查准备 pin 后再次核验；根仓当前/历史引用仍执行原有校验。在新建的无 submodule、无 node_modules checkout 复验：349 文件、899 个本地链接、0 错误，54 个 HAPI 链接明确 deferred；流程检查通过。当前已准备 pin 的工作区：953 链接、0 错误。actionlint 与 diff 检查通过。后续 Actions 结果继续跟踪；这是 T1 的追加修复，不覆盖其首次证据。
+
+## T3 用真实接线试点 Bun 集成与关闭语义
+
+235 行 hub-configuration 长链替换为 91 行 Bun 集成：保留实际 CLI/Gateway/HAPI Runner 的 Agent 选择与解析、runtime 撤销和错误身份拒绝，删除多层重复治理、参数和展示矩阵。当前整体入口和 scope 已切换到同一测试，默认根测试暂显式限制在根层文件；没有保留旧 smoke 转发文件。
+
+共享关闭函数合并并发/重复关闭结果，逆序尝试全部资源；owner hook 在 Bun 超时后仍等待实际退出。真实子进程超时测试已证明该行为；忽略 SIGTERM 的强杀测试将宽限改为 30ms，从约 5 秒降至约 40ms，仍要求失败和进程消失。
+
+实际验证：重建 dist/runweft（复用匹配 pin 的 HAPI）；真实 Hub 配置接线 1/1 通过，4.72 秒，无模型；关闭/超时/旧分片接线 8/8 通过，新增超时 hook 后生命周期文件 3/3 通过。首次真实链发现 Agent definition 缺少 flavor，服务拒绝输入，修复后通过；类型检查发现访问私有 Store 字段，改用现有 gateway Store。失败及成功后的专用运行根已由 owner 清理。文档/流程和 diff 检查通过，现行说明已同步。

@@ -3,22 +3,30 @@ import { rmSync } from 'node:fs';
 import { withSmokeDeadline } from './smoke-deadline';
 
 /** Close acquired resources in reverse order; one failure never skips the rest. */
-export async function closeSmoke(resources: Array<() => void | Promise<void>>) {
-    const errors: unknown[] = [];
-    for (const close of resources.splice(0).reverse()) try { await close(); } catch (error) { errors.push(error); }
-    if (errors.length) throw new AggregateError(errors, 'Smoke cleanup failed');
+const closing = new WeakMap<Array<() => void | Promise<void>>, Promise<void>>();
+export function closeSmoke(resources: Array<() => void | Promise<void>>) {
+    let result = closing.get(resources);
+    if (!result) {
+        result = Promise.resolve().then(async () => {
+            const errors: unknown[] = [];
+            for (const close of resources.splice(0).reverse()) try { await close(); } catch (error) { errors.push(error); }
+            if (errors.length) throw new AggregateError(errors, 'Smoke cleanup failed');
+        });
+        closing.set(resources, result);
+    }
+    return result;
 }
 export async function removeSmokeSecrets(files: Iterable<string>, processes: Iterable<ReturnType<typeof Bun.spawn>>) {
     if ([...processes].some(child => child.exitCode === null && child.signalCode === null)) throw new Error('Secrets retained: a smoke process is still running');
     await closeSmoke([...files].map(file => () => rmSync(file, { force: true })));
 }
-export async function stopSmokeProcess(child: ReturnType<typeof Bun.spawn>) {
+export async function stopSmokeProcess(child: ReturnType<typeof Bun.spawn>, graceMs = 5000) {
     if (child.exitCode !== null || child.signalCode !== null) {
         if (child.exitCode !== 0) throw new Error(`Smoke process exited unexpectedly (${child.exitCode})`);
         return;
     }
     child.kill('SIGTERM');
-    const exited = await withSmokeDeadline(child.exited.then(() => true), 5000, () => false);
+    const exited = await withSmokeDeadline(child.exited.then(() => true), graceMs, () => false);
     if (!exited) { child.kill('SIGKILL'); await child.exited; throw new Error('Smoke process required SIGKILL'); }
     if (child.exitCode !== 0 && child.signalCode !== 'SIGTERM') throw new Error(`Smoke process failed during shutdown (${child.exitCode}, ${child.signalCode})`);
 }

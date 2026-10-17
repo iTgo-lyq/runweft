@@ -15,6 +15,7 @@ export function selectChecks(files) {
         if (/^(\.agents\/skills\/runweft-kit\/|scripts\/(check-runweft-kit\.mjs|sync-runweft-kit\.sh)$)/.test(file)) { scope.kit = scope.tools = true; continue; }
         if (/^(docs\/|\.agents\/skills\/spec-trail\/|\.githooks\/)/.test(file) || /(^|\/)(README|AGENTS)\.md$/.test(file) || /^scripts\/check-(docs|workflow)\.mjs$/.test(file)) continue;
         if (file.startsWith('scripts/tests/') && !file.endsWith('/ci-scope.test.mjs')) { scope.tools = true; continue; }
+        if (file === 'test/integration/hub-configuration.test.ts') { groups.add('access'); continue; }
         // Until the integration split, root tests share the current suite/preload and its native configuration dependency.
         if (file.startsWith('test/')) { scope.core = true; continue; }
         if (/^src\/hub\/(app|console|tasks-page|native-page|style|onboarding-page)/.test(file)) { scope.core = true; groups.add('web'); continue; }

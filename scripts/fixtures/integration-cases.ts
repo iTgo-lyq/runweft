@@ -15,7 +15,7 @@ export function integrationCases(group: string, inputs: Inputs, shard?: string):
             c('hub-access', 1, 'smoke-hub-access.ts', hapi),
             c('hub-realtime', 2, 'smoke-hub-realtime.ts', hapi),
             c('hub-resources', 1, 'smoke-hub-resources.ts', hapi, binary),
-            c('hub-configuration', 2, 'smoke-hub-configuration.ts', hapi, binary),
+            c('hub-configuration', 2, '../test/integration/hub-configuration.test.ts', binary),
         ],
         storage: [
             c('artifacts', 3, 'smoke-artifacts.ts', binary, hapi),
