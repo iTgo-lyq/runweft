@@ -14,13 +14,12 @@
     "dev:env": "bun scripts/dev-env.ts",
     "typecheck": "tsc --noEmit",
     "test": "bun test ./test/core",
-    "test:execution": "bun scripts/smoke-execution.ts",
     "test:install": "node test/acceptance/install.mjs",
     "build": "bun scripts/build.ts",
     "build:hapi": "bun scripts/build-hapi.ts",
     "package": "bun scripts/package.ts",
     "test:integration": "bun scripts/test-integration.ts",
-    "test:native": "bun scripts/smoke-native.ts",
+    "test:native": "bun test/acceptance/native.ts",
     "test:tools": "node --test ./scripts/tests/*.test.mjs"
   },
   "dependencies": {

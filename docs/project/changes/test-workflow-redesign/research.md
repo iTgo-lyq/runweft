@@ -153,8 +153,8 @@
 本轮重新读取源码，并复算文件数/行数，与上面的 87 个 scripts 文件、43 个根测试及 12 个辅助统计一致；没有执行模型或产品回归。三轮方案修订详见 [Review](review.md)。
 
 - [compiled-cli](https://github.com/iTgo-lyq/runweft/blob/28ab4a2/test/compiled-cli.ts) 已共享一次编译，而 [开发工作流](../../../../.github/workflows/checks.yml) 后续还跑 build；两阶段存在重复，但第四轮测量证明编译仅约 0.2 秒，收益不足以抵偿强制引入 HAPI 构建；因此保留轻量编译辅助。根 [tsconfig](../../../../tsconfig.json) 已是单项目，隔离运行成本不要求再拆多个项目。
-- [原生历史页面](../../../../scripts/fixtures/hub-console-history.ts) 消费真实数据库、历史与身份现场；[shared 消费者](../../../../scripts/smoke-shared-package.ts) 先验历史页面再重启 Runner。新设计保持这些实质边界，不能把一个结果摘要当作完整可重建现场。
-- [HAPI 专项](../../../../scripts/smoke-hapi-session-and-shutdown.ts) 同时包含无模型停机/认证和真实 Claude 长路径两轮会话延续；[execution](../../../../scripts/smoke-execution.ts) 还有 Codex 共享宿主兄弟会话停止隔离。它们不能整包认作重复。
+- [原生历史页面](https://github.com/iTgo-lyq/runweft/blob/28ab4a2/scripts/fixtures/hub-console-history.ts) 消费真实数据库、历史与身份现场；[shared 消费者](https://github.com/iTgo-lyq/runweft/blob/28ab4a2/scripts/smoke-shared-package.ts) 先验历史页面再重启 Runner。新设计保持这些实质边界，不能把一个结果摘要当作完整可重建现场。
+- [HAPI 专项](https://github.com/iTgo-lyq/runweft/blob/28ab4a2/scripts/smoke-hapi-session-and-shutdown.ts) 同时包含无模型停机/认证和真实 Claude 长路径两轮会话延续；[execution](https://github.com/iTgo-lyq/runweft/blob/28ab4a2/scripts/smoke-execution.ts) 还有 Codex 共享宿主兄弟会话停止隔离。它们不能整包认作重复。
 - [官网恢复](../../../../website/recover.mjs) 仍按 `.dev-smoke/website-pages` 的固定路径读取日志报告；[报告汇总](../../../../scripts/report-evidence.mjs) 递归扫描目录。因此移除物理目录依赖须联动生产和消费的工作目录；第四轮采纳更小方案，保留现行日志信封与 path 协议标识，只显式传入报告文件。
 - [打包](../../../../scripts/package.ts) 从 scripts 复制 npm launcher 到包内 `bin/runweft.cjs`；[候选来源](https://github.com/iTgo-lyq/runweft/blob/28ab4a2/scripts/fixtures/release-inputs.mjs) 含这个旧源路径。移到 src 只改变源码归属，但两个当前消费者要同步处理。
 
@@ -166,8 +166,8 @@
 | --- | --- |
 | [package.json](../../../../package.json) 的 dev 只是 `bun src/cli.ts`；[服务命令](../../../../src/service-commands.ts) 已有 start/serve/status/stop 与 runner start/stop | 产品启动能力已经存在；开发 dev 命令本身不创建隔离验收环境。新入口仅包装隔离准备和显式 start/stop，不另写服务/runtime；不把产品后台进程当作前台子进程 |
 | [使用说明](../../../usage.md) 明确首次 start 只启动 Hub，不自动建立身份/Runner；停止 Runner 也不等于停止任务 | dev:env 默认只起 Hub，--runner 才额外准备专用身份/连接；显式 stop 先核对会话/宿主，无活跃且归属明确才回收，不能推断外部任务所有权 |
-| [native-user-smoke](../../../../scripts/fixtures/native-user-smoke.ts) 已有独立 Hub、身份、机器、Runner 与 close；[task-smoke](../../../../scripts/fixtures/task-smoke.ts) 进一步绑定模型配置、Agent 与会话关闭 | 拆分通用准备与业务场景，复用前者到薄环境入口；不把 task/native 整段测试直接包装成 setup 命令 |
-| [model-homes](../../../../scripts/fixtures/model-homes.ts) 会读取来源配置，部分上层还修改副本中的 MCP 列表 | 自由启动默认使用空隔离原生目录，不能无条件运行当前模型 fixture；固定 native 的显式模型准备留在该验收路径 |
+| [native-user-smoke](https://github.com/iTgo-lyq/runweft/blob/28ab4a2/scripts/fixtures/native-user-smoke.ts) 已有独立 Hub、身份、机器、Runner 与 close；[task-smoke](https://github.com/iTgo-lyq/runweft/blob/28ab4a2/scripts/fixtures/task-smoke.ts) 进一步绑定模型配置、Agent 与会话关闭 | 拆分通用准备与业务场景，复用前者到薄环境入口；不把 task/native 整段测试直接包装成 setup 命令 |
+| [model-homes](https://github.com/iTgo-lyq/runweft/blob/28ab4a2/scripts/fixtures/model-homes.ts) 会读取来源配置，部分上层还修改副本中的 MCP 列表 | 自由启动默认使用空隔离原生目录，不能无条件运行当前模型 fixture；固定 native 的显式模型准备留在该验收路径 |
 | [发行操作](../../../release.md) 当前通过 KEEP_INSTALL 保留安装现场，后续拿 installedBinary 接着验 | 目标改为测试与环境准备各自独立：test:install 给固定结果，dev:env start --candidate 给可操作环境；共用安装函数，不复用测试现场 |
 | [官网说明](../../../../website/README.md) 已有 build/serve 与 test/verify 的分离 | 保留此现成区分；serve 是预览前置，verify 是固定检查，不新增根包装器 |
 

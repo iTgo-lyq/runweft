@@ -7,8 +7,6 @@ import { getProjectPath } from '../../hapi/cli/src/claude/utils/path';
 import { installedBinaries } from '../../scripts/installed-binaries.mjs';
 import { closeSmoke, removeSmokeSecrets, startSmokeHapi, stopSmokeProcess } from '../lifecycle';
 import { withSmokeDeadline } from '../deadline';
-import { nonGitSmokeProject } from '../../scripts/fixtures/non-git-smoke-project';
-import { taskSmoke } from '../../scripts/fixtures/task-smoke';
 import pkg from '../../package.json';
 
 import { afterEach, test } from 'bun:test';

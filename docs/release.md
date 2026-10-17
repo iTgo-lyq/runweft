@@ -33,9 +33,8 @@ bun run test:install --candidate dist/packages --case all --report /tmp/runweft-
 | 层级 | 入口与范围 |
 | --- | --- |
 | 无模型集成 | `bun run test:integration --bin <CLI> -- [测试文件]`；真实 HAPI/Runner、文件/Git、Playwright，各用例拥有独立现场 |
-| 原生主链 | `bun run test:native <已安装CLI> preflight\|all\|N1..N6\|C-codex\|C-claude\|R-codex\|R-claude [前次证据]` |
-| 扩展配对 | `test:native <CLI> expanded`；身份/native 映射、HAPI/原生版本或 workspace 行为变化时扩到相关四配对，最多十二组合 |
-| HAPI 专项 | `bun run test:execution`；`bun scripts/smoke-hapi-session-and-shutdown.ts <CLI>`：执行关联、真实 Claude 长 cwd 续接，Runner 退出码/状态/锁/控制端口，Hub 无 ACK/停服及启动失败/重启 |
+| 原生主链 | `bun run test:native --candidate <目录> --case main --report <文件>`；N1/N4/N5、C-codex/C-claude 五项 |
+| HAPI 专项 | 无模型退出/锁/断连用 `test:integration --bin <CLI> -- hub-lifecycle`；原生恢复或历史路径变化加 R-codex/R-claude、L-claude，各用 `test:native --case <ID>` |
 
 发布工作流不按 diff 跳过验收。稳定版本上传 beta 前完成核心、四平台构建和 service-package；access/storage/web 从公共 npm 下载同一候选，与四平台安装及完整卸载并行。稳定版 Linux x64 同时运行真实网页 DOM 的精确版本安装，核对配对程序摘要、README 和五份 Skill 内容。空参数预检和 X.Y.Z-beta.N 预发行构建仍在上传前完成四组；所有已有候选恢复重新执行公共集成和四平台安装。任一必需 job 失败、取消或非预期跳过均阻止晋级。
 
@@ -43,28 +42,28 @@ bun run test:install --candidate dist/packages --case all --report /tmp/runweft-
 
 四平台构建前检查至少 14 GiB 可用空间；不足时依次清理 GitHub 托管 Linux 镜像的 dotnet、GHC、Android SDK，达到余量即停止，清理失败或仍不足则拒绝继续。构建及上传前验收每秒采样可用空间并记录实际最低值，不将采样值当作瞬时精确峰值；候选恢复不执行构建空间清理。
 
-原生及 HAPI 专项调用模型，须已有授权并使用专用认证副本，核对源配置不变。Claude 默认优先 iclaude，可用 `RUNWEFT_SMOKE_CLAUDE` 指定程序；`RUNWEFT_SMOKE_CODEX_MODEL/EFFORT` 覆盖专用副本模型选择。已有 Chromium 可用 `RUNWEFT_SMOKE_CHROMIUM` 指定。机器轮换要求旧 Runner 退出 0 并完成清理。
+原生验收调用模型，须已有授权并使用专用认证副本。默认使用 `codex` / `claude`，不自动选择 iclaude；`RUNWEFT_NATIVE_CLAUDE` 可指定 Claude 程序。模型和 effort 取原生配置，也可显式设置 `RUNWEFT_NATIVE_CODEX_MODEL/EFFORT`、`RUNWEFT_NATIVE_CLAUDE_MODEL/EFFORT`，缺少明确值时失败。已有 Chromium 可用 `RUNWEFT_SMOKE_CHROMIUM` 指定。只修改本次副本，报告不包含认证或原生状态摘要，副本刷新认证不影响结果复用。
 
-| 主链 | 保障范围 |
+| 案例 | 保障范围 |
 | --- | --- |
-| N1 | local/shared，Codex→Codex，两轮、65 秒 wait、真实历史页面与重启无重放 |
-| N2 | hub/shared，Claude→Claude，两轮、65 秒 wait 与另一 runtime 的真实历史页面 |
-| N3 | hub/worktree，Codex→Claude，工程指令/Skill/MCP、固定 base、实际 hook 失败后的 retry_finish |
-| N4 | local/worktree，Claude→Codex，两轮输入输出、原生继承、无变更不创建提交 |
-| N5/N6 | hub/remote，两个交叉配对、两 Runner、二进制输入输出、Git/模块/LFS、实际 MCP 下载/取回、离线恢复与显式合入 |
-| C/R | 两 runtime 的审批允许/拒绝、精确 interrupt、Codex steer/Claude 不支持、真实 missing 重建；新输入保留原记忆，原始历史 hash 不变 |
+| N1 | local/shared，Codex→Codex，一个任务两轮、真实成果/记忆及原生历史 |
+| N4 | local/worktree，Claude→Codex，一个任务两轮、工程指令/Skill/MCP、隔离成果和固定 base |
+| N5 | hub/remote，Codex→Claude，一个任务两轮、附件/成果、真实 Hub/Runner 重启取回且不重放、原生历史 |
+| C-codex / C-claude | 批准/拒绝的真实文件效果与中断；Codex 加 steer 和共享宿主兄弟会话隔离 |
+| R-codex / R-claude | 仅明确缺失的原生记录重建，保留业务记忆且本轮输入只发一次 |
+| L-claude | 长非 Git 路径两轮原生会话延续 |
 
-模型前先检查候选二进制、浏览器、两轮 fixture 读写和消费者契约、三个消费者的失败证据出口、local/hub 空原生配置接线。一个 case 只有生产、消费和清理均成功才可复用；未知结果先查原记录，不重发。
+冻结产品和验收源码后构建候选。入口直接安装、准备和关闭各自现场，不消费旧交接文件。失败即停止，不自动重跑整组；先诊断和确认停机，再用新现场执行单项，报告路径不得覆盖旧文件。
 
 ```sh
-bun run test:native <已安装CLI> preflight
-bun run test:native <已安装CLI> all
-# 定位并修复失败后，使用入口打印的证据定向续验：
-bun run test:native <已安装CLI> N3 <前次evidence.json>
-bun run test:native <已安装CLI> all <前次evidence.json>
+bun run test:native --candidate dist/packages --case main --report /tmp/native-main.json
+# 同一冻结版本修复环境后定向复验，显式关联首次失败：
+bun run test:native --candidate dist/packages --case N5 --retry-of /tmp/native-main.json --report /tmp/native-N5-retry.json
+# 推 tag 前由发行 Agent 按改动确定必需集合，显式提供全部相关报告：
+bun run test:native --verify-report /tmp/native-main.json --verify-report /tmp/native-N5-retry.json --source <冻结提交40位> --required-cases N1,N4,N5,C-codex,C-claude
 ```
 
-候选、脚本/helper、原生配置或模型选择指纹变化时拒绝自动复用，不兼容旧 evidence 格式，不自动整组重试。分阶段工程判断与定向续验单列证据，不改写失败 ledger；核对成功现场停机后回收临时目录，源原生配置摘要保持不变。
+main 中途失败后未运行的案例需分别执行并把报告传给校验器；缺项、失败未被显式复验、重复成功或输入不一致均拒绝。代码修复改变受测输入时重新冻结和构建，旧输入的失败证据保留，不冒充同版本复验。报告绑定实际受测包/程序摘要、产品及验收 Git 输入、HAPI pin、Bun、平台、原生版本及模型选择；不扫描历史目录。其保障是冻结源码级模型验收，公开 CI 重建的二进制另由安装和集成验证，不声称字节相同。当前 CI 不消费本地模型报告、不托管模型凭据，发行 Agent 在推 tag 前负责核对。
 
 ## 实测边界
 

@@ -7,7 +7,7 @@ import { atomicWrite } from '../../src/config';
 import { freePort } from '../../src/services';
 import { HubClient } from '../../src/hub/client';
 import { hubConnectionPaths } from '../../src/hub/resources/connection';
-import { installedBinaries } from '../installed-binaries.mjs';
+import { installedBinaries } from '../../scripts/installed-binaries.mjs';
 import pkg from '../../package.json';
 import { closeSmoke } from '../../test/lifecycle';
 import { removeFileSmokeData } from '../../test/integration/native-files';
@@ -18,7 +18,7 @@ export async function nativeUserSmoke(root: string, binary: string, env: NodeJS.
     if (hapiBinary) binaries.hapi = { path: hapiBinary, sha256: createHash('sha256').update(readFileSync(hapiBinary)).digest('hex') };
     const credentialValues = new Set<string>();
     const secrets = new Set<string>(), homes: string[] = [];
-    let stopped = false, preserveConnection = false;
+    let stopped = false;
     const registered = new Map<string, { id: string; flavors: Array<'codex' | 'claude'> }>();
     function run(home: string, args: string[], options: { cwd?: string; timeout?: number } = {}) {
         const result = spawnSync(binary, ['--home', home, '--json', ...args], { env, cwd: options.cwd, encoding: 'utf8', timeout: options.timeout ?? 60_000 });
@@ -27,11 +27,10 @@ export async function nativeUserSmoke(root: string, binary: string, env: NodeJS.
     }
     function cli(home: string, args: string[], options: { cwd?: string; timeout?: number } = {}) {
         const result = run(home, args, options);
-        assert.equal(result.status, 0, `${args.join(' ')} failed: ${result.stderr || result.error || result.signal}`); return JSON.parse(result.stdout);
+        assert.equal(result.status, 0, `${args[0]} ${args[1] ?? ''} failed (exit ${result.status}, signal ${result.signal})`); return JSON.parse(result.stdout);
     }
     resources.push(async () => {
         if (!stopped || homes.some(home => cli(home, ['status']).runner?.running)) throw new Error('Secrets retained: center or Runner still running');
-        if (preserveConnection) return;
         await closeSmoke([...secrets].map(path => () => rmSync(path, { force: true })));
     });
     try {
@@ -67,10 +66,10 @@ export async function nativeUserSmoke(root: string, binary: string, env: NodeJS.
             throw new Error('Runner actual discovery RPC timed out');
         }
         return { server, url, user, space, identityFile, run, cli, runner, binaries,
-            async restart() { cli(server, ['restart']); for (const [home, item] of registered) await ready(home, item.id, item.flavors); },
+            async restart() { cli(server, ['restart']); for (const [home, item] of registered) { cli(home, ['runner', 'start']); await ready(home, item.id, item.flavors); } },
             proxyHttp: (url: string) => new HubClient({ url, identityFile, space }, 'hubAccess', 'unavailable').http,
             candidate: { entry: 'compiled CLI + compiled serve + real HAPI/Runner', invokedCLI: binary, binaries,
                 hashes: { cli: binaries.runweft.sha256, hapi: binaries.hapi.sha256 } },
-            async close(success: boolean, retainConnection = false) { preserveConnection = retainConnection; await closeSmoke(resources); if (success) await removeFileSmokeData(root); } };
+            async close(success: boolean) { await closeSmoke(resources); if (success) await removeFileSmokeData(root); } };
     } catch (error) { try { await closeSmoke(resources); } catch (cleanup) { throw new AggregateError([error, cleanup], 'Native user smoke setup failed'); } throw error; }
 }

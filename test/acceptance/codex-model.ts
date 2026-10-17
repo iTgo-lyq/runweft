@@ -3,7 +3,7 @@ import { parseTOML } from 'toml-eslint-parser';
 
 // Explicit smoke overrides apply only after the harness copies native configuration.
 export function configureSmokeCodexModel(path: string) {
-    const model = process.env.RUNWEFT_SMOKE_CODEX_MODEL, effort = process.env.RUNWEFT_SMOKE_CODEX_EFFORT;
+    const model = process.env.RUNWEFT_NATIVE_CODEX_MODEL, effort = process.env.RUNWEFT_NATIVE_CODEX_EFFORT;
     let content = readFileSync(path, 'utf8');
     const overrides = Object.entries({ model, model_reasoning_effort: effort }).filter((entry): entry is [string, string] => !!entry[1]);
     if (overrides.length) {

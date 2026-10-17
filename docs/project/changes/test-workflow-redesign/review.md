@@ -32,19 +32,19 @@
 
 ### R4 真实历史页面不能从摘要还原
 
-**证据/问题**：[hub-console-history](../../../../scripts/fixtures/hub-console-history.ts) 要求未消费的当前交接，复制真实 Runweft/HAPI 数据库并读取身份与历史。旧稿“清理后让 web 消费新格式 native 证据”会失去所需现场。
+**证据/问题**：[hub-console-history](https://github.com/iTgo-lyq/runweft/blob/28ab4a2/scripts/fixtures/hub-console-history.ts) 要求未消费的当前交接，复制真实 Runweft/HAPI 数据库并读取身份与历史。旧稿“清理后让 web 消费新格式 native 证据”会失去所需现场。
 
-**修订与复核**：真实页面验证进入 N1/N2 的同一 case、最终清理之前；来源副本与浏览器也归此 case 所有，副本禁用 Runner。之后仍按场景重启服务及 Runner，比较 session、轮次与历史摘要验证不重放。与当前 [shared 消费者](../../../../scripts/smoke-shared-package.ts) 的关键顺序一致；普通 web 使用固定当前样本，两者结果不混称。
+**修订与复核**：真实页面验证进入 N1/N2 的同一 case、最终清理之前；来源副本与浏览器也归此 case 所有，副本禁用 Runner。之后仍按场景重启服务及 Runner，比较 session、轮次与历史摘要验证不重放。与当前 [shared 消费者](https://github.com/iTgo-lyq/runweft/blob/28ab4a2/scripts/smoke-shared-package.ts) 的关键顺序一致；普通 web 使用固定当前样本，两者结果不混称。
 
 ### R5 删除工程交接必须承认复验粒度的变化
 
-**证据/问题**：[collaboration-package](../../../../scripts/fixtures/collaboration-package.mjs) 的 live/unconsumed 现场可以独立消费；彻底删除交接格式后，无法同时无成本保留“接管旧现场只跑后半段”。再造断点协议会带回所有权、凭据与清理复杂度。
+**证据/问题**：[collaboration-package](https://github.com/iTgo-lyq/runweft/blob/28ab4a2/scripts/fixtures/collaboration-package.mjs) 的 live/unconsumed 现场可以独立消费；彻底删除交接格式后，无法同时无成本保留“接管旧现场只跑后半段”。再造断点协议会带回所有权、凭据与清理复杂度。
 
 **修订与复核**：明确以单个 case 为最小重跑单位，未知状态先诊断，不能自动重发。成功 case 只按完全匹配的候选/验证输入显式复用结论；不接管旧现场。后半段失败可能多消耗一次该 case 模型调用，这是接受的取舍，以 preflight 和无模型回归降低发生率。首次失败和后续复验分开保留；必需集合、缺项、冲突与指纹必须校验，不因“可续验”重新建设调度器。
 
 ### R6 两个旧大入口仍含唯一保障
 
-**证据/问题**：[HAPI 专项](../../../../scripts/smoke-hapi-session-and-shutdown.ts) 包含正常 SIGTERM、Hub SIGSTOP/断连、坏凭据、机器 ID 重用，以及 Claude 长非 Git 路径两轮原生会话延续。[execution](../../../../scripts/smoke-execution.ts) 包含同一 Codex 宿主的兄弟会话停止隔离；不是全部可由普通 collaboration 替代。
+**证据/问题**：[HAPI 专项](https://github.com/iTgo-lyq/runweft/blob/28ab4a2/scripts/smoke-hapi-session-and-shutdown.ts) 包含正常 SIGTERM、Hub SIGSTOP/断连、坏凭据、机器 ID 重用，以及 Claude 长非 Git 路径两轮原生会话延续。[execution](https://github.com/iTgo-lyq/runweft/blob/28ab4a2/scripts/smoke-execution.ts) 包含同一 Codex 宿主的兄弟会话停止隔离；不是全部可由普通 collaboration 替代。
 
 **修订与复核**：无模型进程保障进 integration，长路径进入 N2，控制/兄弟会话隔离进对应 C case；重建进 R case。保留源代码中的实际信号、原生 session/记忆与文件效果断言，不依赖将来某个 fork PR 才删除旧入口。N2 的 shared 场景本来使用非 Git 工作目录，加入长绝对路径不引入新的矩阵维度。
 
@@ -84,7 +84,7 @@
 
 ### R12 固定测试入口没有解决灵活验收的环境准备
 
-**证据/问题**：用户指出上一版仍无法明确各环节运行什么、哪些是固定测试、哪些是验收前置启动。[package.json](../../../../package.json) 的 dev 只是源码 CLI；[产品服务命令](../../../../src/service-commands.ts) 已有启动/关闭能力，但隔离 Hub/Runner 的工程准备分散在 [native-user-smoke](../../../../scripts/fixtures/native-user-smoke.ts) 等辅助里。现有安装流程使用 KEEP_INSTALL 留现场，测试成功与供后续操作混在一起。把 test:native 的 case 选择称作“灵活验收”也不准确：它仍有固定断言。
+**证据/问题**：用户指出上一版仍无法明确各环节运行什么、哪些是固定测试、哪些是验收前置启动。[package.json](../../../../package.json) 的 dev 只是源码 CLI；[产品服务命令](../../../../src/service-commands.ts) 已有启动/关闭能力，但隔离 Hub/Runner 的工程准备分散在 [native-user-smoke](https://github.com/iTgo-lyq/runweft/blob/28ab4a2/scripts/fixtures/native-user-smoke.ts) 等辅助里。现有安装流程使用 KEEP_INSTALL 留现场，测试成功与供后续操作混在一起。把 test:native 的 case 选择称作“灵活验收”也不准确：它仍有固定断言。
 
 **修订**：技术方案首先按实际环节列入口、前置和完成含义，再分别定义固定检查与薄环境入口。test/core、tools、integration、install、native 都是固定测试；新增 dev:env 只负责明确输入、隔离 Hub/可选 Runner、就绪和前台生命周期。--candidate 在私有位置安装后提供同样环境，不调用 test:install 留现场。默认空原生配置，不自动调模型。官网沿用自己的 serve；build/package、scope/report、publish/recover/sync 各自区分产物准备、协调和工程操作。
 
@@ -158,7 +158,7 @@
 
 **证据/问题**：
 
-- [smoke-collaboration](../../../../scripts/smoke-collaboration.ts) 的 CONTROLS 和 DISCONNECT 模式不可达：smoke-native 会删除对应环境变量，也没有其他地方设置。
+- [smoke-collaboration](https://github.com/iTgo-lyq/runweft/blob/28ab4a2/scripts/smoke-collaboration.ts) 的 CONTROLS 和 DISCONNECT 模式不可达：smoke-native 会删除对应环境变量，也没有其他地方设置。
 - [result-export](https://github.com/iTgo-lyq/runweft/blob/28ab4a2/scripts/smoke-result-export.ts) 与 [repository-import](https://github.com/iTgo-lyq/runweft/blob/28ab4a2/scripts/smoke-repository-import.ts) 的前置流程大体相同（抽查约 21 行差异），导出到导入的前置在每次 CI 中运行三遍；[resources](https://github.com/iTgo-lyq/runweft/blob/28ab4a2/scripts/smoke-hub-resources.ts) 与 [configuration](https://github.com/iTgo-lyq/runweft/blob/28ab4a2/scripts/smoke-hub-configuration.ts) 的 71 行骨架中 36 行有差异，主要是命名与类型；access 与 [artifact-prune](https://github.com/iTgo-lyq/runweft/blob/28ab4a2/scripts/smoke-artifact-prune.ts) 都验证按 owner 清理；MCP 安装检查在 resources 和 install 中各跑一次。
 - workspace-preparation、hub-connect 和 artifacts 中的常规断言已由 [remote](https://github.com/iTgo-lyq/runweft/blob/28ab4a2/test/remote.test.ts)、[hub-connect](https://github.com/iTgo-lyq/runweft/blob/28ab4a2/test/hub-connect.test.ts)、[artifacts](https://github.com/iTgo-lyq/runweft/blob/28ab4a2/test/artifacts.test.ts) 根测试覆盖。
 - [smoke-deadline 测试](https://github.com/iTgo-lyq/runweft/blob/28ab4a2/test/smoke-deadline.test.ts)每次都真实等待 5 秒的 SIGKILL 宽限期。
@@ -179,11 +179,11 @@
 
 **证据/问题**：
 
-- 当前 native 指纹包含 `~/.claude.json`，该文件会被 Claude 例行改写，复用基本落空；[model-homes](../../../../scripts/fixtures/model-homes.ts) 的 verify 对 auth.json 和 .credentials.json 求哈希，令牌刷新会让模型已经成功的 case 判为失败；指纹也没有覆盖 src。
+- 当前 native 指纹包含 `~/.claude.json`，该文件会被 Claude 例行改写，复用基本落空；[model-homes](https://github.com/iTgo-lyq/runweft/blob/28ab4a2/scripts/fixtures/model-homes.ts) 的 verify 对 auth.json 和 .credentials.json 求哈希，令牌刷新会让模型已经成功的 case 判为失败；指纹也没有覆盖 src。
 - 以下根目录从不删除：smoke-install 的 prefix、npm-cache、services，verify-packages 的解包目录，smoke-service 的根目录，uninstall 清理出错时的根目录，以及未传 cleanups 的 `helpers.fixture()` 目录。直接迁到系统临时目录只会让泄漏不可见。
 - src 中没有可注入的时钟，HAPI 的 45 秒机器过期是常量（`hapi/hub/src/sync/machineCache.ts`），realtime 和 resources 分别等待约 52 秒、60 秒；技术方案所说的“已有可控时间接口”并不存在。
 - [smoke-lifecycle](https://github.com/iTgo-lyq/runweft/blob/28ab4a2/scripts/fixtures/smoke-lifecycle.ts) 的 closeSmoke 不共享关闭结果，方案描述的是需要新增的行为。
-- 删除交接的取舍成立：[collaboration-package](../../../../scripts/fixtures/collaboration-package.mjs) 在确认停机后关闭时会删除身份与机器连接文件，重跑读取这些文件即失败，现状本来就只能重跑整个 case。
+- 删除交接的取舍成立：[collaboration-package](https://github.com/iTgo-lyq/runweft/blob/28ab4a2/scripts/fixtures/collaboration-package.mjs) 在确认停机后关闭时会删除身份与机器连接文件，重跑读取这些文件即失败，现状本来就只能重跑整个 case。
 
 **建议**：指纹由候选摘要、干净的测试 commit、宿主与 runtime 版本、模型选择组成，不包含凭据和 Claude 状态文件；“源配置未改变”只核对配置文件。迁移临时目录前，先让每个根目录都有所有者并会被删除。两次机器过期等待合并为一次。
 
