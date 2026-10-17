@@ -87,7 +87,7 @@ export function releaseChecks(version, publishing, mode) {
     assert(['build', 'existing'].includes(mode), 'Unknown release mode');
     const stable = releaseChannel(version) === 'latest';
     return { publicIntegration: publishing && (stable || mode === 'existing'),
-        groups: publishing && stable ? ['service-package'] : ['access', 'storage', 'web', 'service-package'],
+        inlineIntegration: !(publishing && stable),
         siteInstall: publishing && stable };
 }
 
@@ -275,7 +275,7 @@ async function prepare(env) {
         console.log(descriptorMarker + JSON.stringify(prior.release));
     }
     output({ 'source-ref': revision, publish: publishing, build: mode === 'build', 'verify-only': false,
-        'public-integration': checks.publicIntegration, 'integration-groups': checks.groups.join(' '),
+        'public-integration': checks.publicIntegration, 'inline-integration': checks.inlineIntegration,
         'validation-mode': checks.publicIntegration ? 'public' : 'inline', 'site-install': checks.siteInstall,
         release: mode === 'existing' ? JSON.stringify(prior.release) : '' });
     report('RELEASE_PLAN', { tag: env.RELEASE_TAG || null, sourceRevision: revision, controlRevision: env.GITHUB_SHA, mode, publishing });

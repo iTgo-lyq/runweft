@@ -12,7 +12,7 @@
   "scripts": {
     "dev": "bun src/cli.ts",
     "typecheck": "tsc --noEmit",
-    "test": "bun test ./test/*.test.ts",
+    "test": "bun test ./test/core",
     "test:execution": "bun scripts/smoke-execution.ts",
     "test:install": "node scripts/smoke-install.mjs",
     "test:uninstall": "node scripts/smoke-uninstall.mjs",
@@ -20,8 +20,9 @@
     "build": "bun scripts/build.ts",
     "build:hapi": "bun scripts/build-hapi.ts",
     "package": "bun scripts/package.ts",
-    "test:integration": "bun scripts/smoke-integration.ts",
-    "test:native": "bun scripts/smoke-native.ts"
+    "test:integration": "bun scripts/test-integration.ts",
+    "test:native": "bun scripts/smoke-native.ts",
+    "test:tools": "node --test ./scripts/tests/*.test.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.25.1",

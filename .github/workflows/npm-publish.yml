@@ -109,13 +109,14 @@ jobs:
       - name: Check every model-free integration group on the frozen candidate
         if: steps.prepared.outputs.build == 'true'
         env:
-          RUNWEFT_SMOKE_PACKAGES: .dev-smoke/release-source/dist/packages
-          INTEGRATION_GROUPS: ${{ steps.prepared.outputs.integration-groups }}
+          CANDIDATE: .dev-smoke/release-source/dist/packages
+          INLINE_INTEGRATION: ${{ steps.prepared.outputs.inline-integration }}
         run: |
-          for group in $INTEGRATION_GROUPS; do
-            node scripts/release-space.mjs measure bun scripts/smoke-integration.ts "$group" .dev-smoke/release-source/dist/packages/runweft-linux-x64/bin/runweft || exit $?
-            df -h .
-          done
+          node scripts/verify-packages.mjs "$CANDIDATE"
+          node scripts/smoke-install.mjs "$CANDIDATE"
+          if [ "$INLINE_INTEGRATION" = true ]; then
+            bun run test:integration --bin "$CANDIDATE/runweft-linux-x64/bin/runweft" --
+          fi
       - name: Verify five package OIDC bindings
         if: steps.prepared.outputs.build == 'true' && steps.prepared.outputs.publish == 'true'
         run: node scripts/check-npm-trust.mjs
@@ -137,19 +138,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - group: access
-            shard: 1/2
-          - group: access
-            shard: 2/2
-          - group: storage
-            shard: 1/3
-          - group: storage
-            shard: 2/3
-          - group: storage
-            shard: 3/3
-          - group: web
-            shard: 1/1
+        shard: ['1/4', '2/4', '3/4', '4/4']
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     env:
@@ -176,8 +165,7 @@ jobs:
           npm install --prefix .dev-smoke/native-tools --ignore-scripts --registry=https://registry.npmjs.org/ @openai/codex@0.159.2 @anthropic-ai/claude-code@2.1.283
           node .dev-smoke/native-tools/node_modules/@anthropic-ai/claude-code/install.cjs
           echo "$GITHUB_WORKSPACE/.dev-smoke/native-tools/node_modules/.bin" >> "$GITHUB_PATH"
-      - if: matrix.group == 'web'
-        run: bunx playwright install --with-deps chromium
+      - run: bunx playwright install --with-deps chromium
       - name: Download immutable public candidate
         id: candidate
         run: node scripts/npm-release.mjs download
@@ -188,10 +176,9 @@ jobs:
         run: node scripts/npm-release.mjs unpack
       - name: Run selected integration group on the public candidate
         env:
-          INTEGRATION_GROUP: ${{ matrix.group }}
-          RUNWEFT_SMOKE_SHARD: ${{ matrix.shard }}
+          SHARD: ${{ matrix.shard }}
           CANDIDATE_BINARY: ${{ steps.programs.outputs.binary }}
-        run: bun scripts/smoke-integration.ts "$INTEGRATION_GROUP" "$CANDIDATE_BINARY"
+        run: bun run test:integration --bin "$CANDIDATE_BINARY" -- --shard "$SHARD"
       - name: Keep sanitized integration evidence in logs
         if: always()
         run: node scripts/report-evidence.mjs

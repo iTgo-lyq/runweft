@@ -4,7 +4,7 @@ import { chmodSync, copyFileSync, existsSync, mkdirSync, readFileSync, rmSync } 
 import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { configureSmokeCodexModel } from './codex-model';
-import { closeSmoke } from './smoke-lifecycle';
+import { closeSmoke } from '../../test/lifecycle';
 
 /** Copy only native configuration into this invocation's actual model homes. */
 export function modelHomes(root: string, env: NodeJS.ProcessEnv, requireClaude = true) {

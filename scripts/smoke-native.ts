@@ -5,7 +5,7 @@ import { appendFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, write
 import { homedir } from 'node:os';
 import { join, resolve, sep } from 'node:path';
 import { preflightNativeSetup } from './fixtures/native-preflight';
-import { preflightBinaries, preflightBrowser } from './fixtures/smoke-preflight';
+import { preflightBinaries, preflightBrowser } from '../test/preflight';
 
 const binary = resolve(process.argv[2] ?? 'dist/runweft'), selection = process.argv[3] ?? 'all';
 const backbone = [
@@ -28,10 +28,10 @@ console.log(`Evidence: ${evidencePath}`); save();
 try {
 const binaries = preflightBinaries(binary);
 await preflightBrowser();
-const contract = Bun.spawn([process.execPath, 'test', './test/acceptance-fixtures.test.ts'], { stdio: ['ignore', 'inherit', 'inherit'] });
+const contract = Bun.spawn([process.execPath, 'test', './test/integration/acceptance-fixtures.test.ts'], { stdio: ['ignore', 'inherit', 'inherit'] });
 assert.equal(await contract.exited, 0, 'Producer/consumer fixture contract failed before model work');
 await preflightNativeSetup(binary);
-const sources = spawnSync('git', ['ls-files', 'scripts/fixtures', 'scripts/smoke-collaboration.ts', 'scripts/smoke-native.ts', 'scripts/smoke-shared-package.ts', 'scripts/smoke-worktree-package.mjs', 'scripts/smoke-remote-package.ts', 'scripts/smoke-task-controls.ts', 'scripts/smoke-reconstruction.ts'], { encoding: 'utf8' });
+const sources = spawnSync('git', ['ls-files', 'scripts/fixtures', 'test', 'scripts/smoke-collaboration.ts', 'scripts/smoke-native.ts', 'scripts/smoke-shared-package.ts', 'scripts/smoke-worktree-package.mjs', 'scripts/smoke-remote-package.ts', 'scripts/smoke-task-controls.ts', 'scripts/smoke-reconstruction.ts'], { encoding: 'utf8' });
 assert.equal(sources.status, 0);
 const hash = createHash('sha256');
 for (const file of sources.stdout.trim().split('\n').sort()) hash.update(file).update(readFileSync(file));

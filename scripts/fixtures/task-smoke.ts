@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { nativeUserSmoke } from './native-user-smoke';
 import { modelHomes } from './model-homes';
-import { removeFileSmokeData } from './native-file-smoke';
+import { removeFileSmokeData } from '../../test/integration/native-files';
 
 /** Only compiled Task setup and ownership; task waits/permissions/assertions stay in each smoke. */
 export async function taskSmoke(root: string, binary: string, env: NodeJS.ProcessEnv, flavors: Array<'codex' | 'claude'> = ['codex', 'claude']) {

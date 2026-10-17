@@ -31,14 +31,14 @@ bun run test:uninstall dist/packages
 
 | 层级 | 入口与范围 |
 | --- | --- |
-| 无模型集成 | `bun run test:integration <access\|storage\|web\|service-package> <已安装CLI>`；真实 HAPI/Runner、文件/Git、Playwright 和候选安装，各脚本独立现场 |
+| 无模型集成 | `bun run test:integration --bin <CLI> -- [测试文件]`；真实 HAPI/Runner、文件/Git、Playwright，各用例拥有独立现场 |
 | 原生主链 | `bun run test:native <已安装CLI> preflight\|all\|N1..N6\|C-codex\|C-claude\|R-codex\|R-claude [前次证据]` |
 | 扩展配对 | `test:native <CLI> expanded`；身份/native 映射、HAPI/原生版本或 workspace 行为变化时扩到相关四配对，最多十二组合 |
 | HAPI 专项 | `bun run test:execution`；`bun scripts/smoke-hapi-session-and-shutdown.ts <CLI>`：执行关联、真实 Claude 长 cwd 续接，Runner 退出码/状态/锁/控制端口，Hub 无 ACK/停服及启动失败/重启 |
 
 发布工作流不按 diff 跳过验收。稳定版本上传 beta 前完成核心、四平台构建和 service-package；access/storage/web 从公共 npm 下载同一候选，与四平台安装及完整卸载并行。稳定版 Linux x64 同时运行真实网页 DOM 的精确版本安装，核对配对程序摘要、README 和五份 Skill 内容。空参数预检和 X.Y.Z-beta.N 预发行构建仍在上传前完成四组；所有已有候选恢复重新执行公共集成和四平台安装。任一必需 job 失败、取消或非预期跳过均阻止晋级。
 
-公共集成按固定用例分为 access 两片、storage 三片、web 一片，各自下载并校验同一候选。`RUNWEFT_SMOKE_SHARD=1/3 bun run test:integration storage <CLI>` 可定向运行一片；不设该变量仍运行完整组。service-package 仅保留 tarball/symlink 和 npm launcher 两套完整验收，最多两个并行并等待各自清理；`RUNWEFT_SMOKE_SERIAL=1` 可顺序运行。Mac Intel 的公共安装和完整卸载分为两个独立 job，其他三平台各自在同一 job 顺序完成，两种路径均必须成功。
+公共集成使用 Bun 原生文件分片，每片下载并校验同一候选。`bun run test:integration --bin <CLI> -- --shard 1/4` 可单独执行一片；不传分片参数执行全部。安装的 tarball/symlink 与 npm launcher 由 Node 入口负责。通用检查与过滤见[测试验收手册](testing.md)。
 
 四平台构建前检查至少 14 GiB 可用空间；不足时依次清理 GitHub 托管 Linux 镜像的 dotnet、GHC、Android SDK，达到余量即停止，清理失败或仍不足则拒绝继续。构建及上传前验收每秒采样可用空间并记录实际最低值，不将采样值当作瞬时精确峰值；候选恢复不执行构建空间清理。
 

@@ -27,13 +27,13 @@ bun run build:hapi
 bun run typecheck
 bun run test
 bun run build
-node --test ./scripts/tests/*.test.mjs ./website/publish.test.mjs
+bun run test:tools
 node scripts/check-docs.mjs
 node scripts/check-workflow.mjs
 git diff --check
 ```
 
-根测试显式运行 `./test`，不执行 HAPI 全套测试；Node 测试单独运行。集成与模型验收按[发行验收](docs/release.md#验收矩阵)选择，失败先诊断、定向续验，不自动整组重试。
+默认测试仅运行 `test/core`；跨模块检查通过 `bun run test:integration --bin dist/runweft --` 执行，工具测试单独运行。集成与模型验收按[测试验收手册](docs/testing.md)选择，失败先诊断、定向续验，不自动整组重试。
 
 ## 验证边界与按需入口
 

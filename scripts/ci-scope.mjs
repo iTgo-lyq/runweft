@@ -1,39 +1,44 @@
-import { appendFileSync } from 'node:fs';
+import { appendFileSync, readdirSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
 import { parseArgs } from 'node:util';
 
-const allGroups = ['access', 'storage', 'web', 'service'];
 const mainCases = ['N1', 'N4', 'N5', 'C-codex', 'C-claude'];
+const integrationFiles = () => readdirSync(new URL('../test/integration/', import.meta.url))
+    .filter(file => file.endsWith('.test.ts')).sort().map(file => 'test/integration/' + file);
 
 export function selectChecks(files) {
-    const scope = { core: false, tools: false, kit: false, prototype: false, website: false, install: false, groups: [], native: [] };
-    const groups = new Set(), native = new Set();
+    const all = integrationFiles(), selected = new Set(), native = new Set();
+    const scope = { core: false, tools: false, kit: false, prototype: false, website: false, install: false,
+        typecheck: false, managers: false, integration: [] };
+    const select = pattern => all.filter(file => pattern.test(file)).forEach(file => selected.add(file));
     for (const file of files) {
         if (/^(website\/|docs\/usage\.md$)/.test(file)) { scope.website = true; continue; }
         if (file.startsWith('packages/prototype/')) { scope.prototype = true; continue; }
         if (/^(\.agents\/skills\/runweft-kit\/|scripts\/(check-runweft-kit\.mjs|sync-runweft-kit\.sh)$)/.test(file)) { scope.kit = scope.tools = true; continue; }
         if (/^(docs\/|\.agents\/skills\/spec-trail\/|\.githooks\/)/.test(file) || /(^|\/)(README|AGENTS)\.md$/.test(file) || /^scripts\/check-(docs|workflow)\.mjs$/.test(file)) continue;
         if (file.startsWith('scripts/tests/') && !file.endsWith('/ci-scope.test.mjs')) { scope.tools = true; continue; }
-        if (file === 'test/integration/hub-configuration.test.ts') { groups.add('access'); continue; }
-        // Until the integration split, root tests share the current suite/preload and its native configuration dependency.
-        if (file.startsWith('test/')) { scope.core = true; continue; }
-        if (/^src\/hub\/(app|console|tasks-page|native-page|style|onboarding-page)/.test(file)) { scope.core = true; groups.add('web'); continue; }
-        if (/^src\/(tasks|artifacts|repositories)\//.test(file)) { scope.core = true; groups.add('storage'); groups.add('web'); continue; }
-        if (/^src\/mcp\//.test(file)) { scope.core = true; groups.add('access'); groups.add('storage'); mainCases.forEach(c => native.add(c)); continue; }
-        if (/^src\/hub\/(access|resources|configuration|agents|repositories|delegation)\//.test(file)) {
-            scope.core = true; allGroups.forEach(g => groups.add(g)); continue;
+        if (file.startsWith('test/core/')) { scope.core = true; continue; }
+        if (file.startsWith('test/integration/')) {
+            if (all.includes(file)) selected.add(file); else select(/./); // shared helper or deleted test
+            continue;
         }
-        if (/^scripts\/smoke-hub-(console|connect)\.ts$|^scripts\/smoke-hub\.ts$/.test(file)) { groups.add('web'); continue; }
-        if (/^scripts\/smoke-(artifacts|inputs|outputs|artifact-prune|repository-|result-|workspace-)/.test(file)) { groups.add('storage'); continue; }
-        // Shared code, workflows, lockfiles and unclassified paths cannot silently reduce coverage.
-        scope.core = scope.tools = scope.kit = scope.prototype = scope.website = scope.install = true;
-        allGroups.forEach(g => groups.add(g));
+        if (/^src\/hub\/(app|console|tasks-page|native-page|style|onboarding-page)/.test(file)) { scope.typecheck = true; select(/\/(web-|hub-console)/); continue; }
+        if (/^src\/(tasks|artifacts|repositories)\//.test(file)) { scope.typecheck = true; select(/\/(task|remote|execution|workspace|files|artifact|web-)/); continue; }
+        if (/^src\/mcp\//.test(file)) { scope.typecheck = true; select(/mcp|cli-consumers/); mainCases.forEach(c => native.add(c)); continue; }
+        if (file === 'hapi' || /protocol/.test(file) || ['scripts/ci-scope.mjs', '.github/workflows/checks.yml'].includes(file)) scope.managers = true;
+        // Shared inputs and unknown paths select every consumer rather than silently omit checks.
+        scope.core = scope.tools = scope.kit = scope.prototype = scope.website = scope.install = scope.typecheck = true;
+        select(/./);
         [...mainCases, 'R-codex', 'R-claude', 'L-claude'].forEach(c => native.add(c));
     }
-    scope.groups = allGroups.filter(g => groups.has(g));
+    scope.integration = [...selected].sort();
     scope.native = [...native];
-    scope.checks = scope.core || scope.tools || scope.kit || scope.groups.length > 0 || scope.install;
+    scope.hapi = scope.typecheck || scope.managers || selected.size > 0;
+    scope.build = scope.integration.some(file => /\/(files-(access|artifacts|inputs|outputs|prune)\.|hub-(configuration|lifecycle|.*-live)\.|web-|workspace-(export|import|results|preparation|delegation)\.)/.test(file));
+    scope.clients = scope.integration.some(file => /cli-mcp-install|hub-configuration|hub-resources-live|web-console/.test(file));
+    scope.browser = scope.integration.some(file => /\/web-/.test(file));
+    scope.checks = scope.core || scope.tools || scope.kit || scope.hapi || scope.install;
     return scope;
 }
 

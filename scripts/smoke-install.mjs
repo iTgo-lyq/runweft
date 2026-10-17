@@ -7,7 +7,7 @@ import { createRequire } from 'node:module';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 import { createHash } from 'node:crypto';
-import { verifyMcpInstallation } from './fixtures/mcp-install.mjs';
+import { verifyMcpInstallation } from '../test/integration/mcp-install.mjs';
 import { installedBinaries } from './fixtures/installed-binaries.mjs';
 
 const packageRoot = resolve(process.argv[2] ?? 'dist/packages');

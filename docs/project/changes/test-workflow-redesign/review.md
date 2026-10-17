@@ -18,7 +18,7 @@
 
 ### R2 区分重复编译与必要的类型依赖
 
-**证据/问题**：[compiled-cli](../../../../test/compiled-cli.ts) 缓存单个 Promise，[preload](../../../../test/preload.ts) 统一关闭；[checks](../../../../.github/workflows/checks.yml) 在根测试之后再 build。产品和测试引用 pin 的共享 schema/type，部分测试还导入 HAPI 实现，不能声称完全不依赖 HAPI 源码。旧稿为此拟拆多个 TS 项目，增加配置维护。
+**证据/问题**：[compiled-cli](https://github.com/iTgo-lyq/runweft/blob/28ab4a2/test/compiled-cli.ts) 缓存单个 Promise，[preload](https://github.com/iTgo-lyq/runweft/blob/28ab4a2/test/preload.ts) 统一关闭；[checks](../../../../.github/workflows/checks.yml) 在根测试之后再 build。产品和测试引用 pin 的共享 schema/type，部分测试还导入 HAPI 实现，不能声称完全不依赖 HAPI 源码。旧稿为此拟拆多个 TS 项目，增加配置维护。
 
 **修订与复核**：core 不编译/运行真实 HAPI 或 CLI；integration 消费已有明确构建。删除编译 helper/preload，保留单个 tsconfig 和独立全量 typecheck；后者诚实保留 HAPI 类型依赖。通过根测试导入调查区分实际 HAPI 实现与仅共享类型；不把 native 命名的替身测试全移成模型测试。
 
@@ -76,7 +76,7 @@
 
 ### R11 安装边界与实施切换保持具体
 
-**证据/问题**：开发 Bun 命令不等于候选程序需要 Bun；tarball/symlink 与 npm launcher 有不同信号/路径边界，不能只选一种而称完整安装。现有 [MCP 配置测试](../../../../test/mcp-install.test.ts) 缺 Codex 会 skip，也不能沿用为必选验收的成功。
+**证据/问题**：开发 Bun 命令不等于候选程序需要 Bun；tarball/symlink 与 npm launcher 有不同信号/路径边界，不能只选一种而称完整安装。现有 [MCP 配置测试](https://github.com/iTgo-lyq/runweft/blob/28ab4a2/test/mcp-install.test.ts) 缺 Codex 会 skip，也不能沿用为必选验收的成功。
 
 **修订与复核**：安装驱动用 Node，程序在 checkout 外只用候选；两种形态验证自己的部署保障，所选宿主缺失失败。五个职责交付都连同调用方切换并删除旧入口，CI 选择表同步；不单独交付空目录、兼容 alias 或没有消费者的新框架。
 
@@ -108,7 +108,7 @@
 
 ### R13 HAPI 内部测试没有在任何 CI 执行
 
-**证据/问题**：技术方案以“HAPI 内部单元覆盖仍归 fork”作为收缩真实链路的依据。[checks](../../../../.github/workflows/checks.yml) 在 hapi 目录只执行 `bun install`；fork 已启用 Actions，但 2026-10-17 经 GitHub API 查得运行总数为 0，pin 提交也没有运行记录。因此 `hapi/cli/src/runner/repositories/manager.test.ts`（真实 bundle 与 fsck）、`artifacts/manager.test.ts`、`workspaces/manager.test.ts` 等 Runner 侧契约没有 CI 保障；根测试中的 LFS 只有 [remote-native-fixture](../../../../test/remote-native-fixture.ts) 的假数据。
+**证据/问题**：技术方案以“HAPI 内部单元覆盖仍归 fork”作为收缩真实链路的依据。[checks](../../../../.github/workflows/checks.yml) 在 hapi 目录只执行 `bun install`；fork 已启用 Actions，但 2026-10-17 经 GitHub API 查得运行总数为 0，pin 提交也没有运行记录。因此 `hapi/cli/src/runner/repositories/manager.test.ts`（真实 bundle 与 fsck）、`artifacts/manager.test.ts`、`workspaces/manager.test.ts` 等 Runner 侧契约没有 CI 保障；根测试中的 LFS 只有 [remote-native-fixture](https://github.com/iTgo-lyq/runweft/blob/28ab4a2/test/remote-native-fixture.ts) 的假数据。
 
 **建议**：方案中明确二选一：fork 启用 CI 并要求 pin 通过；或在 pin 变化时由本仓 CI 运行这些 HAPI 测试文件。解决前，真实 Runner 上的 Git、LFS 与字节链路不能改为小数据或下沉。
 
@@ -132,7 +132,7 @@
 
 ### R16 环节表缺少选择规则
 
-**证据/问题**：环节表只列出入口，“修改 CLI、Hub 接线…→选定 test:integration 文件/用例”没有路径到测试文件的映射；[ci-scope](../../../../scripts/ci-scope.mjs) 是唯一现成的映射，但只在 CI 使用。发行分片依赖 `RUNWEFT_SMOKE_SHARD` 与 [integration-cases](../../../../scripts/fixtures/integration-cases.ts)，删除后的替代没有写；Bun 已提供 `--shard=N/M` 和 `--timings`。依赖描述也有出入：core 需要 hapi 依赖安装，[artifacts 测试](../../../../test/artifacts.test.ts)等 4 个文件从 `hapi/hub/node_modules` 导入 Hono 和 HAPI Store；[cli-install](../../../../.github/workflows/cli-install.yml) 实际安装了 Bun，“安装验收不需要 Bun”未被 CI 证明；三个入口分别用环境变量、`--candidate`、`--bin` 指定程序。
+**证据/问题**：环节表只列出入口，“修改 CLI、Hub 接线…→选定 test:integration 文件/用例”没有路径到测试文件的映射；[ci-scope](../../../../scripts/ci-scope.mjs) 是唯一现成的映射，但只在 CI 使用。发行分片依赖 `RUNWEFT_SMOKE_SHARD` 与 [integration-cases](https://github.com/iTgo-lyq/runweft/blob/28ab4a2/scripts/fixtures/integration-cases.ts)，删除后的替代没有写；Bun 已提供 `--shard=N/M` 和 `--timings`。依赖描述也有出入：core 需要 hapi 依赖安装，[artifacts 测试](https://github.com/iTgo-lyq/runweft/blob/28ab4a2/test/artifacts.test.ts)等 4 个文件从 `hapi/hub/node_modules` 导入 Hono 和 HAPI Store；[cli-install](../../../../.github/workflows/cli-install.yml) 实际安装了 Bun，“安装验收不需要 Bun”未被 CI 证明；三个入口分别用环境变量、`--candidate`、`--bin` 指定程序。
 
 **建议**：让 scope 成为本地与 CI 共用的映射，可在本地对 main 运行；写明分片方式、单文件超时和是否使用 `--isolate`；统一指定程序的参数。
 
@@ -140,7 +140,7 @@
 
 ### R17 删除编译 helper 会让假 HAPI 测试依赖 HAPI 构建
 
-**证据/问题**：[compiled-cli](../../../../test/compiled-cli.ts) 只编译 src/cli.ts，实测约 0.2 秒；使用它的 9 个测试文件都对着假 HAPI 运行，不需要 HAPI 构建。改为必须通过 `RUNWEFT_TEST_BIN` 指向与 HAPI 匹配的构建，反而会增加 `build:hapi` 依赖。把它们移出默认 core 可让日常回归少约 35 秒（hub-resource-cli 13.2 秒、uninstall 5.7 秒、hub-consumers 5.1 秒等），但这不需要删除编译 helper。43 个根测试没有哪个文件耗时占主导，整体搬入 test/core 的价值有限。
+**证据/问题**：[compiled-cli](https://github.com/iTgo-lyq/runweft/blob/28ab4a2/test/compiled-cli.ts) 只编译 src/cli.ts，实测约 0.2 秒；使用它的 9 个测试文件都对着假 HAPI 运行，不需要 HAPI 构建。改为必须通过 `RUNWEFT_TEST_BIN` 指向与 HAPI 匹配的构建，反而会增加 `build:hapi` 依赖。把它们移出默认 core 可让日常回归少约 35 秒（hub-resource-cli 13.2 秒、uninstall 5.7 秒、hub-consumers 5.1 秒等），但这不需要删除编译 helper。43 个根测试没有哪个文件耗时占主导，整体搬入 test/core 的价值有限。
 
 **建议**：保留测试自行编译，只按文件位置分出；17 个 smoke 改写为 bun:test 之前，先用一个文件试点，验证进程隔离、长等待超时和失败清理。
 
@@ -148,7 +148,7 @@
 
 ### R18 只有 smoke 覆盖、去向表未列出的保障
 
-**证据/问题**：以下保障没有对应的根测试：[realtime](../../../../scripts/smoke-hub-realtime.ts) 的 SSE 回放、可见性与撤销时背压，以及 HAPI 将 RPC 改路由到另一台机器时的拒绝；[access](../../../../scripts/smoke-hub-access.ts) 的传输中途撤销和日志扫描；[smoke-hub](../../../../scripts/smoke-hub.ts) 的日志与 WAL 秘密扫描；[connect](../../../../scripts/smoke-hub-connect.ts) 的浏览器 WebCrypto；真实 codex/claude 的版本发现。
+**证据/问题**：以下保障没有对应的根测试：[realtime](https://github.com/iTgo-lyq/runweft/blob/28ab4a2/scripts/smoke-hub-realtime.ts) 的 SSE 回放、可见性与撤销时背压，以及 HAPI 将 RPC 改路由到另一台机器时的拒绝；[access](https://github.com/iTgo-lyq/runweft/blob/28ab4a2/scripts/smoke-hub-access.ts) 的传输中途撤销和日志扫描；[smoke-hub](https://github.com/iTgo-lyq/runweft/blob/28ab4a2/scripts/smoke-hub.ts) 的日志与 WAL 秘密扫描；[connect](https://github.com/iTgo-lyq/runweft/blob/28ab4a2/scripts/smoke-hub-connect.ts) 的浏览器 WebCrypto；真实 codex/claude 的版本发现。
 
 **建议**：在去向表中逐项写明归属；下沉时用故障注入证明替代测试会失败。
 
@@ -159,9 +159,9 @@
 **证据/问题**：
 
 - [smoke-collaboration](../../../../scripts/smoke-collaboration.ts) 的 CONTROLS 和 DISCONNECT 模式不可达：smoke-native 会删除对应环境变量，也没有其他地方设置。
-- [result-export](../../../../scripts/smoke-result-export.ts) 与 [repository-import](../../../../scripts/smoke-repository-import.ts) 的前置流程大体相同（抽查约 21 行差异），导出到导入的前置在每次 CI 中运行三遍；[resources](../../../../scripts/smoke-hub-resources.ts) 与 [configuration](https://github.com/iTgo-lyq/runweft/blob/28ab4a2/scripts/smoke-hub-configuration.ts) 的 71 行骨架中 36 行有差异，主要是命名与类型；access 与 [artifact-prune](../../../../scripts/smoke-artifact-prune.ts) 都验证按 owner 清理；MCP 安装检查在 resources 和 install 中各跑一次。
-- workspace-preparation、hub-connect 和 artifacts 中的常规断言已由 [remote](../../../../test/remote.test.ts)、[hub-connect](../../../../test/hub-connect.test.ts)、[artifacts](../../../../test/artifacts.test.ts) 根测试覆盖。
-- [smoke-deadline 测试](../../../../test/smoke-deadline.test.ts)每次都真实等待 5 秒的 SIGKILL 宽限期。
+- [result-export](https://github.com/iTgo-lyq/runweft/blob/28ab4a2/scripts/smoke-result-export.ts) 与 [repository-import](https://github.com/iTgo-lyq/runweft/blob/28ab4a2/scripts/smoke-repository-import.ts) 的前置流程大体相同（抽查约 21 行差异），导出到导入的前置在每次 CI 中运行三遍；[resources](https://github.com/iTgo-lyq/runweft/blob/28ab4a2/scripts/smoke-hub-resources.ts) 与 [configuration](https://github.com/iTgo-lyq/runweft/blob/28ab4a2/scripts/smoke-hub-configuration.ts) 的 71 行骨架中 36 行有差异，主要是命名与类型；access 与 [artifact-prune](https://github.com/iTgo-lyq/runweft/blob/28ab4a2/scripts/smoke-artifact-prune.ts) 都验证按 owner 清理；MCP 安装检查在 resources 和 install 中各跑一次。
+- workspace-preparation、hub-connect 和 artifacts 中的常规断言已由 [remote](https://github.com/iTgo-lyq/runweft/blob/28ab4a2/test/remote.test.ts)、[hub-connect](https://github.com/iTgo-lyq/runweft/blob/28ab4a2/test/hub-connect.test.ts)、[artifacts](https://github.com/iTgo-lyq/runweft/blob/28ab4a2/test/artifacts.test.ts) 根测试覆盖。
+- [smoke-deadline 测试](https://github.com/iTgo-lyq/runweft/blob/28ab4a2/test/smoke-deadline.test.ts)每次都真实等待 5 秒的 SIGKILL 宽限期。
 
 **建议**：随对应交付删除；smoke 只保留跨边界断言；宽限时间改为可注入，或删除该测试。
 
@@ -182,7 +182,7 @@
 - 当前 native 指纹包含 `~/.claude.json`，该文件会被 Claude 例行改写，复用基本落空；[model-homes](../../../../scripts/fixtures/model-homes.ts) 的 verify 对 auth.json 和 .credentials.json 求哈希，令牌刷新会让模型已经成功的 case 判为失败；指纹也没有覆盖 src。
 - 以下根目录从不删除：smoke-install 的 prefix、npm-cache、services，verify-packages 的解包目录，smoke-service 的根目录，uninstall 清理出错时的根目录，以及未传 cleanups 的 `helpers.fixture()` 目录。直接迁到系统临时目录只会让泄漏不可见。
 - src 中没有可注入的时钟，HAPI 的 45 秒机器过期是常量（`hapi/hub/src/sync/machineCache.ts`），realtime 和 resources 分别等待约 52 秒、60 秒；技术方案所说的“已有可控时间接口”并不存在。
-- [smoke-lifecycle](../../../../scripts/fixtures/smoke-lifecycle.ts) 的 closeSmoke 不共享关闭结果，方案描述的是需要新增的行为。
+- [smoke-lifecycle](https://github.com/iTgo-lyq/runweft/blob/28ab4a2/scripts/fixtures/smoke-lifecycle.ts) 的 closeSmoke 不共享关闭结果，方案描述的是需要新增的行为。
 - 删除交接的取舍成立：[collaboration-package](../../../../scripts/fixtures/collaboration-package.mjs) 在确认停机后关闭时会删除身份与机器连接文件，重跑读取这些文件即失败，现状本来就只能重跑整个 case。
 
 **建议**：指纹由候选摘要、干净的测试 commit、宿主与 runtime 版本、模型选择组成，不包含凭据和 Claude 状态文件；“源配置未改变”只核对配置文件。迁移临时目录前，先让每个根目录都有所有者并会被删除。两次机器过期等待合并为一次。

@@ -9,14 +9,16 @@ import { changedFiles, selectChecks, verifyJobs } from '../ci-scope.mjs';
 test('scope separates docs and subprojects, selects changed tests, and fails closed for shared changes', () => {
     assert.equal(selectChecks(['docs/release.md', 'AGENTS.md']).checks, false);
     for (const [path, check] of [['website/build.mjs', 'website'], ['packages/prototype/verify.mjs', 'prototype'], ['.agents/skills/runweft-kit/SKILL.md', 'kit']]) {
-        const scope = selectChecks([path]); assert.equal(scope[check], true); assert.equal(scope.core, false); assert.deepEqual(scope.groups, []);
+        const scope = selectChecks([path]); assert.equal(scope[check], true); assert.equal(scope.core, false); assert.deepEqual(scope.integration, []);
     }
-    assert.equal(selectChecks(['test/tasks.test.ts', 'test/compiled-cli.ts']).core, true);
+    assert(selectChecks(['test/integration/compiled-cli.ts']).integration.includes('test/integration/tasks.test.ts'));
+    assert.deepEqual(selectChecks(['test/integration/tasks.test.ts']).integration, ['test/integration/tasks.test.ts']);
+    assert.equal(selectChecks(['test/core/config.test.ts']).hapi, false);
     assert.equal(selectChecks(['scripts/tests/npm-publish.test.mjs']).tools, true);
-    assert.deepEqual(selectChecks(['src/hub/native-page.ts']).groups, ['web']);
+    assert(selectChecks(['src/hub/native-page.ts']).integration.every(file => /web-|hub-console/.test(file)));
     for (const file of ['hapi', 'bun.lock', 'src/unknown.ts', '.github/workflows/checks.yml', 'scripts/ci-scope.mjs']) {
         const scope = selectChecks([file]); assert.equal(scope.install, true); assert.equal(scope.prototype, true);
-        assert.deepEqual(scope.groups, ['access', 'storage', 'web', 'service']); assert(scope.native.includes('R-codex'));
+        assert(scope.integration.length > 20); assert(scope.native.includes('R-codex'));
     }
 });
 
@@ -42,7 +44,7 @@ test('real Git comparison handles first push, merge base, moves, deletions and u
 });
 
 test('aggregate refuses failed, cancelled, missing or skipped required jobs', () => {
-    const scope = selectChecks(['test/tasks.test.ts']);
+    const scope = selectChecks(['test/integration/tasks.test.ts']);
     const jobs = { scope: { result: 'success' }, checks: { result: 'success' }, prototype: { result: 'skipped' } };
     verifyJobs(scope, jobs);
     for (const result of ['failure', 'cancelled', 'skipped', undefined]) assert.throws(() => verifyJobs(scope, { ...jobs, checks: { result } }), /did not succeed/);

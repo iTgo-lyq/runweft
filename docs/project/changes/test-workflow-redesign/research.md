@@ -31,7 +31,7 @@
 
 43 个根测试文件中，9 个直接调用共享 `compiledCli()`，18 个直接出现子进程调用，12 个直接创建 HTTP/Socket 设施；集合交叉，且没有计入 helper 间接启动，不能相加当作不同测试数量。CLI 编译已按进程缓存一次，并非每个文件重复编译；第四轮测量该编译约 0.2 秒，决定保留而不要求所有 CLI 测试先构建 HAPI。
 
-例如 [artifact 测试](../../../../test/artifacts.test.ts)直接导入 HAPI Store、ArtifactService、路由和认证中间件，启动服务并执行编译 CLI；[卸载测试](../../../../test/uninstall.test.ts)建立包目录并执行自卸载。这些是有价值的组件/系统回归，但不能视为无外部准备的函数级测试。[MCP 安装测试](../../../../test/mcp-install.test.ts)两项还依赖本机 Codex，缺少时跳过；CI 因而必须安装 Codex。
+例如 [artifact 测试](https://github.com/iTgo-lyq/runweft/blob/28ab4a2/test/artifacts.test.ts)直接导入 HAPI Store、ArtifactService、路由和认证中间件，启动服务并执行编译 CLI；[卸载测试](https://github.com/iTgo-lyq/runweft/blob/28ab4a2/test/uninstall.test.ts)建立包目录并执行自卸载。这些是有价值的组件/系统回归，但不能视为无外部准备的函数级测试。[MCP 安装测试](https://github.com/iTgo-lyq/runweft/blob/28ab4a2/test/mcp-install.test.ts)两项还依赖本机 Codex，缺少时跳过；CI 因而必须安装 Codex。
 
 ### “冒烟”已经承担完整集成回归
 
@@ -152,7 +152,7 @@
 
 本轮重新读取源码，并复算文件数/行数，与上面的 87 个 scripts 文件、43 个根测试及 12 个辅助统计一致；没有执行模型或产品回归。三轮方案修订详见 [Review](review.md)。
 
-- [compiled-cli](../../../../test/compiled-cli.ts) 已共享一次编译，而 [开发工作流](../../../../.github/workflows/checks.yml) 后续还跑 build；两阶段存在重复，但第四轮测量证明编译仅约 0.2 秒，收益不足以抵偿强制引入 HAPI 构建；因此保留轻量编译辅助。根 [tsconfig](../../../../tsconfig.json) 已是单项目，隔离运行成本不要求再拆多个项目。
+- [compiled-cli](https://github.com/iTgo-lyq/runweft/blob/28ab4a2/test/compiled-cli.ts) 已共享一次编译，而 [开发工作流](../../../../.github/workflows/checks.yml) 后续还跑 build；两阶段存在重复，但第四轮测量证明编译仅约 0.2 秒，收益不足以抵偿强制引入 HAPI 构建；因此保留轻量编译辅助。根 [tsconfig](../../../../tsconfig.json) 已是单项目，隔离运行成本不要求再拆多个项目。
 - [原生历史页面](../../../../scripts/fixtures/hub-console-history.ts) 消费真实数据库、历史与身份现场；[shared 消费者](../../../../scripts/smoke-shared-package.ts) 先验历史页面再重启 Runner。新设计保持这些实质边界，不能把一个结果摘要当作完整可重建现场。
 - [HAPI 专项](../../../../scripts/smoke-hapi-session-and-shutdown.ts) 同时包含无模型停机/认证和真实 Claude 长路径两轮会话延续；[execution](../../../../scripts/smoke-execution.ts) 还有 Codex 共享宿主兄弟会话停止隔离。它们不能整包认作重复。
 - [官网恢复](../../../../website/recover.mjs) 仍按 `.dev-smoke/website-pages` 的固定路径读取日志报告；[报告汇总](../../../../scripts/report-evidence.mjs) 递归扫描目录。因此移除物理目录依赖须联动生产和消费的工作目录；第四轮采纳更小方案，保留现行日志信封与 path 协议标识，只显式传入报告文件。

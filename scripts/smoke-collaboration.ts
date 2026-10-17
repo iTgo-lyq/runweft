@@ -6,7 +6,7 @@ import { dirname, join, resolve } from 'node:path';
 import type { HapiHttp } from '../src/hapi';
 import { nativeUserSmoke } from './fixtures/native-user-smoke';
 import { modelHomes } from './fixtures/model-homes';
-import { preflightBinaries } from './fixtures/smoke-preflight';
+import { preflightBinaries } from '../test/preflight';
 import { watchNativeHost } from './fixtures/native-host';
 import { codexMcpDefinition, replaceCodexMcp } from '../src/mcp/toml';
 import { codexCatalog } from './fixtures/codex-catalog';

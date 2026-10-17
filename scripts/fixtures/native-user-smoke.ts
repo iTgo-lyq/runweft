@@ -9,8 +9,8 @@ import { HubClient } from '../../src/hub/client';
 import { hubConnectionPaths } from '../../src/hub/resources/connection';
 import { installedBinaries } from './installed-binaries.mjs';
 import pkg from '../../package.json';
-import { closeSmoke } from './smoke-lifecycle';
-import { removeFileSmokeData } from './native-file-smoke';
+import { closeSmoke } from '../../test/lifecycle';
+import { removeFileSmokeData } from '../../test/integration/native-files';
 
 /** Compiled center and separate personal Runner homes; public Hub authorization only. */
 export async function nativeUserSmoke(root: string, binary: string, env: NodeJS.ProcessEnv, hapiBinary?: string) {

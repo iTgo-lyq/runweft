@@ -9,8 +9,8 @@ import { freePort } from '../../src/services';
 import { createConfigurationGateway } from '../../src/hub/configuration/gateway';
 import { HubResourceClient } from '../../src/hub/resources/client';
 import { HubStore, createIdentityToken } from '../../src/hub/store';
-import { preflightBinaries } from '../../scripts/fixtures/smoke-preflight';
-import { closeSmoke, removeSmokeSecrets, startSmokeHapi, stopSmokeProcess } from '../../scripts/fixtures/smoke-lifecycle';
+import { preflightBinaries } from '../preflight';
+import { closeSmoke, removeSmokeSecrets, startSmokeHapi, stopSmokeProcess } from '../lifecycle';
 
 // Hooks also run when Bun times out the test; a finally block alone is insufficient.
 const resources: Array<() => void | Promise<void>> = [];

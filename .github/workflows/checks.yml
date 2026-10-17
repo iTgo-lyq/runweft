@@ -25,7 +25,7 @@ jobs:
       tools: ${{ steps.scope.outputs.tools }}
       kit: ${{ steps.scope.outputs.kit }}
       prototype: ${{ steps.scope.outputs.prototype }}
-      groups: ${{ steps.scope.outputs.groups }}
+      integration: ${{ steps.scope.outputs.integration }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -53,6 +53,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          fetch-depth: 0
           persist-credentials: false
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
@@ -61,55 +62,45 @@ jobs:
         with:
           bun-version: '1.4.2'
       - run: bun install --frozen-lockfile
-      - if: needs.scope.outputs.core == 'true' || needs.scope.outputs.groups != '[]'
+      - if: fromJSON(needs.scope.outputs.selection).hapi
         run: git submodule update --init hapi && node scripts/check-docs.mjs
       - if: needs.scope.outputs.kit == 'true'
         run: node scripts/check-runweft-kit.mjs
-      - if: needs.scope.outputs.core == 'true' || needs.scope.outputs.groups != '[]'
+      - if: fromJSON(needs.scope.outputs.selection).hapi
         run: bun install --frozen-lockfile
         working-directory: hapi
-      - name: Install Codex for the real native configuration tests
-        if: needs.scope.outputs.core == 'true' || needs.scope.outputs.groups != '[]'
+      - if: fromJSON(needs.scope.outputs.selection).clients
         run: |
           mkdir -p "$CODEX_HOME" "$CLAUDE_CONFIG_DIR"
-          npm install --prefix .dev-smoke/native-tools --ignore-scripts --registry=https://registry.npmjs.org/ @openai/codex@0.159.2
-          .dev-smoke/native-tools/node_modules/.bin/codex --version
-          echo "$GITHUB_WORKSPACE/.dev-smoke/native-tools/node_modules/.bin" >> "$GITHUB_PATH"
-      - if: needs.scope.outputs.core == 'true'
-        run: bun run typecheck && bun run test
-      - if: needs.scope.outputs.tools == 'true'
-        run: node --test ./scripts/tests/*.test.mjs
-      - run: go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.12
-      - name: Install Claude for integration discovery only
-        if: needs.scope.outputs.groups != '[]'
-        run: |
-          mkdir -p "$CODEX_HOME" "$CLAUDE_CONFIG_DIR"
-          npm install --prefix .dev-smoke/native-tools --ignore-scripts --registry=https://registry.npmjs.org/ @anthropic-ai/claude-code@2.1.283
+          npm install --prefix .dev-smoke/native-tools --ignore-scripts --registry=https://registry.npmjs.org/ @openai/codex@0.159.2 @anthropic-ai/claude-code@2.1.283
           node .dev-smoke/native-tools/node_modules/@anthropic-ai/claude-code/install.cjs
-          .dev-smoke/native-tools/node_modules/.bin/codex --version
-          .dev-smoke/native-tools/node_modules/.bin/claude --version
           echo "$GITHUB_WORKSPACE/.dev-smoke/native-tools/node_modules/.bin" >> "$GITHUB_PATH"
-      - if: contains(fromJSON(needs.scope.outputs.groups), 'web')
+      - if: fromJSON(needs.scope.outputs.selection).typecheck
+        run: bun run typecheck
+      - if: needs.scope.outputs.core == 'true'
+        run: bun run test
+      - if: needs.scope.outputs.tools == 'true'
+        run: bun run test:tools
+      - run: go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.12
+      - if: fromJSON(needs.scope.outputs.selection).browser
         run: bunx playwright install --with-deps chromium
-      - if: needs.scope.outputs.groups != '[]'
-        run: bun run build:hapi && bun run build
-      - name: Run selected local integration groups
-        if: needs.scope.outputs.groups != '[]'
+      - if: fromJSON(needs.scope.outputs.selection).build
+        run: bun run build
+      - name: Run selected integration files in one Bun process
+        if: needs.scope.outputs.integration != '[]'
         env:
-          CI_GROUPS: ${{ needs.scope.outputs.groups }}
+          SELECTION: ${{ needs.scope.outputs.selection }}
         run: |
           node --input-type=module <<'NODE'
           import { spawnSync } from 'node:child_process';
-          for (const group of JSON.parse(process.env.CI_GROUPS)) {
-            const commands = group === 'service'
-              ? [['node', 'scripts/smoke-service.mjs', 'dist/runweft']]
-              : [['bun', 'scripts/smoke-integration.ts', group, 'dist/runweft']];
-            for (const [command, ...args] of commands) {
-              const result = spawnSync(command, args, { stdio: 'inherit' });
-              if (result.status !== 0) process.exit(result.status ?? 1);
-            }
-          }
+          const scope = JSON.parse(process.env.SELECTION);
+          const result = spawnSync('bun', ['run', 'test:integration', ...(scope.build ? ['--bin', 'dist/runweft'] : []), '--', ...scope.integration], { stdio: 'inherit' });
+          process.exit(result.status ?? 1);
           NODE
+      - name: Check pinned HAPI managers when their boundary changes
+        if: fromJSON(needs.scope.outputs.selection).managers
+        run: bunx vitest run src/runner/artifacts/manager.test.ts src/runner/repositories/manager.test.ts src/runner/workspaces/manager.test.ts
+        working-directory: hapi/cli
       - name: Keep sanitized integration evidence in logs
         if: always()
         run: node scripts/report-evidence.mjs

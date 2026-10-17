@@ -13,8 +13,8 @@ import { modelHomes } from './fixtures/model-homes';
 import { nativeUserSmoke } from './fixtures/native-user-smoke';
 import { nonGitSmokeProject } from './fixtures/non-git-smoke-project';
 import { installedBinaries } from './fixtures/installed-binaries.mjs';
-import { closeSmoke } from './fixtures/smoke-lifecycle';
-import { removeFileSmokeData } from './fixtures/native-file-smoke';
+import { closeSmoke } from '../test/lifecycle';
+import { removeFileSmokeData } from '../test/integration/native-files';
 import pkg from '../package.json';
 
 // Compiled Task execution against empty native histories, never a format migration.

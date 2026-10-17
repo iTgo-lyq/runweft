@@ -6,7 +6,7 @@ import { join, resolve, sep } from 'node:path';
 import { Database } from 'bun:sqlite';
 import { chromium } from 'playwright';
 import { freePort } from '../../src/services';
-import { closeSmoke } from './smoke-lifecycle';
+import { closeSmoke } from '../../test/lifecycle';
 import { installedBinaries } from './installed-binaries.mjs';
 import { getSessionTitle } from '../../hapi/web/src/lib/sessionTitle';
 

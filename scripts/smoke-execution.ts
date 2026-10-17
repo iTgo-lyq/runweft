@@ -149,7 +149,7 @@ try {
     try { await fixture?.close(false); } catch (error) { modelShutdownConfirmed = false; evidence.cleanupErrors.push(String(error)); }
     try { await models?.waitHosts(modelPids); } catch (error) { modelShutdownConfirmed = false; evidence.cleanupErrors.push(String(error)); }
     if (modelShutdownConfirmed) try { await models?.remove(); } catch (error) { evidence.cleanupErrors.push(String(error)); }
-    if (evidence.success && !evidence.cleanupErrors.length) try { await (await import('./fixtures/native-file-smoke')).removeFileSmokeData(root); } catch (error) { evidence.cleanupErrors.push(String(error)); }
+    if (evidence.success && !evidence.cleanupErrors.length) try { await (await import('../test/integration/native-files')).removeFileSmokeData(root); } catch (error) { evidence.cleanupErrors.push(String(error)); }
     if (evidence.cleanupErrors.length) { evidence.success = false; process.exitCode = 1; }
     evidence.finishedAt = new Date().toISOString();
     writeFileSync(join(root, 'evidence.json'), JSON.stringify(evidence, null, 2));

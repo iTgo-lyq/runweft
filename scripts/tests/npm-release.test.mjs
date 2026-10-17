@@ -118,9 +118,9 @@ test('four native job failures prevent promotion before any public check or muta
 
 test('all five release modes retain their required integration and recovery evidence', async () => {
     assert.deepEqual(releaseChecks('1.2.0', false, 'build'), { publicIntegration: false,
-        groups: ['access', 'storage', 'web', 'service-package'], siteInstall: false });
+        inlineIntegration: true, siteInstall: false });
     assert.equal(releaseChecks('1.2.0-beta.1', true, 'build').publicIntegration, false);
-    assert.deepEqual(releaseChecks('1.2.0', true, 'build').groups, ['service-package']);
+    assert.equal(releaseChecks('1.2.0', true, 'build').inlineIntegration, false);
     for (const version of ['1.2.0', '1.2.0-beta.1']) {
         const release = descriptor(version);
         assert.equal(releaseChecks(version, true, 'existing').publicIntegration, true);
@@ -291,11 +291,6 @@ test('workflow topology requires all four platforms and has no artifact dependen
     assert.match(publish.jobs.promote.if, /needs.beta.outputs.verify-only != 'true'/);
     assert.equal(publish.jobs.promote.steps.find(step => step.run === 'node scripts/npm-release.mjs promote').env.VERIFY_ONLY, '${{ needs.beta.outputs.verify-only }}');
     assert.equal(publish.jobs.beta.steps.find(step => step.id === 'published').env.VERIFY_ONLY, '${{ steps.prepared.outputs.verify-only }}');
-    const sourceCheckout = publish.jobs.beta.steps.find(step => step.name === 'Check out exact tag source for packaging');
-    const integration = publish.jobs.beta.steps.find(step => step.name === 'Check every model-free integration group on the frozen candidate');
-    const candidateDirectory = sourceCheckout.with.path + '/dist/packages';
-    assert.equal(integration.env.RUNWEFT_SMOKE_PACKAGES, candidateDirectory);
-    assert(integration.run.includes(candidateDirectory + '/runweft-linux-x64/bin/runweft'));
     const installationRows = install.jobs.install.strategy.matrix.include;
     assert.deepEqual([...new Set(installationRows.map(row => row.platform))].sort(),
         ['darwin-arm64', 'darwin-x64', 'linux-arm64', 'linux-x64']);
@@ -308,8 +303,6 @@ test('workflow topology requires all four platforms and has no artifact dependen
     assert.equal(install.jobs.install.steps.find(step => step.run?.includes('node scripts/smoke-uninstall.mjs')).if, "matrix.check != 'install'");
     assert.equal(install.permissions['id-token'], undefined);
     assert.equal(install.jobs.install['continue-on-error'], undefined);
-    assert.deepEqual(publish.jobs.integration.strategy.matrix.include.map(row => row.group + ':' + row.shard).sort(),
-        ['access:1/2', 'access:2/2', 'storage:1/3', 'storage:2/3', 'storage:3/3', 'web:1/1']);
     assert.equal(publish.jobs.integration.strategy['fail-fast'], false);
     assert.equal(publish.jobs.integration.permissions?.['id-token'], undefined);
     assert(publish.jobs.integration.steps.some(step => step.with?.submodules === true));
