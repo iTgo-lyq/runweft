@@ -1,0 +1,1 @@
+export function verifyHapiSourceArchive(archive: string, platform: { id: string; cpu: string; os: string }, revision: string, destination: string): { files: number; platform: string; sourceBlobsMatch: boolean };

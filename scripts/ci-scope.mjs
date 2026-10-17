@@ -70,7 +70,7 @@ export function changedFiles({ base, head = 'HEAD', defaultBranch = 'origin/main
 }
 
 export function verifyJobs(scope, jobs) {
-    for (const name of ['scope', 'checks', 'prototype']) {
+    for (const name of ['scope', 'checks', 'prototype', 'install']) {
         const required = name === 'scope' || scope[name];
         if (required ? jobs[name]?.result !== 'success' : !['success', 'skipped'].includes(jobs[name]?.result)) {
             throw new Error(`Required check did not succeed: ${name} (${jobs[name]?.result ?? 'missing'})`);

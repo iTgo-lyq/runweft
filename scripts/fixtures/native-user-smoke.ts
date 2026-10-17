@@ -7,7 +7,7 @@ import { atomicWrite } from '../../src/config';
 import { freePort } from '../../src/services';
 import { HubClient } from '../../src/hub/client';
 import { hubConnectionPaths } from '../../src/hub/resources/connection';
-import { installedBinaries } from './installed-binaries.mjs';
+import { installedBinaries } from '../installed-binaries.mjs';
 import pkg from '../../package.json';
 import { closeSmoke } from '../../test/lifecycle';
 import { removeFileSmokeData } from '../../test/integration/native-files';

@@ -294,13 +294,8 @@ test('workflow topology requires all four platforms and has no artifact dependen
     const installationRows = install.jobs.install.strategy.matrix.include;
     assert.deepEqual([...new Set(installationRows.map(row => row.platform))].sort(),
         ['darwin-arm64', 'darwin-x64', 'linux-arm64', 'linux-x64']);
-    for (const platform of ['darwin-arm64', 'darwin-x64', 'linux-arm64', 'linux-x64']) {
-        const checks = installationRows.filter(row => row.platform === platform)
-            .flatMap(row => row.check === 'both' ? ['install', 'uninstall'] : [row.check]);
-        assert.deepEqual(checks.sort(), ['install', 'uninstall'], platform + ': both acceptance paths are mandatory, exactly once');
-    }
-    assert.equal(install.jobs.install.steps.find(step => step.run?.includes('node scripts/smoke-install.mjs')).if, "matrix.check != 'uninstall'");
-    assert.equal(install.jobs.install.steps.find(step => step.run?.includes('node scripts/smoke-uninstall.mjs')).if, "matrix.check != 'install'");
+    assert.equal(installationRows.length, 4);
+    assert(install.jobs.install.steps.some(step => step.run?.includes('test/acceptance/install.mjs') && step.run.includes('--case all')));
     assert.equal(install.permissions['id-token'], undefined);
     assert.equal(install.jobs.install['continue-on-error'], undefined);
     assert.equal(publish.jobs.integration.strategy['fail-fast'], false);

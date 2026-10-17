@@ -18,14 +18,12 @@ skills.sh 收录依赖用户通过 skills CLI 安装时的遥测及平台索引�
 
 ```sh
 bun run package --all
-bun run test:packages
-RUNWEFT_SMOKE_NATIVE_INSTALL=1 RUNWEFT_SMOKE_KEEP_INSTALL=1 bun run test:install
-bun run test:uninstall dist/packages
+bun run test:install --candidate dist/packages --case all --report /tmp/runweft-install.json
 ```
 
-`package` 可用 `--platform darwin-arm64` 选单平台，已核对的 HAPI 构建可加 `--reuse-hapi`。产物在 `dist/packages/`；包输入变化须重新构建验收，固定输入由 `scripts/fixtures/release-inputs.mjs` 定义。
+`package` 可用 `--platform darwin-arm64` 选单平台，已核对的 HAPI 构建可加 `--reuse-hapi`。产物在 `dist/packages/`；包输入变化须重新构建验收，固定输入由 `scripts/release-inputs.mjs` 定义。
 
-安装验收使用专用 registry/prefix/cache；打印的 evidence.json 中 `installedBinary` 是后续参数。原生入口核对 npm launcher、平台程序与相邻 HAPI 的 realpath/hash，不能换成另编译的程序。卸载专项使用候选原平台 tarball；登记会话是测试进程，不能算模型协作证据。
+安装验收使用专用 registry/prefix/cache，直接消费候选原始 tarball，分别检查独立包/symlink 和 npm launcher 的安装、服务信号、MCP 接线与完整卸载；驱动为 Node，程序运行时 PATH 不含 Bun 或源码。报告显式写到 `--report`，成功现场由同一入口清理，不能借固定验收获取常驻开发环境。原生入口会独立从候选准备自己的安装。
 
 ## 验收矩阵
 

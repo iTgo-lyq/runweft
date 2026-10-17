@@ -5,7 +5,7 @@ import { join, resolve } from 'node:path';
 import { chromium, type Page } from 'playwright';
 import { freePort } from '../../src/services';
 import { closeSmoke } from '../lifecycle';
-import { installedBinaries } from '../../scripts/fixtures/installed-binaries.mjs';
+import { installedBinaries } from '../../scripts/installed-binaries.mjs';
 import { createHash } from 'node:crypto';
 import { afterEach, test } from 'bun:test';
 import { tmpdir } from 'node:os';

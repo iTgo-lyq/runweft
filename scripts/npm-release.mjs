@@ -6,12 +6,12 @@ import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 import { Transform } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
-import { assertFrozenCandidate } from './fixtures/release-inputs.mjs';
+import { assertFrozenCandidate } from './release-inputs.mjs';
 import { checkManifest, compareReleaseVersions, distTags, metadata, npmPublishArgs, packageNames,
     publishCandidate, registry, releaseChannel, validateCandidate } from './npm-publish.mjs';
 
 import { publicReadBudget, publicReadError, publicResponse } from './npm-read.mjs';
-import { assertCandidateBinaries } from './fixtures/installed-binaries.mjs';
+import { assertCandidateBinaries } from './installed-binaries.mjs';
 
 const delay = () => new Promise(resolve => setTimeout(resolve, 5000));
 const descriptorMarker = 'RUNWEFT_RELEASE_DESCRIPTOR=';

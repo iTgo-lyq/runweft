@@ -6,7 +6,7 @@ import { chromium, type Page } from 'playwright';
 import { Database } from 'bun:sqlite';
 import { freePort } from '../../src/services';
 import { hubConnectionPaths } from '../../src/hub/resources/connection';
-import { installedBinaries } from '../../scripts/fixtures/installed-binaries.mjs';
+import { installedBinaries } from '../../scripts/installed-binaries.mjs';
 import { closeSmoke } from '../lifecycle';
 import { afterEach, test } from 'bun:test';
 import { tmpdir } from 'node:os';

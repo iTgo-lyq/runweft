@@ -112,8 +112,7 @@ jobs:
           CANDIDATE: .dev-smoke/release-source/dist/packages
           INLINE_INTEGRATION: ${{ steps.prepared.outputs.inline-integration }}
         run: |
-          node scripts/verify-packages.mjs "$CANDIDATE"
-          node scripts/smoke-install.mjs "$CANDIDATE"
+          node test/acceptance/install.mjs --candidate "$CANDIDATE" --case all --report "$RUNNER_TEMP/install.json"
           if [ "$INLINE_INTEGRATION" = true ]; then
             bun run test:integration --bin "$CANDIDATE/runweft-linux-x64/bin/runweft" --
           fi

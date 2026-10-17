@@ -5,7 +5,10 @@ on:
     inputs:
       release:
         type: string
-        required: true
+        default: ''
+      build:
+        type: boolean
+        default: false
       site-install:
         type: boolean
         default: false
@@ -21,25 +24,20 @@ jobs:
         include:
           - runner: ubuntu-24.04
             platform: linux-x64
-            check: both
           - runner: ubuntu-24.04-arm
             platform: linux-arm64
-            check: both
           - runner: macos-15
             platform: darwin-arm64
-            check: both
           - runner: macos-15-intel
             platform: darwin-x64
-            check: install
-          - runner: macos-15-intel
-            platform: darwin-x64
-            check: uninstall
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 35
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          submodules: ${{ inputs.build }}
+          fetch-depth: 0
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: '24'
@@ -47,22 +45,21 @@ jobs:
         with:
           bun-version: '1.4.2'
       - run: bun install --frozen-lockfile
+      - if: inputs.build
+        run: bun install --frozen-lockfile
+        working-directory: hapi
+      - if: inputs.build
+        run: bun run package
       - name: Download and verify public npm candidate
+        if: ${{ !inputs.build }}
         id: candidate
         env:
           RELEASE_DESCRIPTOR: ${{ inputs.release }}
         run: node scripts/npm-release.mjs download
-      - name: Install exact public version and verify paired binaries and services
-        if: matrix.check != 'uninstall'
+      - name: Verify both installation layouts and complete removal
         env:
-          CANDIDATE_DIRECTORY: ${{ steps.candidate.outputs.directory }}
-          RUNWEFT_SMOKE_PUBLIC_REGISTRY: '1'
-        run: node scripts/smoke-install.mjs "$CANDIDATE_DIRECTORY"
-      - name: Verify complete uninstall and preservation on the exact public candidate
-        if: matrix.check != 'install'
-        env:
-          CANDIDATE_DIRECTORY: ${{ steps.candidate.outputs.directory }}
-        run: node scripts/smoke-uninstall.mjs "$CANDIDATE_DIRECTORY" .dev-smoke/uninstall-ci/evidence.json
+          CANDIDATE_DIRECTORY: ${{ inputs.build && 'dist/packages' || steps.candidate.outputs.directory }}
+        run: node test/acceptance/install.mjs --candidate "$CANDIDATE_DIRECTORY" --case all --report "$RUNNER_TEMP/install.json"
       - name: Verify stable website DOM installation and packaged instructions
         if: matrix.platform == 'linux-x64' && inputs.site-install
         env:
@@ -73,4 +70,4 @@ jobs:
           node website/verify.mjs
       - name: Keep sanitized installation evidence in logs
         if: always()
-        run: node scripts/report-evidence.mjs
+        run: node scripts/report-evidence.mjs "$RUNNER_TEMP/install.json"

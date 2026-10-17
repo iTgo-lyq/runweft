@@ -26,6 +26,7 @@ jobs:
       kit: ${{ steps.scope.outputs.kit }}
       prototype: ${{ steps.scope.outputs.prototype }}
       integration: ${{ steps.scope.outputs.integration }}
+      install: ${{ steps.scope.outputs.install }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -125,8 +126,15 @@ jobs:
       - run: bunx playwright install --with-deps chromium
       - run: bun run build && bun run test
 
+  install:
+    needs: scope
+    if: needs.scope.outputs.install == 'true'
+    uses: ./.github/workflows/cli-install.yml
+    with:
+      build: true
+
   result:
-    needs: [scope, checks, prototype]
+    needs: [scope, checks, prototype, install]
     if: always() && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository || !startsWith(github.event.pull_request.head.ref, 'codex/'))
     runs-on: ubuntu-24.04
     timeout-minutes: 5

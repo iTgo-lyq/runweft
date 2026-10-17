@@ -4,7 +4,7 @@ import { spawnSync } from 'node:child_process';
 import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fixture } from '../helpers';
-import { assertFrozenCandidate } from '../../scripts/fixtures/release-inputs.mjs';
+import { assertFrozenCandidate } from '../../scripts/release-inputs.mjs';
 
 const cleanupOwner = fixtureCleanup([]);
 afterEach(() => cleanupOwner.close());

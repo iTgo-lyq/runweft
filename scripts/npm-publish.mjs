@@ -3,7 +3,7 @@ import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { assertFrozenCandidate } from './fixtures/release-inputs.mjs';
+import { assertFrozenCandidate } from './release-inputs.mjs';
 
 export const registry = 'https://registry.npmjs.org/';
 export const packageNames = ['runweft-linux-x64', 'runweft-linux-arm64', 'runweft-darwin-x64', 'runweft-darwin-arm64', 'runweft'];

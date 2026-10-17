@@ -46,7 +46,7 @@ test('real Git comparison handles first push, merge base, moves, deletions and u
 
 test('aggregate refuses failed, cancelled, missing or skipped required jobs', () => {
     const scope = selectChecks(['test/integration/tasks.test.ts']);
-    const jobs = { scope: { result: 'success' }, checks: { result: 'success' }, prototype: { result: 'skipped' } };
+    const jobs = { scope: { result: 'success' }, checks: { result: 'success' }, prototype: { result: 'skipped' }, install: { result: 'skipped' } };
     verifyJobs(scope, jobs);
     for (const result of ['failure', 'cancelled', 'skipped', undefined]) assert.throws(() => verifyJobs(scope, { ...jobs, checks: { result } }), /did not succeed/);
     assert.throws(() => verifyJobs(scope, { ...jobs, scope: { result: 'failure' } }));

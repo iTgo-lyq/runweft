@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { chromium } from 'playwright';
-import { installedBinaries } from '../scripts/fixtures/installed-binaries.mjs';
+import { installedBinaries } from '../scripts/installed-binaries.mjs';
 
 export function preflightBinaries(binary: string) {
     const binaries = installedBinaries(binary);

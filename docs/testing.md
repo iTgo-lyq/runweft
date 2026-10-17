@@ -38,3 +38,16 @@ bun run test:integration --bin dist/runweft -- --shard 1/4 --timings /tmp/runwef
 ```
 
 CLI 替身检查未传 `--bin` 时本次共享编译一次；真实 Hub/Runner 检查必须显式提供配对程序。默认单项超时 120 秒，较长 Git 场景在文件中声明；`--timeout`、`--timings`、`--update-timings`、`--shard` 直接交给 Bun。空选择不能作为通过证据。失败先查看具体用例和清理结果，再定向执行文件或名称；不自动整组重试。
+
+## 候选安装验收
+
+安装、打包、launcher、服务启动/退出、MCP 安装或卸载变化时执行。先将包输入提交到干净版本，再构建：
+
+```sh
+bun run package --reuse-hapi
+node test/acceptance/install.mjs --candidate dist/packages --case all --report /tmp/runweft-install.json
+```
+
+`npm` 与 `standalone` 可单独复验；`all` 顺序运行两种布局，每种拥有独立安装根。输入 tarball/程序摘要、版本和平台必须一致，不自行重建候选；Node 驱动在 checkout 外、无 Bun 的 PATH 下运行已安装程序，确认服务退出、MCP 配置保全和完整卸载后才通过。`--report` 保存每个布局的结果及清理失败；未知停机保留根目录，不能当作通过。
+
+本地只证明当前平台。开发 CI 在安装相关范围选择四平台各自构建与实际安装；发行 CI 对四平台各自下载的公共候选执行同一入口。HAPI 源码归档与 pin 的逐文件比对由打包阶段负责，不在每个安装进程重复准备源码。

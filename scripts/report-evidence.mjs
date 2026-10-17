@@ -1,4 +1,4 @@
-import { appendFileSync, existsSync, readdirSync, readFileSync } from 'node:fs';
+import { appendFileSync, existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 
 // These dedicated smoke directories contain the same sanitized reports previously uploaded.
@@ -15,4 +15,7 @@ function walk(directory, allJson) {
         }
     }
 }
-walk(process.argv[2] ?? '.dev-smoke', process.argv[2] === '.dev-smoke/website-pages');
+if (process.argv[2] && statSync(process.argv[2]).isFile()) {
+    const path = process.argv[2];
+    console.log('RUNWEFT_CI_EVIDENCE=' + JSON.stringify({ path, report: JSON.parse(readFileSync(path, 'utf8')) }));
+} else walk(process.argv[2] ?? '.dev-smoke', process.argv[2] === '.dev-smoke/website-pages');

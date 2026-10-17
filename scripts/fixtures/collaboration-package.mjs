@@ -5,7 +5,7 @@ import { basename, dirname, join, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
 import { DatabaseSync } from 'node:sqlite';
 import { spawnSync } from 'node:child_process';
-import { assertCandidateBinaries } from './installed-binaries.mjs';
+import { assertCandidateBinaries } from '../installed-binaries.mjs';
 
 /** Only this family's current handoff and installed no-model lifecycle; business checks stay in consumers. */
 export function collaborationPackage(file, binary, explicitHapi, expectedOwner) {

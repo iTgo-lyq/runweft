@@ -4,6 +4,7 @@ import { createHash } from 'node:crypto';
 import pkg from '../package.json';
 import { buildHapi, readHapiBuild, command } from './build-hapi';
 import { platforms, selectedPlatforms } from './platforms';
+import { verifyHapiSourceArchive } from './hapi-source-archive.mjs';
 import { createHapiSourceArchive } from './hapi-source';
 
 const selected = selectedPlatforms();
@@ -31,6 +32,9 @@ try {
         const name = `runweft-${platform.id}`;
         const source = resolve('dist', `hapi-source-${pkg.hapi.revision}-${platform.id}.tar.gz`);
         await createHapiSourceArchive(pkg.hapi.revision, platform, source);
+        const inspection = join(output, 'source-check-' + platform.id);
+        verifyHapiSourceArchive(source, platform, pkg.hapi.revision, inspection);
+        rmSync(inspection, { recursive: true });
         const sourceInfo = `HAPI ${pkg.hapi.version}\nRevision: ${pkg.hapi.revision}\nSource: https://github.com/iTgo-lyq/hapi/tree/${pkg.hapi.revision}\nSource archive: hapi-source.tar.gz\nAll tracked source files and licenses are preserved. Prebuilt ripgrep/difftastic archives are included for ${platform.id}; other platforms' prebuilt archives are omitted.\nRebuild from the extracted source archive using Bun ${Bun.version}:\n  bun install --frozen-lockfile\n  bun run download:tunwg\n  bun run build:web\n  bun run --cwd hub generate:embedded-web-assets\n  bun run --cwd cli scripts/build-executable.ts --with-web-assets --target ${platform.target}\nDependencies and tunwg are downloaded by the original build steps.\nFor cross-platform builds, use the complete pinned Git checkout from the source URL.\nThe HAPI executable is built without source changes.\n`;
         const directory = join(output, name);
         mkdirSync(join(directory, 'bin'), { recursive: true });
@@ -58,7 +62,7 @@ try {
     }
     const main = join(output, 'runweft');
     mkdirSync(join(main, 'bin'), { recursive: true });
-    copyFileSync('scripts/npm-launcher.cjs', join(main, 'bin', 'runweft.cjs'));
+    copyFileSync('src/npm-launcher.cjs', join(main, 'bin', 'runweft.cjs'));
     chmodSync(join(main, 'bin', 'runweft.cjs'), 0o755);
     copyFileSync('docs/usage.md', join(main, 'README.md'));
     cpSync('.agents/skills/runweft-kit', join(main, 'skills/runweft-kit'), { recursive: true });

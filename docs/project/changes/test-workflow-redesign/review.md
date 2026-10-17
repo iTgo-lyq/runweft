@@ -116,7 +116,7 @@
 
 ### R14 dev:env 的前台所有权与产品实现冲突
 
-**证据/问题**：[services](../../../../src/services.ts) 的 `start()` 以 detached 方式启动 serve 后 unref，`stop()` 只发 SIGTERM 并返回 `sessionsPreserved`；[runner](../../../../src/runner.ts) 的 `runner start` 启动 HAPI 后台进程。入口被强杀、终端关闭或 Agent 工具超时后，Hub 与 Runner 仍会存活；“停止本次拥有的任务”也缺少来源，任务由外部操作经产品 API 创建。仅 Hub 模式用产品 `--home` 下的 init、config set port、start 三条命令即可完成。真实缺口有两处：Runner 身份初始化（产品没有创建身份的 CLI，8 个脚本文件共 13 处直接调用未鉴权的 `/api/runweft/hub/identities` 再写 identity.json），以及候选包私有安装（[smoke-install](../../../../scripts/smoke-install.mjs) 前段可复用，install、native、dev:env 三方需要）。
+**证据/问题**：[services](../../../../src/services.ts) 的 `start()` 以 detached 方式启动 serve 后 unref，`stop()` 只发 SIGTERM 并返回 `sessionsPreserved`；[runner](../../../../src/runner.ts) 的 `runner start` 启动 HAPI 后台进程。入口被强杀、终端关闭或 Agent 工具超时后，Hub 与 Runner 仍会存活；“停止本次拥有的任务”也缺少来源，任务由外部操作经产品 API 创建。仅 Hub 模式用产品 `--home` 下的 init、config set port、start 三条命令即可完成。真实缺口有两处：Runner 身份初始化（产品没有创建身份的 CLI，8 个脚本文件共 13 处直接调用未鉴权的 `/api/runweft/hub/identities` 再写 identity.json），以及候选包私有安装（[smoke-install](https://github.com/iTgo-lyq/runweft/blob/28ab4a2/scripts/smoke-install.mjs) 前段可复用，install、native、dev:env 三方需要）。
 
 **建议**：先把这两个普通函数抽出来，供 integration 与 native 使用，dev:env 再作为薄包装。生命周期二选一：serve 和 Runner `start-sync` 作为非 detached 子进程运行（现有 smoke 已使用 start-sync）；或以环境目录为句柄提供显式 stop，经产品 API 核对会话，状态未知就保留现场。删除停止外部任务、保证外部宿主退出等无法兑现的承诺。
 

@@ -45,3 +45,7 @@ Actions 38995400052 的 scope、prototype 通过，checks 在历史归档链接�
 ## T12 补齐干净 CI 的 HAPI 构建前置
 
 T4 Actions 38996745344 的 scope/prototype、文档、类型、core、tools 均通过，checks 在 `bun run build` 因缺少 HAPI manifest 失败。工作流明确先 build:hapi 再 build；本地移开已有 manifest 后执行同一顺序，实际生成配对清单并构建成功。actionlint 通过。此项是 T4 的追加修复，原失败与已通过的本地测试事实不改写；修复后的远端结果继续跟踪。
+
+## T5 收敛候选安装、启动与卸载验收
+
+实现检查点：launcher 移入 src；候选校验/私有安装与正式包输入、HAPI 源码归档校验归 scripts。一个 Node 入口按 npm/standalone 分别消费未改写候选，验证实际服务、信号、MCP 配置保全和完整卸载，删除旧 package/install/service/uninstall 四入口及 KEEP_INSTALL。HAPI 源码逐文件比对前移到打包阶段，四平台开发/发行安装复用同一入口。Node 工具 50/50、官网发布工具 20/20、类型/文档/流程/actionlint/diff 通过；此检查点用于冻结干净包输入，实际候选安装尚待以下验证记录，不提前宣称任务完成。

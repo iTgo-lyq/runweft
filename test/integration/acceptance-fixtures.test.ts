@@ -7,7 +7,7 @@ import { fixtureCleanup } from '../fixture-cleanup';
 import { hubDelegationFixture } from './hub-delegation-fixture';
 import { appendFixtureRound } from './fixture-round';
 import { watchNativeHost } from '../../scripts/fixtures/native-host';
-import { installedBinaries, assertCandidateBinaries } from '../../scripts/fixtures/installed-binaries.mjs';
+import { installedBinaries, assertCandidateBinaries } from '../../scripts/installed-binaries.mjs';
 import { assertCollaborationRecords } from '../../scripts/fixtures/collaboration-package.mjs';
 import { preflightBrowser } from '../preflight';
 

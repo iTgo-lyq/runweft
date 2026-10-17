@@ -8,7 +8,7 @@ import { promisify } from 'node:util';
 import { chromium } from 'playwright';
 import { serveSite } from './serve.mjs';
 import { assertDescriptor } from '../scripts/npm-release.mjs';
-import { assertCandidateBinaries } from '../scripts/fixtures/installed-binaries.mjs';
+import { assertCandidateBinaries } from '../scripts/installed-binaries.mjs';
 
 const run = promisify(execFile);
 const browserOnly = process.argv.includes('--browser-only');

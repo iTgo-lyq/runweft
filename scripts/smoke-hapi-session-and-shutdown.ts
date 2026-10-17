@@ -4,7 +4,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, realpath
 import { basename, join, resolve } from 'node:path';
 import { freePort } from '../src/services';
 import { getProjectPath } from '../hapi/cli/src/claude/utils/path';
-import { installedBinaries } from './fixtures/installed-binaries.mjs';
+import { installedBinaries } from './installed-binaries.mjs';
 import { closeSmoke, removeSmokeSecrets, startSmokeHapi, stopSmokeProcess } from '../test/lifecycle';
 import { withSmokeDeadline } from '../test/deadline';
 import { nonGitSmokeProject } from './fixtures/non-git-smoke-project';

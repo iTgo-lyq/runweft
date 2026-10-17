@@ -6,7 +6,7 @@ import { randomBytes } from 'node:crypto';
 import { chromium, type Page } from 'playwright';
 import { freePort } from '../../src/services';
 import { consoleTasks } from './console-tasks';
-import { installedBinaries } from '../../scripts/fixtures/installed-binaries.mjs';
+import { installedBinaries } from '../../scripts/installed-binaries.mjs';
 import { consoleHistory } from '../../scripts/fixtures/hub-console-history';
 import { closeSmoke } from '../lifecycle';
 import { hubConnectionPaths } from '../../src/hub/resources/connection';

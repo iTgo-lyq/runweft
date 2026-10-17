@@ -7,7 +7,7 @@ import { Database } from 'bun:sqlite';
 import { chromium } from 'playwright';
 import { freePort } from '../../src/services';
 import { closeSmoke } from '../../test/lifecycle';
-import { installedBinaries } from './installed-binaries.mjs';
+import { installedBinaries } from '../installed-binaries.mjs';
 import { getSessionTitle } from '../../hapi/web/src/lib/sessionTitle';
 
 // Current completed acceptance data is copied into an isolated service, never upgraded or edited at its source.

@@ -20,7 +20,7 @@ HAPI 固定版本和协议见[执行兼容](../execution/spec.md)。构建检查
 
 普通CI共用一次checkout/依赖/工具，核心保留实际Codex配置检查；按真实Git差异选择access/storage/web/本机service，未知路径、新分支或缺少base保守全选；已有base的Git差异读取失败则报错。正式发布完整执行根/Node/四组无模型验证和四平台安装及完整卸载，不按diff跳过。
 
-正式候选必须 `source.dirty=false`。冻结后按 `scripts/fixtures/release-inputs.mjs` 的固定包输入检查已跟踪与未跟踪变化；源码、Skill、包内使用说明、package/lock/HAPI及指定构建脚本变化即重建。仅验收脚本和未打入包的项目记录变化可保留同候选，程序源码归档仍取索引revision，后续验收提交独立记录。
+正式候选必须 `source.dirty=false`。冻结后按 `scripts/release-inputs.mjs` 的固定包输入检查已跟踪与未跟踪变化；源码、Skill、包内使用说明、package/lock/HAPI及指定构建脚本变化即重建。仅验收脚本和未打入包的项目记录变化可保留同候选，程序源码归档仍取索引revision，后续验收提交独立记录。
 
 当前独立官网仅包含页面、资源与 npm 元数据，无包或 Skill 下载副本；见[官网安装](../website/spec.md)。
 
