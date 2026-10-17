@@ -15,10 +15,14 @@ import { recovery } from './recovery';
 
 export const mainCases = ['N1', 'N4', 'N5', 'C-codex', 'C-claude'];
 const cases = [...mainCases, 'R-codex', 'R-claude', 'L-claude'];
-const testInputs = ['test/acceptance', 'test/integration/console-history.ts', 'test/preflight.ts', 'test/lifecycle.ts', 'scripts/candidate.mjs', 'scripts/installed-binaries.mjs', 'scripts/release-inputs.mjs', 'package.json', 'bun.lock'];
+const testInputs = ['test/acceptance', 'test/integration/console-history.ts', 'test/integration/native-files.ts', 'test/integration/fixture-round.ts', 'test/preflight.ts', 'test/lifecycle.ts', 'test/deadline.ts', 'scripts/candidate.mjs', 'scripts/installed-binaries.mjs', 'scripts/release-inputs.mjs', 'package.json', 'bun.lock'];
 const sha = (value: string | Buffer) => createHash('sha256').update(value).digest('hex');
 function git(...args: string[]) { const r = spawnSync('git', args, { encoding: 'utf8' }); assert.equal(r.status, 0, 'Cannot read frozen Git inputs'); return r.stdout.trim(); }
 function tree(source: string, paths: string[]) { return sha(git('ls-tree', '-r', source, '--', ...paths)); }
+function assertFrozenTests(source: string) {
+    assert.equal(spawnSync('git', ['diff', '--quiet', source, '--', ...testInputs, ...packageInputs], { stdio: 'ignore' }).status, 0, 'Freeze product and acceptance inputs before model work or report verification');
+    assert(!git('ls-files', '--others', '--exclude-standard', '--', ...testInputs, ...packageInputs), 'Commit all acceptance inputs before verification');
+}
 export function selectedCases(value: string) { assert(value === 'main' || cases.includes(value), 'Select main, N1/N4/N5, C-codex/C-claude, R-codex/R-claude or L-claude'); return value === 'main' ? [...mainCases] : [value]; }
 export function verifyReports(files: string[], source: string, required: string[]) {
     assert.match(source, /^[a-f0-9]{40}$/); assert(required.length && new Set(required).size === required.length && required.every(id => cases.includes(id)), 'Caller must provide known, unique required cases');
@@ -71,7 +75,7 @@ function diagnostic(error: unknown) {
 async function main() {
     const { values: args } = parseArgs({ options: { candidate: { type: 'string' }, case: { type: 'string' }, report: { type: 'string' }, 'retry-of': { type: 'string' },
         'verify-report': { type: 'string', multiple: true }, source: { type: 'string' }, 'required-cases': { type: 'string' } }, strict: true });
-    if (args['verify-report']) { console.log(JSON.stringify(verifyReports(args['verify-report'], args.source!, args['required-cases']?.split(',') ?? []))); return; }
+    if (args['verify-report']) { assertFrozenTests(args.source!); console.log(JSON.stringify(verifyReports(args['verify-report'], args.source!, args['required-cases']?.split(',') ?? []))); return; }
     assert(args.report, '--report is required'); const output = resolve(args.report); assert(!existsSync(output), 'Report already exists; preserve previous results');
     mkdirSync(dirname(output), { recursive: true });
     const report: any = { kind: 'runweft-native-v1', startedAt: new Date().toISOString(), success: false, cases: [] };
@@ -81,8 +85,7 @@ async function main() {
         const candidate = readCandidate(args.candidate);
         assertFrozenCandidate(candidate.index);
         const testSource = git('rev-parse', 'HEAD');
-        assert.equal(git('diff', 'HEAD', '--', ...testInputs), '', 'Freeze acceptance code before model work');
-        assert.equal(git('ls-files', '--others', '--exclude-standard', '--', ...testInputs), '', 'Commit acceptance inputs before model work');
+        assertFrozenTests(testSource);
         assert.equal(candidate.index.bunVersion, Bun.version);
         report.binding = { source: candidate.index.source.revision, testSource, packageInputs: tree(candidate.index.source.revision, packageInputs), testInputs: tree(testSource, testInputs),
             hapi: candidate.index.hapi, bun: Bun.version, build: 'package-default', platform: `${process.platform}-${process.arch}`,

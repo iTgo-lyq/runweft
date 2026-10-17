@@ -4,7 +4,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, renameSync, rmSync } from 'node:
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { spawnSync } from 'node:child_process';
-import { changedFiles, selectChecks, verifyJobs } from '../ci-scope.mjs';
+import { changedFiles, selectChecks, verifyJobs, successfulPushBase } from '../ci-scope.mjs';
 
 test('scope separates docs and subprojects, selects changed tests, and fails closed for shared changes', () => {
     assert.equal(selectChecks(['docs/release.md', 'AGENTS.md']).checks, false);
@@ -13,7 +13,11 @@ test('scope separates docs and subprojects, selects changed tests, and fails clo
     }
     assert(selectChecks(['test/integration/compiled-cli.ts']).integration.includes('test/integration/tasks.test.ts'));
     assert.deepEqual(selectChecks(['test/integration/tasks.test.ts']).integration, ['test/integration/tasks.test.ts']);
-    assert.equal(selectChecks(['test/core/config.test.ts']).hapi, false);
+    for (const file of ['test/core/config.test.ts', 'test/integration/tasks.test.ts']) assert.equal(selectChecks([file]).typecheck, true);
+    for (const [source, test] of [['src/mcp/claude-hook.ts', 'test/core/state.test.ts'], ['src/mcp/install.ts', 'test/integration/cli-uninstall.test.ts'],
+        ['src/mcp/server.ts', 'test/integration/task-outputs.test.ts'], ['src/mcp/tasks.ts', 'test/integration/workspace-results.test.ts'], ['src/tasks/store.ts', 'test/integration/hub-delegation.test.ts']]) {
+        const scope = selectChecks([source]); assert(test.startsWith('test/core') ? scope.core : scope.integration.includes(test));
+    }
     assert.equal(selectChecks(['test/integration/workspace-preparation.test.ts']).clients, true);
     assert.equal(selectChecks(['scripts/tests/npm-publish.test.mjs']).tools, true);
     assert(selectChecks(['src/hub/native-page.ts']).integration.every(file => /web-|hub-console/.test(file)));
@@ -57,4 +61,30 @@ test('aggregate refuses failed, cancelled, missing or skipped required jobs', ()
     verifyJobs(scope, jobs);
     for (const result of ['failure', 'cancelled', 'skipped', undefined]) assert.throws(() => verifyJobs(scope, { ...jobs, checks: { result } }), /did not succeed/);
     assert.throws(() => verifyJobs(scope, { ...jobs, scope: { result: 'failure' } }));
+});
+
+test('push selection carries unchecked changes across failed/cancelled runs and rejects unrelated or missing history', async () => {
+    const cwd = mkdtempSync(join(tmpdir(), 'runweft-scope-history-'));
+    const git = (...args) => { const r = spawnSync('git', args, { cwd, encoding: 'utf8' }); assert.equal(r.status, 0, r.stderr); return r.stdout.trim(); };
+    try {
+        git('init', '-qb', 'main'); git('config', 'user.name', 'Fixture'); git('config', 'user.email', 'fixture@example.invalid'); git('config', 'commit.gpgsign', 'false');
+        writeFileSync(join(cwd, 'README.md'), 'base'); git('add', '.'); git('commit', '-qm', 'verified'); const verified = git('rev-parse', 'HEAD');
+        git('checkout', '-qb', 'other'); writeFileSync(join(cwd, 'other'), 'unrelated'); git('add', '.'); git('commit', '-qm', 'other'); const unrelated = git('rev-parse', 'HEAD'); git('checkout', 'main');
+        writeFileSync(join(cwd, 'code.ts'), 'unchecked'); git('add', '.'); git('commit', '-qm', 'code'); const unchecked = git('rev-parse', 'HEAD');
+        writeFileSync(join(cwd, 'README.md'), 'docs'); git('commit', '-qam', 'docs'); const head = git('rev-parse', 'HEAD');
+        const run = (sha, conclusion = 'success') => ({ head_sha: sha, conclusion, event: 'push', head_branch: 'main', id: 1 });
+        const context = { cwd, repository: 'owner/repo', head, token: 'fixture' };
+        const request = runs => async url => { assert.equal(url.searchParams.get('status'), 'success'); assert(!url.searchParams.has('branch')); return { ok: true, json: async () => ({ workflow_runs: runs }) }; };
+        for (const outcome of ['failure', 'cancelled']) {
+            const baseline = await successfulPushBase({ ...context, request: request([run(unchecked, outcome), run(unrelated), run(verified)]) });
+            assert.equal(baseline.base, verified);
+            assert.deepEqual(changedFiles({ cwd, base: baseline.base, head }).files, ['README.md', 'code.ts']);
+        }
+        for (const runs of [[], [run(unrelated)], [run('a'.repeat(40))]]) assert.equal((await successfulPushBase({ ...context, request: request(runs) })).base, null);
+        git('checkout', '-qb', 'first-doc-push', verified); writeFileSync(join(cwd, 'README.md'), 'new branch docs'); git('commit', '-qam', 'docs');
+        const firstHead = git('rev-parse', 'HEAD');
+        const firstBase = await successfulPushBase({ ...context, head: firstHead, request: request([run(verified)]) });
+        assert.equal(firstBase.base, verified); assert.equal(selectChecks(changedFiles({ cwd, base: firstBase.base, head: firstHead }).files).checks, false);
+        assert.equal((await successfulPushBase({ ...context, request: async () => { throw new Error('unavailable'); } })).base, null);
+    } finally { rmSync(cwd, { recursive: true, force: true }); }
 });

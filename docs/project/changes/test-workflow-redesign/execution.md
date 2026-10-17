@@ -76,7 +76,7 @@ T7 候选路径使用冻结候选 `b9b8006` 实际启动后台 Hub，启动进�
 
 report-evidence 仅消费显式文件列表，一次校验后输出原 `RUNWEFT_CI_EVIDENCE={path,report}`；官网生产者返回明确报告路径，最终收集沿用旧 `.dev-smoke/website-pages/...` 作为协议 ID，恢复不改。发行标记、原先 prepublication step 显示名和读回契约保留。普通集成直接使用 Bun 输出，删除无报告来源的全目录扫描步骤。官网本地浏览器验收新增必填 `--report`，服务/浏览器全部关闭后，成功回收私有安装，失败保留诊断根；报告和截图在根外。
 
-实际验证：Node 工程/官网 71/71、actionlint、类型、文档/流程/diff 通过；真实官网 browser-only 成功且私有根已回收；错误浏览器路径的失败报告为 false，服务全部关闭且明确保留根，本次探针随后回收该已停根。CI 根与 slot 绑定、非法 slot 拒绝、仓库外冻结 checkout 源码干净通过。缺失/重复证据反例与官网只读恢复/上传失败留回执均通过。首次 actionlint 拒绝 job-env 使用 runner context，改为 13 行共享 CI 准备入口；两处工具测试原先依赖输出全字节/最后一步位置，改为核对实际门禁值，复验通过。未执行发布、部署、OIDC 交换或远端 Kit 同步；原生旧链的剩余物理依赖留 T9 整体移除。
+实际验证：Node 工程/官网 71/71、actionlint、类型、文档/流程/diff 通过；真实官网 browser-only 成功且私有根已回收；错误浏览器路径的失败报告为 false，服务全部关闭且明确保留根，本次探针随后回收该已停根。CI 根与 slot 绑定、非法 slot 拒绝、仓库外冻结 checkout 源码干净通过。缺失/重复证据反例与官网只读恢复/上传失败留回执均通过。首次 actionlint 拒绝 job-env 使用 runner context，改为 13 行共享 CI 准备入口；两处工具测试原先依赖输出全字节/最后一步位置，改为核对实际门禁值，复验通过。未执行 npm 发布、生产官网部署、OIDC 交换或远端 Kit 同步；后续 push 触发过分支预览上传，见 T14 勘误；原生旧链的剩余物理依赖留 T9 整体移除。
 
 
 ## T9 单 case 原生验收实现检查点
@@ -152,4 +152,20 @@ Codex 实际版本 0.159.2，选择 gpt-6.1-sol / xhigh；Claude Code 实际版�
 
 最终 c26cc91 的定向 [Development checks 39001130304](https://github.com/iTgo-lyq/runweft/actions/runs/39001130304) 成功，安装/原型未受影响而跳过；沿用 adee9a5 完整 CI 的 247 项集成、51 项工程 Node、8 项 core、31 项 HAPI managers、四平台八次安装与原型结果。官网另有 20 项 Node 与 T6/T8 浏览器证据，本机工程加官网共 71 项。手册已按真实命令实走普通回归、候选双布局、自由环境 start/stop、受控失败后的定向复验；文档/流程/diff 校验通过。
 
-交付对应：低价值覆盖及旧入口实际删除，核心契约集中到 integration；固定测试与 dev:env 分开；候选/报告/失败清理边界均有真实反例；scope 与完整/定向 CI 均有证据；[测试验收手册](../../../testing.md) 是日常入口。独立评审覆盖完整差异并复核整改，无未解决实质问题。未执行 npm 发布、官网部署或 Kit 分发，未修改全局模型配置；正式产品 Specs 同步与归档依照人工验收后顺序办理。
+交付对应：低价值覆盖及旧入口实际删除，核心契约集中到 integration；固定测试与 dev:env 分开；候选/报告/失败清理边界均有真实反例；scope 与完整/定向 CI 均有证据；[测试验收手册](../../../testing.md) 是日常入口。独立评审覆盖完整差异并复核整改，无未解决实质问题。未执行 npm 发布、生产官网部署或 Kit 分发；push 曾触发官网分支预览上传，见 T14 勘误，未修改全局模型配置；正式产品 Specs 同步与归档依照人工验收后顺序办理。
+
+## T14 外部验收返修与记录勘误
+
+上一轮 `diff 检查通过` 实际指工作区 `git diff --check`，没有覆盖完整分支；外部验收查出的 collaboration 尾空格和 cli-resources 末尾空行已复现并修正，后续改用 `git diff --check origin/main...HEAD` 加工作区检查。
+
+官网 [38998858887](https://github.com/iTgo-lyq/runweft/actions/runs/38998858887)（2a5d260）与 [38999601662](https://github.com/iTgo-lyq/runweft/actions/runs/38999601662)（c0daff9）均实际完成分支 preview 上传及 URL 验证。未手动调用发布命令不代表没有部署：之前笼统“未执行官网部署”的记录不准确，应限定未部署生产。此轮不以官网 README 勘误为由再次触发预览，过时触发列表以当前 workflow 为准，待有官网上传授权的变更一并修正。
+
+普通 config.yaml 注释保持测试及 SHA256SUMS 二次核对的删除现已披露；不把它们写成迁入安装验收。许可证/SOURCES 的遗漏在 T14 补回已安装产物检查。release Spec 仍含旧命令/分组，人工验收后必须实际同步，不得记为 not_needed。
+
+T14 实现检查点：push 不再信任 before SHA，而从本仓库最近 100 次成功开发检查中选可证明的祖先，累积失败/取消之后的改动；新分支可复用默认分支成功祖先，无可信记录保守全量。补齐测试 TS 的类型检查、MCP 消费者与 TaskStore 范围，scope 固定反例 4/4 通过。安装失败保留目录、冻结集合补三个 helper 并拒绝当前脏输入、缺 Codex 明确失败，无原 config.toml 时显式模型覆盖仍写入专用副本并登记清理。
+
+本机两种安装布局 `/tmp/runweft-t14-install.json` 通过，新增许可证和 SOURCES 实物核对，成功根全部回收。通过仓库外 Node 加载钩子在真实 Hub/Runner 启动后注入异常，原清理逻辑执行后报告 `/tmp/runweft-t14-install-failure.json` 明确失败、cleanupErrors 为空、根保留；额外查询确认 Hub/Runner 均停止。该项是故障注入反例，不算普通安装通过。固定候选拒绝与安装失败反例纳入现有 acceptance-fixtures；与原生配置检查合计 11/11，通过 125 个断言。
+
+工具/官网 Node 72/72、类型检查通过；scope 独立复核追加的首次分支边界另复验 4/4。无 Codex PATH 的定向用例明确失败并输出所需前置，不再 skip；首次探针误调用需要系统命令的 Bun shim 未计为通过，改用真实 Bun 程序复现。空的 dummy CODEX_HOME 下显式 model/effort 生成专用 config.toml，源目录未写入，配置副本清理通过。手册候选环境实际 start --runner、Hub 访问、拼错路径/外来目录/HOME 拒绝、有效 stop 通过；重复 stop 现在明确失败，无法从不存在路径证明上次是否停止，手册已同步。
+
+独立复核追加的源码 diff 泄露与新分支全量问题已修正；最终冻结反例、整组集成、真实模型与远端 CI 仍待本检查点提交后执行，不复用旧冻结报告冒充新版通过。

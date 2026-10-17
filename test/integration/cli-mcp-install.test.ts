@@ -19,7 +19,8 @@ function setup() {
 const json = (path: string) => JSON.parse(readFileSync(path, 'utf8'));
 const matcher = 'mcp__runweft__.*';
 
-test.skipIf(!Bun.which('codex'))('native Codex editing and Claude merging are idempotent and preserve unrelated settings', async () => {
+test('native Codex editing and Claude merging are idempotent and preserve unrelated settings', async () => {
+    expect(Bun.which('codex'), 'Codex is required for native configuration checks').not.toBeNull();
     const { c } = setup();
     const [codex] = clientFiles(c, 'codex'), [claude, settings] = clientFiles(c, 'claude');
     atomicWrite(codex, '# model comment\nmodel="unmodified" # inline model comment\n\n[mcp_servers.keep]\n# keep server comment\ncommand="unchanged"\n');
@@ -53,7 +54,8 @@ test.skipIf(!Bun.which('codex'))('native Codex editing and Claude merging are id
     expect(configureMcp(c, false, 'all').changed).toBe(false);
 });
 
-test.skipIf(!Bun.which('codex'))('old managed Codex entries require an explicit upgrade for long waits', async () => {
+test('old managed Codex entries require an explicit upgrade for long waits', async () => {
+    expect(Bun.which('codex'), 'Codex is required for native configuration checks').not.toBeNull();
     const { c } = setup();
     configureMcp(c, true, 'codex');
     const [path] = clientFiles(c, 'codex');

@@ -92,7 +92,7 @@
 | --- | --- |
 | `build.ts`、`build-hapi.ts`、`hapi-source.ts`、`package.ts`、`platforms.ts` | 保留平铺 scripts 中的构建/候选职责；共享实际公共逻辑，保留独立操作 |
 | `npm-launcher.cjs` | 移至 src/npm-launcher.cjs；包内 bin/runweft.cjs 不变，安装验收覆盖行为 |
-| `verify-packages.mjs` | 包内容验证归安装验收，共用构建的候选读取；删除旧独立转发入口 |
+| `verify-packages.mjs` | 候选归属/平台/包与程序摘要、许可证和 SOURCES pin 归安装验收；HAPI 源码逐文件比对归打包。删除旧独立转发入口及不再消费的 SHA256SUMS 二次镜像核对，实际包完整性由 sha512/程序 sha256 保障 |
 | `npm-publish.mjs`、`npm-read.mjs`、`npm-release.mjs`、`release-finish.mjs`、`release-space.mjs` | 保留发布、读取、恢复、收尾与资源保障的实际语义，留在平铺 scripts；聚合共同判定，避免万能命令 |
 | `check-docs.mjs`、`check-workflow.mjs`、`check-runweft-kit.mjs`、`check-npm-trust.mjs`、`ci-scope.mjs` | 保留明确检查职责，留在平铺 scripts；scope 在依赖准备前执行 |
 | `report-evidence.mjs` | 删除递归历史目录扫描；当前报告的显式列表汇总留在平铺 scripts，由 CI 直接传入 |
@@ -264,3 +264,5 @@
 明确放弃所有真实模型宿主 × runtime × 工作区配对、65 秒宿主等待固定回归、普通展示/参数的穷举、原型完整业务模拟以及每次发行必跑全部恢复/长路径专项。剩余核心契约能降低漏改风险，但不宣称与旧套件等价覆盖。删除建议不依赖“AI 一定不会写错”这一无法证明的前提。
 
 这轮可精确定位的 30 个测试块共 371 行；重复集成、浏览器和 native 的重写量另计，尚不能把候选删除文件的总行数当净缩减，也不把固定模型 case 减半说成模型耗时或费用减半。手册须列出固定主集合与专项触发，记录实际运行的子集和未执行项。
+
+T14 补录删减边界：原 config.yaml 重复初始化保留用户注释的普通正例检查已删除，当前只保留格式拒绝、不覆盖坏文件等核心边界；不声称仍有注释保持固定回归。旧 verify-packages 的 SHA256SUMS 二次读取核对未迁入安装，清单仍生成，实际候选 tarball sha512 与程序 sha256 校验保留。许可证/SOURCES 检查在初版 T5 迁移中漏失，T14 补回已安装产物检查。

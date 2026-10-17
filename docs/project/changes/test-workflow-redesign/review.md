@@ -268,3 +268,5 @@ recovery 将原生 home 改名为 retained 后，原清理集合未包含新位�
 R35 只读核实：Actions 38998858887（2a5d260）和 38999601662（c0daff9）的 Upload to Cloudflare Pages 与唯一 URL 验证均成功；先前没有手动发布命令不等于没有部署副作用。原检查为工作区 `git diff --check`，不能代表 `origin/main...HEAD` 完整差异通过。
 
 附带修正 dev:env 停止的缺目录/外来目录提示与 AGENTS 的范围入口。官网 README 触发路径列表和 release Spec 的过时入口已记录；官网 README 改动自身会触发已有预览上传，不能再次不披露地当作本地文档修正推送。Specs 同步留实际人工验收后执行。
+
+T14 独立增量复核还发现两项边界：成功记录只查同分支会让新文档分支无条件全量，违反已确认需求；冻结拒绝把源码 diff 放入 AssertionError，会输出原文。现改查本仓库成功 push 并核对祖先，新分支可复用已验证的默认分支祖先；冻结只检查 git diff --quiet 退出状态，未跟踪输入只做布尔判定。真实 Git 反例覆盖失败/取消后文档提交、首推、非祖先和缺对象/API 失败；scope 4/4 通过。

@@ -196,4 +196,3 @@ test('compiled repository CLI serializes replay, matches real Git worktrees, rep
     expect((await run(['match', '--machine', machine, '--cwd', root])).result.status).toBe('unmatched');
     expect(h.calls).toEqual([]); // metadata does not probe or start the native runtime
 }, 20_000);
-

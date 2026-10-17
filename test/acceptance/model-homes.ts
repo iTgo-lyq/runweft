@@ -22,7 +22,9 @@ export function modelHomes(root: string, env: NodeJS.ProcessEnv, requireClaude =
     copy(process.env.CLAUDE_CONFIG_DIR ? join(claudeSource, '.claude.json') : join(homedir(), '.claude.json'), join(claude, '.claude.json'));
     for (const name of ['settings.json', '.credentials.json']) copy(join(claudeSource, name), join(claude, name));
     }
-    const codexModel = existsSync(join(codex, 'config.toml')) ? configureSmokeCodexModel(join(codex, 'config.toml')) : { model: undefined, reasoningEffort: undefined };
+    const config = join(codex, 'config.toml');
+    if (!copies.includes(config)) copies.push(config);
+    const codexModel = configureSmokeCodexModel(config);
     env.CODEX_HOME = codex; env.CLAUDE_CONFIG_DIR = claude;
     const nativeClaude = process.env.RUNWEFT_NATIVE_CLAUDE ?? Bun.which('claude');
     if (requireClaude) assert(nativeClaude, 'Claude Code is required for the explicit dual-runtime smoke');

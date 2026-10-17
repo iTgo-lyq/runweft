@@ -128,7 +128,7 @@ export async function collaboration(f: NativeFixture, id: string) {
                     assert.equal(readFileSync(output.path, 'utf8'), (index ? input[index] : marker) + '\n');
                 }
                 f.stopRunners(); await f.restart();
-                
+
                 cli(['task', 'result', 'fetch', second.agent_id, '--round', second.round_id]);
                 const fetched = await until(() => cli(['task', 'result', 'show', second.agent_id, '--round', second.round_id]), value => {
                     const latest = value.fetches.at(-1); assert.notEqual(latest?.status, 'failed'); return latest?.status === 'available' && latest.released;

@@ -13,6 +13,7 @@ export function selectChecks(files) {
         typecheck: false, managers: false, integration: [] };
     const select = pattern => all.filter(file => pattern.test(file)).forEach(file => selected.add(file));
     for (const file of files) {
+        if (/^(src|test|scripts)\/.*\.ts$/.test(file)) scope.typecheck = true;
         if (/^(website\/|docs\/usage\.md$)/.test(file)) { scope.website = true; continue; }
         if (file.startsWith('packages/prototype/')) { scope.prototype = true; continue; }
         if (/^(\.agents\/skills\/runweft-kit\/|scripts\/(check-runweft-kit\.mjs|sync-runweft-kit\.sh)$)/.test(file)) { scope.kit = scope.tools = true; continue; }
@@ -37,9 +38,10 @@ export function selectChecks(files) {
             continue;
         }
         if (file === 'src/hub/native-page.ts') ['N1', 'N5'].forEach(c => native.add(c));
+        if (file === 'src/tasks/store.ts') { select(/./); [...mainCases, 'R-codex', 'R-claude'].forEach(c => native.add(c)); continue; }
         if (/^src\/hub\/(app|console|tasks-page|native-page|style|onboarding-page)/.test(file)) { scope.typecheck = true; select(/\/(web-|hub-console)/); continue; }
-        if (/^src\/(tasks|artifacts|repositories)\//.test(file)) { scope.typecheck = true; select(/\/(task|remote|execution|workspace|files|artifact|web-)/); continue; }
-        if (/^src\/mcp\//.test(file)) { scope.typecheck = true; select(/mcp|cli-consumers/); mainCases.forEach(c => native.add(c)); continue; }
+        if (/^src\/(tasks|artifacts|repositories)\//.test(file)) { scope.typecheck = true; select(/\/(task|remote|execution|workspace|files|artifact|web-|hub-delegation)/); continue; }
+        if (/^src\/mcp\//.test(file)) { scope.core = scope.typecheck = true; select(/mcp|cli-consumers|cli-uninstall|task-outputs|workspace-results/); mainCases.forEach(c => native.add(c)); continue; }
         if (file === 'hapi' || /protocol/.test(file) || ['src/hapi.ts', 'src/execution.ts', 'scripts/ci-scope.mjs', '.github/workflows/checks.yml'].includes(file)) scope.managers = true;
         // Shared inputs and unknown paths select every consumer rather than silently omit checks.
         scope.core = scope.tools = scope.kit = scope.prototype = scope.website = scope.install = scope.typecheck = true;
@@ -54,6 +56,25 @@ export function selectChecks(files) {
     scope.browser = scope.integration.some(file => /\/web-/.test(file));
     scope.checks = scope.core || scope.tools || scope.kit || scope.hapi || scope.install;
     return scope;
+}
+
+// A push's before SHA may never have passed checks. Only a successful ancestor can bound incremental work.
+export async function successfulPushBase({ repository, head, token, api = 'https://api.github.com', cwd = process.cwd(), request = fetch }) {
+    try {
+        if (!repository || !token) throw new Error('missing GitHub context');
+        const url = new URL(`/repos/${repository}/actions/workflows/checks.yml/runs`, api);
+        url.search = new URLSearchParams({ event: 'push', status: 'success', per_page: '100' }).toString();
+        const response = await request(url, { headers: { authorization: `Bearer ${token}`, accept: 'application/vnd.github+json' }, signal: AbortSignal.timeout(10000) });
+        if (!response.ok) throw new Error('cannot read successful checks');
+        const { workflow_runs: runs } = await response.json();
+        if (!Array.isArray(runs)) throw new Error('invalid checks history');
+        for (const run of runs) {
+            if (run.conclusion !== 'success' || run.event !== 'push' || !/^[a-f0-9]{40}$/.test(run.head_sha) || run.head_sha === head) continue;
+            if (spawnSync('git', ['merge-base', '--is-ancestor', run.head_sha, head], { cwd, stdio: 'ignore' }).status === 0)
+                return { base: run.head_sha, run: run.id, reason: 'Changes since successful ancestor checks' };
+        }
+    } catch { /* Missing history, unavailable objects or API failure must never produce an empty selection. */ }
+    return { base: null, reason: 'No proven successful ancestor in available checks history; full checks selected' };
 }
 
 export function changedFiles({ base, head = 'HEAD', defaultBranch = 'origin/main', mergeBase = false, workingTree = false, cwd = process.cwd() }) {
@@ -95,9 +116,14 @@ export function verifyJobs(scope, jobs) {
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
     const { values } = parseArgs({ options: { base: { type: 'string' }, head: { type: 'string' }, 'default-branch': { type: 'string' },
         'merge-base': { type: 'boolean' }, 'working-tree': { type: 'boolean' } } });
-    const change = changedFiles({ base: values.base ?? process.env.CI_BASE, head: values.head ?? process.env.CI_HEAD ?? 'HEAD',
+    const head = values.head ?? process.env.CI_HEAD ?? 'HEAD';
+    const push = process.env.GITHUB_EVENT_NAME === 'push' && !values.base ? await successfulPushBase({
+        repository: process.env.GITHUB_REPOSITORY, head,
+        token: process.env.GH_TOKEN, api: process.env.GITHUB_API_URL,
+    }) : undefined;
+    const change = push && !push.base ? { ...push, head, files: ['unknown'] } : { ...changedFiles({ base: push?.base ?? values.base ?? process.env.CI_BASE, head,
         defaultBranch: values['default-branch'] ?? process.env.CI_DEFAULT_BRANCH ?? 'origin/main',
-        mergeBase: values['merge-base'] || process.env.GITHUB_EVENT_NAME === 'pull_request', workingTree: values['working-tree'] });
+        mergeBase: values['merge-base'] || process.env.GITHUB_EVENT_NAME === 'pull_request', workingTree: values['working-tree'] }), ...(push ? { reason: push.reason, run: push.run } : {}) };
     const scope = selectChecks(change.files);
     if (process.env.GITHUB_OUTPUT) appendFileSync(process.env.GITHUB_OUTPUT,
         Object.entries(scope).map(([key, value]) => `${key}=${JSON.stringify(value)}\n`).join('') + `selection=${JSON.stringify(scope)}\n`);

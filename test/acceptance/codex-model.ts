@@ -1,10 +1,10 @@
-import { readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { parseTOML } from 'toml-eslint-parser';
 
 // Explicit smoke overrides apply only after the harness copies native configuration.
 export function configureSmokeCodexModel(path: string) {
     const model = process.env.RUNWEFT_NATIVE_CODEX_MODEL, effort = process.env.RUNWEFT_NATIVE_CODEX_EFFORT;
-    let content = readFileSync(path, 'utf8');
+    let content = existsSync(path) ? readFileSync(path, 'utf8') : '';
     const overrides = Object.entries({ model, model_reasoning_effort: effort }).filter((entry): entry is [string, string] => !!entry[1]);
     if (overrides.length) {
         const keys = new Set(overrides.map(([key]) => key));

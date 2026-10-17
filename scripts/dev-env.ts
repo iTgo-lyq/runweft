@@ -26,9 +26,10 @@ function command(cli: string, root: string, env: NodeJS.ProcessEnv, args: string
 }
 async function stop(directory: string) {
     const root = resolve(directory);
-    if (!existsSync(root)) return { directory: root, stopped: true, alreadyAbsent: true };
+    assert(existsSync(root), 'Environment directory does not exist; no process was stopped. Check the directory returned by start.');
     assert(lstatSync(root).isDirectory() && !lstatSync(root).isSymbolicLink(), 'Environment directory must be an owned ordinary directory');
     assert.equal(realpathSync(root), root, 'Use the canonical directory returned by start');
+    assert(existsSync(join(root, marker)), 'Not an owned development environment; environment.json is missing. Nothing was stopped or removed.');
     const record = JSON.parse(readFileSync(join(root, marker), 'utf8'));
     assert.equal(record.kind, kind); assert.equal(record.directory, root);
     assert(basename(root).startsWith('runweft-env-'), 'Not a development environment directory');
@@ -111,7 +112,8 @@ async function start() {
         throw error;
     }
 }
-if (action === 'stop') {
+try { if (action === 'stop') {
     assert(values.dir && !values.bin && !values.candidate && !values.runner, 'stop requires only --dir');
     console.log(JSON.stringify(await stop(values.dir), null, 2));
 } else console.log(JSON.stringify(await start(), null, 2));
+} catch (error) { console.error(error instanceof Error ? error.message : String(error)); process.exitCode = 1; }

@@ -21,7 +21,7 @@ bun run build:hapi
 
 同仓库 worktree 共用 hook 配置；`node .agents/skills/spec-trail/setup/scripts/check-setup.mjs .` 只查准备条件，hook 须由实际提交验证。HAPI pin 改变后重跑 build:hapi；构建会核对 revision、源码干净和程序 hash。
 
-按改动选择检查，不声称未执行的验证通过：
+先用 `node scripts/ci-scope.mjs --base origin/main --head HEAD --working-tree` 查看所需检查，再按改动执行，不声称未执行的验证通过：
 
 ```sh
 bun run typecheck

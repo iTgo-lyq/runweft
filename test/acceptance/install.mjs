@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { spawn, spawnSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
 import { createServer } from 'node:net';
@@ -38,6 +38,11 @@ async function verify(layout) {
     try {
         installed = await installCandidate(values.candidate, root, layout);
         Object.assign(item, { source: installed.index.source, hapi: installed.index.hapi, binaries: installed.binaries });
+        const packageRoot = dirname(dirname(installed.binaries.runweft.path));
+        for (const file of ['HAPI-LICENSE', 'HAPI-NOTICE', 'TUNWG-LICENSE']) assert(readFileSync(join(packageRoot, file), 'utf8').trim(), `Missing packaged ${file}`);
+        assert(readdirSync(join(packageRoot, 'tool-licenses')).length > 0, 'Missing packaged tool licenses');
+        assert(readFileSync(join(packageRoot, 'SOURCES.txt'), 'utf8').includes(installed.index.hapi.revision), 'Packaged source attribution differs from the HAPI pin');
+        item.checks.push('installed package contains licenses and source attribution for its HAPI pin');
         const tools = join(root, 'node-tools'); mkdirSync(tools);
         const npm = spawnSync('/usr/bin/which', ['npm'], { encoding: 'utf8' }).stdout.trim(); assert(npm);
         symlinkSync(process.execPath, join(tools, 'node')); symlinkSync(realpathSync(npm), join(tools, 'npm'));
@@ -113,7 +118,7 @@ async function verify(layout) {
         }
         if (url && !(await closed(url + '/health'))) item.cleanupErrors.push('Service still responds; installation root retained');
         if (item.cleanupErrors.length) { item.success = false; process.exitCode = 1; }
-        else rmSync(root, { recursive: true, force: true });
+        else if (item.success) rmSync(root, { recursive: true, force: true });
         item.finishedAt = new Date().toISOString();
     }
 }

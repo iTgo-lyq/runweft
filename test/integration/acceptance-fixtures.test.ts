@@ -1,12 +1,14 @@
 import { afterEach, expect, spyOn, test } from 'bun:test';
 import { spawn, spawnSync } from 'node:child_process';
-import { mkdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { dirname, join, resolve } from 'node:path';
 import { fixture } from '../helpers';
 import { fixtureCleanup } from '../fixture-cleanup';
 import { watchNativeHost } from '../acceptance/native-host';
 import { installedBinaries, assertCandidateBinaries } from '../../scripts/installed-binaries.mjs';
 import { preflightBrowser } from '../preflight';
+import { readCandidate } from '../../scripts/candidate.mjs';
 
 const cleanup = fixtureCleanup([]);
 afterEach(() => cleanup.close());
@@ -23,6 +25,23 @@ test('preflight resolves installed launcher/core consistently and rejects bad ha
     expect(assertCandidateBinaries(command, JSON.parse(JSON.stringify(produced)))).toEqual(installedBinaries(core));
     expect(() => assertCandidateBinaries(command, { ...produced, runweft: { path: launcher, sha256: 'wrong-launcher-hash' } })).toThrow('Candidate runweft hash differs');
     await expect(preflightBrowser(join(root, 'missing-chromium'))).rejects.toThrow();
+    const archive = join(root, 'candidate.tgz'); writeFileSync(archive, 'candidate');
+    const index = { product: 'hub-console-v1', source: { revision: 'a'.repeat(40), dirty: false }, version: '1.0.0',
+        packages: ['runweft', `runweft-${process.platform}-${process.arch}`].map(name => ({ name, version: '1.0.0', tarball: 'candidate.tgz', sha512: createHash('sha512').update('candidate').digest('base64') })) };
+    const save = () => writeFileSync(join(root, 'index.json'), JSON.stringify(index)); save();
+    expect(readCandidate(root).entries).toHaveLength(2);
+    index.source.dirty = true; save(); expect(() => readCandidate(root)).toThrow('clean source'); index.source.dirty = false;
+    const platform = index.packages.pop()!; save(); expect(() => readCandidate(root)).toThrow('lacks'); index.packages.push(platform);
+    save(); writeFileSync(archive, 'changed'); expect(() => readCandidate(root)).toThrow('archive changed');
+});
+
+test('installation failure preserves its owned root and reports failure after cleanup', () => {
+    const root = fixture('install-failure', cleanup.resources), report = join(root, 'install.json');
+    const child = spawnSync('node', ['test/acceptance/install.mjs', '--candidate', join(root, 'missing'), '--case', 'standalone', '--report', report], { encoding: 'utf8', timeout: 20_000 });
+    expect(child.status).toBe(1);
+    const result = JSON.parse(readFileSync(report, 'utf8')), item = result.cases[0];
+    cleanup.resources.push(() => rmSync(item.root, { recursive: true, force: true }));
+    expect(result.success).toBe(false); expect(item.success).toBe(false); expect(item.cleanupErrors).toEqual([]); expect(existsSync(item.root)).toBe(true);
 });
 
 test('native host timeout fails even when SIGTERM exits zero; diagnostics never retain raw stderr', async () => {
@@ -53,7 +72,7 @@ test('native entry rejects missing candidates and preserves failure receipts; re
     const git = (...args: string[]) => { const r = spawnSync('git', args, { encoding: 'utf8' }); expect(r.status).toBe(0); return r.stdout.trim(); };
     const source = git('rev-parse', 'HEAD'), hash = (paths: string[]) => createHash('sha256').update(git('ls-tree', '-r', source, '--', ...paths)).digest('hex');
     const pkg = JSON.parse(git('show', source + ':package.json'));
-    const inputs = ['test/acceptance', 'test/integration/console-history.ts', 'test/preflight.ts', 'test/lifecycle.ts', 'scripts/candidate.mjs', 'scripts/installed-binaries.mjs', 'scripts/release-inputs.mjs', 'package.json', 'bun.lock'];
+    const inputs = ['test/acceptance', 'test/integration/console-history.ts', 'test/integration/native-files.ts', 'test/integration/fixture-round.ts', 'test/preflight.ts', 'test/lifecycle.ts', 'test/deadline.ts', 'scripts/candidate.mjs', 'scripts/installed-binaries.mjs', 'scripts/release-inputs.mjs', 'package.json', 'bun.lock'];
     const stamp = new Date().toISOString();
     const record: any = { kind: 'runweft-native-v1', success: true, startedAt: stamp, finishedAt: stamp, binding: { source, testSource: source, packageInputs: hash(packageInputs), testInputs: hash(inputs), hapi: pkg.hapi,
         bun: pkg.packageManager.split('@')[1], build: 'package-default', platform: 'linux-x64', binaries: { runweft: 'a'.repeat(64), hapi: 'b'.repeat(64) },

@@ -78,7 +78,7 @@ hapi/                      # 固定版本 submodule，内部测试归独立 fork
 | 入口 | 输入/依赖 | 负责什么 |
 | --- | --- | --- |
 | `bun run test` | 根依赖、pin 的共享源码；显式运行 `test/core` | 少量复杂核心状态、并发/幂等与不可逆边界；不编译 CLI，不要求 HAPI 构建、原生宿主、浏览器或模型 |
-| `bun run test:tools` | Node；运行 `scripts/tests/*.test.mjs` | 工程工具有实际分支的决策、失败和恢复；不真实发布 |
+| `bun run test:tools` | Node 与已安装根依赖（含 yaml）；运行 `scripts/tests/*.test.mjs` | 工程工具有实际分支的决策、失败和恢复；不真实发布 |
 | `bun run test:integration [--bin <CLI>] -- <文件/原生测试参数>` | CLI 对替身测试可省略 --bin 并共享一次 CLI 编译；实际 HAPI/Runner 接线必须传匹配程序，web 才需浏览器 | CLI 子进程、真实接线、传输、Git/工作区和 Hub UI；无模型 |
 | `bun run test:install --candidate <目录> --case <case或all> --report <文件>` | 明确的不可变候选；宿主配置 case 需对应程序 | 包内容、两种部署形态、服务/信号、配置与卸载；无模型 |
 | `bun run test:native --candidate <目录> --case <case或main> --report <文件>` | 明确候选、专用原生配置与已授权模型 | main 为五项核心集合；其他 case 按变更验证恢复/长路径等专项，不把未执行专项标为通过 |
@@ -244,9 +244,9 @@ scope 输出下表的建议集合，普通 CI 不因此调用模型。跨多类�
 
 ## CI：先选范围，再准备环境
 
-沿用现有工作流体系，开发检查形成轻量 scope → 按需 checks/prototype → 最终汇总。checks 内按条件执行 core、tools、integration、当前平台安装等步骤，不为每个测试文件建 job。官网与 Kit 保留各自工作流/入口，更新触发条件，避免在两个工作流重复跑同一检查；不通过本次改造触发部署或分发。
+沿用现有工作流体系，开发检查形成轻量 scope → 按需 checks/prototype → 最终汇总。checks 内按条件执行 core、tools、integration、当前平台安装等步骤，不为每个测试文件建 job。官网与 Kit 保留各自工作流/入口，更新触发条件，避免在两个工作流重复跑同一检查；开发检查不主动调用部署或分发；官网相关文件推送仍会触发现有分支预览上传，必须在操作与证据中明确记录。
 
-scope 只 checkout 所需历史并使用 Node，不初始化 HAPI 或安装产品依赖。PR 比较目标分支 merge-base 与 head；正常 push 使用已验证的 before/head；新分支零 SHA 使用远端默认分支 merge-base。没有可信基线则保守选择完整开发检查；工作流执行错误本身不能被解释为空集合。
+scope 只 checkout 所需历史并使用 Node，不初始化 HAPI 或安装产品依赖。PR 比较目标分支 merge-base 与 head；push 通过只读 Actions API 从本仓库最近 100 次成功开发检查选择当前 HEAD 的成功祖先；失败/取消不作为基线，强推后无成功祖先或缺少 Git/API 历史时全量。没有可信基线则保守选择完整开发检查；工作流执行错误本身不能被解释为空集合。
 
 本地与 CI 共用 `node scripts/ci-scope.mjs --base origin/main --head HEAD` 的同一映射；本地加 --working-tree 合入未提交/未跟踪路径。输出固定检查、integration 文件集合、HAPI 构建/浏览器/宿主依赖、安装范围与 native 建议集合。native 建议仅供显式验收选择，不能作为自动执行指令。按以下少量规则取并集，测试/辅助文件变化直接选自身及消费者：
 
