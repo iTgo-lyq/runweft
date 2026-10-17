@@ -51,3 +51,17 @@ node test/acceptance/install.mjs --candidate dist/packages --case all --report /
 `npm` 与 `standalone` 可单独复验；`all` 顺序运行两种布局，每种拥有独立安装根。输入 tarball/程序摘要、版本和平台必须一致，不自行重建候选；Node 驱动在 checkout 外、无 Bun 的 PATH 下运行已安装程序，确认服务退出、MCP 配置保全和完整卸载后才通过。`--report` 保存每个布局的结果及清理失败；未知停机保留根目录，不能当作通过。
 
 本地只证明当前平台。开发 CI 在安装相关范围选择四平台各自构建与实际安装；发行 CI 对四平台各自下载的公共候选执行同一入口。HAPI 源码归档与 pin 的逐文件比对由打包阶段负责，不在每个安装进程重复准备源码。
+
+## 浏览器与原型
+
+Hub 页面变化选择 `web-identity`、`web-connect`、`web-console` 集成：真实身份/加密连接、配置选择、任务到原生详情，保留跨 owner 隔离、撤权失效和秘密扫描。普通任务历史是当前格式样本；真实模型历史在原生 case 内验证，不能用普通浏览器样本代替。
+
+```sh
+bunx playwright install chromium
+bun run test:integration --bin dist/runweft -- ./test/integration/web-console.test.ts
+node website/build.mjs
+node website/verify.mjs --browser-only
+(cd packages/prototype && bun run build && bun run test)
+```
+
+官网三页各检查桌面/手机两档布局、版本命令、复制/键盘、图片和本地链接。仅正式发行验收才加公共 npm 的实际 DOM 安装（不传 `--browser-only`）；独立 Kit 安装不在官网重复。原型八入口各检查桌面/手机、opaque iframe、无外部请求、导航及代表性交互，不复演内存演示业务。失败按文件/入口定向复验，无需部署或真实用户浏览器。

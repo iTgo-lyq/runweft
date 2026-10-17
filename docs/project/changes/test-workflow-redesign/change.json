@@ -56,7 +56,9 @@
     },
     "T6": {
       "title": "缩减浏览器与原型验收到核心用户路径",
-      "status": "doing"
+      "status": "done",
+      "verification": "Hub console/identity/connect 均通过；官网 build/browser-only、原型 build、Node 10 项及 16 个入口视口通过；类型/文档/流程/diff 通过，重复矩阵已删除。",
+      "commitTitle": "test-workflow-redesign T6: keep core browser journeys and remove repetitive matrices"
     },
     "T7": {
       "title": "提供独立的灵活验收环境入口",

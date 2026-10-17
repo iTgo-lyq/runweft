@@ -12,7 +12,7 @@ bun run test
 bun run screenshots
 ```
 
-手机截图滚动到空间内容，便于从缩略图区分各入口；页面仍保留完整侧栏。构建将 HTML/CSS/JavaScript 合成 `dist/<id>/index.html`。可使用任意静态 HTTP 服务预览；CI 的临时 Ubuntu runner 关闭 Chromium 进程沙箱（其 user namespace 被宿主限制）；iframe 权限仍仅为 allow-scripts，本地默认启用进程沙箱。受限 iframe 的 24 组真实交互验收由 `verify.mjs` 自动执行。场景切换、空间切换和资源编辑使用内存；刷新或“重置演示”恢复初始值。导入身份/接受邀请使用 `demo`，不输入真实凭据。
+手机截图滚动到空间内容，便于从缩略图区分各入口；页面仍保留完整侧栏。构建将 HTML/CSS/JavaScript 合成 `dist/<id>/index.html`。可使用任意静态 HTTP 服务预览；CI 的临时 Ubuntu runner 关闭 Chromium 进程沙箱（其 user namespace 被宿主限制）；iframe 权限仍仅为 allow-scripts，本地默认启用进程沙箱。受限 iframe 的 16 组桌面/手机入口检查由 `verify.mjs` 自动执行：加载、隔离、无外部请求、主导航，以及身份和任务详情的代表性交互；不逐页复演演示 CRUD。场景切换、空间切换和资源编辑使用内存；刷新或“重置演示”恢复初始值。导入身份/接受邀请使用 `demo`，不输入真实凭据。
 
 清单在 `prototype.json`，上传入口在 `publish-entries.json`。每次发布必须从干净、已推送的源码提交构建，再登记固定版本；后续更新不会覆盖历史地址。
 

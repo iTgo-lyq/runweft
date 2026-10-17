@@ -53,3 +53,11 @@ T4 Actions 38996745344 的 scope/prototype、文档、类型、core、tools 均�
 T5 安装实测：冻结候选 `b9b8006` 的 Linux x64 npm / standalone 两种布局均通过（`/tmp/runweft-install-t5-retry1.json`）；实际无 Bun PATH、Hub/Runner、MCP 握手、版本不一致诊断、前台 SIGTERM、npm 删除失败后显式重试、完整卸载与外部配置保留均有证据，两根已删除且 cleanupErrors 为空。首次运行及四平台 CI 38997190450 的安装失败为 fixture 遗漏 `hub.url`，已补齐；失败也正确停机清理，不冒充成功。候选 hash、平台缺项、dirty 来源三种反例均在安装前拒绝。关闭失败的严格语义沿用 T3/T4 生命周期反例；修复后的四平台 CI 继续跟踪。
 
 T5 四平台复验：Actions [38997618984](https://github.com/iTgo-lyq/runweft/actions/runs/38997618984) 的 Linux x64/arm64、Darwin x64/arm64 安装 jobs 全部成功，每个平台均运行 npm 和 standalone 两种布局，共八个安装生命周期。该结论仅针对四个安装 jobs；此刻整个 development checks 尚在运行，未将其整体计为通过。
+
+## T6 缩减浏览器与原型验收到核心用户路径
+
+删去 Hub 的完整仓库/Agent 版本与分享/成员角色/选择排列，以及任务展示、筛选分页、错误排列、重复审批/文件样本和时钟模拟。样本从 owner 27 个任务加 member 1 个，降为两个 owner 各 1 个；身份页删除普通改名、空间 CRUD/角色矩阵。保留实际 WebCrypto/原点绑定、选择解析、一次编辑冲突保留表单、任务到原生消息与 SSE、跨 owner 拒绝、真实 token 轮换与恢复、DB/WAL/日志秘密扫描。`openTaskHistory` 是浏览器与后续真实历史共享的普通页面函数；删除 console 中不可达的旧 sourceFixtures 分支。
+
+官网从六档宽度 × 三页降为两档 × 三页，删除几何/装饰/无 JS 重复链和公开 Kit 安装；原型从 24 个入口视口组合降为 16 个，删除整套演示 CRUD 和错误/空白场景排列。官网仅验证可见图像解码，准确 DOM npm 命令和失败短路仍保留。
+
+实际结果：Hub console 1/1（12.50s）、精简后的 identity 1/1（6.62s）、connect 1/1（4.58s）；官网 build + browser-only 通过（27 个本地链接）；原型 build、发布工具 10/10 和 16 个浏览器入口通过。首次 console 断言误用未展示的 Runtime ID，改为实际展示的执行机器 ID 后通过；首次官网把手机隐藏装饰图当可滚动元素，改为可见图片检查后通过。只定向重跑失败项；未调用模型、公共 npm 安装或部署。

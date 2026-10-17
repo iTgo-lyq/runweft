@@ -1,17 +1,15 @@
 import assert from 'node:assert/strict';
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { randomBytes } from 'node:crypto';
 import { chromium, type Page } from 'playwright';
 import { freePort } from '../../src/services';
 import { consoleTasks } from './console-tasks';
 import { installedBinaries } from '../../scripts/installed-binaries.mjs';
-import { consoleHistory } from '../../scripts/fixtures/hub-console-history';
 import { closeSmoke } from '../lifecycle';
 import { hubConnectionPaths } from '../../src/hub/resources/connection';
 
-export async function smokeConsole(options: { binary: string; hapiBinary?: string; sourceFixtures?: string[]; own?: (close: () => Promise<void>) => void }) {
+export async function smokeConsole(options: { binary: string; hapiBinary?: string; own?: (close: () => Promise<void>) => void }) {
 const root = mkdtempSync(join(tmpdir(), 'runweft-hub-console-')), home = join(root, 'home');
 const binary = resolve(options.binary);
 const selectedBinaries = installedBinaries(binary);
@@ -19,7 +17,7 @@ if (options.hapiBinary) { const path = resolve(options.hapiBinary); selectedBina
 const env = { ...process.env };
 for (const key of Object.keys(env)) if (key.startsWith('HAPI_') || key.startsWith('RUNWEFT_') || ['CLI_API_TOKEN', 'DB_PATH', 'TELEGRAM_BOT_TOKEN'].includes(key)) delete env[key];
 const port = await freePort(), origin = `http://127.0.0.1:${port}`;
-const evidence: any = { root, binary, sourceFixtures: options.sourceFixtures ?? [], binaries: selectedBinaries, origin, checks: [], screenshots: [], success: false, cleanupErrors: [],
+const evidence: any = { root, binary, binaries: selectedBinaries, origin, checks: [], screenshots: [], success: false, cleanupErrors: [],
     scope: 'compiled CLI, real HAPI/Runner and Chromium; task history and session RPC are explicit browser fixtures, no model execution or OS terminal' };
 const secrets: string[] = [], pageErrors: string[] = [], output: string[] = [];
 async function cli(args: string[]) {
@@ -49,13 +47,6 @@ async function navigate(page: Page, name: string) {
 async function importIdentity(page: Page, token: string, spaceId: string) {
     page.on('pageerror', error => pageErrors.push(error.message));
     await page.goto(origin + '/hub'); await ready(page);
-    const invalid = `rw_id_${randomBytes(32).toString('base64url')}`; let reads = 0, creates = 0;
-    const observe = (request: import('playwright').Request) => { const path = new URL(request.url()).pathname; if (path === '/api/runweft/hub/identity') reads++; if (path === '/api/runweft/hub/identities' && request.method() === 'POST') creates++; };
-    page.on('request', observe);
-    await page.locator('#import-token').fill(invalid); await page.locator('#import-identity button').click(); await ready(page);
-    assert.equal(reads, 1); assert.equal(creates, 0); assert.equal(await page.evaluate(() => sessionStorage.getItem('runweft.hub.identity')), null);
-    assert(!(await page.locator('body').innerText()).includes(invalid)); assert(await page.locator('#notice').isVisible());
-    page.off('request', observe);
     await page.locator('#import-token').fill(token); await page.locator('#import-identity button').click(); await ready(page);
     await page.locator('#spaces button').filter({ hasText: '后台验收' }).click(); await ready(page);
     assert.equal(await page.locator('#space-id').innerText(), spaceId);
@@ -72,8 +63,6 @@ const close = () => closing ??= (async () => {
         catch (error) { evidence.success = false; evidence.cleanupErrors.push(String(error)); process.exitCode = 1; }
         if (evidence.success && !evidence.cleanupErrors.length) rmSync(home, { recursive: true, force: true });
     }
-    evidence.consoleSuccess = evidence.success;
-    if (options.sourceFixtures?.length) evidence.success = false;
     writeFileSync(join(root, 'evidence.json'), JSON.stringify(evidence, null, 2));
 if (evidence.cleanupErrors.length) throw new AggregateError(evidence.cleanupErrors, 'Console cleanup failed');
 if (evidence.success) rmSync(root, { recursive: true, force: true });
@@ -88,11 +77,8 @@ try {
     page.on('pageerror', error => pageErrors.push(error.message));
     page.on('console', message => { if (message.type() !== 'error') output.push(message.text()); });
     await page.goto(connection.confirmationUrl); await ready(page);
-    await page.route(origin + '/api/runweft/tasks/overview*', route => route.fulfill({ status: 503, json: { error: { message: '首次任务读取失败' } } }), { times: 1 });
     await page.locator('#new-name').fill('后台验收'); await page.locator('#create-identity button').click();
     await page.locator('#secret-dialog[open]').waitFor(); await ready(page);
-    assert.match(await page.locator('#console-content').innerText(), /资源未能加载/);
-    assert(!(await page.locator('#console-content').innerText()).includes('正在读取'));
     const identityToken = await page.locator('#secret-value').innerText(); secrets.push(identityToken);
     await page.locator('#close-secret').click();
     const spaceId = await page.locator('#space-id').innerText();
@@ -127,23 +113,6 @@ try {
     const memberPage = await context.newPage();
     await importIdentity(memberPage, member.token, spaceId);
     await page.locator('#refresh').click(); await ready(page);
-    await navigate(page, '仓库');
-    await page.getByText('登记仓库', { exact: true }).first().click();
-    await page.getByLabel('仓库名称', { exact: true }).fill('后台仓库');
-    await page.getByLabel('Git remote 别名（每行一个，可选）').fill('https://example.invalid/team/console.git');
-    await page.route(origin + '/api/runweft/repositories', async route => {
-        if (route.request().method() !== 'POST') return route.continue();
-        await route.fetch(); await route.abort('failed'); await page.unroute(origin + '/api/runweft/repositories');
-    });
-    await page.getByRole('button', { name: '登记仓库', exact: true }).click(); await ready(page);
-    const repositories = (await request('/api/runweft/repositories', ownerToken)).body.repositories;
-    assert.equal(repositories.length, 1);
-    const repository = repositories[0]; card = page.locator(`[data-resource-id="${repository.id}"]`);
-    await card.waitFor(); assert.match(await card.innerText(), /example.invalid/);
-    assert.equal((await request(`/api/runweft/repositories/${repository.id}`, memberToken, { name: '越权改名' }, 'PATCH')).status, 403);
-    await navigate(memberPage, '仓库');
-    assert.equal(await memberPage.locator(`[data-resource-id="${repository.id}"]`).getByRole('button').count(), 0);
-    check('repository create recovers lost response by receipt without duplicate; member UI and API remain read-only');
     await navigate(page, 'Agent'); await page.getByText('创建 Agent', { exact: true }).first().click();
     await page.getByLabel('Agent 名称', { exact: true }).fill('审查 Agent');
     await page.getByLabel('业务指令', { exact: true }).fill('私有业务指令 marker-console-private');
@@ -161,80 +130,29 @@ try {
     assert.match(await page.locator('#notice').innerText(), /其他操作更新/);
     assert.equal(await card.getByLabel('业务指令', { exact: true }).inputValue(), '浏览器更新');
     await page.locator('#refresh').click(); await ready(page);
-    await card.getByText('编辑定义 · v2', { exact: true }).click();
-    await card.getByLabel('业务指令', { exact: true }).fill('完整定义 v3 marker-console-private');
-    await card.getByLabel('模型（可选）').fill('model-inspection-only');
-    await card.getByLabel('推理等级（可选）').fill('high');
-    await card.getByRole('button', { name: '保存新版本' }).click(); await ready(page);
-    await card.getByRole('button', { name: '查看版本历史' }).click(); await ready(page);
-    assert.equal(await card.locator('.version-history details').count(), 3);
-    assert.equal((await request('/api/runweft/agents', memberToken)).body.agents.length, 0);
-    assert.equal((await request(`/api/runweft/agents/${agent.id}`, memberToken)).status, 404);
-    await navigate(memberPage, 'Agent'); assert(!(await memberPage.locator('#console-content').innerText()).includes('marker-console-private'));
-    check('full Agent definition, optimistic version conflict preserves form, owner-only history and private member invisibility');
-    await card.getByText('管理 Agent 分享', { exact: true }).click();
-    await card.getByLabel('分享范围').selectOption('members');
-    await card.getByRole('checkbox', { name: /^独立成员/ }).check();
-    await card.getByRole('button', { name: '保存分享范围' }).click(); await confirm(page);
-    await memberPage.locator('#refresh').click(); await ready(memberPage);
-    let memberCard = memberPage.locator(`[data-resource-id="${agent.id}"]`);
-    await memberCard.getByText('查看当前定义', { exact: true }).click();
-    assert.match(await memberCard.innerText(), /marker-console-private/);
-    assert.equal(await memberCard.getByRole('button', { name: '保存新版本' }).count(), 0);
     agent = (await request(`/api/runweft/agents/${agent.id}`, ownerToken)).body.agent;
-    assert.equal((await request(`/api/runweft/agents/${agent.id}`, memberToken, { expectedVersion: 3, definition: agent.definition }, 'PATCH')).status, 403);
-    assert.equal((await request(`/api/runweft/agents/${agent.id}/versions`, memberToken)).status, 403);
+    check('Agent creation and conflicting edit preserve the unsaved form without overwriting the current definition');
     await navigate(page, '我的选择');
-    await page.getByLabel('选择 Agent', { exact: true }).selectOption(agent.id);
-    await page.getByRole('button', { name: '保存我的选择' }).click(); await ready(page);
-    await page.getByLabel('选择作用范围').selectOption(repository.id); await page.getByLabel('个人 Runtime override').selectOption(runtime.id);
     await page.getByLabel('选择 Agent', { exact: true }).selectOption(agent.id);
     await page.getByRole('button', { name: '保存我的选择' }).click(); await ready(page);
     const personalAgent = (await request('/api/runweft/agents', memberToken, { requestId: crypto.randomUUID(),
         definition: { ...agent.definition, name: '成员私有 Agent', instructions: 'private-member-instructions', model: null, reasoningEffort: null } })).body.agent;
-    await navigate(memberPage, '我的选择'); await memberPage.getByLabel('选择作用范围').selectOption(repository.id);
-    await memberPage.getByLabel('选择 Agent', { exact: true }).selectOption(personalAgent.id);
-    await memberPage.getByRole('button', { name: '保存我的选择' }).click(); await ready(memberPage);
-    assert.equal((await request('/api/runweft/agent-selections', memberToken)).body.selections[0].agentId, personalAgent.id);
-    assert.equal((await request('/api/runweft/agent-selections', ownerToken)).body.selections.length, 2);
-    await page.getByText('验证我的选择', { exact: true }).click(); await page.getByLabel('解析仓库').selectOption(repository.id);
+    await page.getByText('验证我的选择', { exact: true }).click();
     await page.getByRole('button', { name: '解析当前配置' }).click(); await ready(page);
-    assert.match(await page.locator('.resolution-result').innerText(), /repository/);
-    check('member sharing without edit/history rights, independent per-repository choices and actual runtime resolution');
-    await navigate(page, 'Agent');
-    const privateCard = page.locator(`[data-resource-id="${personalAgent.id}"]`);
-    assert.match(await privateCard.innerText(), /治理概要/); assert(!(await page.locator('#console-content').innerText()).includes('private-member-instructions'));
-    assert.equal((await request(`/api/runweft/agents/${personalAgent.id}/access`, ownerToken, { mode: 'space' }, 'PUT')).status, 403);
-    check('private governance summary excludes instructions and cannot grant owner editing rights');
-    await screenshot(page, 'agents-desktop');
-    await page.setViewportSize({ width: 390, height: 844 }); await screenshot(page, 'agents-mobile');
-    assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+    assert.match(await page.locator('.resolution-result').innerText(), new RegExp(machine.machineId));
+    check('browser saves a personal Agent selection and resolves the actual registered Runtime');
     await consoleTasks({ origin, home, root, page, memberPage, context, identityToken, memberToken, memberIdentity: member.token,
-        ownerToken, spaceId, machineId: machine.machineId, agentId: agent.id, memberAgentId: personalAgent.id, ready, navigate, screenshot, check });
+        ownerToken, spaceId, machineId: machine.machineId, agentId: agent.id, memberAgentId: personalAgent.id, ready, navigate, check });
     await memberPage.close();
-    await navigate(page, 'Runtime');
     await page.setViewportSize({ width: 390, height: 844 });
     assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
-    await screenshot(page, 'runtimes-mobile');
-    await page.locator('#console-navigation').getByRole('button', { name: '成员', exact: true }).click(); await ready(page);
-    assert(await page.locator('#members-panel').isVisible()); assert(await page.locator('#leave-space').isHidden());
-    await screenshot(page, 'members-mobile');
     await page.locator('#logout').click(); await ready(page);
     assert.equal(await page.locator('#console-content').innerText(), '');
-    check('390px layout, service-provided last-owner controls and logout clear prior resource data');
+    check('mobile layout and logout clear prior resource data');
     assert.deepEqual(pageErrors, []);
     for (const secret of secrets) assert(!output.some(text => text.includes(secret)), 'secret leaked into ordinary output');
     evidence.success = true;
 } catch (error) { evidence.error = String(error); throw error; }
 finally { await close(); }
 if (evidence.cleanupErrors.length) throw new AggregateError(evidence.cleanupErrors, 'Console cleanup failed');
-if (options.sourceFixtures?.length) {
-    evidence.historyResults = [];
-    try {
-        await consoleHistory({ binary, hapiBinary: selectedBinaries.hapi.path, sources: options.sourceFixtures, record: result => evidence.historyResults.push(result) });
-        assert(evidence.consoleSuccess && evidence.historyResults.length === options.sourceFixtures.length && evidence.historyResults.every((result: { success: boolean }) => result.success));
-        evidence.success = true; // The owning case consumer performs source cleanup.
-    } catch (error) { evidence.success = false; evidence.error = String(error); throw error; }
-    finally { writeFileSync(join(root, 'evidence.json'), JSON.stringify(evidence, null, 2)); }
-}
 }

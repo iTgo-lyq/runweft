@@ -86,7 +86,7 @@ node website/publish.mjs check
 
 最后一步访问公共 npm；API/路由失败路径用专用夹具测试。当前产品行为见[官网规格](../docs/project/specs/website/spec.md)，生产部署和匿名安装证据见[发行归档](../docs/project/archive/2026-10-12-npm-uninstall-release/acceptance.md)。[正式官网](https://runweft.pages.dev/)随 main 更新，固定构建验收使用唯一部署 URL。
 
-根测试中的独立网站夹具不含 dist/packages，验证无下载产物、非法版本和模板失败保留旧输出。Playwright 使用根工程依赖，在 Linux x64 执行网页与真实 npm 安装验收：
+构建与发布工具契约由 Node 检查负责。Playwright 使用根工程依赖，在 Linux x64 执行网页与真实 npm 安装验收：
 
 ```sh
 bunx playwright install chromium --only-shell
@@ -102,9 +102,9 @@ node website/verify.mjs --browser-only
 
 该模式保留 DOM 命令、安装失败短路和全部浏览器检查，跳过再次下载/安装已发布 npm 包，证据标注 scope 与 install.skipped；不能作为新的平台安装证明。默认不加参数仍执行真实 npm 安装。
 
-已有兼容浏览器可用 RUNWEFT_SITE_CHROMIUM 指定可执行路径。验收覆盖三个页面、320–1440px、首屏定义/主入口、首页到指南路径、两页接入及首项任务提示一致性、复制成功/拒绝与焦点、菜单、FAQ、MCP/runtime 切换、无 JS、reduced motion 和子路径全部本地链接。
+已有兼容浏览器可用 RUNWEFT_SITE_CHROMIUM 指定可执行路径。验收覆盖三个页面的桌面 1440px / 手机 390px、图片加载与无溢出、首页到指南路径、准确版本命令、复制成功/拒绝与基本键盘操作、MCP/runtime 切换和子路径本地链接。
 
-程序和 Kit 安装命令从实际页面 DOM 获取。安装使用独立 HOME、npm prefix/userconfig/globalconfig/cache，清除继承的 npm 配置与认证环境变量，PATH 仅含本次安装、Node/npm/npx 和系统工具。失败 npm 夹具确认不继续运行旧程序；公共 registry 实际安装核对入口归属、精确版本、README 和全部六个包内 Skill 文件字节；公开 Kit 安装核对新名称、完整引用和独立宿主目录。稳定发布的 Linux x64 job 传入原 descriptor，另核对 Runweft/HAPI 两程序摘要。不改用户 MCP/Skill，不启动模型。该检查不代表 Mac/arm64 实机运行。
+程序安装命令从实际页面 DOM 获取；Kit 命令仅检查页面内容和复制，安装验收由 Kit 正式入口负责。安装使用独立 HOME、npm prefix/userconfig/globalconfig/cache，清除继承的 npm 配置与认证环境变量，PATH 仅含本次安装、Node/npm/npx 和系统工具。失败 npm 夹具确认不继续运行旧程序；公共 registry 实际安装核对入口归属、精确版本、README 和全部六个包内 Skill 文件字节；不重复执行公开 Kit 安装。稳定发布的 Linux x64 job 传入原 descriptor，另核对 Runweft/HAPI 两程序摘要。不改用户 MCP/Skill，不启动模型。该检查不代表 Mac/arm64 实机运行。
 
 本次服务和浏览器在结束时关闭；证据与截图、专用安装留在 `.dev-smoke/website-*/`，不提交。
 

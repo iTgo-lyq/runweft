@@ -28,22 +28,12 @@ const assertLayout = async (page, route, width) => {
   evidence.layouts.push({ route, width, ...layout });
 };
 
-const assertScreenshots = async page => {
-  const figures = page.locator('#session-screenshots.session-band .session-shot');
-  assert.equal(await figures.count(), 2);
-  for (const figure of await figures.all()) {
-    await figure.scrollIntoViewIfNeeded();
-    const img = figure.locator('img');
-    await img.evaluate(image => image.decode());
-    assert(await img.evaluate(image => image.complete && image.naturalWidth === 946 && image.naturalHeight === 2048));
-    assert((await img.getAttribute('alt')).trim().length > 0);
-    assert.equal(await figure.locator('a').getAttribute('href'), await img.getAttribute('src'));
-    const box = await figure.locator('a').boundingBox();
-    assert(box && box.width <= 180 && box.width > 0 && box.height <= 250);
+const assertImages = async page => {
+  for (const image of await page.locator('img:visible').all()) {
+    await image.scrollIntoViewIfNeeded();
+    await image.evaluate(image => image.decode());
+    assert(await image.evaluate(image => image.complete && image.naturalWidth > 0));
   }
-  const positions = await figures.evaluateAll(items => items.map(item => item.getBoundingClientRect().top));
-  assert(Math.abs(positions[0] - positions[1]) < 1, 'Session previews remain side by side');
-  assert.equal(await page.locator('.session-gallery-intro, .session-gallery-source').count(), 0);
 };
 
 try {
@@ -67,18 +57,6 @@ try {
   await page.goto(started.url, { waitUntil: 'networkidle' });
   assert.match(await page.title(), /Runweft/);
   assert.equal(await page.locator('h1').count(), 1);
-  const localLocations = await page.locator('[data-location]').allTextContents();
-  const localDescription = await page.locator('#map-description').textContent();
-  await page.locator('[data-mode="remote"]').click();
-  assert.equal(await page.locator('#collaboration-map').getAttribute('data-mode'), 'remote');
-  assert.notDeepEqual(await page.locator('[data-location]').allTextContents(), localLocations);
-  assert.notEqual(await page.locator('#map-description').textContent(), localDescription);
-  await page.locator('[data-mode="local"]').click();
-  assert.equal(await page.locator('#collaboration-map').getAttribute('data-mode'), 'local');
-  assert.deepEqual(await page.locator('[data-location]').allTextContents(), localLocations);
-  assert.equal(await page.locator('#map-description').textContent(), localDescription);
-  check('Local / remote diagram is interactive and explicitly illustrative');
-
   await page.locator('.hero-copy .hero-actions a').first().click();
   assert.equal(new URL(page.url()).hash, '#onboarding');
   await page.locator('[data-copy="onboarding-prompt"]').click();
@@ -100,28 +78,17 @@ try {
   assert(await page.locator('#install-command').evaluate(element => element.closest('pre') === document.activeElement));
   check('Agent prompt and npm commands copy correctly; clipboard denial selects the command with accessible feedback');
 
-  await page.locator('#faq details summary').first().click();
-  assert(await page.locator('#faq details').first().evaluate(element => element.open));
-  for (const width of [1440, 1280, 1024, 768, 390, 320]) {
+  for (const width of [1440, 390]) {
     await page.setViewportSize({ width, height: 1000 });
     for (const route of ['', 'guide.html', 'manual.html']) {
       await page.goto(started.url + route);
       assert.equal(await page.locator('a[download],a[href*="downloads/"]').count(), 0);
       assert(!(await page.locator('body').textContent()).includes('尚未发布到公共 npm'));
-      if (!route) await assertScreenshots(page);
+      await assertImages(page);
       await assertLayout(page, route || 'index.html', width);
     }
   }
-  check('Home, guide and manual have no page overflow at 1440 / 1280 / 1024 / 768 / 390 / 320px');
-  for (const [width, height] of [[1280, 800], [390, 844]]) {
-    await page.setViewportSize({ width, height }); await page.goto(started.url);
-    for (const selector of ['.hero-description', '.hero-copy .hero-actions a:first-child']) {
-      const box = await page.locator(selector).boundingBox();
-      assert(box && box.y >= 0 && box.y + box.height <= height, `First-visit content is below the initial viewport: ${selector} at ${width}`);
-    }
-  }
-  check('Two HAPI screenshots decode at every viewport and retain original image links');
-  check('Product definition and primary action are visible before scrolling on desktop and mobile');
+  check('Home, guide and manual load images without page overflow at desktop 1440px and mobile 390px');
 
   await page.setViewportSize({ width: 390, height: 1000 });
   await page.goto(started.url);
@@ -146,7 +113,6 @@ try {
   assert.equal(skillCommand, 'npx skills add iTgo-lyq/runweft-kit --skill runweft-kit --agent codex -g --copy -y');
   await page.locator('[data-copy="skill-install-command"]').click();
   assert.equal(await page.evaluate(() => navigator.clipboard.readText()), skillCommand);
-  await writeFile(join(evidenceRoot, 'skill-install-from-dom.sh'), skillCommand + '\n');
   await page.locator('#mcp details:has([data-client]) > summary').click();
   await page.locator('[data-client="claude"]').click();
   assert.equal(await page.locator('#mcp-command').textContent(), 'runweft mcp install --client claude\nrunweft mcp check --client claude');
@@ -173,34 +139,10 @@ try {
         assert(html.includes(`id="${decodeURIComponent(url.hash.slice(1))}"`), `Missing anchor: ${key}`);
       }
     }
-    if (!route) await assertScreenshots(page);
+    await assertImages(page);
     await assertLayout(page, '/sub/' + route, 390);
   }
   check(`Relative deployment: ${checkedLinks.size} local links and anchors`);
-
-  await page.emulateMedia({ reducedMotion: 'reduce' }); await page.goto(started.url);
-  assert.equal(await page.locator('.map-flow').evaluate(element => getComputedStyle(element).animationName), 'none');
-  const plain = await browser.newContext({ javaScriptEnabled: false, viewport: { width: 390, height: 1000 } });
-  const plainPage = await plain.newPage(); await plainPage.goto(started.url);
-  assert.equal(await plainPage.locator('#install-command').textContent(), expected);
-  await assertScreenshots(plainPage);
-  for (let index = 0; index < 2; index++) {
-    const link = plainPage.locator('.session-shot-image').nth(index);
-    const href = await link.getAttribute('href');
-    await link.focus(); await plainPage.keyboard.press('Enter');
-    await plainPage.waitForURL(new URL(href, started.url).href);
-    const response = await fetch(plainPage.url(), { method: 'HEAD' });
-    assert.equal(response.headers.get('content-type'), 'image/webp');
-    await plainPage.goBack();
-  }
-  check('Both original WebP images open by keyboard without JavaScript');
-  await plainPage.locator('a[href="guide.html"]').first().click();
-  assert.equal(await plainPage.locator('#guide-install-command').textContent(), expected);
-  assert.equal(await plainPage.locator('#skill-install-command').textContent(), skillCommand);
-  assert.equal(await plainPage.locator('#guide-prompt').textContent(), prompt);
-  assert.equal(await plainPage.locator('#first-task-prompt').textContent(), firstTask);
-  await assertLayout(plainPage, 'no-js guide', 390); await plainPage.close(); await plain.close();
-  check('Reduced motion and the same npm / Kit installation commands without JavaScript');
 
   // Execute the exact rendered commands without inheriting user npm configuration, credentials or installed binaries.
   const installHome = join(evidenceRoot, 'install-home'); await mkdir(installHome);
@@ -246,14 +188,10 @@ try {
     for (const file of ['SKILL.md', 'agents/openai.yaml', 'references/onboarding.md', 'references/configuration.md', 'references/delegation.md', 'references/maintenance.md']) {
       assert.deepEqual(await readFile(join(skillDirectory, file)), await readFile(join(repository, '.agents/skills/runweft-kit', file)));
     }
-    await run('/bin/bash', ['--noprofile', '--norc', join(evidenceRoot, 'skill-install-from-dom.sh')], { env: environment, timeout: 180_000 });
-    const installedKitDirectory = join(installHome, '.agents/skills/runweft-kit');
-    const { checkRunweftKit } = await import('../scripts/check-runweft-kit.mjs');
-    checkRunweftKit(installedKitDirectory);
     const installedPackage = JSON.parse(await readFile(join(prefix, 'lib/node_modules/runweft/package.json'), 'utf8'));
     assert.equal(installedPackage.name, release.package); assert.equal(installedPackage.version, release.version);
-    evidence.install = { version: version.stdout.trim(), commandSource: 'rendered DOM', prefix, binary, launcherSha256: await hash(binary), skillDirectory, installedKitDirectory };
-    check('DOM npm and Kit installs succeed; packaged Skill matches the candidate and the public Kit has valid metadata and references');
+    evidence.install = { version: version.stdout.trim(), commandSource: 'rendered DOM', prefix, binary, launcherSha256: await hash(binary), skillDirectory };
+    check('DOM npm installation succeeds and packaged instructions match the candidate; independent Kit installation belongs to its own check');
   }
   assert.equal((await fetch(started.url + '../package.json')).status, 404);
   assert.equal((await fetch(started.url, { method: 'POST' })).status, 405);
