@@ -104,7 +104,9 @@
     },
     "T14": {
       "title": "修复外部验收发现的 CI、生命周期、冻结绑定与证据偏差",
-      "status": "doing"
+      "status": "done",
+      "verification": "R29–R35 及独立复核补充已修；冻结/安装失败/无客户端等反例通过。core 8、integration 248、Node 工程与官网 72、模型 8 项及完整 CI 39016351111（四平台双布局、HAPI 31、原型）通过；独立只读复核通过；净减 2135 行，手册与证据勘误见 Execution/Review。",
+      "commitTitle": "test-workflow-redesign T14: record corrected acceptance evidence"
     }
   },
   "closure": {},

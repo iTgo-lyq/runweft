@@ -26,14 +26,14 @@ packages/prototype/        原型自己的构建、发布工具测试和浏览�
 | 开始改动、提交前 | `node scripts/ci-scope.mjs --base origin/main --head HEAD --working-tree` | 只读选择；输出需要的检查与依赖，不执行模型 |
 | 文档或 Change 修改 | `node scripts/check-docs.mjs`、`node scripts/check-workflow.mjs`、`git diff --check` | 固定检查；链接、流程与差异有效 |
 | 核心格式/持久化边界 | `bun run test` | 固定 8 项核心检查；不编译或启动服务 |
-| TypeScript 产品接线 | `bun run typecheck`，按 scope 执行 integration 文件 | 类型和跨模块固定契约；全部选中项通过并关闭 |
+| TypeScript 产品 / 测试 / 工具改动 | `bun run typecheck`，按 scope 执行 integration 文件 | 类型和跨模块固定契约；全部选中项通过并关闭 |
 | 工程/发布工具修改 | `bun run test:tools` | 固定 Node 工具契约，不真实发布 |
 | Hub 页面 | 选中 `web-*.test.ts` | 固定 Playwright 用户路径，自动浏览器 |
 | 官网 / 原型 / Kit | 下文所属工程命令 | 固定检查；分发与部署另行触发 |
 | 围绕需求自由操作 | `bun run dev:env start …` → 操作 CLI/API/UI → `stop --dir …` | 前置启动命令；不宣称业务验收已通过 |
 | 安装/launcher/服务/卸载变化 | `test:install --candidate … --case all --report …` | 固定两种安装生命周期，无模型 |
 | 原生适配、MCP、恢复接线变化 | `test:native --candidate … --case <ID> --report …` | 已授权的真实模型固定案例，按影响选择 |
-| 合并前 | scope 选中项、适用专项、文档/流程；核对 CI | 必需 job 失败、取消或缺结果不能视为通过 |
+| 合并前 | scope 选中项、适用专项、文档/流程及 `git diff --check origin/main...HEAD`；核对 CI | 必需 job 失败、取消或缺结果不能视为通过 |
 | 正式程序发行前 | 冻结候选 → 安装 → 五项原生主集合及受影响专项 → 校验报告 | 本地源码级模型证明；公共候选另做固定安装/集成 |
 
 ## 准备条件
