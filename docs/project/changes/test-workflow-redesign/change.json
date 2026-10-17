@@ -74,11 +74,15 @@
     },
     "T9": {
       "title": "将原生验收收敛为单 case 生命周期",
-      "status": "doing"
+      "status": "done",
+      "verification": "c26cc91 冻结验收输入下五项主集合及三个专项 8/8 真实模型通过，显式必需集合校验通过；19 个托管轮次加 Codex 兄弟原生输入，成功根全部回收。首次失败及定向修正、版本/摘要/耗时见 execution.md。",
+      "commitTitle": "test-workflow-redesign T9 T10: record final acceptance evidence and testing handbook"
     },
     "T10": {
       "title": "交付完整测试验收手册与整体验证结果",
-      "status": "doing"
+      "status": "done",
+      "verification": "交付 docs/testing.md 并实走回归、候选安装、dev:env start/stop 和失败定向复验；core 8、integration 247、工具/官网 Node 71、HAPI 31、四平台八次安装、浏览器/原型及真实模型 8 项通过；完整 CI 39000549238 与定向 CI 39001130304 成功；净减 2225 行及独立评审结论已记录。",
+      "commitTitle": "test-workflow-redesign T9 T10: record final acceptance evidence and testing handbook"
     },
     "T11": {
       "title": "修复轻量文档校验的 submodule 隐含依赖",
