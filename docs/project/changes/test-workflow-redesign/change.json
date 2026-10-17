@@ -78,7 +78,7 @@
     },
     "T10": {
       "title": "交付完整测试验收手册与整体验证结果",
-      "status": "todo"
+      "status": "doing"
     },
     "T11": {
       "title": "修复轻量文档校验的 submodule 隐含依赖",

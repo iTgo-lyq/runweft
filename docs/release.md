@@ -34,7 +34,7 @@ bun run test:install --candidate dist/packages --case all --report /tmp/runweft-
 | --- | --- |
 | 无模型集成 | `bun run test:integration --bin <CLI> -- [测试文件]`；真实 HAPI/Runner、文件/Git、Playwright，各用例拥有独立现场 |
 | 原生主链 | `bun run test:native --candidate <目录> --case main --report <文件>`；N1/N4/N5、C-codex/C-claude 五项 |
-| HAPI 专项 | 无模型退出/锁/断连用 `test:integration --bin <CLI> -- hub-lifecycle`；原生恢复或历史路径变化加 R-codex/R-claude、L-claude，各用 `test:native --case <ID>` |
+| HAPI 专项 | 无模型退出/锁/断连用 `test:integration --bin <CLI> -- ./test/integration/hub-lifecycle.test.ts`；原生恢复或历史路径变化加 R-codex/R-claude、L-claude，各用 `test:native --case <ID>` |
 
 发布工作流不按 diff 跳过验收。稳定版本上传 beta 前完成核心、四平台构建和 service-package；access/storage/web 从公共 npm 下载同一候选，与四平台安装及完整卸载并行。稳定版 Linux x64 同时运行真实网页 DOM 的精确版本安装，核对配对程序摘要、README 和五份 Skill 内容。空参数预检和 X.Y.Z-beta.N 预发行构建仍在上传前完成四组；所有已有候选恢复重新执行公共集成和四平台安装。任一必需 job 失败、取消或非预期跳过均阻止晋级。
 
