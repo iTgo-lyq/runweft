@@ -27,7 +27,8 @@ export async function nativeUserSmoke(root: string, binary: string, env: NodeJS.
     }
     function cli(home: string, args: string[], options: { cwd?: string; timeout?: number } = {}) {
         const result = run(home, args, options);
-        assert.equal(result.status, 0, `${args[0]} ${args[1] ?? ''} failed (exit ${result.status}, signal ${result.signal})`); return JSON.parse(result.stdout);
+        let code = ''; try { code = JSON.parse(result.stderr.trim().split('\n').at(-1)!).error?.code ?? ''; } catch {}
+        assert.equal(result.status, 0, `${args[0]} ${args[1] ?? ''} failed (exit ${result.status}, code ${/^[a-z_]+$/.test(code) ? code : 'unknown'})`); return JSON.parse(result.stdout);
     }
     resources.push(async () => {
         if (!stopped || homes.some(home => cli(home, ['status']).runner?.running)) throw new Error('Secrets retained: center or Runner still running');

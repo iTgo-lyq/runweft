@@ -55,7 +55,7 @@ export async function nativeFixture(root: string, binary: string, env: NodeJS.Pr
             stopRunners() { for (const home of runners) { center!.cli(home, ['runner', 'stop']); assert.equal(center!.cli(home, ['status']).runner.running, false); } },
             agent(flavor: Flavor, definition = {}, runtimeId = runner.runtimes[flavor].id) {
                 const path = join(root, `agent-${crypto.randomUUID()}.json`);
-                writeFileSync(path, JSON.stringify({ name: `Native ${flavor}`, runtimeId, ...selections[flavor], ...definition }));
+                writeFileSync(path, JSON.stringify({ name: `Native ${flavor}`, runtimeId, flavor, ...selections[flavor], ...definition }));
                 return cli(['agent', 'create', '--request-id', crypto.randomUUID(), '--file', path]).agent;
             },
             async close() {
