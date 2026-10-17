@@ -62,7 +62,9 @@
     },
     "T7": {
       "title": "提供独立的灵活验收环境入口",
-      "status": "todo"
+      "status": "done",
+      "verification": "实际 Hub-only/Runner/candidate 后台启动与停止通过；外来目录、未知 Runner、活跃会话拒绝，结束后清理、重复停止和 setup 失败清理通过；类型、Node 17、文档/流程/diff 通过。",
+      "commitTitle": "test-workflow-redesign T7: add an owned development environment entrypoint"
     },
     "T8": {
       "title": "明确工程工作目录与报告消费",

@@ -65,3 +65,17 @@ node website/verify.mjs --browser-only
 ```
 
 官网三页各检查桌面/手机两档布局、版本命令、复制/键盘、图片和本地链接。仅正式发行验收才加公共 npm 的实际 DOM 安装（不传 `--browser-only`）；独立 Kit 安装不在官网重复。原型八入口各检查桌面/手机、opaque iframe、无外部请求、导航及代表性交互，不复演内存演示业务。失败按文件/入口定向复验，无需部署或真实用户浏览器。
+
+## 灵活验收前置环境
+
+需要围绕当前需求手动操作 CLI/API/浏览器时，先准备环境，再执行自己的业务步骤。它不运行测试、不准备 Agent 或模型配置，也不产生业务通过报告。
+
+```sh
+bun run dev:env start --bin dist/runweft
+bun run dev:env start --candidate dist/packages --runner
+bun run dev:env stop --dir /返回的/runweft-env-目录
+```
+
+`--bin` 使用显式程序及其相邻 HAPI 的私有副本；`--candidate` 使用已校验的候选私有安装。两者必须二选一，不自动编译或换包。默认只有 Hub，`--runner` 才登记并启动 Runner；身份和个人空间已准备好，返回 `identityFile` 供需要时读取并导入浏览器，不在终端打印 token。`cli`、`home`、`nativeHome` 分别说明专用程序、Runweft 数据与原生配置位置；后续命令带 `--home` 使用返回的数据根。
+
+启动命令退出后环境仍可使用。完成业务验收后运行返回的停止命令：核对目录/程序摘要和现有产品进程状态，活跃会话、MCP 客户端、未知进程或未确认结束的任务会拒绝删除并保留目录。先用此环境的 CLI/原生会话入口结束任务、修复状态，再定向停止；不猜 PID 强杀。确认全部进程退出后删除本次专用目录，重复停止已删除目录是空操作。业务结果需要留存时先保存到环境外。固定测试自行准备和清理，不调用此入口获取现场。

@@ -25,18 +25,24 @@ export function readCandidate(directory) {
     return { directory, index, platform, entries };
 }
 
-/** Install verified, unchanged tarballs into the caller's private root. No service or model starts. */
-export async function installCandidate(directory, root, layout = 'npm') {
-    assert(['npm', 'standalone'].includes(layout), 'Select npm or standalone');
-    const candidate = readCandidate(directory), { index, entries, platform } = candidate;
+export function isolatedEnvironment(root) {
     root = resolve(root);
     const env = Object.fromEntries(Object.entries(process.env).filter(([key]) =>
-        !/^(RUNWEFT_|HAPI_|npm_config_)/i.test(key) && !['NPM_TOKEN', 'NODE_AUTH_TOKEN', 'CLI_API_TOKEN', 'DB_PATH', 'TELEGRAM_BOT_TOKEN'].includes(key)));
+        !/^(RUNWEFT_|HAPI_|ANTHROPIC_|OPENAI_|CODEX_|CLAUDE_|npm_config_)/i.test(key) && !['NPM_TOKEN', 'NODE_AUTH_TOKEN', 'CLI_API_TOKEN', 'DB_PATH', 'TELEGRAM_BOT_TOKEN'].includes(key)));
     Object.assign(env, { HOME: join(root, 'user'), CODEX_HOME: join(root, 'user/.codex'), CLAUDE_CONFIG_DIR: join(root, 'user/.claude'),
         NPM_CONFIG_USERCONFIG: join(root, 'npmrc'), NPM_CONFIG_GLOBALCONFIG: join(root, 'npmrc-global'),
         NPM_CONFIG_CACHE: join(root, 'npm-cache'), NPM_CONFIG_UPDATE_NOTIFIER: 'false' });
     for (const directory of [root, env.HOME, env.CODEX_HOME, env.CLAUDE_CONFIG_DIR]) mkdirSync(directory, { recursive: true, mode: 0o700 });
     writeFileSync(env.NPM_CONFIG_USERCONFIG, ''); writeFileSync(env.NPM_CONFIG_GLOBALCONFIG, '');
+    return env;
+}
+
+/** Install verified, unchanged tarballs into the caller's private root. No service or model starts. */
+export async function installCandidate(directory, root, layout = 'npm') {
+    assert(['npm', 'standalone'].includes(layout), 'Select npm or standalone');
+    const candidate = readCandidate(directory), { index, entries, platform } = candidate;
+    root = resolve(root);
+    const env = isolatedEnvironment(root);
     let cli;
     if (layout === 'standalone') {
         const destination = join(root, platform); mkdirSync(destination);

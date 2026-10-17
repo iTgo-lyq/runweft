@@ -11,6 +11,7 @@
   },
   "scripts": {
     "dev": "bun src/cli.ts",
+    "dev:env": "bun scripts/dev-env.ts",
     "typecheck": "tsc --noEmit",
     "test": "bun test ./test/core",
     "test:execution": "bun scripts/smoke-execution.ts",
