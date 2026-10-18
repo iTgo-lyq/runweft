@@ -36,7 +36,7 @@
     {
       "id": "tasks",
       "title": "任务与轮次详情",
-      "sourcePath": "packages/prototype/src/ui/tasks-page.js",
+      "sourcePath": "packages/prototype/src/app.js",
       "kind": "page",
       "devices": [
         "pc-web",
@@ -68,7 +68,7 @@
     {
       "id": "machines",
       "title": "机器管理",
-      "sourcePath": "packages/prototype/src/ui/resources-page.js",
+      "sourcePath": "packages/prototype/src/app.js",
       "kind": "page",
       "devices": [
         "pc-web",
@@ -100,7 +100,7 @@
     {
       "id": "runtimes",
       "title": "Runtime 管理",
-      "sourcePath": "packages/prototype/src/ui/resources-page.js",
+      "sourcePath": "packages/prototype/src/app.js",
       "kind": "page",
       "devices": [
         "pc-web",
@@ -132,7 +132,7 @@
     {
       "id": "agents",
       "title": "Agent 定义与分享",
-      "sourcePath": "packages/prototype/src/ui/agents-page.js",
+      "sourcePath": "packages/prototype/src/app.js",
       "kind": "page",
       "devices": [
         "pc-web",
@@ -164,7 +164,7 @@
     {
       "id": "repositories",
       "title": "仓库与 checkout",
-      "sourcePath": "packages/prototype/src/ui/repositories-page.js",
+      "sourcePath": "packages/prototype/src/app.js",
       "kind": "page",
       "devices": [
         "pc-web",
@@ -196,7 +196,7 @@
     {
       "id": "selections",
       "title": "我的选择与配置解析",
-      "sourcePath": "packages/prototype/src/ui/selections-page.js",
+      "sourcePath": "packages/prototype/src/app.js",
       "kind": "page",
       "devices": [
         "pc-web",

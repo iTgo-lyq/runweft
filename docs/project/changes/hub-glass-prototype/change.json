@@ -4,7 +4,7 @@
   "title": "蓝色轻玻璃 Hub 交互原型",
   "size": "medium",
   "status": "active",
-  "stage": "technical",
+  "stage": "execution",
   "branch": "codex/hub-glass-prototype",
   "confirmations": {
     "requirement": {
@@ -26,7 +26,8 @@
   "tasks": {
     "T1": {
       "title": "完成蓝色轻玻璃八入口原型与交互验证",
-      "status": "todo"
+      "status": "done",
+      "verification": "Bun 1.4.2 构建通过；10项工具测试、24组三尺寸交互与截图通过；已人工查看截图，文档/工作流/diff检查通过。"
     }
   },
   "closure": {}
