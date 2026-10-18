@@ -4,7 +4,7 @@
   "title": "蓝色轻玻璃 Hub 交互原型",
   "size": "medium",
   "status": "active",
-  "stage": "execution",
+  "stage": "close",
   "branch": "codex/hub-glass-prototype",
   "confirmations": {
     "requirement": {
@@ -30,5 +30,137 @@
       "verification": "Bun 1.4.2 构建通过；10项工具测试、24组三尺寸交互与截图通过；已人工查看截图，文档/工作流/diff检查通过。"
     }
   },
-  "closure": {}
+  "closure": {
+    "verification": {
+      "result": "passed",
+      "at": "2026-10-18T14:46:51.956Z",
+      "summary": "八入口自包含原型完成，24组受限iframe交互及截图通过，实际预览键盘操作通过。"
+    }
+  },
+  "previews": [
+    {
+      "id": "identity",
+      "title": "身份与空间",
+      "kind": "page",
+      "devices": [
+        "pc-web",
+        "ipad",
+        "mobile"
+      ],
+      "artifact": {
+        "type": "git",
+        "path": "docs/project/changes/hub-glass-prototype/previews/identity",
+        "sourceCommit": "a4b76fdc86a9c57b7af4792912f970b0e241a034"
+      }
+    },
+    {
+      "id": "tasks",
+      "title": "任务与轮次详情",
+      "kind": "page",
+      "devices": [
+        "pc-web",
+        "ipad",
+        "mobile"
+      ],
+      "artifact": {
+        "type": "git",
+        "path": "docs/project/changes/hub-glass-prototype/previews/tasks",
+        "sourceCommit": "a4b76fdc86a9c57b7af4792912f970b0e241a034"
+      }
+    },
+    {
+      "id": "machines",
+      "title": "机器管理",
+      "kind": "page",
+      "devices": [
+        "pc-web",
+        "ipad",
+        "mobile"
+      ],
+      "artifact": {
+        "type": "git",
+        "path": "docs/project/changes/hub-glass-prototype/previews/machines",
+        "sourceCommit": "a4b76fdc86a9c57b7af4792912f970b0e241a034"
+      }
+    },
+    {
+      "id": "runtimes",
+      "title": "Runtime 管理",
+      "kind": "page",
+      "devices": [
+        "pc-web",
+        "ipad",
+        "mobile"
+      ],
+      "artifact": {
+        "type": "git",
+        "path": "docs/project/changes/hub-glass-prototype/previews/runtimes",
+        "sourceCommit": "a4b76fdc86a9c57b7af4792912f970b0e241a034"
+      }
+    },
+    {
+      "id": "agents",
+      "title": "Agent 定义与分享",
+      "kind": "page",
+      "devices": [
+        "pc-web",
+        "ipad",
+        "mobile"
+      ],
+      "artifact": {
+        "type": "git",
+        "path": "docs/project/changes/hub-glass-prototype/previews/agents",
+        "sourceCommit": "a4b76fdc86a9c57b7af4792912f970b0e241a034"
+      }
+    },
+    {
+      "id": "repositories",
+      "title": "仓库与 checkout",
+      "kind": "page",
+      "devices": [
+        "pc-web",
+        "ipad",
+        "mobile"
+      ],
+      "artifact": {
+        "type": "git",
+        "path": "docs/project/changes/hub-glass-prototype/previews/repositories",
+        "sourceCommit": "a4b76fdc86a9c57b7af4792912f970b0e241a034"
+      }
+    },
+    {
+      "id": "selections",
+      "title": "我的选择与配置解析",
+      "kind": "page",
+      "devices": [
+        "pc-web",
+        "ipad",
+        "mobile"
+      ],
+      "artifact": {
+        "type": "git",
+        "path": "docs/project/changes/hub-glass-prototype/previews/selections",
+        "sourceCommit": "a4b76fdc86a9c57b7af4792912f970b0e241a034"
+      }
+    },
+    {
+      "id": "members",
+      "title": "成员与邀请",
+      "kind": "page",
+      "devices": [
+        "pc-web",
+        "ipad",
+        "mobile"
+      ],
+      "artifact": {
+        "type": "git",
+        "path": "docs/project/changes/hub-glass-prototype/previews/members",
+        "sourceCommit": "a4b76fdc86a9c57b7af4792912f970b0e241a034"
+      }
+    }
+  ],
+  "waitingFor": {
+    "kind": "confirmation",
+    "summary": "原型已交付，等待用户评审视觉与操作体验，不推进产品改造。"
+  }
 }
