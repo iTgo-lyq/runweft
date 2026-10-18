@@ -5,7 +5,7 @@
   "size": "medium",
   "status": "active",
   "stage": "technical",
-  "branch": "develop",
+  "branch": "codex/hub-glass-prototype",
   "confirmations": {
     "requirement": {
       "at": "2026-10-18T14:23:39.717Z",
