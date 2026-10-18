@@ -36,9 +36,9 @@ website-pages.yml 复用规范版本识别，稳定版本使用托管 runner 构
 
 手动 verify-run-id 可仅复验已上传部署，跳过 Pages 准备和上传。来源必须为同仓库、同分支 push/workflow_dispatch 的已完成官网 run，实际上传步骤成功且日志保存完整静态检查与上传回执；拒绝 PR/fork、仅复验 run 或当前 Pages 项目不符。当前源码可变化，但版本与全部静态文件须与原部署一致；唯一 URL、环境、正式域名及浏览器检查保留。复验回执标记 uploaded=false/verificationOnly=true，分别记录本次控制源码和原上传 run/attempt/部署源码，不改写原失败记录。
 
-官网使用Cloudflare Direct Upload，不依赖Actions artifact；脱敏部署回执、十文件摘要与URL保存在日志/summary及仓库验收记录，静态输出按对应提交重建核对。
+官网使用 Cloudflare Direct Upload，不依赖 Actions artifact；脱敏部署回执、十文件摘要与 URL 保存在日志/summary，专项验收结论另记对应 Change，静态输出按对应提交重建核对。发布/复验使用显式工作目录与报告列表；`.dev-smoke/website-pages/...` 只保留为既有日志恢复标识，不作为物理目录依赖。缺失、格式错误或冲突回执明确失败，不推断成功或盲目重传。
 
-官网内容改动可使用 `website/verify.mjs --browser-only` 验证三页、首屏入口、两页提示一致性及既有交互；证据明确标注跳过 npm 安装。默认模式仍从实际 DOM 取命令，在独立环境执行公共 npm 与公开 Kit 安装，分别核对冻结包内文件与当前公开 Skill 的元数据和完整引用。
+官网内容改动可使用 `node website/verify.mjs --browser-only --report <文件>` 验证三页桌面/手机布局、首屏入口、两页提示一致性及既有交互；证据明确标注跳过 npm 安装。默认模式从实际 DOM 取命令，在独立环境执行公共 npm 安装并核对配对程序、冻结包内使用说明与 Skill；公开 Kit 的独立安装/分发验证归其正式流程，不在官网重复。
 
 ## 官网使用指南
 

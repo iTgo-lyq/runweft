@@ -36,11 +36,11 @@ bun run test:install --candidate dist/packages --case all --report /tmp/runweft-
 | 原生主链 | `bun run test:native --candidate <目录> --case main --report <文件>`；N1/N4/N5、C-codex/C-claude 五项 |
 | HAPI 专项 | 无模型退出/锁/断连用 `test:integration --bin <CLI> -- ./test/integration/hub-lifecycle.test.ts`；原生恢复或历史路径变化加 R-codex/R-claude、L-claude，各用 `test:native --case <ID>` |
 
-发布工作流不按 diff 跳过验收。稳定版本上传 beta 前完成核心、四平台构建和 service-package；access/storage/web 从公共 npm 下载同一候选，与四平台安装及完整卸载并行。稳定版 Linux x64 同时运行真实网页 DOM 的精确版本安装，核对配对程序摘要、README 和五份 Skill 内容。空参数预检和 X.Y.Z-beta.N 预发行构建仍在上传前完成四组；所有已有候选恢复重新执行公共集成和四平台安装。任一必需 job 失败、取消或非预期跳过均阻止晋级。
+发布工作流不按 diff 跳过验收。稳定版本上传 beta 前完成核心/工具检查、四平台构建和本机双布局安装；完整无模型集成通过四个 Bun 分片下载并核验同一公共 npm 候选，与四平台双布局安装并行。稳定版 Linux x64 同时运行真实网页 DOM 的精确版本安装，核对配对程序摘要、README 和包内 Skill 内容。空参数预检和 X.Y.Z-beta.N 预发行的新候选在上传前执行完整无模型集成；所有已有候选恢复重新执行公共集成四分片和四平台双布局安装。任一必需 job 失败、取消或非预期跳过均阻止晋级。
 
 公共集成使用 Bun 原生文件分片，每片下载并校验同一候选。`bun run test:integration --bin <CLI> -- --shard 1/4` 可单独执行一片；不传分片参数执行全部。安装的 tarball/symlink 与 npm launcher 由 Node 入口负责。通用检查与过滤见[测试验收手册](testing.md)。
 
-四平台构建前检查至少 14 GiB 可用空间；不足时依次清理 GitHub 托管 Linux 镜像的 dotnet、GHC、Android SDK，达到余量即停止，清理失败或仍不足则拒绝继续。构建及上传前验收每秒采样可用空间并记录实际最低值，不将采样值当作瞬时精确峰值；候选恢复不执行构建空间清理。
+四平台构建前检查至少 14 GiB 可用空间；不足时依次清理 GitHub 托管 Linux 镜像的 dotnet、GHC、Android SDK，达到余量即停止，清理失败或仍不足则拒绝继续。构建期间每秒采样可用空间并记录实际最低值，不将采样值当作瞬时精确峰值或后续安装/集成验收的磁盘证据；候选恢复不执行构建空间清理。
 
 原生验收调用模型，须已有授权并使用专用认证副本。默认使用 `codex` / `claude`，不自动选择 iclaude；`RUNWEFT_NATIVE_CLAUDE` 可指定 Claude 程序。模型和 effort 取原生配置，也可显式设置 `RUNWEFT_NATIVE_CODEX_MODEL/EFFORT`、`RUNWEFT_NATIVE_CLAUDE_MODEL/EFFORT`，缺少明确值时失败。已有 Chromium 可用 `RUNWEFT_SMOKE_CHROMIUM` 指定。只修改本次副本，报告不包含认证或原生状态摘要，副本刷新认证不影响结果复用。
 
