@@ -9,6 +9,10 @@
 
 ## 源码准备与检查
 
+协作分支为 `develop`，主工作区固定签出该分支；Change 的实现使用独立分支和 worktree。`main` 为正式发布基线，仅按用户明确指令合入或发布，分支角色登记在 `docs/project/workflow.json`。
+
+工程 Skill（包括 `document-diagrams`）安装到项目的 `.agents/skills/` 并随仓库交付。
+
 使用 package.json 固定的 Bun（当前 1.4.2）和 HAPI pin。首次准备：
 
 ```sh
@@ -21,7 +25,7 @@ bun run build:hapi
 
 同仓库 worktree 共用 hook 配置；`node .agents/skills/spec-trail/setup/scripts/check-setup.mjs .` 只查准备条件，hook 须由实际提交验证。HAPI pin 改变后重跑 build:hapi；构建会核对 revision、源码干净和程序 hash。
 
-先用 `node scripts/ci-scope.mjs --base origin/main --head HEAD --working-tree` 查看所需检查，再按改动执行，不声称未执行的验证通过：
+先用 `node scripts/ci-scope.mjs --base origin/develop --head HEAD --working-tree` 查看所需检查，再按改动执行，不声称未执行的验证通过：
 
 ```sh
 bun run typecheck

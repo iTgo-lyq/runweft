@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "skills": {
+    "document-diagrams": {
+      "source": "iTgo-lyq/document-diagrams",
+      "sourceType": "github",
+      "skillPath": "skills/document-diagrams/SKILL.md",
+      "computedHash": "dceca9ec3039944a1600509be1b497f627ff0966b7ae357f4467daaa816b170d"
+    },
+    "spec-trail": {
+      "source": "iTgo-lyq/spec-trail",
+      "sourceType": "github",
+      "skillPath": "skills/spec-trail/SKILL.md",
+      "computedHash": "7ec09af87bdd8b46524d5536c295a5841cf98ead2f4ca19831250cb758407d74"
+    }
+  }
+}

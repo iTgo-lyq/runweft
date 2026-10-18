@@ -4,9 +4,12 @@ import {
   existsSync,
   lstatSync,
   mkdirSync,
+  openSync,
+  closeSync,
   readFileSync,
   readdirSync,
   renameSync,
+  rmdirSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
@@ -16,11 +19,29 @@ import { isDeepStrictEqual, parseArgs } from "node:util";
 import { validateChange, validateWorkflow } from "./state-schema.mjs";
 import { entryPath } from "../prototype/scripts/contract.mjs";
 import { parseTaskOrder, unfinishedPredecessors } from "./task-order.mjs";
+import { closedRecord } from "./routing.mjs";
+import {
+  repository,
+  collaborationCatalog,
+  routedRecord,
+} from "./repository.mjs";
 
 const commands = {
-  create: ["title", "size", "depends-on", "parent", "children"],
+  create: [
+    "title",
+    "size",
+    "depends-on",
+    "parent",
+    "children",
+    "follow-up-of",
+    "group-title",
+  ],
+  "follow-up": ["target", "group-title"],
   show: [],
   retitle: ["title"],
+  "clarification-ask": ["question", "round", "text", "recommendation"],
+  "clarification-answer": ["question", "answer", "source"],
+  "clarification-withdraw": ["question", "reason"],
   confirm: [
     "phase",
     "summary",
@@ -129,27 +150,64 @@ function main() {
         ? readdirSync(dir).flatMap((name) => {
             const file = safe(`docs/project/${kind}/${name}/change.json`);
             return existsSync(file)
-              ? [{ file, state: read(file), archived: kind === "archive" }]
+              ? [
+                  {
+                    file,
+                    state: (() => {
+                      try {
+                        return read(file);
+                      } catch {
+                        return {
+                          id: kind === "archive" ? name.slice(11) : name,
+                        };
+                      }
+                    })(),
+                    archived: kind === "archive",
+                  },
+                ]
               : [];
           })
         : [];
     });
+  safe("docs/project/workflow.json");
+  const repo = repository(root);
+  const catalog = collaborationCatalog(repo, {
+    refresh: command !== "show" && !opts["dry-run"],
+    local: repo.branch === repo.config.collaborationBranch,
+  });
+  const route = catalog?.routes.find((entry) => entry.id === id);
   const matches = records().filter((r) => r.state.id === id);
+  if (command === "show") {
+    if (route?.errors.length) throw Error(route.errors.join("; "));
+    const local =
+      (!route || (route.kind !== "archive" && route.branch === repo.branch)) &&
+      matches.filter((r) => r.state.branch === repo.branch);
+    if (
+      local &&
+      local.length === 1 &&
+      (route || repo.branch === repo.config.collaborationBranch)
+    ) {
+      console.log(
+        json({
+          path: relative(root, local[0].file),
+          state: local[0].state,
+          errors: validateChange(local[0].state),
+          source: "working-tree",
+          branch: repo.branch,
+          entryCommit: catalog.commit,
+          freshness: catalog.freshness,
+        }),
+      );
+    } else
+      console.log(
+        json({ ...routedRecord(repo, catalog, id), source: "pushed-record" }),
+      );
+    return;
+  }
   assert(
     matches.length <= 1,
     "Duplicate Change id; resolve the source records first",
   );
-  if (command === "show") {
-    assert(matches.length === 1, "Change not found");
-    console.log(
-      json({
-        path: relative(root, matches[0].file),
-        state: matches[0].state,
-        errors: validateChange(matches[0].state),
-      }),
-    );
-    return;
-  }
   const lock = resolve(
     git(["rev-parse", "--path-format=absolute", "--git-common-dir"]),
     "spec-trail-state.lock",
@@ -172,13 +230,41 @@ function main() {
       "Use the Change branch, not a protected branch",
     );
     const all = records();
+    {
+      assert(
+        branch === repo.branch,
+        "The checkout branch changed; retry after inspecting the workspace",
+      );
+      if (route) {
+        assert(!route.errors.length, route.errors.join("; "));
+        assert(
+          route.branch === branch && route.kind !== "archive",
+          `Use the registered Change branch ${route.branch}; inherited entries are read-only`,
+        );
+      } else
+        assert(
+          branch === config.collaborationBranch,
+          "Register this Change on the collaboration branch before writing it",
+        );
+      if (command === "create") {
+        assert(
+          branch === config.collaborationBranch,
+          "Create planning Changes on the collaboration branch",
+        );
+        assert(
+          !route,
+          "Change id is already registered on the collaboration branch",
+        );
+      }
+    }
     assert(
-      !all.some(
-        (r) =>
-          !r.archived &&
-          r.state.branch === branch &&
-          r.state.status === "cancelled",
-      ),
+      branch === config.collaborationBranch ||
+        !all.some(
+          (r) =>
+            !r.archived &&
+            r.state.branch === branch &&
+            r.state.status === "cancelled",
+        ),
       "This branch contains a cancelled Change and is frozen",
     );
     const found = all.filter((r) => r.state.id === id);
@@ -218,6 +304,9 @@ function main() {
               : {}),
             ...(opts.parent ? { parent: opts.parent } : {}),
             ...(opts.children ? { children: list(opts.children) } : {}),
+            ...(opts["follow-up-of"]
+              ? { followUpOf: opts["follow-up-of"] }
+              : {}),
           }
         : JSON.parse(original);
     assert(
@@ -280,25 +369,33 @@ function main() {
     };
     const uniqueActive = () =>
       assert(
-        !all.some(
-          (r) =>
-            !r.archived &&
-            r.state.id !== id &&
-            r.state.branch === branch &&
-            r.state.status === "active" &&
-            ["execution", "close"].includes(r.state.stage),
-        ),
+        (branch === config.collaborationBranch && state.size === "xlarge") ||
+          !all.some(
+            (r) =>
+              !r.archived &&
+              r.state.id !== id &&
+              r.state.branch === branch &&
+              r.state.status === "active" &&
+              ["execution", "close"].includes(r.state.stage),
+          ),
         "Another Change is already executing/closing on this branch",
       );
     const availability = [];
     const dependency = (target, allowCancelled = false) => {
-      const candidates = all.filter((r) => r.state.id === target);
+      const routed = routedRecord(repo, catalog, target, {
+        refresh: !opts["dry-run"],
+      });
+      const candidates = [{ ...routed, file: join(root, routed.path) }];
       assert(
         candidates.length === 1,
         `Dependency/child ${target} is missing or ambiguous`,
       );
       const record = candidates[0],
         source = record.state;
+      assert(
+        !validateChange(source).length,
+        `Dependency/child ${target} has invalid state`,
+      );
       assert(
         (allowCancelled && source.status === "cancelled") ||
           (record.archived &&
@@ -317,7 +414,7 @@ function main() {
             )),
         `Dependency/child ${target} is not closed`,
       );
-      const remote = `refs/remotes/origin/${source.branch}`;
+      const remote = routed.sourceRef;
       const remoteState = JSON.parse(
         git(["show", `${remote}:${relative(root, record.file)}`]),
       );
@@ -377,12 +474,262 @@ function main() {
       };
     };
     let archiveDir, indexRecovery;
+    const archiveCopies = [];
+    const checkFollowUp = (target) => {
+      const records = new Map(),
+        checked = new Set(),
+        checking = new Set();
+      const readPrior = (priorId) => {
+        if (records.has(priorId)) return records.get(priorId);
+        const record = routedRecord(repo, catalog, priorId, {
+          refresh: !opts["dry-run"],
+        });
+        const prior = record.state;
+        const valid = (condition) =>
+          assert(
+            condition,
+            `Follow-up history ${priorId} is not a valid published record`,
+          );
+        valid(!record.errors.length);
+        valid(
+          prior.size === "xlarge"
+            ? !Object.keys(prior.tasks).length &&
+                !prior.dependsOn?.length &&
+                !prior.parent
+            : !prior.children?.length,
+        );
+        valid(
+          !(
+            prior.size === "small" &&
+            ["technical", "plan"].includes(prior.stage)
+          ),
+        );
+        valid(
+          !(
+            ["medium", "xlarge"].includes(prior.size) && prior.stage === "plan"
+          ),
+        );
+        if (prior.status !== "cancelled") {
+          const phases =
+            prior.size === "small" || prior.stage === "requirement"
+              ? []
+              : prior.stage === "technical"
+                ? ["requirement"]
+                : prior.stage === "plan"
+                  ? ["requirement", "technical"]
+                  : ["requirement", "technical", "plan"];
+          valid(phases.every((phase) => prior.confirmations[phase]));
+          if (prior.stage === "close")
+            valid(
+              Object.values(prior.tasks).every(
+                (task) => task.status === "done",
+              ),
+            );
+        }
+        for (const [i, key] of steps.entries()) {
+          const step = prior.closure[key];
+          if (!step) continue;
+          const previous = prior.closure[steps[i - 1]];
+          valid(prior.stage === "close");
+          if (i)
+            valid(
+              previous &&
+                prior.closure.verification?.result === "passed" &&
+                Date.parse(step.at) >= Date.parse(previous.at),
+            );
+        }
+        if (prior.status === "completed") {
+          valid(record.archived && closedRecord(prior, dirname(record.path)));
+          valid(
+            !git([
+              "ls-tree",
+              "-r",
+              "--name-only",
+              record.commit,
+              "--",
+              `docs/project/changes/${priorId}/`,
+            ]).trim(),
+          );
+          valid(
+            prior.size === "xlarge"
+              ? prior.children?.length
+              : Object.keys(prior.tasks).length,
+          );
+          let plan;
+          try {
+            plan = git([
+              "show",
+              `${record.commit}:${dirname(record.path)}/plan.md`,
+            ]);
+          } catch {
+            /* Missing Plan is checked below. */
+          }
+          valid(
+            ["valid", "not-applicable"].includes(
+              parseTaskOrder(prior, plan).status,
+            ),
+          );
+        } else valid(!record.archived);
+        records.set(priorId, record);
+        return record;
+      };
+      // Validate the predecessor's existing history, without making it an
+      // execution prerequisite of the new Change or requiring Git ancestry.
+      const validateHistory = (priorId) => {
+        assert(
+          !checking.has(priorId),
+          "Follow-up history has a dependency/child cycle",
+        );
+        if (checked.has(priorId)) return;
+        checking.add(priorId);
+        const prior = readPrior(priorId).state;
+        if (prior.parent) {
+          const parent = readPrior(prior.parent).state;
+          assert(
+            parent.size === "xlarge" && parent.children?.includes(priorId),
+            `Follow-up history ${priorId} has an invalid parent`,
+          );
+        }
+        for (const dependencyId of prior.dependsOn ?? []) {
+          assert(
+            dependencyId !== prior.parent,
+            `Follow-up history ${priorId} depends on its parent`,
+          );
+          const dependency = readPrior(dependencyId).state;
+          validateHistory(dependencyId);
+          assert(
+            prior.status !== "completed" || dependency.status === "completed",
+            `Follow-up history ${priorId} has an unfinished dependency`,
+          );
+        }
+        for (const childId of prior.children ?? []) {
+          const child = readPrior(childId).state;
+          assert(
+            child.parent === priorId && child.size !== "xlarge",
+            `Follow-up history ${priorId} has an invalid child`,
+          );
+          validateHistory(childId);
+          assert(
+            prior.status !== "completed" ||
+              ["completed", "cancelled"].includes(child.status),
+            `Follow-up history ${priorId} has an unfinished child`,
+          );
+        }
+        checking.delete(priorId);
+        checked.add(priorId);
+      };
+      const visited = new Set([id]);
+      const titles = new Set();
+      while (target) {
+        assert(
+          !visited.has(target),
+          "Follow-up cannot reference itself or form a cycle",
+        );
+        visited.add(target);
+        const record = readPrior(target);
+        const prior = record.state;
+        assert(
+          record.archived && prior.status === "completed",
+          `Follow-up target ${target} must be a valid published archive`,
+        );
+        validateHistory(target);
+        if (prior.followUpTitle) titles.add(prior.followUpTitle);
+        target = prior.followUpOf;
+      }
+      return titles;
+    };
+    const setFollowUp = (target) => {
+      const titles = checkFollowUp(target);
+      if (state.followUpOf !== target) delete state.followUpTitle;
+      state.followUpOf = target;
+      if (opts["group-title"] !== undefined) {
+        const title = need("group-title").trim();
+        assert(
+          !titles.size || (titles.size === 1 && titles.has(title)),
+          "Keep the existing follow-up group title; inspect conflicting history before renaming",
+        );
+        state.followUpTitle = title;
+      }
+    };
     switch (command) {
       case "create":
+        assert(
+          opts["group-title"] === undefined || state.followUpOf,
+          "--group-title requires --follow-up-of",
+        );
+        if (state.followUpOf) setFollowUp(state.followUpOf);
         break;
+      case "follow-up": {
+        const target = need("target");
+        if (target === "none") {
+          assert(
+            opts["group-title"] === undefined,
+            "Cannot name a removed follow-up group",
+          );
+          delete state.followUpOf;
+          delete state.followUpTitle;
+        } else {
+          assert(
+            /^[a-z0-9]+(-[a-z0-9]+)*$/.test(target),
+            "Invalid follow-up target id",
+          );
+          setFollowUp(target);
+        }
+        break;
+      }
       case "retitle":
         state.title = need("title");
         break;
+      case "clarification-ask": {
+        const entries = state.clarifications || {};
+        const next =
+          Math.max(
+            0,
+            ...Object.keys(entries).map((key) => Number(key.slice(1))),
+          ) + 1;
+        const question = opts.question || `Q${next}`;
+        assert(
+          /^Q[1-9][0-9]*$/.test(question) &&
+            Number.isSafeInteger(Number(question.slice(1))) &&
+            Number(question.slice(1)) >= next,
+          "Question id must increase and cannot be reused",
+        );
+        const round = need("round");
+        assert(
+          /^[1-9][0-9]*$/.test(round),
+          "--round must be a positive integer",
+        );
+        state.clarifications = {
+          ...entries,
+          [question]: {
+            round: Number(round),
+            question: need("text"),
+            recommendation: need("recommendation"),
+          },
+        };
+        break;
+      }
+      case "clarification-answer":
+      case "clarification-withdraw": {
+        const question = need("question");
+        assert(
+          Object.hasOwn(state.clarifications || {}, question),
+          "Question does not exist",
+        );
+        const entry = state.clarifications[question];
+        assert(
+          !entry.withdrawn,
+          "Question has been withdrawn; retain it and ask a new question if needed",
+        );
+        if (command === "clarification-withdraw")
+          entry.withdrawn = need("reason");
+        else {
+          entry.answer = need("answer");
+          if (opts.source !== undefined) entry.source = need("source");
+          else delete entry.source;
+        }
+        break;
+      }
       case "confirm": {
         const phase = need("phase");
         assert(
@@ -392,6 +739,12 @@ function main() {
         assert(
           !state.confirmations[phase],
           "Confirmation already recorded; use rework first",
+        );
+        const summary = need("summary");
+        assert(
+          [...summary].length <= 60 &&
+            !/[\r\n\u0085\u2028\u2029]/u.test(summary),
+          "Confirmation summary must be a single line of at most 60 Unicode characters",
         );
         if (phase !== "merge") {
           assert(
@@ -413,7 +766,7 @@ function main() {
         }
         state.confirmations[phase] = {
           at: now,
-          summary: need("summary"),
+          summary,
           source: need("source"),
         };
         if (phase === "merge")
@@ -632,6 +985,7 @@ function main() {
         recordStep("specs", opts.result);
         break;
       case "archive": {
+        assert(branch !== config.collaborationBranch, "Handoff to an independent closing branch before archiving; this also applies to xlarge parents");
         requireStage("close");
         unblocked();
         completeTasks();
@@ -647,15 +1001,18 @@ function main() {
         assert(!existsSync(archiveDir), "Archive destination already exists");
         recordStep("archive", "done", { path: relative(root, archiveDir) });
         for (const entry of state.previews ?? []) {
-          if (
-            entry.artifact?.type === "git" &&
-            entry.artifact.path.startsWith(
-              relative(root, liveDir) + "/previews/",
-            )
-          )
-            entry.artifact.path =
-              relative(root, archiveDir) +
-              entry.artifact.path.slice(relative(root, liveDir).length);
+          if (entry.artifact?.type !== "git") continue;
+          const sourcePath = entryPath(entry, config.prototype, relative(root, liveDir));
+          assert(sourcePath && lstatSync(safe(sourcePath)).isFile(), "Archive requires a regular prototype index.html");
+          let path = entry.artifact.path;
+          if (!path.startsWith(relative(root, liveDir) + "/previews/")) {
+            path = `${relative(root, liveDir)}/previews/${entry.id}`;
+            const target = safe(`${path}/index.html`), content = readFileSync(safe(sourcePath));
+            if (existsSync(target))
+              assert(lstatSync(target).isFile() && readFileSync(target).equals(content), `Archive prototype destination differs: ${path}`);
+            else archiveCopies.push({target, content});
+          }
+          entry.artifact.path = relative(root, archiveDir) + path.slice(relative(root, liveDir).length);
         }
         state.status = "completed";
         break;
@@ -702,6 +1059,12 @@ function main() {
     const errors = validateChange(state);
     assert(!errors.length, errors.join("; "));
     assert(
+      branch !== config.collaborationBranch ||
+        state.size === "xlarge" ||
+        !["execution", "close"].includes(state.stage),
+      "Handoff this Change to its own worktree before implementation",
+    );
+    assert(
       !(state.dependsOn || []).includes(id) &&
         !(state.children || []).includes(id) &&
         state.parent !== id,
@@ -734,6 +1097,13 @@ function main() {
     );
     if (original === null) mkdirSync(liveDir, { recursive: true });
     const temporary = join(dirname(file), `.change-${randomUUID()}.tmp`);
+    const copiedFiles = [], createdDirectories = [];
+    const makeSnapshotDirectory = (path) => {
+      if (existsSync(path)) return;
+      makeSnapshotDirectory(dirname(path));
+      mkdirSync(path);
+      createdDirectories.push(path);
+    };
     let updatedBlob;
     try {
       writeFileSync(temporary, json(state), {
@@ -769,6 +1139,14 @@ function main() {
         updatedBlob = blob;
       }
       if (archiveDir) {
+        for (const {target, content} of archiveCopies) {
+          safe(target);
+          makeSnapshotDirectory(dirname(target));
+          const descriptor = openSync(target, "wx");
+          copiedFiles.push(target);
+          try { writeFileSync(descriptor, content); }
+          finally { closeSync(descriptor); }
+        }
         mkdirSync(archiveRoot, { recursive: true });
         renameSync(liveDir, archiveDir);
         try {
@@ -782,6 +1160,8 @@ function main() {
         }
       } else renameSync(temporary, file);
     } catch (error) {
+      for (const path of copiedFiles.reverse()) rmSync(path, {force: true});
+      for (const path of createdDirectories.reverse()) rmdirSync(path);
       if (
         updatedBlob &&
         git(["rev-parse", `:${relative(root, file)}`]) === updatedBlob
@@ -798,8 +1178,8 @@ function main() {
       rmSync(temporary, { force: true });
     }
     result.next =
-      archiveDir && state.previews?.length
-        ? "Commit archive and outputs, then run prototype/scripts/archive.mjs --change <id> --push; verify the remote branch and retained tag."
+      archiveDir
+        ? `Commit and push the archived source, then run scripts/integration.mjs merge --change ${state.id}; verify delivery before cleanup. Do not create retention tags or edit the archive.`
         : "Review the local diff, commit and push. A local command is not a published workflow fact.";
     console.log(json(result));
   } finally {

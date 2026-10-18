@@ -23,7 +23,7 @@ packages/prototype/        原型自己的构建、发布工具测试和浏览�
 
 | 环节 / 触发条件 | 执行什么 | 性质与成功结果 |
 | --- | --- | --- |
-| 开始改动、提交前 | `node scripts/ci-scope.mjs --base origin/main --head HEAD --working-tree` | 只读选择；输出需要的检查与依赖，不执行模型 |
+| 开始改动、提交前 | `node scripts/ci-scope.mjs --base origin/develop --head HEAD --working-tree` | 只读选择；输出需要的检查与依赖，不执行模型 |
 | 文档或 Change 修改 | `node scripts/check-docs.mjs`、`node scripts/check-workflow.mjs`、`git diff --check` | 固定检查；链接、流程与差异有效 |
 | 核心格式/持久化边界 | `bun run test` | 固定 8 项核心检查；不编译或启动服务 |
 | TypeScript 产品 / 测试 / 工具改动 | `bun run typecheck`，按 scope 执行 integration 文件 | 类型和跨模块固定契约；全部选中项通过并关闭 |
@@ -33,7 +33,7 @@ packages/prototype/        原型自己的构建、发布工具测试和浏览�
 | 围绕需求自由操作 | `bun run dev:env start …` → 操作 CLI/API/UI → `stop --dir …` | 前置启动命令；不宣称业务验收已通过 |
 | 安装/launcher/服务/卸载变化 | `test:install --candidate … --case all --report …` | 固定两种安装生命周期，无模型 |
 | 原生适配、MCP、恢复接线变化 | `test:native --candidate … --case <ID> --report …` | 已授权的真实模型固定案例，按影响选择 |
-| 合并前 | scope 选中项、适用专项、文档/流程及 `git diff --check origin/main...HEAD`；核对 CI | 必需 job 失败、取消或缺结果不能视为通过 |
+| 合并前 | scope 选中项、适用专项、文档/流程及 `git diff --check origin/develop...HEAD`；核对 CI | 必需 job 失败、取消或缺结果不能视为通过 |
 | 正式程序发行前 | 冻结候选 → 安装 → 五项原生主集合及受影响专项 → 校验报告 | 本地源码级模型证明；公共候选另做固定安装/集成 |
 
 ## 准备条件
@@ -62,8 +62,8 @@ git config --local core.hooksPath .githooks
 在仓库根执行；比较前先 fetch 所需分支，显式参数引用必须在本地可解析。
 
 ```sh
-node scripts/ci-scope.mjs --base origin/main --head HEAD
-node scripts/ci-scope.mjs --base origin/main --head HEAD --working-tree
+node scripts/ci-scope.mjs --base origin/develop --head HEAD
+node scripts/ci-scope.mjs --base origin/develop --head HEAD --working-tree
 ```
 
 输出比较提交、文件清单、固定检查和依赖范围。`--working-tree` 额外纳入已暂存、未暂存及未跟踪文件；重命名同时考虑旧、新路径。比较分叉分支可加 `--merge-base`。明确基线不存在会失败，不能把失败当成“无须测试”。

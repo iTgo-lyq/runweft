@@ -9,11 +9,11 @@ description: SpecTrail 原型协作：选择 OpenFolio 或自建托管、Git 兜
 
 ## 接入与设计
 
-读取 AGENTS、设计规范、现有组件及 `workflow.json.prototype`，基线为已推送 main。未选择时按需询问；disabled 不重复建议；pending 修复接入；enabled 复用已有包。
+读取 AGENTS、设计规范、现有组件及 `workflow.json.prototype`，当前基线为项目实际配置并已推送的协作分支，develop 只是推荐名称。OpenFolio 直接使用接入时指定的协作分支读取原型策略与清单，不依赖默认分支或保护分支。未选择时按需询问；disabled 不重复建议；pending 修复接入；enabled 复用已有包。
 
 原型已启用时，按 UI 影响范围处理，不以 Change 规模代替判断：
 
-- 小型变化：先询问是否绘制原型；可先推进无关工作，较长时间未回复时说明后跳过。
+- 小型变化：先询问是否绘制原型；可先推进无关工作，较长时间未回复时说明后跳过绘制。
 - 大范围变化：实现前必须先绘制或更新原型，并提供预览。
 
 ```bash
@@ -32,7 +32,7 @@ node .agents/skills/spec-trail/prototype/scripts/setup.mjs --configure --openfol
 
 首次初始化可将这些参数与 --accept 一起使用。新 hosted 包默认输出 dist，Git 输出 preview/id/index.html；已有工程保留原构建命令，发布时显式指定产物目录。
 
-管理员可在本地设置 OPENFOLIO_ADMIN_PASSWORD，将 --upload-url 换为 --fetch-upload-url 自动获取并保存地址；不把管理密码写入仓库。OpenFolio 的静态文件公开读取，上传不要求项目登记或邀请码。
+管理员可在本地设置 OPENFOLIO_ADMIN_PASSWORD，将 --upload-url 换为 --fetch-upload-url 自动获取并保存地址；不把管理密码写入仓库。OpenFolio 的静态文件公开读取，上传使用专用上传地址授权。
 
 setup 不安装框架，不覆盖已有文件；采用现有工程时提供 package.json、AGENTS、DESIGN 和合法 prototype.json，再运行 --enable。保留原包管理器，原型包 private:true。源码可用 HTML、React 及项目 UI 包，宿主保证正常 build 与浏览器交互，局部状态和 mock 不依赖真实业务服务或持久存储。
 
@@ -42,9 +42,13 @@ setup 不安装框架，不覆盖已有文件；采用现有工程时提供 pack
 
 模板组织参考 [Google Stitch](https://github.com/google-labs-code/stitch-skills/blob/main/plugins/stitch-design/skills/extract-design-md/SKILL.md) 的源码提炼方法和 [Anthropic frontend-design](https://github.com/anthropics/claude-code/blob/main/plugins/frontend-design/skills/frontend-design/SKILL.md) 的设计方向约定；无需安装这些 skill 或接入其服务。
 
+### 原型验收
+
+只要绘制或更新了原型，无论 Change 规模，都必须提供预览并由用户明确验收通过，才能开始对应实现。
+
 ## 当前清单
 
-`<packagePath>/prototype.json` 是 main 总览唯一清单，Git 保存源码及描述，dist 默认忽略。格式由 [共享契约](./scripts/contract.mjs) 校验：
+`<packagePath>/prototype.json` 是协作分支当前总览唯一清单，Git 保存源码及描述，dist 默认忽略。格式由 [共享契约](./scripts/contract.mjs) 校验：
 
 ```json
 {
@@ -55,7 +59,7 @@ setup 不安装框架，不覆盖已有文件；采用现有工程时提供 pack
 }
 ```
 
-id 稳定且项目内唯一；名称可改。component 在 devices 和 1–4096 CSS px 的 viewport 中二选一。artifact 缺失表示未交付。删除 main 清单项即从总览移除，不清除旧发布或 Change 历史；源码或主题变化不强制重发所有参考原型。
+id 稳定且项目内唯一；名称可改。component 在 devices 和 1–4096 CSS px 的 viewport 中二选一。artifact 缺失表示未交付。删除协作分支清单项即从总览移除，不清除旧发布或 Change 历史；源码或主题变化不强制重发所有参考原型。
 
 ## 宿主发布
 
@@ -74,7 +78,7 @@ node .agents/skills/spec-trail/prototype/scripts/publish.mjs register --request 
 
 成功结果包含 schemaVersion:1、status:published、原 requestId/sourceCommit/digest、固定 version 及 entries；每项是 id/url，可提供 thumbnails 数组（device/url；固定 PNG/WebP）。失败返回 status:failed、requestId、code、message、retryable。宿主先完整上传再原子发布，重复请求返回同版本，绝不覆盖旧版本字节；失败不替换引用，也不自动提交 dist。
 
-登记命令校验结果后一起更新当前 artifact 与可选 Change previews；无 --change 可只更新当前清单。多文件更新中断后运行 `publish.mjs recover`，遇到新用户编辑停止恢复，不覆盖。若进程异常退出遗留 Git common-dir 下的 `spec-trail-state.lock`，命令不会抢占锁：先读取其中的 owner.json（PID、主机、工作区、开始时间），核实对应主机上的进程已结束、仓库无其他状态操作并检查工作区及事务日志，再清理已确认失效的锁目录，重新运行 recover。没有 owner.json 的共享锁也必须先核实持锁进程；无法确认时保留锁与日志。不要删除事务日志来绕过恢复。随后提交推送；引用进入 main 才更新总览。Change 保留自己的显示信息、视口、固定地址和构建源码 commit，不跟随当前清单变化。预览引用使用无凭据、无 query 的 HTTP/HTTPS，可用 hash 路由；上传地址只保存在 workflow，不放进预览引用或成功日志。
+登记命令校验结果后一起更新当前 artifact 与可选 Change previews；无 --change 可只更新当前清单。多文件更新中断后运行 `publish.mjs recover`，遇到新用户编辑停止恢复，不覆盖。若进程异常退出遗留 Git common-dir 下的 `spec-trail-state.lock`，命令不会抢占锁：先读取其中的 owner.json（PID、主机、工作区、开始时间），核实对应主机上的进程已结束、仓库无其他状态操作并检查工作区及事务日志，再清理已确认失效的锁目录，重新运行 recover。没有 owner.json 的共享锁也必须先核实持锁进程；无法确认时保留锁与日志。不要删除事务日志来绕过恢复。随后提交推送；引用进入协作分支后更新预发布总览，不必等待保护分支发布。Change 保留自己的显示信息、视口、固定地址和构建源码 commit，不跟随当前清单变化。预览引用使用无凭据、无 query 的 HTTP/HTTPS，可用 hash 路由；上传地址只保存在 workflow，不放进预览引用或成功日志。
 
 宿主负责保留被历史引用的版本。Git 标签仅保留记录和源码，不能代替外部存储的保留承诺。
 
@@ -84,7 +88,7 @@ OpenFolio 上传失败可原请求重试；上传成功但本地登记失败时�
 
 原型使用 HTTP/HTTPS，无来源白名单或不同源要求。iframe 保留 `sandbox="allow-scripts"`，不授予 allow-same-origin。ESM、动态模块和字体等静态资源需允许无 Cookie 的 CORS（如 Access-Control-Allow-Origin:*），资源用相对路径，路由用 hash/memory。宿主允许嵌入并配置 CSP；OpenFolio 不代理第三方登录、下载或转发凭据。
 
-宿主可使用 [就绪桥接](./scripts/bridge.mjs) 回复工作台的 ready/error 握手。未确认就绪时工作台显示未确认，iframe load 不等于应用成功。
+宿主可使用 [就绪桥接](./scripts/bridge.mjs) 回复工作台的 ready/error 握手。工作台分别处理页面加载和应用就绪，页面加载完成后不因缺少可选握手而持续提示未就绪。
 
 ```bash
 node .agents/skills/spec-trail/prototype/scripts/validate.mjs
@@ -105,26 +109,6 @@ node .agents/skills/spec-trail/prototype/scripts/publish.mjs register --git-entr
 
 ## 归档
 
-主 skill 完成验证、人工验收与 Specs 同步后提交归档。非空 previews 继续需要保留标签：
+主 skill 完成验证、验收与 Specs 同步后提交归档，再按[集成与清理命令](../references/integration.md)形成合并提交 M。归档命令将 Git 原型固定到本 Change 的 previews 快照目录，保留 sourceCommit；共享目录引用先复制，路径冲突则停止。已合入 Change 从 M 定位固定原型；Git HTML 读取归档快照，hosted 保留原版本、地址、摘要、截图和 sourceCommit。未合入来源仍固定到已推送 SHA。
 
-```bash
-node .agents/skills/spec-trail/prototype/scripts/archive.mjs --change change-id --push
-```
-
-分支与 `spec-trail/archive-v2/<id>` 标签均核实后才报告完成。相同提交可重试，不覆盖同名异提交标签。缺少标签或远端产物时明确说明，不回退其他版本。
-
-
-## 一次性旧存档迁移
-
-运行时只接受 artifact 引用，旧 previews.path 格式不再兼容。用户明确要求迁移旧存档后，在非守护分支运行：
-
-```bash
-node .agents/skills/spec-trail/prototype/scripts/migrate.mjs --change old-change
-# 原标签不存在时须提供原交付的完整 --revision。
-# 核对迁移字节与来源，提交推送后：
-node .agents/skills/spec-trail/prototype/scripts/archive.mjs --change old-change --push
-```
-
-迁移只从确定的原交付提交读取 HTML，复制到 Change 的 previews/id 并更新引用；保留其他历史事实，拒绝覆盖不同字节和之后已修改的关联。同参数可重试；中断后用 publish.mjs recover 恢复事务。源码提交采用所迁移的原交付提交，可由该提交核对当时源码及产物。
-
-新保留标签统一为 spec-trail/archive-v2/id，旧标签和 Git 历史不改写；迁移后分享新提交链接，旧格式固定链接不再预览。服务 pin 按新命名空间隔离，并保留旧缓存 pin；新标签一经观察同样禁止替换。
+不创建保留标签，不改写已归档引用；旧归档没有有效 M 时留空，不用标签或显式 revision 回退。清理来源前验证 Git 文件、源码对象与托管产物可用性；已准备的公开版本独立保留。旧标签退出按集成命令中的切换顺序执行。
