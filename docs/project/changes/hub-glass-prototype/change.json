@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "id": "hub-glass-prototype",
+  "title": "蓝色轻玻璃 Hub 交互原型",
+  "size": "medium",
+  "status": "active",
+  "stage": "requirement",
+  "branch": "develop",
+  "confirmations": {},
+  "tasks": {},
+  "closure": {}
+}
