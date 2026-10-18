@@ -12,9 +12,25 @@
         "mobile"
       ],
       "artifact": {
-        "type": "git",
-        "path": "packages/prototype/preview/identity",
-        "sourceCommit": "a4b76fdc86a9c57b7af4792912f970b0e241a034"
+        "type": "hosted",
+        "version": "b149b044b09411002b131c5b1f80eca821e0d8980ae4d6366f28c8b5bc137dc3",
+        "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/b149b044b09411002b131c5b1f80eca821e0d8980ae4d6366f28c8b5bc137dc3/identity/index.html",
+        "sourceCommit": "092296356840ef5ed7ff4cda4109226864df7bc8",
+        "digest": "sha256:2d2c434bd2be7bce0a995e8b83445e250f047830533a8f239e54a53c417cb4fd",
+        "thumbnails": [
+          {
+            "device": "pc-web",
+            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/b149b044b09411002b131c5b1f80eca821e0d8980ae4d6366f28c8b5bc137dc3/identity/pc-web.png"
+          },
+          {
+            "device": "ipad",
+            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/b149b044b09411002b131c5b1f80eca821e0d8980ae4d6366f28c8b5bc137dc3/identity/ipad.png"
+          },
+          {
+            "device": "mobile",
+            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/b149b044b09411002b131c5b1f80eca821e0d8980ae4d6366f28c8b5bc137dc3/identity/mobile.png"
+          }
+        ]
       }
     },
     {
@@ -28,9 +44,25 @@
         "mobile"
       ],
       "artifact": {
-        "type": "git",
-        "path": "packages/prototype/preview/tasks",
-        "sourceCommit": "a4b76fdc86a9c57b7af4792912f970b0e241a034"
+        "type": "hosted",
+        "version": "b149b044b09411002b131c5b1f80eca821e0d8980ae4d6366f28c8b5bc137dc3",
+        "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/b149b044b09411002b131c5b1f80eca821e0d8980ae4d6366f28c8b5bc137dc3/tasks/index.html",
+        "sourceCommit": "092296356840ef5ed7ff4cda4109226864df7bc8",
+        "digest": "sha256:2d2c434bd2be7bce0a995e8b83445e250f047830533a8f239e54a53c417cb4fd",
+        "thumbnails": [
+          {
+            "device": "pc-web",
+            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/b149b044b09411002b131c5b1f80eca821e0d8980ae4d6366f28c8b5bc137dc3/tasks/pc-web.png"
+          },
+          {
+            "device": "ipad",
+            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/b149b044b09411002b131c5b1f80eca821e0d8980ae4d6366f28c8b5bc137dc3/tasks/ipad.png"
+          },
+          {
+            "device": "mobile",
+            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/b149b044b09411002b131c5b1f80eca821e0d8980ae4d6366f28c8b5bc137dc3/tasks/mobile.png"
+          }
+        ]
       }
     },
     {
@@ -44,9 +76,25 @@
         "mobile"
       ],
       "artifact": {
-        "type": "git",
-        "path": "packages/prototype/preview/machines",
-        "sourceCommit": "a4b76fdc86a9c57b7af4792912f970b0e241a034"
+        "type": "hosted",
+        "version": "b149b044b09411002b131c5b1f80eca821e0d8980ae4d6366f28c8b5bc137dc3",
+        "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/b149b044b09411002b131c5b1f80eca821e0d8980ae4d6366f28c8b5bc137dc3/machines/index.html",
+        "sourceCommit": "092296356840ef5ed7ff4cda4109226864df7bc8",
+        "digest": "sha256:2d2c434bd2be7bce0a995e8b83445e250f047830533a8f239e54a53c417cb4fd",
+        "thumbnails": [
+          {
+            "device": "pc-web",
+            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/b149b044b09411002b131c5b1f80eca821e0d8980ae4d6366f28c8b5bc137dc3/machines/pc-web.png"
+          },
+          {
+            "device": "ipad",
+            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/b149b044b09411002b131c5b1f80eca821e0d8980ae4d6366f28c8b5bc137dc3/machines/ipad.png"
+          },
+          {
+            "device": "mobile",
+            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/b149b044b09411002b131c5b1f80eca821e0d8980ae4d6366f28c8b5bc137dc3/machines/mobile.png"
+          }
+        ]
       }
     },
     {
@@ -60,9 +108,25 @@
         "mobile"
       ],
       "artifact": {
-        "type": "git",
-        "path": "packages/prototype/preview/runtimes",
-        "sourceCommit": "a4b76fdc86a9c57b7af4792912f970b0e241a034"
+        "type": "hosted",
+        "version": "b149b044b09411002b131c5b1f80eca821e0d8980ae4d6366f28c8b5bc137dc3",
+        "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/b149b044b09411002b131c5b1f80eca821e0d8980ae4d6366f28c8b5bc137dc3/runtimes/index.html",
+        "sourceCommit": "092296356840ef5ed7ff4cda4109226864df7bc8",
+        "digest": "sha256:2d2c434bd2be7bce0a995e8b83445e250f047830533a8f239e54a53c417cb4fd",
+        "thumbnails": [
+          {
+            "device": "pc-web",
+            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/b149b044b09411002b131c5b1f80eca821e0d8980ae4d6366f28c8b5bc137dc3/runtimes/pc-web.png"
+          },
+          {
+            "device": "ipad",
+            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/b149b044b09411002b131c5b1f80eca821e0d8980ae4d6366f28c8b5bc137dc3/runtimes/ipad.png"
+          },
+          {
+            "device": "mobile",
+            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/b149b044b09411002b131c5b1f80eca821e0d8980ae4d6366f28c8b5bc137dc3/runtimes/mobile.png"
+          }
+        ]
       }
     },
     {
@@ -76,9 +140,25 @@
         "mobile"
       ],
       "artifact": {
-        "type": "git",
-        "path": "packages/prototype/preview/agents",
-        "sourceCommit": "a4b76fdc86a9c57b7af4792912f970b0e241a034"
+        "type": "hosted",
+        "version": "b149b044b09411002b131c5b1f80eca821e0d8980ae4d6366f28c8b5bc137dc3",
+        "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/b149b044b09411002b131c5b1f80eca821e0d8980ae4d6366f28c8b5bc137dc3/agents/index.html",
+        "sourceCommit": "092296356840ef5ed7ff4cda4109226864df7bc8",
+        "digest": "sha256:2d2c434bd2be7bce0a995e8b83445e250f047830533a8f239e54a53c417cb4fd",
+        "thumbnails": [
+          {
+            "device": "pc-web",
+            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/b149b044b09411002b131c5b1f80eca821e0d8980ae4d6366f28c8b5bc137dc3/agents/pc-web.png"
+          },
+          {
+            "device": "ipad",
+            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/b149b044b09411002b131c5b1f80eca821e0d8980ae4d6366f28c8b5bc137dc3/agents/ipad.png"
+          },
+          {
+            "device": "mobile",
+            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/b149b044b09411002b131c5b1f80eca821e0d8980ae4d6366f28c8b5bc137dc3/agents/mobile.png"
+          }
+        ]
       }
     },
     {
@@ -92,9 +172,25 @@
         "mobile"
       ],
       "artifact": {
-        "type": "git",
-        "path": "packages/prototype/preview/repositories",
-        "sourceCommit": "a4b76fdc86a9c57b7af4792912f970b0e241a034"
+        "type": "hosted",
+        "version": "b149b044b09411002b131c5b1f80eca821e0d8980ae4d6366f28c8b5bc137dc3",
+        "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/b149b044b09411002b131c5b1f80eca821e0d8980ae4d6366f28c8b5bc137dc3/repositories/index.html",
+        "sourceCommit": "092296356840ef5ed7ff4cda4109226864df7bc8",
+        "digest": "sha256:2d2c434bd2be7bce0a995e8b83445e250f047830533a8f239e54a53c417cb4fd",
+        "thumbnails": [
+          {
+            "device": "pc-web",
+            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/b149b044b09411002b131c5b1f80eca821e0d8980ae4d6366f28c8b5bc137dc3/repositories/pc-web.png"
+          },
+          {
+            "device": "ipad",
+            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/b149b044b09411002b131c5b1f80eca821e0d8980ae4d6366f28c8b5bc137dc3/repositories/ipad.png"
+          },
+          {
+            "device": "mobile",
+            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/b149b044b09411002b131c5b1f80eca821e0d8980ae4d6366f28c8b5bc137dc3/repositories/mobile.png"
+          }
+        ]
       }
     },
     {
@@ -108,9 +204,25 @@
         "mobile"
       ],
       "artifact": {
-        "type": "git",
-        "path": "packages/prototype/preview/selections",
-        "sourceCommit": "a4b76fdc86a9c57b7af4792912f970b0e241a034"
+        "type": "hosted",
+        "version": "b149b044b09411002b131c5b1f80eca821e0d8980ae4d6366f28c8b5bc137dc3",
+        "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/b149b044b09411002b131c5b1f80eca821e0d8980ae4d6366f28c8b5bc137dc3/selections/index.html",
+        "sourceCommit": "092296356840ef5ed7ff4cda4109226864df7bc8",
+        "digest": "sha256:2d2c434bd2be7bce0a995e8b83445e250f047830533a8f239e54a53c417cb4fd",
+        "thumbnails": [
+          {
+            "device": "pc-web",
+            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/b149b044b09411002b131c5b1f80eca821e0d8980ae4d6366f28c8b5bc137dc3/selections/pc-web.png"
+          },
+          {
+            "device": "ipad",
+            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/b149b044b09411002b131c5b1f80eca821e0d8980ae4d6366f28c8b5bc137dc3/selections/ipad.png"
+          },
+          {
+            "device": "mobile",
+            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/b149b044b09411002b131c5b1f80eca821e0d8980ae4d6366f28c8b5bc137dc3/selections/mobile.png"
+          }
+        ]
       }
     },
     {
@@ -124,9 +236,25 @@
         "mobile"
       ],
       "artifact": {
-        "type": "git",
-        "path": "packages/prototype/preview/members",
-        "sourceCommit": "a4b76fdc86a9c57b7af4792912f970b0e241a034"
+        "type": "hosted",
+        "version": "b149b044b09411002b131c5b1f80eca821e0d8980ae4d6366f28c8b5bc137dc3",
+        "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/b149b044b09411002b131c5b1f80eca821e0d8980ae4d6366f28c8b5bc137dc3/members/index.html",
+        "sourceCommit": "092296356840ef5ed7ff4cda4109226864df7bc8",
+        "digest": "sha256:2d2c434bd2be7bce0a995e8b83445e250f047830533a8f239e54a53c417cb4fd",
+        "thumbnails": [
+          {
+            "device": "pc-web",
+            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/b149b044b09411002b131c5b1f80eca821e0d8980ae4d6366f28c8b5bc137dc3/members/pc-web.png"
+          },
+          {
+            "device": "ipad",
+            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/b149b044b09411002b131c5b1f80eca821e0d8980ae4d6366f28c8b5bc137dc3/members/ipad.png"
+          },
+          {
+            "device": "mobile",
+            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/b149b044b09411002b131c5b1f80eca821e0d8980ae4d6366f28c8b5bc137dc3/members/mobile.png"
+          }
+        ]
       }
     }
   ]
