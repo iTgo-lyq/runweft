@@ -1,42 +1,48 @@
 {
   "schemaVersion": 1,
   "id": "hub-glass-prototype",
-  "title": "蓝色轻玻璃 Hub 交互原型",
-  "size": "medium",
+  "title": "Hub 前端交互与样式重构",
+  "size": "large",
   "status": "active",
-  "stage": "close",
+  "stage": "requirement",
   "branch": "codex/hub-glass-prototype",
-  "confirmations": {
-    "requirement": {
-      "at": "2026-10-18T14:23:39.717Z",
-      "summary": "交付蓝色轻玻璃八入口后台原型，优化阅读与操作",
-      "source": "用户：根据现有资源尝试优化一版现代化、易读易操作、冗余少而漂亮的后台；部分液态玻璃，保持蓝色；你可以自由发挥，输出原型即可。"
-    },
-    "technical": {
-      "at": "2026-10-18T14:23:40.979Z",
-      "summary": "按用户自由发挥授权沿用独立内存原型技术路线",
-      "source": "用户授权：其他的我没什么要求了。你可以自由发挥。输出原型即可。技术决策由 Agent 在该原型范围内完成，并非用户逐项评审。"
-    },
-    "plan": {
-      "at": "2026-10-18T14:23:42.282Z",
-      "summary": "按用户授权完成原型设计、浏览器验证与预览交付",
-      "source": "用户授权自由发挥并输出原型；本次不实施产品变更，产品实施仍等待原型评审。"
-    }
-  },
+  "confirmations": {},
   "tasks": {
     "T1": {
       "title": "完成蓝色轻玻璃八入口原型与交互验证",
       "status": "done",
       "verification": "Bun 1.4.2 构建通过；10项工具测试、24组三尺寸交互与截图通过；已人工查看截图，文档/工作流/diff检查通过。"
+    },
+    "T2": {
+      "title": "交付统一应用壳与基础交互组件",
+      "status": "todo"
+    },
+    "T3": {
+      "title": "重构真实身份与空间接入流程",
+      "status": "todo"
+    },
+    "T4": {
+      "title": "重构任务列表与轮次交付详情",
+      "status": "todo"
+    },
+    "T5": {
+      "title": "重构机器与 Runtime 资源管理",
+      "status": "todo"
+    },
+    "T6": {
+      "title": "重构 Agent 定义与分享管理",
+      "status": "todo"
+    },
+    "T7": {
+      "title": "重构仓库与个人协作选择",
+      "status": "todo"
+    },
+    "T8": {
+      "title": "重构成员与邀请协作流程",
+      "status": "todo"
     }
   },
-  "closure": {
-    "verification": {
-      "result": "passed",
-      "at": "2026-10-18T14:46:51.956Z",
-      "summary": "八入口自包含原型完成，24组受限iframe交互及截图通过，实际预览键盘操作通过。"
-    }
-  },
+  "closure": {},
   "previews": [
     {
       "id": "agents",
@@ -287,8 +293,9 @@
       }
     }
   ],
-  "waitingFor": {
-    "kind": "confirmation",
-    "summary": "原型已交付，等待用户评审视觉与操作体验，不推进产品改造。"
+  "rework": {
+    "at": "2026-10-18T23:27:41.877Z",
+    "reason": "用户将原型优化升级为前端交互与样式重构的大型 Change，原先仅原型范围失效",
+    "approach": "保留已交付原型任务及固定 R2 引用，重写真实 Hub 重构需求、技术方案、计划与验收，重新确认后再实施产品"
   }
 }
