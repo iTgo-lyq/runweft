@@ -2,7 +2,7 @@ name: Development checks
 
 on:
   push:
-    branches: [main, 'codex/**']
+    branches: [main, develop, 'codex/**', 'change/**', 'task/**']
   pull_request:
 
 permissions:

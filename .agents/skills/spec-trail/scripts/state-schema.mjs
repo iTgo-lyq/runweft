@@ -1,3 +1,5 @@
+import { validBranchName, workflowRoutingIssues } from "./routing.mjs";
+
 const pointer = (path, key) =>
   `${path}/${String(key).replaceAll("~", "~0").replaceAll("/", "~1")}`;
 const report = (errors, path, message) =>
@@ -17,10 +19,10 @@ const id = stringRule(
   /^[a-z0-9]+(-[a-z0-9]+)*$/,
   "must be a lowercase kebab-case id",
 );
-const branch = stringRule(
-  /^[^\s~^:?*\[\\]+$/,
-  "must be a non-empty branch name without forbidden characters",
-);
+const branch = (value, path, errors) => {
+  if (!validBranchName(value))
+    report(errors, path, "must be a valid local branch name");
+};
 const commit = stringRule(
   /^[0-9a-f]{7,64}$/,
   "must contain 7–64 lowercase hexadecimal characters",
@@ -114,6 +116,37 @@ const confirmation = object({ at: timestamp, summary: text, source: text }, [
   "at",
   "summary",
 ]);
+const clarification = object(
+  {
+    round: (value, path, errors) => {
+      if (!Number.isSafeInteger(value) || value < 1)
+        report(errors, path, "must be a positive safe integer");
+    },
+    question: text,
+    recommendation: text,
+    answer: text,
+    source: text,
+    withdrawn: text,
+  },
+  ["round", "question", "recommendation"],
+);
+function clarifications(value, path, errors) {
+  if (!isObject(value)) return report(errors, path, "must be an object");
+  for (const [key, entry] of Object.entries(value)) {
+    const at = pointer(path, key);
+    if (
+      !/^Q[1-9][0-9]*$/.test(key) ||
+      !Number.isSafeInteger(Number(key.slice(1)))
+    )
+      report(errors, at, "must be Q followed by a positive safe integer");
+    clarification(entry, at, errors);
+  }
+}
+export function validateClarifications(value) {
+  const errors = [];
+  clarifications(value, "/clarifications", errors);
+  return errors;
+}
 const step = (result, extra = {}, required = []) =>
   object({ result, at: timestamp, summary: text, ...extra }, [
     "result",
@@ -165,18 +198,13 @@ const previewsRule = (value, path, errors) =>
   errors.push(...prototypeContract.validatePreviews(value, path));
 const workflow = object(
   {
-    schemaVersion: oneOf(1),
+    schemaVersion: oneOf(2),
+    collaborationBranch: branch,
     prototype: prototypeRule,
     openfolioUrl: () => {}, // Validated together with the hosting choice below.
-    protectedBranches: list(
-      stringRule(
-        /^[^\s*?\[]+$/,
-        "must be a non-empty branch name without whitespace or wildcards",
-      ),
-      true,
-    ),
+    protectedBranches: list(branch, true),
   },
-  ["schemaVersion", "protectedBranches"],
+  ["schemaVersion", "collaborationBranch", "protectedBranches"],
 );
 
 const changeFields = object(
@@ -191,7 +219,13 @@ const changeFields = object(
     parent: id,
     children: list(id),
     dependsOn: list(id),
+    followUpOf: id,
+    followUpTitle: stringRule(
+      /^(?=.*\S)[^\r\n]+$/,
+      "must be a non-empty single-line title",
+    ),
     previews: previewsRule,
+    clarifications,
     confirmations: object(
       {
         requirement: confirmation,
@@ -274,6 +308,7 @@ export const validateChange = (value) => {
 export const validateWorkflow = (value) => {
   const errors = [];
   workflow(value, "", errors);
+  errors.push(...workflowRoutingIssues(value));
   errors.push(...prototypeContract.workflowHostingIssues(value));
   return errors;
 };

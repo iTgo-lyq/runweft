@@ -1,0 +1,4 @@
+interface:
+  display_name: "Document Diagrams"
+  short_description: "为技术方案、需求说明和项目介绍制作清晰易读的中文 SVG 图表"
+  default_prompt: "使用 $document-diagrams，依据当前项目材料选择适合的图形，制作一张保留关键关系和必要条件的中文 SVG 图表。"
