@@ -128,7 +128,7 @@ HTTP lease、Socket、SSE 和文件流继续复用现有动态检查，空闲长
 
 ### 只读任务访问与筛选
 
-将只需身份/空间的 CLI 查询从创建 `Parent` 的执行 client 中分离。list/show 复用现有 Web overview/details 投影；wait/result show/artifacts show 提取只读领域操作并增加用户空间入口，不为只读调用伪造 machineId 或 MCP 父身份。任务仍限制为当前 owner/space，可读不等于可继续执行；控制、取回/释放操作和 MCP 保留现有授权路径。留存 release 的 preview 会涉及计划和能力检查，与 apply 一起沿用原流程。
+将只需身份/空间的 CLI 查询从创建 `Parent` 的执行 client 中分离。list/show 复用现有 Web overview/details 投影；wait/result show/artifacts show 提取只读领域操作并增加用户空间入口，不为只读调用伪造 machineId 或 MCP 父身份。任务仍限制为当前 owner/space，可读不等于可继续执行；CLI 只读传输使用 POST `/api/runweft/tasks/query/{list,read,wait,result,artifacts}`，携带只读 context（可选 HAPI_SESSION_ID），服务端从已认证 owner/space 推导 namespace；list 同时传 local 精确范围或 all 和 overview 筛选，不接收伪造的 Parent。消息在授权 read 后通过现有原生 GET 网关读取。控制、取回/释放操作和 MCP 保留现有授权路径。留存 release 的 preview 会涉及计划和能力检查，与 apply 一起沿用原流程。
 
 去掉机器登记前置不等于丢弃调用环境：只读 CLI 仍传递已有 `HAPI_SESSION_ID` 上下文，服务端复用现有受管子任务识别与拒绝判断，覆盖查询、等待、清单和消息入口；它只用于延续调用限制，不能用来授予 owner/space 权限。不构造完整 Parent，也不借此次拆分开放受管子任务读取兄弟任务；普通用户终端无需机器或原生会话 ID 即可读取。
 

@@ -65,3 +65,11 @@ CLI 提供账号查看/改名、登录环境列表及撤销、改密码和全端
 根命令与 hub 显式入口补齐 space、member、invitation 全部计划操作，直接复用身份级 API 与 HubStore。邀请只写入显式新建的 0600 文件，输出元数据和位置；文件已存在时在请求前拒绝。加入/创建不自动切换，use 校验成员资格后在本机连接锁内比较并原子更新默认空间。失效默认不阻塞 list/use，单次 --space 与已构造客户端的固定空间分别生效。
 
 验证：typecheck/build 通过；space-cli 与 Hub 角色/邀请回归共 6 pass、0 fail、126 断言。编译后 CLI 实际覆盖创建、改名、默认切换、邀请文件权限与重试、成员角色、最后 owner 拒绝、成员越权、移除后修复失效默认和无机器登记；原有跨进程最后 owner 与邀请消费约束继续通过。未运行真实模型。
+
+## T6 无需机器的任务查询
+
+提取 HubTaskReader 与用户空间 query 入口，list/show/wait/result show/artifacts show 不构造执行 Parent。列表复用 Web overview 投影、排序、筛选与库存降级；本机 machineId+cwd 精确范围在服务端分页前过滤，--all 显式扩展当前 owner/space，无机器默认查询提示 --all。MCP、执行、控制和成果释放保留旧路径。受管 HAPI_SESSION_ID 检查共享既有会话归属记录，读取也不绕过子任务限制。
+
+messages 先读取授权任务轮次，再经现有 GET 网关分页读取原生会话；复用 HAPI limit≤200 和成对游标，明确会话历史可能跨轮。不触发 resume、发送或停止。等待继续复用固定轮次和 after-revision 逻辑；取消只结束请求。
+
+验证：typecheck/build 通过。hub-delegation 与 hub-delegation-native 原有 16 项通过，覆盖后台稳定身份、访问撤销、成员移除与停止恢复。新增 task-reader 首轮一项失败源于测试 send 夹具多传 id，被严格契约正确拒绝；修正测试输入后定向 2 pass、0 fail、79 断言。编译 CLI 实测无机器读写边界、默认范围分页、消息前翻页、受管子任务拒绝、其他成员私有历史拒绝；等待取消/后续版本和无原生会话也通过，所有诊断前后执行计数未增加。未运行真实模型。

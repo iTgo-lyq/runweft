@@ -144,6 +144,9 @@ export class TaskCoordinator {
     }
     result(namespace: string, value: unknown) {
         const { parent, id, roundId } = parseTask(ResultShowSchema, value);
+        return this.resultView(namespace, id, roundId, parent);
+    }
+    resultView(namespace: string, id: string, roundId?: string, parent?: Parent) {
         const { task, rounds } = this.store.require(namespace, id, parent);
         const round = roundId ? rounds.find(item => item.id === roundId) : rounds.at(-1);
         if (!round) throw new TaskError(404, 'round_unknown', '此任务中没有指定轮次。');
@@ -262,7 +265,7 @@ export class TaskCoordinator {
         if (apply) this.kick(namespace, id);
         return result;
     }
-    artifactManifests(namespace: string, parent: Parent, id: string, roundId: string) {
+    artifactManifests(namespace: string, parent: Parent | undefined, id: string, roundId: string) {
         const bundle = this.store.require(namespace, id, parent);
         const round = bundle.rounds.find(round => round.id === roundId);
         if (!round) throw new TaskError(404, 'round_unknown', '此任务中没有指定轮次。');
@@ -291,12 +294,12 @@ export class TaskCoordinator {
             accepted_requests: this.store.requests(namespace, bundle.task.id) })) };
     }
 
-    read(namespace: string, parent: Parent, id: string, options?: { roundId?: string; offset?: number; limit?: number }) {
+    read(namespace: string, parent: Parent | undefined, id: string, options?: { roundId?: string; offset?: number; limit?: number }) {
         const result = detail(this.store.require(namespace, id, parent), options);
         if (!result) throw new TaskError(404, 'round_unknown', '此任务中没有指定轮次。');
         return result;
     }
-    async wait(namespace: string, parent: Parent, ids: string[], timeoutMs: number, after: Record<string, number> = {}, signal?: AbortSignal) {
+    async wait(namespace: string, parent: Parent | undefined, ids: string[], timeoutMs: number, after: Record<string, number> = {}, signal?: AbortSignal) {
         const targets = new Map(ids.map(id => [id, this.store.require(namespace, id, parent).rounds.at(-1)!.id]));
         const deadline = Date.now() + timeoutMs;
         while (true) {

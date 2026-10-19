@@ -7,6 +7,7 @@ import { ArtifactOutputsSchema, type ArtifactOutput } from '../../hapi/shared/sr
 import type { OutputManifest } from './output-types';
 import { RunweftError } from '../errors';
 import { openBrowser } from '../browser';
+import type { HubTaskReader } from '../hub/delegation/reader';
 import { HubClient } from '../hub/client';
 import { ArtifactInputSchema, parseTask, type ArtifactInput } from './types';
 import type { HubTaskClient } from '../hub/delegation/client';
@@ -58,8 +59,9 @@ export function announceRequest(program: Command, requested?: string) {
     return id;
 }
 export function addTaskCommands(program: Command, context: () => ResolvedConfig, output: (value: unknown, human: string) => void,
-    hub: { client: () => HubTaskClient; url: () => string }) {
+    hub: { client: () => HubTaskClient; reader: () => HubTaskReader; url: () => string }) {
     const client = hub.client;
+    const reader = hub.reader;
     function taskUrl(id:string,roundId?:string,spaceId?:string|null){
         parseTask(z.uuid(),id);if(roundId)parseTask(z.uuid(),roundId);
         const target=new URL('/hub',hub.url());
@@ -91,7 +93,7 @@ export function addTaskCommands(program: Command, context: () => ResolvedConfig,
             + (fetch && !['available', 'failed'].includes(fetch.status) ? `\n查询取回：runweft task result show ${value.agent_id} --round ${value.round_id}` : '');
     };
     result.command('show <id>').option('--round <id>', '指定轮次；省略时显示最新接受轮次')
-        .action(async (id, options) => { const value = await client().result(id, options.round); output(value, resultText(value)); });
+        .action(async (id, options) => { const value = await reader().result(id, options.round); output(value, resultText(value)); });
     for (const action of ['fetch', 'retry'] as const) {
         const command = result.command(`${action} <id>`).description(action === 'fetch' ? '在原主仓库取回专用成果引用；不自动合入' : '只重试代码交付；不重新执行模型或封存')
             .option('--request-id <uuid>', '响应不明时以原 ID 和参数查询同一操作');
@@ -115,7 +117,7 @@ export function addTaskCommands(program: Command, context: () => ResolvedConfig,
     const artifacts = task.command('artifacts').description('查看成果版本、重传候选或显式补收文件');
     artifacts.command('show <id>').requiredOption('--round <id>', '指定业务轮次').option('--version <n>', '只查看某个不可变版本')
         .action(async (id, options) => {
-            const result = await client().artifacts(id, options.round);
+            const result = await reader().artifacts(id, options.round);
             const versions = options.version === undefined ? result.manifests : result.manifests.filter(item => item.version === Number(options.version));
             if (options.version !== undefined && !versions.length) throw new RunweftError('artifact_version_unknown', '没有指定清单版本。');
             output({ ...result, manifests: versions }, `附件留存：${result.retention.state}${result.retention.state === 'retained' ? '' : '（历史发布状态不保证当前仍可下载）'}\n`
@@ -154,9 +156,14 @@ export function addTaskCommands(program: Command, context: () => ResolvedConfig,
             output(result, `任务已接受：${result.agent_id}\n轮次：${result.round_id}\n原生执行尚待确认。\n等待：runweft task wait ${result.agent_id}`);
         });
     spawn.option('--runtime <id>', '本次显式 runtime UUID').option('--remote <name>', '显式选择工作区 fetch remote');
-    task.command('list').description('列出当前发起目录的任务').option('--all', '查看当前身份/空间全部任务').action(async options => {
-        const result = await client().list(options.all); output(result, result.agents.map(taskText).join('\n\n') || '尚无任务。用 runweft agent list 查看可选定义。');
-    });
+    task.command('list').description('默认查询当前机器和目录；筛选排序与 Web 一致').option('--all', '查看当前身份/空间全部任务，无需登记机器')
+        .option('--workspace <text>', '按发起目录搜索').option('--parent <text>', '按父会话或发起机器搜索')
+        .option('--status <status>', 'running、needs_attention、completed、failed、interrupted、unknown')
+        .option('--page <n>', '页码，从 1 开始').option('--limit <n>', '每页最多 100 项')
+        .action(async options => {
+            const result = await reader().list(options);
+            output(result, result.items.map(item => `${item.id} · ${item.status} · ${item.agent.name}\n${item.parent.cwd}\n${item.summary}`).join('\n\n') || '尚无匹配任务。');
+        });
     task.command('send <id>').description('默认排队下一轮；--steer 追加到指定活跃 Codex 轮次')
         .option('--message <text>', '任务描述').option('--message-file <path>', '从文件读取任务；- 读取 stdin')
         .option('--input <name=id|id>', '下一轮的已上传输入文件；可重复，steer 不支持', addInput, [])
@@ -189,7 +196,7 @@ export function addTaskCommands(program: Command, context: () => ResolvedConfig,
         });
     task.command('show <id>').description('查看任务事实与报告').option('--round <id>', '历史轮次').option('--offset <n>', '报告字符偏移', '0').option('--limit <n>', '报告最多字符数', '16000')
         .action(async (id, options) => {
-            const current=client();const result = await current.read(id, { roundId: options.round, offset: Number(options.offset), limit: Number(options.limit) });
+            const current=reader();const result = await current.read(id, { roundId: options.round, offset: Number(options.offset), limit: Number(options.limit) });
             const permissions = Object.entries(result.permissions ?? {}).map(([requestId, request]) => `\n待审批：${requestId} · ${request.tool}\n参数：${JSON.stringify(request.arguments).slice(0, 1200)}\n`
                 + `响应：runweft task permission ${id} --round ${result.round_id} --request ${requestId} --decision <approved|denied|abort>`).join('\n');
             output(result, taskText(result) + `\n原生会话：${result.session_id ?? '未建立'}\n执行关闭：${result.stop} · 收尾：${result.finish}`
@@ -204,7 +211,16 @@ export function addTaskCommands(program: Command, context: () => ResolvedConfig,
             let after: Record<string, number> | undefined;
             try { if (options.afterRevision) after = JSON.parse(options.afterRevision); }
             catch { throw new RunweftError('invalid_revision_cursor', '--after-revision 必须是 JSON 对象。'); }
-            const result = await client().wait(ids, timeout, after);
+            const result = await reader().wait(ids, timeout, after);
             output(result, `${result.timed_out ? '等待超时；任务继续运行。\n' : ''}${result.agents.map(taskText).join('\n\n')}`);
+        });
+    task.command('messages <id>').description('分页读取所选轮次的原生会话历史；同会话可能跨轮复用')
+        .option('--round <id>', '指定轮次；默认最新接受轮次').option('--limit <n>', '最多 200 条', '50')
+        .option('--before-at <n>', '原生消息时间游标；必须与 --before-seq 同时提供').option('--before-seq <n>', '原生消息序号游标')
+        .action(async (id, options) => {
+            const value = await reader().messages(id, { roundId: options.round, limit: Number(options.limit),
+                ...(options.beforeAt !== undefined ? { beforeAt: Number(options.beforeAt) } : {}),
+                ...(options.beforeSeq !== undefined ? { beforeSeq: Number(options.beforeSeq) } : {}) });
+            output(value, JSON.stringify(value, null, 2));
         });
 }

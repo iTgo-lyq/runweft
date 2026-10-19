@@ -18,6 +18,7 @@ import { addUninstallCommand } from './uninstall';
 import { addRepositoryCommands } from './hub/repositories/commands';
 import { HubClient } from './hub/client';
 import { HubTaskClient, HubPreparationClient, hubOptions } from './hub/delegation/client';
+import { HubTaskReader } from './hub/delegation/reader';
 import { ArtifactClient } from './artifacts/client';
 
 export const VERSION = pkg.version;
@@ -93,7 +94,7 @@ export function createProgram() {
     addHubCommands(program, output);
     addRepositoryCommands(program, output, connection);
     addAgentCommands(program, output, connection);
-    addTaskCommands(program, context, output, { client: () => new HubTaskClient(connection(), process.cwd()), url: () => connection().url });
+    addTaskCommands(program, context, output, { client: () => new HubTaskClient(connection(), process.cwd()), reader: () => new HubTaskReader(connection(), process.cwd()), url: () => connection().url });
     addArtifactCommands(program, context, output, () => new ArtifactClient(new HubClient(connection(), 'hubAccess', 'hub_access_unavailable').http));
     program.addHelpText('after', '\n开始使用：\n  runweft start\n  runweft open\n\n编辑配置：runweft init，然后 runweft config show。\n持久数据默认位于 ~/.runweft；使用 --home 可选择其他位置。');
     return program;

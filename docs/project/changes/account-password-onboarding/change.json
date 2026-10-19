@@ -52,7 +52,9 @@
     },
     "T6": {
       "title": "交付无需机器的任务查询与诊断",
-      "status": "todo"
+      "status": "done",
+      "verification": "typecheck/build；原有 Hub 委派集成 16 pass；只读 CLI 两项修正夹具后 2 pass；check-docs、diff --check",
+      "commitTitle": "account-password-onboarding T6: separate task diagnostics from machine enrollment"
     },
     "T7": {
       "title": "交付 Web 账户流程与任务定位",

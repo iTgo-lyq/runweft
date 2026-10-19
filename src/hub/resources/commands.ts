@@ -17,6 +17,7 @@ import { hostClientSchema } from '../../mcp/identity';
 import { serveMcp } from '../../mcp/server';
 import { RunweftError } from '../../errors';
 import { addSpaceCommands } from '../spaces/commands';
+import { HubTaskReader } from '../delegation/reader';
 
 export function addHubCommands(program: Command, output: (value: unknown, human: string) => void) {
     const hub = program.command('hub').description('通过明确 Hub 身份管理中心资源；不会启动本地服务')
@@ -30,7 +31,7 @@ export function addHubCommands(program: Command, output: (value: unknown, human:
     const context = () => loadConfig(home());
     addSpaceCommands(hub, () => hub.opts(), home, output);
     // Explicit Hub consumers are available before the default service is switched in T5.
-    addTaskCommands(hub, context, output, { client: () => new HubTaskClient(hub.opts(), process.cwd()), url: () => hub.opts().url });
+    addTaskCommands(hub, context, output, { client: () => new HubTaskClient(hub.opts(), process.cwd()), reader: () => new HubTaskReader(hub.opts(), process.cwd()), url: () => hub.opts().url });
     addArtifactCommands(hub, context, output, () => new ArtifactClient(new HubClient(hub.opts(), 'hubAccess', 'hub_access_unavailable').http));
     addPreparationCommands(hub.command('workspace').description('通过中心配置诊断独立 Git 工作区'), hub, context, output, () => new HubPreparationClient(hub.opts(), process.cwd()));
     hub.command('mcp').description('以显式 Hub 连接启动 MCP').command('serve').requiredOption('--client <codex|claude>', '接入的原生客户端')
