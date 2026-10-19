@@ -20,7 +20,6 @@ import { RunweftError } from '../../errors';
 export function addHubCommands(program: Command, output: (value: unknown, human: string) => void) {
     const hub = program.command('hub').description('通过明确 Hub 身份管理中心资源；不会启动本地服务')
         .option('--url <origin>', 'Hub HTTP(S) 根地址')
-        .option('--identity-file <file>', '显式身份备份；默认环境变量或此 Hub 已保存的身份连接')
         .option('--space <id>', '当前空间 UUID；使用 runtime 和空间治理时需要');
     addRepositoryCommands(hub, output);
     addAgentCommands(hub, output);
@@ -47,8 +46,9 @@ export function addHubCommands(program: Command, output: (value: unknown, human:
         const result = await new IdentityConnection(home(), hub.opts().url).begin(options.name);
         output(result, `请在浏览器核对并确认：${result.confirmationUrl}\n本机：${result.label}\n核对码：${result.code}\n过期时间：${new Date(result.expiresAt).toISOString()}\n确认后执行 hub connect complete。`);
     });
-    connect.command('complete').description('领取并校验凭据，保存后确认消费；可重复执行').action(async () => {
-        const result = await new IdentityConnection(home(), hub.opts().url).complete();
+    connect.command('complete').description('校验并保存已授权的连接；可重复执行').option('--wait <seconds>','有界等待授权，最多 300 秒','0').action(async options => {
+        const seconds=Number(options.wait);if(!Number.isFinite(seconds)||seconds<0||seconds>300)throw new RunweftError('hub_wait_invalid','等待时间须为 0–300 秒。');
+        const result = await new IdentityConnection(home(), hub.opts().url).complete({waitMs:seconds*1000,spaceId:hub.opts().space});
         if (result.status === 'connected') setConfig(context(), 'hub.url', hub.opts().url);
         output(result, result.status === 'pending' ? `等待 Web 确认：${'confirmationUrl' in result ? result.confirmationUrl : ''}` : `身份连接已保存。\n${JSON.stringify(result, null, 2)}`);
     });

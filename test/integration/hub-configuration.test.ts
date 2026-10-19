@@ -1,3 +1,4 @@
+import { fixtureCredential } from '../identity-fixture';
 import { createTestIdentity, createIdentityToken } from '../identity-fixture';
 import { afterAll, test } from 'bun:test';
 import assert from 'node:assert/strict';
@@ -62,7 +63,7 @@ test('CLI resolves a saved Agent through the gateway and real Runner; revoked ru
         CLI_API_TOKEN: record.active.token, HAPI_DISABLE_VERSION_HANDOFF: '1' },
         stdout: Bun.file(join(root, 'runner-out.log')), stderr: Bun.file(join(root, 'runner-err.log')) });
     processes.add(runner); resources.push(() => stopSmokeProcess(runner));
-    const client = new HubResourceClient({ url: base, identityFile, space });
+    const client = new HubResourceClient({ url: base, credential: fixtureCredential(identityFile), space });
     const deadline = Date.now() + 30_000;
     while (true) {
         assert.equal(runner.exitCode, null, 'Runner exited before discovery');

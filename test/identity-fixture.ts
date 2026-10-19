@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { readFileSync } from 'node:fs';
 import type { HubStore } from '../src/hub/store';
 import { createUserSecret } from '../src/hub/accounts/credentials';
 
@@ -10,6 +11,11 @@ export function createTestIdentity(store: HubStore, name: string) {
     return { ...value, token: credential.token! };
 }
 export const createIdentityToken = () => createUserSecret('browser').token;
+export function fixtureCredential(file: string) {
+    const value=readFileSync(file,'utf8'), token=value.match(/rw_(?:web|cli)_[A-Za-z0-9_-]{43}/)?.[0];
+    if(!token)throw new Error('missing synthetic fixture credential');
+    return {token};
+}
 export function replaceTestCredential(store: HubStore, identity: {id: string}, previous: string, next: string) {
     const row = store.accounts.authenticate(previous); if(row.identity.id!==identity.id) throw new Error('fixture owner mismatch');
     store.accounts.revoke(identity.id,row.credential.id);

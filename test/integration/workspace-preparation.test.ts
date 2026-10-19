@@ -1,3 +1,4 @@
+import { fixtureCredential } from '../identity-fixture';
 import assert from 'node:assert/strict';
 import { createHash, randomUUID } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
@@ -60,7 +61,7 @@ test('workspace-preparation real integration', async () => {
             async function hubCli(args: string[], home = center) {
                 return service(home, ['hub', '--url', url, '--identity-file', identityFile, '--space', space, ...args]);
             }
-            const resources = new HubResourceClient({ url, identityFile, space });
+            const resources = new HubResourceClient({ url, credential: fixtureCredential(identityFile), space });
             async function waitRunner(machineId: string) {
                 await until(async () => { try { return (await resources.discover(machineId)).tools.length === 2; } catch { return false; } }, Boolean);
             }
@@ -87,7 +88,7 @@ test('workspace-preparation real integration', async () => {
             }
             const paths = await service(center, ['paths']);
             return { url, user, space, identityFile, statePath: paths.state, cli: hubCli, addRunner, stopRunner, startRunner, restart,
-                http: new HubClient({ url, identityFile, space }, 'hubAccess', 'hub_access_unavailable').http,
+                http: new HubClient({ url, credential: fixtureCredential(identityFile), space }, 'hubAccess', 'hub_access_unavailable').http,
                 candidate: { entry: 'compiled CLI + compiled serve + real HAPI/Runner', binary, hapiBinary,
                     cliSha256: createHash('sha256').update(readFileSync(binary)).digest('hex'), hapiSha256: createHash('sha256').update(readFileSync(hapiBinary)).digest('hex') },
                 close: async (success = false) => { await closeSmoke(cleanups); if (success) await removeFileSmokeData(root); } };
@@ -135,7 +136,7 @@ test('workspace-preparation real integration', async () => {
         const definition = join(root, 'reviewer.json'); writeFileSync(definition, JSON.stringify({ name: 'Reviewer', repositoryId: repository.id, runtimeId: runtime.id }));
         const agent = (await fixture.cli(['agent', 'create', '--request-id', randomUUID(), '--file', definition])).agent;
         const hapi = fixture.http;
-        const client = new HubPreparationClient({ url: fixture.url, home: sourceRunner.home, identityFile: fixture.identityFile, space: fixture.space, env }, join(project, 'app'));
+        const client = new HubPreparationClient({ url: fixture.url, home: sourceRunner.home, credential: fixtureCredential(fixture.identityFile), space: fixture.space, env }, join(project, 'app'));
         const requestId = randomUUID();
         const accepted = (await cli(sourceHome, ['workspace', 'prepare', '--agent', agent.id, '--base', 'HEAD', '--request-id', requestId], { cwd: join(project, 'app') })).preparation;
         evidence.preparations.push(accepted.id); assert.equal(accepted.origin.baseCommit, original); assert(accepted.origin.dirty);

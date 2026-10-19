@@ -1,3 +1,4 @@
+import { fixtureCredential } from '../identity-fixture';
 import assert from 'node:assert/strict';
 import { createHash, randomUUID } from 'node:crypto';
 import { mkdir, mkdtemp, open, readFile, stat, writeFile, rm } from 'node:fs/promises';
@@ -71,7 +72,7 @@ test('files-artifacts real integration', async () => {
         url = `http://127.0.0.1:${port}`; remoteUrl = url;
         const user = await (await fetch(url + '/api/runweft/hub/identities', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: 'Artifact owner' }) })).json();
         token = user.token; secrets.push(user.token); spaceId = user.personalSpace.id; identityFile = join(root, 'identity.txt'); await writeFile(identityFile, user.token, { mode: 0o600 });
-        const hapi = new HubClient({ url, identityFile, space: spaceId }, 'hubAccess', 'hub_access_unavailable').http;
+        const hapi = new HubClient({ url, credential: fixtureCredential(identityFile), space: spaceId }, 'hubAccess', 'hub_access_unavailable').http;
         const status = (await cli(home, ['status'])).value; assert.equal(status.runner.running, false);
         assert.equal((await hapi.request('/api/sessions')).sessions.length, 0);
         assert.equal((await hapi.request('/api/runweft/resources/machines')).machines.length, 0);
@@ -117,7 +118,7 @@ test('files-artifacts real integration', async () => {
         assert.equal((await cli(home, ['artifact', 'remove', object.id])).value.state, 'deleted');
         const another = await (await fetch(url + '/api/runweft/hub/identities', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: 'Other owner' }) })).json();
         secrets.push(another.token); const otherFile = join(root, 'other-identity.txt'); await writeFile(otherFile, another.token, { mode: 0o600 });
-        const other = new HubClient({ url, identityFile: otherFile, space: another.personalSpace.id }, 'hubAccess', 'hub_access_unavailable').http;
+        const other = new HubClient({ url, credential: fixtureCredential(otherFile), space: another.personalSpace.id }, 'hubAccess', 'hub_access_unavailable').http;
         await assert.rejects(() => other.request(`/api/artifacts/${evidence.cases[0]!.artifactId}`), { status: 404 });
         const rootCredential = JSON.parse(await readFile(join(paths.hapiServer, 'settings.json'), 'utf8')).cliApiToken;
         const runnerRead = await fetch(url + `/cli/artifacts/${evidence.cases[0]!.artifactId}`, { headers: { authorization: `Bearer ${rootCredential}` } });

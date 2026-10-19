@@ -36,7 +36,8 @@
     },
     "T3": {
       "title": "交付确认即激活与人工 CLI 登录",
-      "status": "todo"
+      "status": "done",
+      "verification": "确认即激活及 schema 2 本地记录接通；7 项连接集成通过，覆盖重试/取消/期限/冲突/保存失败；人工隐藏输入已验证，typecheck 和构建通过。"
     },
     "T4": {
       "title": "交付账号管理与部署者协助恢复",

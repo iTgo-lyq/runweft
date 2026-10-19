@@ -1,3 +1,4 @@
+import { fixtureCredential } from '../identity-fixture';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { randomUUID, createHash } from 'node:crypto';
@@ -68,7 +69,7 @@ export async function nativeUserSmoke(root: string, binary: string, env: NodeJS.
         }
         return { server, url, user, space, identityFile, run, cli, runner, binaries,
             async restart() { cli(server, ['restart']); for (const [home, item] of registered) { cli(home, ['runner', 'start']); await ready(home, item.id, item.flavors); } },
-            proxyHttp: (url: string) => new HubClient({ url, identityFile, space }, 'hubAccess', 'unavailable').http,
+            proxyHttp: (url: string) => new HubClient({ url, credential: fixtureCredential(identityFile), space }, 'hubAccess', 'unavailable').http,
             candidate: { entry: 'compiled CLI + compiled serve + real HAPI/Runner', invokedCLI: binary, binaries,
                 hashes: { cli: binaries.runweft.sha256, hapi: binaries.hapi.sha256 } },
             async close(success: boolean) { await closeSmoke(resources); if (success) await removeFileSmokeData(root); } };

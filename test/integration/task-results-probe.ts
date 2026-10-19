@@ -1,3 +1,4 @@
+import { fixtureCredential } from '../identity-fixture';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
@@ -118,7 +119,7 @@ export async function taskResultsProbe(p: { root: string; center: string; source
         writeFileSync(join(repo, 'app/note'), 'parent dirty stays'); writeFileSync(join(repo, 'untracked'), 'parent untracked');
         const protectedBefore = [readFileSync(join(repo, '.git/index')), readFileSync(join(repo, '.git/config')), readFileSync(join(repo, 'app/note'))];
         const config = loadConfig(p.sourceHome, p.env), identity = { host: 'codex' as const, nativeSessionId: parent.nativeSessionId, cwd: repo, callId: 'actual-fetch' };
-        const options = { url: p.fixture.url, identityFile: p.fixture.identityFile, space: p.fixture.space, home: p.sourceRunner.home, env: p.env };
+        const options = { url: p.fixture.url, credential: fixtureCredential(p.fixture.identityFile), space: p.fixture.space, home: p.sourceRunner.home, env: p.env };
         const client = new HubTaskClient(options, repo, identity), requestId = randomUUID();
         const pending = await cli(p.sourceHome, ['task', 'result', 'fetch', bundle.task.id, '--round', rounds[0]!, '--request-id', requestId], repo);
         assert.equal(pending.round_id, rounds[0]);

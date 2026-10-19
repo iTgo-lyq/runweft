@@ -1,3 +1,4 @@
+import { fixtureCredential } from '../identity-fixture';
 import { createTestIdentity } from '../identity-fixture';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
@@ -62,7 +63,7 @@ export async function nativeFileSmoke(root: string, command: string[], hapiBinar
             processes.add(item.child); await waitRunner(item);
         }
         async function waitRunner(item: typeof runners[number]) {
-            const client = new HubResourceClient({ url, identityFile, space });
+            const client = new HubResourceClient({ url, credential: fixtureCredential(identityFile), space });
             const deadline = Date.now() + 30_000;
             while (Date.now() < deadline) {
                 assert.equal(item.child!.exitCode, null, 'Runner exited');
@@ -107,7 +108,7 @@ export async function nativeFileSmoke(root: string, command: string[], hapiBinar
         }
         return { get gateway() { return gateway; }, get url() { return url; }, nativeUrl: target,
             losingNative: (client: DelegationNativeClient, proxyUrl: string) => new DelegationNativeClient(gateway.resources.store, new NativeTransport(proxyUrl, rootToken), client.scope), user, space, identityFile, home, statePath, runners,
-            http: new HubClient({ url, identityFile, space }, 'hubAccess', 'hub_access_unavailable').http, cli, addRunner, scoped, startRunner, stopRunner, restart,
+            http: new HubClient({ url, credential: fixtureCredential(identityFile), space }, 'hubAccess', 'hub_access_unavailable').http, cli, addRunner, scoped, startRunner, stopRunner, restart,
             async reopenGateway(scan = false) { await gateway.close(); await openGateway(scan); for (const item of runners.filter(item => item.child)) await waitRunner(item); },
             candidate: { cli: command, entry: command.length === 1 ? 'compiled CLI + source gateway' : 'source CLI + source gateway', bun: Bun.version, revision: execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(), hapiBinary, hashes: { cli: createHash('sha256').update(readFileSync(command.at(-1)!)).digest('hex'), hapi: createHash('sha256').update(readFileSync(hapiBinary)).digest('hex') },
                 kind: 'current domain seeds; real Hub authorization/Git/RPC/bytes; no Task coordinator end-to-end' },

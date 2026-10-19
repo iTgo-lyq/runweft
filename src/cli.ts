@@ -4,6 +4,7 @@ import { stringify } from 'yaml';
 import pkg from '../package.json';
 import { configPath, dataPaths, initializeConfig, loadConfig, setConfig, type ResolvedConfig } from './config';
 import { errorDetails } from './errors';
+import { addAccountCommands } from './hub/accounts/commands';
 import { addServiceCommands } from './service-commands';
 import { addMcpCommands } from './mcp/commands';
 import { addAgentCommands } from './hub/agents/commands';
@@ -26,7 +27,6 @@ export function createProgram() {
         .version(VERSION)
         .option('--home <directory>', '配置与数据根目录（默认 ~/.runweft）')
         .option('--space <id>', '本次操作的空间 UUID；默认已保存的连接空间')
-        .option('--identity-file <file>', '本次操作的身份备份文件')
         .option('--json', '输出结构化 JSON')
         .enablePositionalOptions()
         .showHelpAfterError()
@@ -84,6 +84,7 @@ export function createProgram() {
     const workspace = program.command('workspace').description('通过中心配置诊断独立 Git 工作区；仓库关联使用 repository');
     addPreparationCommands(workspace, program, context, output, () => new HubPreparationClient(connection(), process.cwd()));
     addServiceCommands(program, context, output);
+    addAccountCommands(program,context,output);
     addMcpCommands(program, context, output);
     addUninstallCommand(program, output);
     addHubResourceCommands(program, connection, () => context().home, output);

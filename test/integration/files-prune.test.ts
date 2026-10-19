@@ -1,3 +1,4 @@
+import { fixtureCredential } from '../identity-fixture';
 import assert from 'node:assert/strict';
 import { Database } from 'bun:sqlite';
 import { createHash, randomUUID } from 'node:crypto';
@@ -64,7 +65,7 @@ test('files-prune real integration', async () => {
         const paths = (await cli(home, ['paths'])).value;
         const user = await (await fetch(url + '/api/runweft/hub/identities', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: 'Prune owner' }) })).json();
         token = user.token; secrets.push(token); spaceId = user.personalSpace.id; identityFile = join(root, 'identity.txt'); await writeFile(identityFile, token, { mode: 0o600 });
-        const hapi = new HubClient({ url, identityFile, space: spaceId }, 'hubAccess', 'hub_access_unavailable').http;
+        const hapi = new HubClient({ url, credential: fixtureCredential(identityFile), space: spaceId }, 'hubAccess', 'hub_access_unavailable').http;
         let losePruneResponse = false;
         proxy = Bun.serve({ port: 0, hostname: '127.0.0.1', async fetch(request) {
             const input = new URL(request.url);
@@ -136,7 +137,7 @@ test('files-prune real integration', async () => {
         assert.equal(await readFile(download, 'utf8'), 'retained file bytes');
         const otherUser = await (await fetch(url + '/api/runweft/hub/identities', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: 'Other prune owner' }) })).json();
         secrets.push(otherUser.token); const otherFile = join(root, 'other-identity.txt'); await writeFile(otherFile, otherUser.token, { mode: 0o600 });
-        const other = new HubClient({ url, identityFile: otherFile, space: otherUser.personalSpace.id }, 'hubAccess', 'hub_access_unavailable').http;
+        const other = new HubClient({ url, credential: fixtureCredential(otherFile), space: otherUser.personalSpace.id }, 'hubAccess', 'hub_access_unavailable').http;
         assert.equal((await other.request('/api/artifacts/prune', { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' })).candidates.length, 0);
         assert.equal((await hapi.request('/api/sessions')).sessions.length, 0);
         record('apply pagination frees quota, preserves input/output/recovery/external pins and recent files; tombstones survive restart; zero agents');

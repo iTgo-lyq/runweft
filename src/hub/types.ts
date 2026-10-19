@@ -3,7 +3,6 @@ import { RunweftError } from '../errors';
 
 export const HubName = z.string().trim().min(1).max(80);
 export const HubRole = z.enum(['owner', 'admin', 'member']);
-export const IdentityToken = z.string().regex(/^rw_id_[A-Za-z0-9_-]{43}$/);
 export const InvitationToken = z.string().regex(/^rw_inv_[A-Za-z0-9_-]{43}$/);
 export type Role = z.infer<typeof HubRole>;
 export type Identity = { id: string; name: string; createdAt: number };

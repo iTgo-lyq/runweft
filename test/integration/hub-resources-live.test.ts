@@ -1,3 +1,4 @@
+import { fixtureCredential } from '../identity-fixture';
 import { createTestIdentity } from '../identity-fixture';
 import assert from 'node:assert/strict';
 import { randomBytes } from 'node:crypto';
@@ -106,7 +107,7 @@ test('hub-resources-live real integration', async () => {
         assert.equal((await cli(af, ['machine', 'show', machineId])).machine.connection, 'pending');
         assert.equal((await cli(af, ['machine', 'enroll'])).machineId, machineId);
         for (const space of [sid, tid]) await cli(af, ['machine', 'associate', machineId, space]);
-        const owner = new HubResourceClient({ url: base, identityFile: af, space: sid });
+        const owner = new HubResourceClient({ url: base, credential: fixtureCredential(af), space: sid });
         await startRunner(recordPath);
         await until(async () => {
             assert.equal(runner!.exitCode, null, 'Runner exited unexpectedly');

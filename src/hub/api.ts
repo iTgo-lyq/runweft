@@ -8,7 +8,7 @@ const prefix = '/api/runweft/hub';
 const named = z.object({ name: HubName }).strict();
 const roleInput = z.object({ role: HubRole }).strict();
 const attempts = new Map<string,{at: number; count: number}>();
-function limitPassword(request: IncomingMessage, body: unknown) {
+export function limitPassword(request: IncomingMessage, body: unknown) {
     const now = Date.now(), name = body && typeof body === 'object' && 'username' in body ? String(body.username).trim().toLowerCase().slice(0,80) : '';
     for (const [key,value] of attempts) if (now-value.at>=60_000) attempts.delete(key);
     if (attempts.size>4096) throw new HubError(429,'account_rate_limited','登录请求过多，请稍后重试。');
