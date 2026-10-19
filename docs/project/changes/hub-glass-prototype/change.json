@@ -4,42 +4,20 @@
   "title": "Hub 前端交互与样式重构",
   "size": "large",
   "status": "active",
-  "stage": "requirement",
+  "stage": "technical",
   "branch": "codex/hub-glass-prototype",
-  "confirmations": {},
+  "confirmations": {
+    "requirement": {
+      "at": "2026-10-19T18:17:38.224Z",
+      "summary": "先交付8入口浅深双主题Hub原型，验收后再定重构方案",
+      "source": "用户：继续吧，接下来完全靠你自己推进了，不要再问我问题了，直到原型交付。（此前已答：深浅一起做；8个入口全做）"
+    }
+  },
   "tasks": {
     "T1": {
       "title": "完成蓝色轻玻璃八入口原型与交互验证",
       "status": "done",
       "verification": "Bun 1.4.2 构建通过；10项工具测试、24组三尺寸交互与截图通过；已人工查看截图，文档/工作流/diff检查通过。"
-    },
-    "T2": {
-      "title": "交付统一应用壳与基础交互组件",
-      "status": "todo"
-    },
-    "T3": {
-      "title": "重构真实身份与空间接入流程",
-      "status": "todo"
-    },
-    "T4": {
-      "title": "重构任务列表与轮次交付详情",
-      "status": "todo"
-    },
-    "T5": {
-      "title": "重构机器与 Runtime 资源管理",
-      "status": "todo"
-    },
-    "T6": {
-      "title": "重构 Agent 定义与分享管理",
-      "status": "todo"
-    },
-    "T7": {
-      "title": "重构仓库与个人协作选择",
-      "status": "todo"
-    },
-    "T8": {
-      "title": "重构成员与邀请协作流程",
-      "status": "todo"
     }
   },
   "closure": {},
@@ -294,8 +272,42 @@
     }
   ],
   "rework": {
-    "at": "2026-10-18T23:27:41.877Z",
-    "reason": "用户将原型优化升级为前端交互与样式重构的大型 Change，原先仅原型范围失效",
-    "approach": "保留已交付原型任务及固定 R2 引用，重写真实 Hub 重构需求、技术方案、计划与验收，重新确认后再实施产品"
+    "at": "2026-10-19T18:11:19.609Z",
+    "reason": "用户回滚预定的产品实施计划，要求先完成原型设计并经其验收，再梳理前端重构技术方案",
+    "approach": "以当前 develop 的 Hub 为基线重写需求与原型覆盖，删除技术与计划草案；保留 T1 与固定引用，产品任务待原型验收后重新规划"
+  },
+  "clarifications": {
+    "Q1": {
+      "round": 1,
+      "question": "重构范围只做 Hub 与原型，还是同时包含官网？",
+      "recommendation": "先做 Hub 与原型；官网的约束和发布链路不同，另开 Change",
+      "answer": "目前先只做原型，覆盖 Hub 主体页面",
+      "source": "用户：目前只是先做原型，覆盖主体页面即可"
+    },
+    "Q2": {
+      "round": 1,
+      "question": "是否加入深色模式？",
+      "recommendation": "浅色与深色一起设计，跟随系统并可在演示工具条切换；Craft 参考包含深色层级处理，与浅色同时定 token 比事后补做成本低",
+      "answer": "浅色与深色一起做",
+      "source": "用户：深浅一起做"
+    },
+    "Q3": {
+      "round": 1,
+      "question": "产品前端沿用原生栈只借鉴 shadcnuikit 设计，还是迁移到 React + Tailwind + shadcn？",
+      "recommendation": "沿用原生栈：保持 CSP、单二进制与零外部依赖；迁移代价需在技术方案中单独评估"
+    },
+    "Q4": {
+      "round": 2,
+      "question": "原型 8 个入口全做，还是只做最小集（账号与连接、任务、Agent、成员，资源页仅机器作代表）？",
+      "recommendation": "8 个全做：资源页共用一套模式，额外成本小，且与后续产品页一一对应",
+      "answer": "8 个入口全做",
+      "source": "用户：8个入口全做"
+    },
+    "Q5": {
+      "round": 2,
+      "question": "原 identity 入口是否并入工作台壳？",
+      "recommendation": "并入：账号模式下身份只剩显示名称和空间管理",
+      "withdrawn": "核对产品后确认身份与空间位于工作台侧栏，不是独立页面；按事实并入工作台壳，无需取舍"
+    }
   }
 }
