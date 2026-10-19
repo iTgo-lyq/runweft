@@ -181,5 +181,9 @@
       "recommendation": "并入：账号模式下身份只剩显示名称和空间管理",
       "withdrawn": "核对产品后确认身份与空间位于工作台侧栏，不是独立页面；按事实并入工作台壳，无需取舍"
     }
+  },
+  "waitingFor": {
+    "kind": "confirmation",
+    "summary": "等待用户验收 Hub 原型，通过后再编写产品重构技术方案"
   }
 }
