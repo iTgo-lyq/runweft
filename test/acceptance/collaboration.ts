@@ -84,9 +84,10 @@ export async function collaboration(f: NativeFixture, id: string) {
     try {
         while (!done) {
             await Promise.race([exited, Bun.sleep(750)]);
-            const tasks = cli(['task', 'list']).agents; assert(tasks.length <= 1, 'Host created duplicate task');
+            const listed = cli(['task', 'list']); assert(listed.total <= 1, 'Host created duplicate task');
+            const tasks = listed.items;
             if (tasks.length) {
-                const current = cli(['task', 'show', tasks[0].agent_id]);
+                const current = cli(['task', 'show', tasks[0].id]);
                 if (current.host_pid) f.pids.add(current.host_pid);
                 assert(!['unknown', 'failed'].includes(current.status), 'Native task failed or became unknown');
                 assert(current.status !== 'needs_attention' || current.attention?.code === 'permission_required', 'Native task needs non-permission attention');
