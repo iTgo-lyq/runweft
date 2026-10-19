@@ -2,9 +2,10 @@
   "schemaVersion": 1,
   "entries": [
     {
-      "id": "identity",
-      "title": "身份与空间",
-      "sourcePath": "packages/prototype/src/app.js",
+      "id": "account-onboarding",
+      "title": "账号与首次连接",
+      "description": "注册登录、CLI 连接核对与授权结果、过期请求和密码重置",
+      "sourcePath": "packages/prototype/src/pages/account.js",
       "kind": "page",
       "devices": [
         "pc-web",
@@ -13,30 +14,16 @@
       ],
       "artifact": {
         "type": "hosted",
-        "version": "2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06",
-        "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06/identity/index.html",
-        "sourceCommit": "58882d25872fe1779982b4b629cba1cd8120f835",
-        "digest": "sha256:167353c25a15f8d77d4bff846bc1e95746959596b7c561524177d5c1953b6332",
-        "thumbnails": [
-          {
-            "device": "pc-web",
-            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06/identity/pc-web.png"
-          },
-          {
-            "device": "ipad",
-            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06/identity/ipad.png"
-          },
-          {
-            "device": "mobile",
-            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06/identity/mobile.png"
-          }
-        ]
+        "version": "a3b8d01ec793b8bba24b8b685af2c4a528c01dbc63de592237ad8443362780ff",
+        "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/a3b8d01ec793b8bba24b8b685af2c4a528c01dbc63de592237ad8443362780ff/index.html",
+        "sourceCommit": "add4fc691c370d95ca28e1d5f3d4a97bc1fd79cc",
+        "digest": "sha256:8b68e9671a3b9e03252da8ebbd3698bd1a61ab0526e4fa5032764bd5548964cd"
       }
     },
     {
       "id": "tasks",
       "title": "任务与轮次详情",
-      "sourcePath": "packages/prototype/src/ui/tasks-page.js",
+      "sourcePath": "packages/prototype/src/pages/tasks.js",
       "kind": "page",
       "devices": [
         "pc-web",
@@ -63,12 +50,13 @@
             "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06/tasks/mobile.png"
           }
         ]
-      }
+      },
+      "description": "任务列表与检查器：轮次、报告阅读、交付与继续处理"
     },
     {
       "id": "machines",
       "title": "机器管理",
-      "sourcePath": "packages/prototype/src/ui/resources-page.js",
+      "sourcePath": "packages/prototype/src/pages/resources.js",
       "kind": "page",
       "devices": [
         "pc-web",
@@ -95,12 +83,13 @@
             "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06/machines/mobile.png"
           }
         ]
-      }
+      },
+      "description": "机器列表、空间关联、凭据与治理"
     },
     {
       "id": "runtimes",
       "title": "Runtime 管理",
-      "sourcePath": "packages/prototype/src/ui/resources-page.js",
+      "sourcePath": "packages/prototype/src/pages/resources.js",
       "kind": "page",
       "devices": [
         "pc-web",
@@ -127,12 +116,13 @@
             "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06/runtimes/mobile.png"
           }
         ]
-      }
+      },
+      "description": "Runtime 登记、共享、可用性与检查"
     },
     {
       "id": "agents",
       "title": "Agent 定义与分享",
-      "sourcePath": "packages/prototype/src/ui/agents-page.js",
+      "sourcePath": "packages/prototype/src/pages/agents.js",
       "kind": "page",
       "devices": [
         "pc-web",
@@ -159,12 +149,13 @@
             "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06/agents/mobile.png"
           }
         ]
-      }
+      },
+      "description": "Agent 定义的阅读与就地编辑、版本历史、分享与治理"
     },
     {
       "id": "repositories",
       "title": "仓库与 checkout",
-      "sourcePath": "packages/prototype/src/ui/repositories-page.js",
+      "sourcePath": "packages/prototype/src/pages/repositories.js",
       "kind": "page",
       "devices": [
         "pc-web",
@@ -191,12 +182,13 @@
             "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06/repositories/mobile.png"
           }
         ]
-      }
+      },
+      "description": "仓库目录、Git 别名与本人 checkout"
     },
     {
       "id": "selections",
       "title": "我的选择与配置解析",
-      "sourcePath": "packages/prototype/src/ui/selections-page.js",
+      "sourcePath": "packages/prototype/src/pages/selections.js",
       "kind": "page",
       "devices": [
         "pc-web",
@@ -223,12 +215,13 @@
             "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06/selections/mobile.png"
           }
         ]
-      }
+      },
+      "description": "个人选择、解析顺序与解析预览"
     },
     {
       "id": "members",
       "title": "成员与邀请",
-      "sourcePath": "packages/prototype/src/app.js",
+      "sourcePath": "packages/prototype/src/pages/members.js",
       "kind": "page",
       "devices": [
         "pc-web",
@@ -255,25 +248,8 @@
             "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06/members/mobile.png"
           }
         ]
-      }
-    },
-    {
-      "id": "account-onboarding",
-      "title": "账号与首次连接",
-      "description": "注册登录、一页授权、恢复密码、登录环境和首次空态；仅内存演示",
-      "sourcePath": "packages/prototype/src/account-onboarding.html",
-      "kind": "page",
-      "devices": [
-        "pc-web",
-        "mobile"
-      ],
-      "artifact": {
-        "type": "hosted",
-        "version": "a3b8d01ec793b8bba24b8b685af2c4a528c01dbc63de592237ad8443362780ff",
-        "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/a3b8d01ec793b8bba24b8b685af2c4a528c01dbc63de592237ad8443362780ff/index.html",
-        "sourceCommit": "add4fc691c370d95ca28e1d5f3d4a97bc1fd79cc",
-        "digest": "sha256:8b68e9671a3b9e03252da8ebbd3698bd1a61ab0526e4fa5032764bd5548964cd"
-      }
+      },
+      "description": "成员角色、邀请、空间名称与退出"
     }
   ]
 }

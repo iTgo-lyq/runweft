@@ -48,3 +48,36 @@ T1 仅交付独立原型，未修改 src/hub、HAPI、产品配置或模型凭�
 已按当前 develop 的 Hub 重写 Requirement，用 rework 记录本次调整，并删除 Technical 与 Plan 草案（Git 历史保留）。T1 及其固定引用不变。SpecTrail 现有命令不能删除未开始的任务，经用户授权（“允许你直接改 json”）直接编辑 change.json，删除未开始的 T2–T8；编号不复用，后续任务从 T9 起。本分支落后 develop 50 个提交，绘制原型前先同步。
 
 本轮只修改文档与流程状态，未改动原型或产品代码。
+
+## 2026-10-19 原型设计交付
+
+需求确认后，把最新 develop 合入本分支，原型包以 develop 为基线。分支上此前的蓝色轻玻璃实现只作参考，保留在 Git 历史和固定 R2 版本中。按需求重新设计 8 个入口：账号与首次连接、任务、机器、Runtime、Agent、仓库、我的选择、成员；原 `identity` 入口并入工作台侧栏。没有修改 `src/hub`、HAPI 或官网。
+
+视觉与交互规范写入[原型 DESIGN](../../../../packages/prototype/DESIGN.md)：冷调中性框架与蓝色强调、只在浮动控制层使用的玻璃、浅色与深色两套令牌、列表与检查器、就地编辑、轮次“纬线”。shadcnuikit 读取了 `dashboard-shell8`、`tables19` 源码与 `apps/mail`、`project-detail` 页面结构，空态、账号与成员只按目录说明对照；没有安装或复制其 React 源码。界面按当前 Specs 表达产品事实：账号不出现 token 流程，用户名和密码不设长度规则；任务筛选只用现有服务端参数，“在本页查找”写明范围；不显示全量状态统计；“执行未确认”有独立颜色和图标，不提示重发；权限差异通过演示角色切换展示。
+
+### 实际验证
+
+- `bun run build`：8 个自包含入口构建成功。
+- `node --test publish-r2.test.mjs`：10 项通过。
+- `CI=true bun run test`、`CI=true bun run screenshots`：24 组入口流程（8 个入口 × 桌面 1440×1000、平板 834×1112、手机 390×844，平板和手机使用触摸）全部通过，另存 48 张浅色与深色截图。每组都检查不透明 iframe、ready 握手、无外部请求或存储访问、无横向溢出和浏览器错误，并覆盖各入口的主要操作和失败路径。另一组桌面检查覆盖空数据、首次加载失败、刷新失败保留内容、离线时写入结果未确认、登录过期后回到原页面、对话框和检查器关闭后焦点回归、方向键在列表中移动、外观切换，以及减少动态效果和减少透明度（本机 Chromium 支持这两项模拟）。
+- 本机 Chromium 无法启用进程沙箱，按包内说明使用 `CI=true` 运行；iframe 权限仍仅为 allow-scripts。
+- 人工查看了桌面、平板、手机的浅色与深色截图，以及任务、Agent、机器、Runtime 检查器的展开状态。发现并修复了：空值被渲染成文字、本页查找框样式被通用输入样式覆盖、平板检查器遮住列表时的操作路径、关系线在行尾断开、轮次间距过大、窄屏标签缺少底色。
+
+### 与当前 develop 原型对照
+
+左侧为合入前 develop 的原型，右侧为本次原型，均为同一入口打开后的首屏。
+
+| 入口 | 主要变化 | 桌面 | 手机 |
+| --- | --- | --- | --- |
+| 账号与首次连接 | 与工作台使用同一套视觉；核对码单独突出，手机上先显示；按当前 Spec 去掉用户名和密码长度规则；账号设置移入工作台 | [对照](assets/compare/account-onboarding-pc-web.jpg) | [对照](assets/compare/account-onboarding-mobile.jpg) |
+| 任务 | 状态分段筛选，其余筛选收进弹出层；列表与检查器并排，不再替换列表；轮次用纬线切换；报告分段阅读；交付、详情与继续处理分标签 | [对照](assets/compare/tasks-pc-web.jpg) | [对照](assets/compare/tasks-mobile.jpg) |
+| 机器 | 表格式列表加检查器；空间关联改为带确认的开关；凭据和取消登记收进菜单；非本人机器只显示概要 | [对照](assets/compare/machines-pc-web.jpg) | [对照](assets/compare/machines-mobile.jpg) |
+| Runtime | 可用性和不可用原因直接显示；共享按空间开关，未关联机器的空间不可开启；检查结果写明未检查模型认证 | [对照](assets/compare/runtimes-pc-web.jpg) | [对照](assets/compare/runtimes-mobile.jpg) |
+| Agent | 定义以阅读形式呈现，在检查器内就地编辑并提示将生成的版本；版本历史和分享独立成标签；他人私有 Agent 只显示治理概要 | [对照](assets/compare/agents-pc-web.jpg) | [对照](assets/compare/agents-mobile.jpg) |
+| 仓库 | 别名可添加和移除并校验地址；本人 checkout 只读展示；登记改为对话框 | [对照](assets/compare/repositories-pc-web.jpg) | [对照](assets/compare/repositories-mobile.jpg) |
+| 我的选择 | 解析顺序用纬线展示；每条选择显示有效或需要处理及原因；解析预览给出来源层和失败原因 | [对照](assets/compare/selections-pc-web.jpg) | [对照](assets/compare/selections-mobile.jpg) |
+| 成员 | 空间名称就地编辑；角色操作按权限收进菜单；邀请只显示一次；最后一位所有者的限制提前说明 | [对照](assets/compare/members-pc-web.jpg) | [对照](assets/compare/members-mobile.jpg) |
+
+### 交付方式与边界
+
+本机没有配置 R2 发布凭据，本次没有上传 R2，也没有改变项目的 custom/R2 托管策略。按 SpecTrail Git 兜底，从已推送的源码提交生成 8 个自包含 HTML 快照，登记到原型清单和本 Change；`bun run dev` 可在本机预览全部入口。原型只证明界面与交互设计，不代表真实接口、权限执行或模型执行；示例版本、哈希和路径都是虚构的。需要用户验收原型后，才开始编写产品重构的技术方案。

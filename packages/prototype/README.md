@@ -1,8 +1,16 @@
 # Hub 交互原型
 
-九个入口覆盖账号与首次连接、身份与空间、任务详情、机器、Runtime、Agent、仓库、个人选择和成员。工作台页面主体从 `src/hub` 在提交 `23ca1d4` 抽取，独立维护在 `src/ui`；身份壳与请求替换为本包内存演示，不引入后端。新增账号入口独立位于 `src/account-onboarding.html`，只表达本 Change 的账号/连接流程，不改变其他原型入口。原型不是产品或真实 HAPI 执行验证。
+八个入口覆盖账号与首次连接、任务、机器、Runtime、Agent、仓库、我的选择和成员。所有入口是同一个应用，入口 ID 只决定打开时的第一屏；身份与空间位于工作台侧栏。视觉与交互规范见 [DESIGN.md](DESIGN.md)。原型只用虚构的内存数据，不是产品或真实 HAPI 执行验证。
 
-账号入口提供场景切换：首次注册、已有账号（含多空间）、过期请求、忘记密码、账号设置和首次工作台。表单仅演示，不输入真实密码；可用任意不少于 15 个字符的示例密码，重置码输入 demo。环境撤销、改密码及全端退出只改变内存演示。
+| 位置 | 内容 |
+| --- | --- |
+| `src/app.js` | 工作台壳、路由、账号状态切换、演示控制 |
+| `src/mock.js` | 虚构数据与内存接口，字段沿用产品投影 |
+| `src/ui/` | DOM 工具与通用控件（按钮、检查器、菜单、对话框、纬线等） |
+| `src/pages/` | 各页面：账号、任务、机器与 Runtime、Agent、仓库、我的选择、成员、账号设置 |
+| `src/style.css`、`src/shell.html` | 浅色/深色令牌与组件样式；页面骨架和内联图标 |
+
+右下角“演示”切换数据场景（正常、空数据、首次加载失败、刷新失败、离线或结果未知、登录过期）、在“产品协作”的角色（所有者、管理员、成员）、外观（跟随系统、浅色、深色）和账号场景。账号页可用任意用户名和密码；重置码和邀请输入 `demo`。刷新或“重置演示”恢复初始数据。
 
 在本目录运行：
 
@@ -10,11 +18,12 @@
 bun install --frozen-lockfile
 bunx playwright install chromium
 bun run build
+bun run dev        # http://127.0.0.1:4175/tasks/index.html
 bun run test
 bun run screenshots
 ```
 
-手机截图滚动到空间内容，便于从缩略图区分各入口；页面仍保留完整侧栏。构建将 HTML/CSS/JavaScript 合成 `dist/<id>/index.html`。可使用任意静态 HTTP 服务预览；CI 的临时 Ubuntu runner 关闭 Chromium 进程沙箱（其 user namespace 被宿主限制）；iframe 权限仍仅为 allow-scripts，本地默认启用进程沙箱。受限 iframe 的 16 组桌面/手机入口检查由 `verify.mjs` 自动执行：加载、隔离、无外部请求、主导航，以及身份和任务详情的代表性交互；不逐页复演演示 CRUD。场景切换、空间切换和资源编辑使用内存；刷新或“重置演示”恢复初始值。导入身份/接受邀请使用 `demo`，不输入真实凭据。
+构建将 HTML/CSS/JavaScript 合成自包含的 `dist/<id>/index.html`；`bun build.mjs --git-preview` 同时写出 Git 交付用的 `preview/<id>/index.html`。`verify.mjs` 在受限 iframe 中覆盖 8 个入口 × 桌面 1440×1000、平板 834×1112、手机 390×844：加载、隔离、无外部请求和存储、无横向溢出、各入口主要操作（平板和手机用触摸），以及数据场景、键盘焦点回归、外观切换、减少动态效果和减少透明度。`--screenshots` 另存每个入口与设备的浅色和深色截图。CI 的临时 Ubuntu runner 和不允许 user namespace 的机器上设置 `CI=true`，关闭 Chromium 进程沙箱；iframe 权限仍仅为 allow-scripts。
 
 清单在 `prototype.json`，上传入口在 `publish-entries.json`。每次发布必须从干净、已推送的源码提交构建，再登记固定版本；后续更新不会覆盖历史地址。
 
