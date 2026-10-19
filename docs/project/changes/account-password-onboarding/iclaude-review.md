@@ -1,88 +1,128 @@
 # iclaude 评审原文
 
-评审日期：2026-10-19。输入为基线 `62128b383d36a90b36c47323a076bfb9d4c886d9` 的需求、技术方案、首次体验评审和调查依据，可按需只读核对当前源码。调用入口为本机 `iclaude`，Claude Code 2.1.283，实际模型为该入口已有配置 `glm-5.3`；开放工具仅 Read/Grep/Glob。进程退出码 0，结果为 success，无工具权限拒绝。
+评审日期：2026-10-19。评审基线 `ec835fc9ce89177dc7e4bd08a0373c64c4c3b26f`，本机 `iclaude` 入口，Claude Code 2.1.283。此次保留启动脚本的专用配置，启动事件及最终 modelUsage 均报告 `claude-opus-5-5`；进程退出码 0，结果 success，无工具权限拒绝。仅开放 Read/Grep/Glob，未修改仓库文件。
 
-以下保留其最终评审原文；其中行号对应评审时的文件。主 Agent 对意见的核实与采纳范围见 [评审处理记录](review.md#iclaude-大方向复审)。此报告不构成新功能的运行验收。
+本报告替换前次因调用方额外传入 `--settings`、覆盖 iclaude 专用配置而错误使用 GLM 生成的版本。纠正过程与意见采纳范围见 [评审处理记录](review.md)。本次要求独立审阅，不参考前次报告。
 
----
-
-核实完毕。以下为最终评审。
+以下保留本次完整最终输出，行号对应评审时文件；结论属于方案评审，不构成新功能运行验收。
 
 ---
 
-# Runweft 账号密码与首次接入改造方案 — 独立评审(iclaude,只读)
+# Runweft 账号密码与首次接入方案评审（iclaude，只读）
 
-评审基线 `62128b3`(方案文档)，源码事实核实于当前工作区 `develop`。仅读代码与文档，未运行任何命令、未修改文件。
+评审基线是 `ec835fc`。我读完了规定的 5 份文档，并只读抽查了 `src/hub/{access,connect,delegation}`、`app.ts`、CLI 命令注册和 Runweft Kit 的 onboarding/delegation 说明。没有运行命令，没有改动文件，也没有复查 HAPI 子模块源码；HAPI 部分的结论来自 research.md，与我看到的 Runweft 侧代码一致。
 
-## 一、总判断
+## 1. 总判断：方向正确，可以推进
 
-**方向正确，可推进。**
+- **目标闭环成立。** 账号密码取代用户手工保管 token；浏览器会话和 CLI 凭据分开、可单独撤销；部署者在服务器上协助重置密码；主 Agent 用 CLI 跑出首份结果，MCP 重载不再是看到结果的前置条件。这几项合起来，"退出后能回来、不再保管 token、尽快拿到首个真实结果"都能做到。
+- **改动范围克制。** 身份 UUID、空间、成员和资源授权不动，HAPI 不改，也没有新建工作流引擎或身份平台。
+- **有一处建议在写 Plan 前改掉。** 连接协议的两段式激活可以合并（见第 4 节第 1 项）。原设计也能工作，只是更重，所以这一项不阻塞方向。
 
-方案把“登录凭据”从身份本体拆出、把首次体验从“用户搬运 token + 两轮对话”改成“一张表单 + Agent 驱动 CLI",这两个主方向都直接命中用户目标，且与现有代码的耦合点被正确识别(详见下文代码证据)。经核实未发现会使核心方案不成立的架构性矛盾。方案自身已做的减法(RSA 交接、token 备份/导入、迁移框架、邮箱/SSO)方向正确，新增面控制在登录模型变更的最小必要范围内，没有借机造通用身份平台或工作流引擎。
+## 2. 第一性功能
 
-## 二、功能第一性判断
+**能直接解决目标。** 我对照了现有 Kit（`.agents/skills/runweft-kit/references/onboarding.md`）里的三个断点，方案都去掉了：
+- 第 8 行：要求用户在"已有 Hub / 本机启动"之间二选一；
+- 第 32 行：要求用户保存身份 token 备份；
+- 第 83 行：要求先重开客户端，才能开始首个任务。
 
-对照用户四个目标：
+**没有核心缺口。** 首次路径需要的 CLI 命令都已存在：
+- `hub connect`、`machine enroll/associate/discover`、`runtime register/check`（`src/hub/resources/commands.ts:46-116`）；
+- `repository inspect/match/create/bind`（`src/hub/repositories/commands.ts:15-33`）；
+- `agent create/select`（`src/hub/agents/commands.ts:18-37`）；
+- `task spawn/wait/show`（`src/tasks/commands.ts:133-198`）；
+- `runner start`（`src/service-commands.ts:53`）。
 
-1. **账号密码登录、退出可返回、不保管 token** — 直接闭环。现状的最高摩擦点(token 备份弹窗、退出后找回外部 token 副本)在 onboarding-review.md 的实测走查中被准确识别(audit-03、audit-06),改造(密码登录 + 独立可撤销凭据 + 部署者重置)逐点对应。首版不承诺“跨浏览器重启记住登录”是合理边界，不是缺口。
-2. **保留身份 UUID / 空间 / 权限 / HAPI** — 闭环。Identity 保留 UUID 作外键，Membership、Machine/Task credential、授权回查模型全部不动；账号逻辑全部落在 Runweft 自有网关层。
-3. **少交互、CLI 优先、尽快首份结果** — 闭环且克制。目标路径“一次请求、一张表单、零手工 CLI、无第二段提示”所需的命令面在现有 CLI 中全部存在(证据见下)，方案仅新增 `connect complete --wait` 有界等待与凭据注销两个小能力，编排仍交给 Skill/主 Agent,没有新增 setup 引擎。
-4. **无部署、无兼容、部署者重置** — 闭环。schema 20 唯一格式 + 拒绝旧格式保留原文件，与 AGENTS.md 数据策略一致；重置走本机管理命令，不引入邮件基础设施。
+真正要新增的只有 `connect complete --wait`，再加上 Skill 重写。
 
-**可省掉的复杂度**：方案已自行删除(RSA 交接改为客户端随机秘密 + 服务端摘要，净简化；删除 token 备份/导入/轮换/迁移)。剩余部分(凭据列表/撤销、重置码、限流)分别对应 requirement 验收表中的可观察场景，不属于镀金。我没有发现应砍而未砍的整块设计。
+**可以省掉的复杂度：**
+- 连接协议的确认→回执→ACK 激活两段式（第 4 节第 1 项）；
+- "已登录只确认"这条页面分支（第 4 节第 2 项）；
+- 浏览器闲置期限加 lastUsedAt 合并写、`revoke-all` 独立接口：首版用绝对期限就够；改密码本身已经能达到全端退出。这两项可以延后，不设为门槛；
+- `hub_accounts` 单独 1:1 建表还是直接加列到 `hub_users`，两种都行，不需要专门讨论。
 
-## 三、主体技术判断
+## 3. 主体技术
 
-### 1. 账户与身份分离 — 成立(事实)
+**账户/身份分离：成立，改动集中。**
+- 现状：用户认证和 JWT `ref` 都直接绑定 `hub_users.tokenDigest`（`src/hub/access/store.ts:114-121`、`src/hub/access/auth.ts:25`）。
+- 方案：改成 N:1 的 `UserCredential`，JWT 的 `ref` 指向具体凭据，验证时照旧回查。这是最小改法，动态撤权语义不变。
+- 方案点出的关键耦合是对的：`serviceUser` 目前靠读用户摘要来构造后台主体（`store.ts:137-139`），被委派上下文、服务和原生代理反复调用（`delegation/context.ts:26-28`、`delegation/service.ts:40,47,94`、`delegation/native.ts:40`）。删掉 `tokenDigest` 后，后台任务会立刻失去授权。所以它必须和凭据拆分放在同一个交付任务里，`technical.md:149` 已经这样写了，应保持。
 
-现状 `hub_users` 直接保存唯一 `tokenDigest`,`AccessStore.resolve('user')` 按该摘要查询用户(`src/hub/access/store.ts:116-120`),后台任务 `serviceUser` 复用同一摘要(`src/hub/access/store.ts:137-139`),浏览器与 CLI 最终共用同一 token(确认时把确认者 tokenDigest 存为 `identityDigest`,`src/hub/connect/store.ts:60-61`;CLI 解密 ciphertext 得到的就是 IdentityToken,`src/hub/connect/client.ts:111-114`)。**事实**：这套结构下，多凭据、独立撤销、密码失效语义必然要求拆表。方案的三层结构(Account 1:1 Identity、UserCredential N:1、JWT ref 指向凭据并每次回查)是该问题的最小正确形态。撤权语义表(浏览器单退/撤 CLI/改密码/撤机器)与现有动态回查机制(`src/hub/access/auth.ts:33-42` verify 后 resolve 重查)同构，不依赖 JWT 黑名单。
+**浏览器凭据：成立。**
+- 现在主页就把长期 token 放在 `sessionStorage`（`src/hub/app.ts:24,292`）。打开原生页时先清掉继承的存储、断开 opener、只注入短 JWT（`app.ts:141-147`）。
+- 把 `rw_id_` 换成浏览器会话凭据基本是原样替换，原生页的边界不变。
+- 不用 Cookie、不增加第二个 origin 的取舍是合理的。"关标签需重登"的限制可以接受，因为有了密码，用户退出后照样能回来。
 
-### 2. 浏览器/CLI 凭据与连接协议 — 成立(事实 + 标注推断)
+**CLI 凭据：方向正确。** 由客户端生成秘密、Hub 只存摘要，比现在的 RSA 交接简单，也避免了浏览器把自己的秘密复制给 CLI。协议还可以再收一步，见第 4 节第 1 项。
 
-- **事实**：原生页隔离依赖“清除继承的 sessionStorage 身份 + 断 opener + 只注入短 JWT"(`src/hub/app.ts:141-147`、`src/hub/native-page.ts:16-19`,native-page 还拦截 HAPI 对 `hapi_access_token::*` localStorage 的读写)。换成同源自动携带的 Cookie 确实会击穿该边界，方案保持 sessionStorage 并显式写下 XSS 取舍而非宣称更安全，论据与代码一致。
-- **事实**：CLI 侧现状已有 pollingSecret(`rw_cp_` 前缀)与 pending/confirmed/consumed 状态机(`src/hub/connect/client.ts:76-79`、`src/hub/connect/store.ts:65-82`)。方案的“客户端生成秘密 → 浏览器确认只记批准事实 → ACK 事务重查后激活唯一凭据”与现有状态机同构，删掉了 RSA 密钥对与 342 字节 ciphertext,是简化不是加框架。R2(批准与激活分离)、R3(原始会话与派生 JWT 区分)的修正在协议层是必要的，已正确合入方案文本。
-- **推断**：激活事务的并发正确性、ACK 丢响应恢复路径可实现但未经运行验证——方案自身已声明“未证明新账户方案可运行”(technical.md 末段)，定位诚实。
+**HAPI 复用：成立。**
+- Runweft 网关已经接管 `/api/auth`，浏览器侧的换票由 `exchangeBrowser` 处理（`auth.ts:15-22`）。
+- 账号密码完全落在 Runweft 的身份层，不需要动 HAPI pin、launcher 或原生登录。
 
-### 3. HAPI 复用 — 成立(事实 + 引用)
+**Agent 加 CLI 拿首份结果：成立。**
+- CLI 发起的任务父上下文是 `kind: 'cli'`（`src/hub/delegation/client.ts:27`），不依赖 MCP 重载。
+- 委派前必须匹配当前仓库，只接受 matched 或 non_git（`src/hub/delegation/service.ts:133-134`）。方案用 inspect/match 加必要的 create/bind 来满足，没有绕开这条规则。
+- `task wait` 单次最长 540 秒（`tasks/commands.ts:192`），Agent 循环等待即可。
+- 推断：用 Claude Code 作执行端时，评审过程中很可能出现原生审批请求。现有 Kit 规则是"只在用户已授权范围内处理"（`delegation.md:43`），默认指令已经授权了只读评审，沿用这条规则即可，不需要新机制。
 
-**事实**：Runweft 网关已接管 `/api/auth` 并以枚举表面代理原生面(`src/hub/access/http.ts:25-32`、`73-77`),短 JWT 注入原生页的机制保持不变。方案全部新逻辑落在 Runweft 自有层，不需要动 HAPI pin、launcher 或 HAPI 用户模型。HAPI 内部(AuthRequestSchema 仅 accessToken/Telegram、users.ts 为外部身份→namespace 映射)引自 research.md 的调查，我核实了 Runweft 侧接管事实与之吻合，未逐文件读 hapi/ 子模块。
+## 4. 主要意见
 
-### 4. Agent + CLI 首份结果路径 — 成立(事实)
+### 第 1 项：连接协议的两段式是旧 RSA 交接的遗留，可以改成"确认即激活"（不阻塞，建议写 Plan 前定下）
 
-方案工作流表所需的每个命令在现状 CLI 中已存在：
+**事实：**
+- 现在需要 ACK，是因为 Hub 要暂存浏览器长期 token 的密文（`src/hub/connect/store.ts:60-61`）。CLI 必须先解密、保存，再 ACK，让服务端清掉密文（`store.ts:77`、`src/hub/connect/client.ts:109-134`）。
+- 新方案里秘密在 begin 时就由 CLI 生成，Hub 只存摘要（`technical.md:63,70`），已经没有需要交接或清除的东西。
 
-| 方案阶段 | 现状命令 |
-| --- | --- |
-| 连接 | `hub connect begin/complete/status/cancel`(`src/hub/resources/commands.ts:45-60`) |
-| 执行准备 | `machine enroll`(:76)、`machine associate`(:96)、`runner start`(`src/service-commands.ts:53`)、`machine discover`(:98)、`runtime register/check`(:100,:108) |
-| 仓库关联 | `repository inspect/match`(`src/hub/repositories/commands.ts:26-28`) |
-| 首份结果 | `task spawn/wait/show`(`src/tasks/commands.ts:133,179,188`;show 带 offset/limit 完整读报告) |
+**推断：** `technical.md:66-68,74` 里的这些内容，都只是为了支撑第二阶段：
+- pending 回执文件；
+- 预留 credentialId；
+- consumed 状态；
+- ACK 丢响应后的续接；
+- 对已 consumed 请求执行 cancel 时返回"已激活"；
+- consumed 后的恢复不受 10 分钟期限约束。
 
-**事实**：所有委派模式先 `repository.match` 且仅接受 matched/non_git(`src/hub/delegation/service.ts:133-135`),方案的“Agent 自动 inspect/match → 必要时固定 requestId create/bind → 歧义才问”正是围绕该约束的最小路径，而非绕过授权。**推断**：“一次请求 + 一张表单”的交互次数是目标而非已验证事实，方案已如实标注(onboarding-review.md 末段)。
+**最小改动：**
+1. 浏览器确认的事务里，直接用 begin 时登记的摘要创建并激活这台 CLI 的凭据。
+2. `complete` 就是拿这个秘密调一次身份接口：成功则原子保存；仍是 pending 则继续等；401 则查询请求状态（过期、取消或已撤销）。
+3. 摘要在 begin 时已固定，重试天然不会产生第二条凭据。确认之后再 cancel，等同于这台 CLI 注销自身。
+4. 两段式唯一的实际好处，是 CLI 能在激活前拒绝身份不符的情况，对应现有机器记录 owner 不一致的检查（`client.ts:124-129`）。替代办法：本机已有机器记录时，begin 带上预期的 ownerId，由服务端在确认时拒绝；或者 CLI 拒绝后注销该凭据。
+5. 如果用户确认了但 CLI 没有回来，凭据只有那台设备的 `connect.json` 持有，会出现在登录环境列表里，90 天后到期，不构成问题。
+6. 验收第 68 行相应改为"未确认、取消或过期的请求不授予凭据"。
 
-## 四、主要意见
+**影响：** 少一个接口、一个状态、一个本地文件，以及一整类续接测试（`cli-connect` 里的 ACK 续接用例）。
 
-经核实，**没有发现阻塞推进的架构性矛盾**。以下 1 项为实施排期层面的联动确认，非设计缺陷：
+### 第 2 项："已登录时只需确认连接"和按标签存储的会话几乎不会同时出现（不阻塞，属于简化）
 
-**M1(非阻塞)：「重建 hub_users 凭据结构」与「serviceUser 替换为可信内部主体」必须在同一场景落地，建议在实施计划中显式绑定。**
-- 依据(事实):`serviceUser` 现在读取 `this.user(ownerId).tokenDigest` 构造 principal(`src/hub/access/store.ts:137-139`),且委派 lease 每次检查都重新调用它(`src/hub/delegation/context.ts:26-28`)。schema 20 一旦删除 `hub_users.tokenDigest`,该函数即刻失效，即**所有已接受的后台任务**失去授权通道。
-- 影响：technical.md L90 已正确识别此改造，但实施顺序(technical.md L147)按用户场景组织，第一个场景是“账号注册登录及退出”——若该场景交付时不同步替换 serviceUser,后台任务会在第一个场景合入时全体失效。
-- 最小改动建议：在实施计划中把“schema 重建 + serviceUser 内部主体”标记为第一场景的强制交付物(或作为所有场景的共同前置)，一句话即可，不需要改方案设计。
-- 是否阻塞：**不阻塞方案本身**，推进时注意排期即可。
+**事实：** 登录状态只存在当前标签的 `sessionStorage` 里（`technical.md:32`、`app.ts:24`）。按浏览器语义，从终端或聊天客户端打开的链接会进入一个新的顶层标签，这个标签的 `sessionStorage` 是空的。
 
-## 五、应保持的部分与可延后的建议
+**推断：** Agent 给出的连接链接几乎总是落在新标签里，所以已有账号的用户实际总是看到"登录并连接"。`requirement.md:28` 和 `technical.md:129` 里的"已登录只确认"和"切换登录入口"分支基本走不到。新用户的首次路径不受影响，反正都是一张表单。
 
-**应保持(方案的这些决定是正确的，评审中不应被细节意见稀释)：**
-- Identity UUID / Membership / Machine·Task credential / 授权回查模型原样保留；HAPI pin、原生页协议、launcher 不动。
-- connect 的 begin→确认→complete 入口、核对码、pending/confirmed/consumed 状态机骨架。
-- sessionStorage 取舍及其在方案中的显式披露；首版不承诺长期记住登录。
-- 数据格式“唯一当前格式、拒绝旧格式并保留原文件”；部署者本机重置命令；移除 token 备份/导入。
-- 编排留在 Skill/主 Agent,新增 CLI 能力仅限有界等待与凭据注销。
-- 原型协调方式：UI 实施前在项目唯一原型包覆盖流程，不作为本轮方案门槛。
+**最小改动：**
+- 写明来自 Agent 的连接链接默认是"登录并连接"，配合密码管理器自动填充；
+- 删掉这条分支，或者降级为同标签内的偶发情况；
+- "已登录 / 已有接入"那条验收改成以"已有有效 CLI 连接时跳过浏览器"为准。
 
-**可延后(不应设为本 Change 阶段门槛)：**
-- Cookie / 独立 origin / 跨浏览器记住登录(方案已列延后，正确)。
-- 邮箱/短信/SSO/MFA、密码参数与限流参数的调优、CLI 凭据 90 天期限的具体值——均属部署后按真实使用再定的细节。
-- research.md L44 记录的 `check-workflow.mjs` 失败是 `hub-glass-prototype` 既有登记差异，与本方案无关，不应算入本 Change 的方案质量。
+授权新设备时重新输入一次密码，本身也合理。
 
-**事实与推断的边界重申**：本评审中标注“事实”的结论均有上述代码行号支撑；HAPI 子模块内部细节引自 research.md;“目标交互次数可实现”“激活事务并发正确”属推断，与方案自身的未验证声明一致，留待实现后的定向验收。
+除这两项外，我没有发现会让核心方案不成立的架构矛盾。
+
+## 5. 应保持与可延后
+
+**保持：**
+- Identity UUID 不变，加上 N:1 的浏览器/CLI 凭据，JWT `ref` 指向具体凭据并逐次回查；
+- `serviceUser` 改为按固定 owner/space 构造内部主体，并和凭据拆分同批交付；
+- 浏览器会话按标签存储，不引入 Cookie 或第二个 origin；
+- CLI 由客户端生成秘密，浏览器不再把自己的秘密复制给 CLI；
+- 部署者用本机管理命令离线重置密码；
+- 首次没有目标时默认启动本机 Hub；
+- Agent 串接现有 CLI，首份结果先于 MCP 重载拿到；CLI 任务成功、MCP 配置完成、MCP 实际调用分别报告；
+- 不新建工作流引擎，不做网页端的全流程就绪追踪。
+
+**可延后，按简单方式实现即可，不设阶段门槛：**
+- 闲置期限和 lastUsedAt 合并写；
+- `revoke-all` 独立接口；
+- 限流维度、假哈希计时、Argon2 参数实测；
+- 重置码的输出方式等安全细节；
+- 公网 Hub 的开放注册控制（现在 `POST /identities` 本来就不需要认证，见 `src/hub/api.ts:49-56`，不是新问题）；
+- 长期记住登录。
+
+**关于顺序：** `technical.md:147` 和 `requirement.md:53` 把交互原型放在整个 Plan 之前。第一个后端场景（凭据拆分、`serviceUser`、连接协议、CLI）不依赖 UI。建议原型只卡住登录和连接页面相关的任务，不卡住后端场景的规划和实现。
