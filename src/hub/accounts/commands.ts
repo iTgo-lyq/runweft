@@ -22,6 +22,7 @@ export function addAccountCommands(program:Command,context:()=>ResolvedConfig,ou
         .action(async options=>{
             const target=url(options.url),session=new IdentityConnection(context().home,target);
             if(!options.interactive){const value=await session.begin();output(value,`请打开并核对：${value.confirmationUrl}\n核对码：${value.code}\nAgent 可用 hub connect complete --wait 60 继续。`);return;}
+            if(!process.stdin.isTTY||!process.stderr.isTTY)throw new RunweftError('account_interaction_required','此操作需要用户在自己的终端输入。',`请在 ${target}/hub 完成登录，Agent 不应代收密码。`);
             process.stderr.write(`Hub：${target}\n此命令行环境将以你的账号使用有权访问的资源。\n`);
             const username=options.username??await terminalInput('用户名'),password=await terminalInput('密码',true);
             await session.password(username,password,register);

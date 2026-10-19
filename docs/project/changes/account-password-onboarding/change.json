@@ -59,6 +59,11 @@
     "T8": {
       "title": "交付 Agent 首次体验并完成整体验证",
       "status": "todo"
+    },
+    "T9": {
+      "title": "修复非交互账号命令的结构化错误输出",
+      "status": "done",
+      "verification": "已修复非交互 stderr 混入提示的问题；typecheck/build 通过，新构建联合集成 18 pass、0 fail，执行记录更正 T4 首轮失败事实。"
     }
   },
   "closure": {},
