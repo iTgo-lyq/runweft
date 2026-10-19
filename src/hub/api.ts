@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { jsonResponse } from '../proxy';
 import { HubStore } from './store';
 import { HubError, HubName, HubRole, InvitationToken, hubInput, hubNotFound, hubUnauthorized } from './types';
+import { checkBrowserOrigin } from './access/transport';
 
 const prefix = '/api/runweft/hub';
 const named = z.object({ name: HubName }).strict();
@@ -61,7 +62,7 @@ export async function handleHubRequest(request: IncomingMessage, response: Serve
         const authorization = request.headers.authorization;
         const token = authorization?.startsWith('Bearer ') ? authorization.slice(7) : '';
         const body = method === 'POST' || method === 'PATCH' ? await readBody(request) : undefined;
-        if (request.headers.origin && new URL(request.headers.origin).host !== request.headers.host) throw new HubError(403,'account_origin_invalid','请在当前 Hub 页面完成操作。');
+        checkBrowserOrigin(request);
         if (publicAction) {
             limitPassword(request,body);
             const input = hubInput(z.object({ username: z.unknown(), password: z.unknown(), code: z.unknown().optional() }).strict(), body);
