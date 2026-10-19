@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "id": "npm-processing-budget",
+  "title": "延长 npm 异步处理确认预算",
+  "size": "small",
+  "status": "completed",
+  "stage": "close",
+  "branch": "codex/npm-processing-budget",
+  "confirmations": {},
+  "tasks": {
+    "T1": {
+      "title": "延长处理等待并准备 beta.3 发行候选",
+      "status": "done",
+      "verification": "发布工具32项通过，跨阶段共享预算和已接受回执不重传通过，文档及差异检查通过"
+    }
+  },
+  "closure": {
+    "verification": {
+      "result": "passed",
+      "at": "2026-10-19T08:41:17.096Z",
+      "summary": "32项发布测试通过，共享等待预算与回执保护通过"
+    },
+    "acceptance": {
+      "result": "accepted",
+      "at": "2026-10-19T08:41:18.443Z",
+      "summary": "小型发行等待预算修复自验收，保留完整发布门禁",
+      "source": "用户已授权 npm 预发行，Agent 对照真实超时记录、32项工具测试和最终差异自验收"
+    },
+    "specs": {
+      "result": "synced",
+      "at": "2026-10-19T08:41:19.810Z",
+      "summary": "发行规格与手册同步45分钟共享确认预算"
+    },
+    "archive": {
+      "result": "done",
+      "at": "2026-10-19T08:41:21.170Z",
+      "summary": "共享预算修复与beta.3候选准备已验证，发行结果另由CI确认",
+      "path": "docs/project/archive/2026-10-19-npm-processing-budget"
+    }
+  }
+}
