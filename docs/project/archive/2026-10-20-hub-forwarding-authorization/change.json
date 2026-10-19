@@ -3,8 +3,8 @@
   "id": "hub-forwarding-authorization",
   "title": "支持端口转发下的账号连接授权与本机试用",
   "size": "small",
-  "status": "active",
-  "stage": "execution",
+  "status": "completed",
+  "stage": "close",
   "branch": "codex/hub-forwarding-authorization",
   "confirmations": {},
   "tasks": {
@@ -27,7 +27,30 @@
       "commitTitle": "hub-forwarding-authorization T3: record stable release verification"
     }
   },
-  "closure": {},
+  "closure": {
+    "verification": {
+      "result": "passed",
+      "at": "2026-10-19T17:25:50.044Z",
+      "summary": "Agent自查完整差异及验收对应；CI全部通过，安装/官网及N1、C-codex通过，本地Claude项按用户明确指示跳过。"
+    },
+    "acceptance": {
+      "result": "accepted",
+      "at": "2026-10-19T17:25:51.937Z",
+      "summary": "用户本机体验通过并明确要求正式发布。",
+      "source": "用户：基本算是通了吧，正式发布一下；补充：本地先跳过 Claude 校验吧。"
+    },
+    "specs": {
+      "result": "synced",
+      "at": "2026-10-19T17:25:53.435Z",
+      "summary": "同步identity中的必填/重名输入规则与转发来源、原请求及完整链接映射契约。"
+    },
+    "archive": {
+      "result": "done",
+      "at": "2026-10-19T17:25:54.865Z",
+      "summary": "用户本机验收并授权正式发行，验证与明确跳过边界已记录，identity Specs已同步。",
+      "path": "docs/project/archive/2026-10-20-hub-forwarding-authorization"
+    }
+  },
   "followUpOf": "account-password-onboarding",
   "followUpTitle": "账号登录与首次接入",
   "rework": {
