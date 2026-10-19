@@ -4,7 +4,7 @@
   "title": "账号密码登录与 Agent 主导的首次接入",
   "size": "large",
   "status": "active",
-  "stage": "plan",
+  "stage": "execution",
   "branch": "codex/account-password-onboarding",
   "confirmations": {
     "requirement": {
@@ -26,7 +26,7 @@
   "tasks": {
     "T1": {
       "title": "交付账号与首次接入交互原型",
-      "status": "todo"
+      "status": "doing"
     },
     "T2": {
       "title": "交付账户、独立凭据与稳定后台身份",

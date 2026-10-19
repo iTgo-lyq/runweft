@@ -12,7 +12,9 @@ const shell = await readFile(join(root, 'src/shell.html'), 'utf8');
 const { htmlIssues } = await import('../../.agents/skills/spec-trail/prototype/scripts/html.mjs');
 await rm(join(root, 'dist'), { recursive: true, force: true });
 for (const entry of manifest.entries) {
-  const html = shell.replace('__ENTRY__', entry.id).replace('<!-- STYLE -->', `<style>${css}</style>`).replace('<!-- SCRIPT -->', `<script>${js}</script>`);
+  const html = entry.id === 'account-onboarding'
+    ? await readFile(join(root, 'src/account-onboarding.html'), 'utf8')
+    : shell.replace('__ENTRY__', entry.id).replace('<!-- STYLE -->', `<style>${css}</style>`).replace('<!-- SCRIPT -->', `<script>${js}</script>`);
   const issues = htmlIssues(html); if (issues.length) throw Error(`${entry.id}: ${issues.join('; ')}`);
   await mkdir(join(root, 'dist', entry.id), { recursive: true });
   await writeFile(join(root, 'dist', entry.id, 'index.html'), html);

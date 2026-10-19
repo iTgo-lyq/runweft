@@ -256,6 +256,17 @@
           }
         ]
       }
+    },
+    {
+      "id": "account-onboarding",
+      "title": "账号与首次连接",
+      "description": "注册登录、一页授权、恢复密码、登录环境和首次空态；仅内存演示",
+      "sourcePath": "packages/prototype/src/account-onboarding.html",
+      "kind": "page",
+      "devices": [
+        "pc-web",
+        "mobile"
+      ]
     }
   ]
 }
