@@ -39,6 +39,16 @@ Runweft [公开网关](../../../../src/hub/access/http.ts) 已接管 `/api/auth`
 
 ## 文档校验
 
-本轮 `node scripts/check-docs.mjs` 通过，413 份文档、1095 个本地链接无错误；`git diff --check` 通过。语义命令 `change.mjs show --change account-password-onboarding` 对新 Change 返回 `errors: []`。
+首次方案整理时 `node scripts/check-docs.mjs` 通过，413 份文档、1095 个本地链接无错误；`git diff --check` 通过。语义命令 `change.mjs show --change account-password-onboarding` 对新 Change 返回 `errors: []`。
 
 全仓 `node scripts/check-workflow.mjs` 未通过：已有 `hub-glass-prototype` 的集中 Plan 缺少 JSON 中 T1 的同名任务标题。已核对 `origin/develop` 基线存在同一差异，本轮没有修改该 Change；不能据此报告全仓流程检查通过。
+
+## CLI 与 Web 补充核查
+
+用户进一步明确 CLI 为核心后，在 `10da0b76c276cc037b9d13ab16cea71dbdc6b13b` 上完成命令注册和源码比对，结果见 [能力矩阵与证据](cli-web-parity.md)。实际 createProgram 遍历发现 204 个叶子命令路径，其中包含 root/hub 镜像，不能视为 204 个独立能力；没有专用 space 命令组，identity 只有查询。
+
+资源和任务执行已有较完整 CLI，空间协作管理与任务查询是主要实际缺口。任务只读操作当前被 client 构造的机器登记前置拦住，Web 用户空间读接口已提供可复用路径；裸原生 URL 也不能完成新标签的授权交接。HAPI 既有 GET messages 支持有界分页，可用于 Agent 诊断而不扩展 runtime。
+
+此次补充是只读源码证据，没有再运行产品浏览器或 Runweft 模型任务；新增 CLI/Web 契约及人工密码登录仅为设计。用户 Q3 的双入口选择登记在 change.json，需求、技术方案与 R7 记录保持一致。另调用实际 iclaude 对新增方案进行只读评审，结论和克制采纳范围见 [评审记录](review.md)。
+
+补齐后的文档校验：check-docs 检查 416 份文档、1139 个本地链接，0 errors；本 Change 的 show 返回 errors: []，git diff --check 通过。ci-scope 判定仅 Change 文档变动，无生产代码构建/测试范围；未运行或声称运行新增功能测试。全仓 check-workflow 仍报告上述已有 hub-glass-prototype 的 T1 标题差异。
