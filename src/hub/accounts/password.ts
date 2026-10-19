@@ -3,22 +3,18 @@ import { HubError } from '../types';
 const algorithm = { algorithm: 'argon2id' as const, memoryCost: 19_456, timeCost: 2 };
 // Synthetic comparison only. It belongs to no account and grants no access.
 const absentAccountHash = '$argon2id$v=19$m=19456,t=2,p=1$2DDrleWSDR0H2dyqO6sDDzyl1J1xgUqihXr+Nat/JAU$xu8yhA0ezXfjeDgVeXhq8gEIlbD03pKmqSjihQrI3tc';
-const invalidPassword = () => new HubError(400, 'account_password_invalid', '密码须为 15–128 个字符，允许空格。');
+const invalidPassword = () => new HubError(400, 'account_password_invalid', '请输入密码。');
 
 export function accountUsername(value: unknown): string {
     if (typeof value !== 'string') throw new HubError(400, 'account_username_invalid', '请输入有效的用户名。');
     const name = value.trim();
-    if (!/^[A-Za-z0-9][A-Za-z0-9._-]{2,31}$/.test(name)) {
-        throw new HubError(400, 'account_username_invalid', '用户名须为 3–32 位字母、数字、点、下划线或短横线，首位为字母或数字。');
-    }
+    if (!name) throw new HubError(400, 'account_username_invalid', '请输入用户名。');
     return name.toLowerCase();
 }
 
 /** Validate new passwords without trimming, normalization, or UTF-16 truncation. */
 export function accountPassword(value: unknown): string {
-    if (typeof value !== 'string' || value.length > 256 || /[\uD800-\uDFFF]/u.test(value)) throw invalidPassword();
-    const length = [...value].length;
-    if (length < 15 || length > 128) throw invalidPassword();
+    if (typeof value !== 'string' || !value.length) throw invalidPassword();
     return value;
 }
 
@@ -38,7 +34,7 @@ export function hashAccountPassword(value: unknown): Promise<string> {
 
 /** Missing accounts take the same expensive comparison path, but can never authenticate. */
 export async function verifyAccountPassword(value: unknown, hash: string | null): Promise<boolean> {
-    if (typeof value !== 'string' || value.length > 256 || [...value].length > 128 || /[\uD800-\uDFFF]/u.test(value)) return false;
+    if (typeof value !== 'string' || !value.length) return false;
     const matched = await passwordWork(() => Bun.password.verify(value, hash ?? absentAccountHash));
     return hash !== null && matched;
 }

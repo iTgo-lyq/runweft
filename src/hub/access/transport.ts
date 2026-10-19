@@ -9,6 +9,16 @@ import type { AccessStore } from './store';
 
 export const unavailable = (message = '该原生入口尚未开放给当前 Hub 身份。') => new HubError(403, 'native_route_unavailable', message, '通过 Runweft 的资源或任务入口操作。');
 export const inputError = () => new HubError(400, 'invalid_native_request', '请求参数或路径无效。');
+/** TCP forwarding changes the browser origin, while preserving its HTTP Host. */
+export function checkBrowserOrigin(request: IncomingMessage) {
+    const value = request.headers.origin;
+    if (value === undefined) return;
+    try {
+        const origin = new URL(value);
+        if (['http:', 'https:'].includes(origin.protocol) && origin.origin === value && origin.host === request.headers.host) return;
+    } catch { /* Reject malformed and opaque browser origins as well. */ }
+    throw new HubError(403, 'account_origin_invalid', '请在当前 Hub 页面完成操作。');
+}
 export function record(value: unknown): Record<string, any> {
     if (!value || typeof value !== 'object' || Array.isArray(value)) throw inputError();
     return value as Record<string, any>;

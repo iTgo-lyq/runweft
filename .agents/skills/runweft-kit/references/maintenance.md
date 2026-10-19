@@ -21,6 +21,7 @@ runweft mcp check --client <codex或claude>
 | --- | --- |
 | 程序不存在或 HAPI 不兼容 | 核对安装路径、版本与同批配套 HAPI；不随便调用系统另一份 HAPI |
 | Hub 未连接 | 核对 `hub.url`、网络与 `hub identity`；按 begin/complete 接入，不要求 token |
+| 转发页面提示地址不一致或确认被拒绝 | 按 onboarding 的端口转发指引核对 CLI 地址、浏览器入口和原请求；旧版需先核对实际 CLI/运行中 Hub 版本。保留原记录，正确映射链接并检查转发是否保留 Host，不反复注册或重发请求 |
 | 401/身份失效 | 让用户在浏览器登录原账号并授权当前 CLI；密码留在用户界面，不自动注册新账号 |
 | 403/资源不可用 | 查当前空间、资源 permissions、登记/共享/成员关系；不改身份绕过 |
 | 无机器凭据 | 该机器 enroll、associate，再 runner start；中心不用 root token 分发 |

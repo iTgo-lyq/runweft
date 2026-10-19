@@ -3,22 +3,15 @@ import { accountPassword, accountUsername, hashAccountPassword, verifyAccountPas
 import { activeUserCredential, browserIdleMs, createUserSecret, publicUserCredential, userCredentialKind,
     type UserCredential } from '../../src/hub/accounts/credentials';
 
-test('login names normalize to one Hub uniqueness key and reject unsupported input', () => {
+test('login names keep one uniqueness key without length or character restrictions', () => {
     expect(accountUsername('  Alice.Dev-1  ')).toBe('alice.dev-1');
-    for (const input of [null, 1, '', 'ab', '.alice', 'a b', '名字测试', 'Kate', 'a'.repeat(33)]) expect(() => accountUsername(input)).toThrow();
-    expect(accountUsername('a'.repeat(32))).toBe('a'.repeat(32));
+    for (const input of ['a', '.alice', 'A B', '名字测试', '🧵@!', 'a'.repeat(300)]) expect(accountUsername(input)).toBe(input.toLowerCase());
+    for (const input of [null, 1, '', '   ']) expect(() => accountUsername(input)).toThrow();
 });
 
-test('password length counts Unicode code points and retains spaces and composition', () => {
-    const phrase = '  keep these spaces  ';
-    expect(accountPassword(phrase)).toBe(phrase);
-    expect(accountPassword('🧵'.repeat(15))).toBe('🧵'.repeat(15));
-    expect(accountPassword('🧵'.repeat(128))).toBe('🧵'.repeat(128));
-    const composed = 'e\u0301'.repeat(8);
-    expect(accountPassword(composed)).toBe(composed);
-    for (const input of [null, 'x'.repeat(14), '🧵'.repeat(14), 'x'.repeat(129), '🧵'.repeat(129), '\uD800'.repeat(15)]) {
-        expect(() => accountPassword(input)).toThrow();
-    }
+test('passwords require a value and retain arbitrary length, characters and whitespace', () => {
+    for (const input of ['x', ' ', '  keep these spaces  ', '🧵', '🧵'.repeat(300), 'e\u0301', '\uD800']) expect(accountPassword(input)).toBe(input);
+    for (const input of [null, 1, '']) expect(() => accountPassword(input)).toThrow();
 });
 
 test('Argon2id hashes use a salt and verify exact passwords without trimming', async () => {
@@ -30,6 +23,11 @@ test('Argon2id hashes use a salt and verify exact passwords without trimming', a
     expect(await verifyAccountPassword(password, hash)).toBe(true);
     expect(await verifyAccountPassword(password.trim(), hash)).toBe(false);
     expect(await verifyAccountPassword('a different long passphrase', hash)).toBe(false);
+    for (const value of ['x', ' ', '🧵'.repeat(300)]) {
+        const unrestricted = await hashAccountPassword(value);
+        expect(await verifyAccountPassword(value, unrestricted)).toBe(true);
+        expect(await verifyAccountPassword(value + '!', unrestricted)).toBe(false);
+    }
 });
 
 test('an absent account never authenticates, including the synthetic comparison phrase', async () => {

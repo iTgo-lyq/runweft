@@ -10,16 +10,16 @@
 <section id="entry" class="entry" data-connect="false" aria-label="账号登录">
   <section class="panel account-panel">
     <form id="auth-form"><h2 id="auth-title">欢迎回来</h2><p id="auth-description" class="muted">用账号密码回到你的空间。</p>
-      <label for="account-username">用户名</label><input id="account-username" required minlength="3" maxlength="32" autocomplete="username" pattern="[A-Za-z0-9]([A-Za-z0-9._]|-){2,31}" aria-describedby="username-help">
-      <p id="username-help" class="hint">3–32 位字母、数字、点、下划线或短横线。</p>
-      <label for="account-password">密码</label><div class="password-input"><input id="account-password" type="password" required minlength="15" maxlength="256" autocomplete="current-password" aria-describedby="password-help"><button type="button" class="secondary" data-password="account-password" aria-label="显示密码">显示</button></div>
-      <p id="password-help" class="hint">15–128 个字符，允许空格、粘贴和密码管理器。</p><button type="submit" id="auth-submit">登录</button>
+      <label for="account-username">用户名</label><input id="account-username" required autocomplete="username" aria-describedby="username-help">
+      <p id="username-help" class="hint">用于登录，不能与已有用户名重复。</p>
+      <label for="account-password">密码</label><div class="password-input"><input id="account-password" type="password" required autocomplete="current-password" aria-describedby="password-help"><button type="button" class="secondary" data-password="account-password" aria-label="显示密码">显示</button></div>
+      <p id="password-help" class="hint">支持粘贴和密码管理器。</p><button type="submit" id="auth-submit">登录</button>
     </form>
     <p><button id="toggle-auth" class="quiet" type="button">没有账号？注册</button> <button id="forgot-password" class="quiet" type="button">忘记密码？</button></p>
     <form id="reset-form" hidden><h2>重置密码</h2><p class="muted">请联系 Hub 部署者获取一次性重置码，再设置新密码。</p>
       <label>用户名<input id="reset-username" autocomplete="username" required></label>
       <label>一次性重置码<input id="reset-code" type="password" autocomplete="off" required></label>
-      <label for="reset-password">新密码</label><div class="password-input"><input id="reset-password" type="password" autocomplete="new-password" minlength="15" maxlength="256" required><button type="button" class="secondary" data-password="reset-password" data-password-label="新密码" aria-label="显示新密码">显示</button></div>
+      <label for="reset-password">新密码</label><div class="password-input"><input id="reset-password" type="password" autocomplete="new-password" required><button type="button" class="secondary" data-password="reset-password" data-password-label="新密码" aria-label="显示新密码">显示</button></div>
       <button type="submit">重置密码</button><button id="back-login" type="button" class="secondary">返回登录</button>
     </form>
   </section>
@@ -33,7 +33,7 @@
 </section>
 <section id="connection-success" class="panel account-success" hidden><span class="eyebrow">已授权</span><h2>可以返回原对话了</h2><p>Agent 会继续完成接入，并把第一份评审报告带回原对话。无需再发送“已经点好”。</p><p class="hint">本机连接和执行工具是否就绪，由 Agent 核对后告诉你。</p><button id="view-workspace" class="secondary">查看工作台</button></section>
 <section id="account-settings" class="panel" hidden aria-label="账号设置"><h2>账号设置</h2><p id="settings-username"></p><button id="close-settings" class="secondary">返回工作台</button><h3>登录环境</h3><p class="hint">断开只影响该环境的账号访问，已接受的任务会继续执行。</p><div id="credentials-list"></div>
-  <form id="change-password"><h3>修改密码</h3><label for="current-password">当前密码</label><div class="password-input"><input id="current-password" type="password" autocomplete="current-password" required><button type="button" class="secondary" data-password="current-password" data-password-label="当前密码" aria-label="显示当前密码">显示</button></div><label for="next-password">新密码</label><div class="password-input"><input id="next-password" type="password" autocomplete="new-password" minlength="15" maxlength="256" required><button type="button" class="secondary" data-password="next-password" data-password-label="新密码" aria-label="显示新密码">显示</button></div><button type="submit">修改密码并退出全部环境</button></form>
+  <form id="change-password"><h3>修改密码</h3><label for="current-password">当前密码</label><div class="password-input"><input id="current-password" type="password" autocomplete="current-password" required><button type="button" class="secondary" data-password="current-password" data-password-label="当前密码" aria-label="显示当前密码">显示</button></div><label for="next-password">新密码</label><div class="password-input"><input id="next-password" type="password" autocomplete="new-password" required><button type="button" class="secondary" data-password="next-password" data-password-label="新密码" aria-label="显示新密码">显示</button></div><button type="submit">修改密码并退出全部环境</button></form>
   <details><summary>退出全部登录环境</summary><form id="logout-all-form"><label for="all-password">验证当前密码</label><div class="password-input"><input id="all-password" type="password" autocomplete="current-password" required><button type="button" class="secondary" data-password="all-password" data-password-label="验证当前密码" aria-label="显示验证当前密码">显示</button></div><button type="submit">确认退出全部环境</button></form></details>
 </section>
 <div id="workspace" class="workspace" hidden>

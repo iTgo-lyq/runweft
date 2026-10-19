@@ -56,11 +56,11 @@ export class ConnectionRequestStore {
             .run(ownerId,spaceId,issued.credential.id,row.id);
         return this.view(this.get(row.id));
     }
-    confirm(id: string,token: string,value: unknown,origin?: string) {
+    confirm(id: string,token: string,value: unknown) {
         const body=connectionInput(ConfirmConnection,value);
         return this.access.db.transaction(()=>{
             const actor=this.access.accounts.authenticate(token),row=this.get(id);
-            if(actor.credential.kind!=='browser' || (origin && origin!==row.origin))throw hubUnauthorized();
+            if(actor.credential.kind!=='browser')throw hubUnauthorized();
             return this.activate(row,actor.identity.id,body.spaceId);
         }).immediate();
     }
