@@ -5,7 +5,7 @@
   "size": "large",
   "status": "active",
   "stage": "plan",
-  "branch": "develop",
+  "branch": "codex/account-password-onboarding",
   "confirmations": {
     "requirement": {
       "at": "2026-10-19T04:16:28.971Z",
