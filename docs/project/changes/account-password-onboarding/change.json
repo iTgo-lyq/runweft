@@ -46,7 +46,9 @@
     },
     "T5": {
       "title": "交付空间协作 CLI",
-      "status": "todo"
+      "status": "done",
+      "verification": "typecheck/build；space-cli、hub 集成 6 pass、0 fail；check-docs、diff --check",
+      "commitTitle": "account-password-onboarding T5: add space collaboration CLI"
     },
     "T6": {
       "title": "交付无需机器的任务查询与诊断",

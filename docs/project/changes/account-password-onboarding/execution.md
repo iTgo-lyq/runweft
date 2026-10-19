@@ -59,3 +59,9 @@ CLI 提供账号查看/改名、登录环境列表及撤销、改密码和全端
 新增 task open/--print 及 show 中的无秘密 Hub 链接，登录后恢复空间、任务和轮次；原生页继续显式新开，清除原始浏览器凭据并断开 opener。任务查询终端不需要机器登记。服务端后台主体与资源存储复用同一 AccessStore，未跨实例传递内部 WeakSet 主体。
 
 验证：typecheck/build 通过；新构建二进制启动隔离的真实 Hub/HAPI，以 Playwright 执行 web-identity、web-connect、web-task-links，3 pass、0 fail、37 断言。覆盖不同浏览器环境独立退出与撤销、错误当前密码留在设置、改密/恢复后身份不变、授权响应丢失恢复、新标签登录与同标签确认、窄屏无溢出、深链登录恢复、其他成员不能读取任务报告，以及原生页短 JWT 不能访问账号管理。任务内容来自合成执行 fixture，不冒充真实模型验收。首轮发现退出模式残留与 fragment 变更未刷新的问题，修复后定向复验通过。check-docs 与 diff --check 通过。
+
+## T5 空间协作 CLI
+
+根命令与 hub 显式入口补齐 space、member、invitation 全部计划操作，直接复用身份级 API 与 HubStore。邀请只写入显式新建的 0600 文件，输出元数据和位置；文件已存在时在请求前拒绝。加入/创建不自动切换，use 校验成员资格后在本机连接锁内比较并原子更新默认空间。失效默认不阻塞 list/use，单次 --space 与已构造客户端的固定空间分别生效。
+
+验证：typecheck/build 通过；space-cli 与 Hub 角色/邀请回归共 6 pass、0 fail、126 断言。编译后 CLI 实际覆盖创建、改名、默认切换、邀请文件权限与重试、成员角色、最后 owner 拒绝、成员越权、移除后修复失效默认和无机器登记；原有跨进程最后 owner 与邀请消费约束继续通过。未运行真实模型。

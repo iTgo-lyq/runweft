@@ -5,6 +5,7 @@ import pkg from '../package.json';
 import { configPath, dataPaths, initializeConfig, loadConfig, setConfig, type ResolvedConfig } from './config';
 import { errorDetails } from './errors';
 import { addAccountCommands } from './hub/accounts/commands';
+import { addSpaceCommands } from './hub/spaces/commands';
 import { addServiceCommands } from './service-commands';
 import { addMcpCommands } from './mcp/commands';
 import { addAgentCommands } from './hub/agents/commands';
@@ -85,6 +86,7 @@ export function createProgram() {
     addPreparationCommands(workspace, program, context, output, () => new HubPreparationClient(connection(), process.cwd()));
     addServiceCommands(program, context, output);
     addAccountCommands(program,context,output);
+    addSpaceCommands(program,connection,()=>context().home,output);
     addMcpCommands(program, context, output);
     addUninstallCommand(program, output);
     addHubResourceCommands(program, connection, () => context().home, output);
