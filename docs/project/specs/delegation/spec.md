@@ -30,7 +30,7 @@ spawn/next 可传 inputs[{artifactId,name?}] 和 outputs[{name,relativePath}]，
 
 列表默认当前发起机器和 cwd，包含 MCP 来源；`--all` 列本人当前空间。show 默认最新接受轮次，可指定 `--round` 与报告 `--offset/--limit`；wait 支持 `--timeout/--after-revision`。send 默认下一轮，`--steer --round` 才追加本轮。interrupt 和 permission 必须指定轮次；permission 还需原生请求 ID，可附 `--answers`。
 
-CLI 使用当前连接已登记 machine.json 作为来源，不伪装原生父会话；未登记时明确提示先 enroll。MCP 只能操作自己的父会话任务，CLI 可操作本人当前空间内既有任务。完整示例见[使用说明](../../../usage.md#委派等待与续接)。
+CLI 执行写操作使用当前连接已登记 machine.json 作为来源，不伪装原生父会话；未登记时明确提示先 enroll。list/show/wait、原生 messages、成果和附件清单使用独立只读入口，只需有效用户/空间，不要求机器登记。list 默认精确匹配已登记来源机器和 cwd，在分页前过滤；没有有效机器时提示显式 --all，不静默扩大范围。MCP 只能操作自己的父会话任务，CLI 可操作本人当前空间内既有任务。完整示例见[使用说明](../../../usage.md#委派等待与续接)。
 
 spawn/send 支持可重复 --input/--output；`task artifacts show/retry/collect/release` 提供历史版本、传输恢复、补收及显式留存释放。清理仍是 CLI 操作者入口，不新增 MCP 删除工具。
 
@@ -68,7 +68,7 @@ MCP 省略 request_id 时由 host、nativeSessionId、callId 和操作生成稳�
 
 ### 数据与服务
 
-业务数据在中心 `server/runweft/state.sqlite`，固定schema19保存任务、轮次、输入、请求去重、child关联与中心归属。使用WAL；只支持完整当前结构，格式不匹配无写入拒绝，详见[部署](../deployment/spec.md)。任务输入和报告作为业务数据保存，不复制完整原生 transcript 或隐藏推理，不保存模型凭据。Hub 客户端没有第二份权威任务库。
+业务数据在中心 `server/runweft/state.sqlite`，固定schema20保存任务、轮次、输入、请求去重、child关联与中心归属。使用WAL；只支持完整当前结构，格式不匹配无写入拒绝，详见[部署](../deployment/spec.md)。任务输入和报告作为业务数据保存，不复制完整原生 transcript 或隐藏推理，不保存模型凭据。Hub 客户端没有第二份权威任务库。
 
 自有任务 API 为认证后的 `/api/runweft/tasks/{spawn,lookup,send,interrupt,permission,list,read,wait}` POST，使用 Hub 用户/空间 JWT；宿主元数据与业务身份分别校验。中心后台以受控对象绑定调用私有 HAPI，不依赖宿主短期 JWT。客户端按 exp 提前续期认证，不自动重放业务 POST。
 
@@ -139,3 +139,7 @@ wait 在任一指定任务完成或需处理时返回，并内联有界报告。
 等待后轮时，前轮的审批或未知状态仍通过 blocking_round_id 返回。游标只抑制已交付通知，不删除报告或审批；需要详情时按固定轮次读取。
 
 远端 code 独立返回 pending/capturing/publishing/available/needs_attention/unknown 及留存状态、固定成果、取回摘要和下一步。完成不等于代码已取回/合入；代码捕获失败可阻止后轮，固定候选后的确定上传失败只影响交付。show/read 默认最新接受轮次，详细清单与历史取回使用 task result show；见[代码交付](../results/spec.md)。
+
+## CLI 诊断与 Web 交接
+
+任务只读 API 位于 /api/runweft/tasks/query/{list,read,wait,result,artifacts}，复用用户/空间授权而不伪造执行父会话；受管 child 仍按现有上下文规则拒绝递归。task messages 按选定轮次定位原生会话并复用 HAPI 有界分页，最多 200 条，历史缺失/离线明确返回相应状态；同一原生会话复用时历史可能跨轮，不声称按业务轮裁剪 transcript。task show 的 Web 链接仅含任务、轮次与空间定位，登录后恢复，权限不由链接授予。

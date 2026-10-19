@@ -123,3 +123,11 @@ typecheck/build 通过；空间、服务、账号、连接和邀请共 8 pass、
 用户此前“交互可以，继续实现 Web 页面”只记录原型验收；实现的用户验收尚待实际反馈，不用事先方案授权代替。最终 Specs 同步、归档和 develop 集成在该验收后执行；main 未改动。
 
 最终说明检查点 150d8dd 已重新 typecheck/build；账号、连接与空间命令定向 11 pass、0 fail、135 断言。按该干净源码重建当前平台候选，再执行 npm 与 standalone 两种隔离安装，二者均成功且 cleanupErrors 为空。最终官网 build、Kit 结构检查、check-docs（418 文档、1144 链接）及完整差异 diff --check 通过。全仓 check-workflow 仍仅报另一个 Change 的继承标题不一致；本 Change show 的 errors=[]。T8 以这些实际证据完成，不将未授权的真实模型案例记为通过。
+
+## 用户验收与 develop 集成
+
+用户明确要求“先合入 dev 分支吧。 npm 包发布预发布版本。”，沿用仓库配置将 dev 解释为协作分支 develop，按该授权记录验收、同步当前 Specs 并归档。当前 origin/develop 未新增并行提交，无合码冲突。账号、空间、连接协议、CLI 只读任务、Web、首次体验和数据基线同步至 Specs；schema20、client1、identity/connect2 的冻结结构以 150d8ddb1270945dc5da9ada03ac709c300c3a83 为准。
+
+本次仅将发行版本与包内说明调整为 1.2.0-beta.1，交由不可变 tag 的发布工作流重新构建四平台并执行无模型集成和隔离安装门禁；这些 CI 结果在发布完成前未知。已有真实模型未运行的边界保持，不调用 iclaude。npm 预发行不更新 latest，不部署生产官网，也不提前同步公开 Kit main；新版 Kit 随预发行 npm 包交付。发布运行日志与 summary 为发行证据，无需另写版本报告。
+
+归档前 check-docs 与 diff --check 通过。完整 check-workflow 仍报告继承的 hub-glass-prototype T1 标题与 Plan 不一致，其权威状态在另一工作分支；本 Change 的状态和 Plan 校验无错误，不在此修改其他 Change。实际提交继续运行 SpecTrail 暂存校验 hook。

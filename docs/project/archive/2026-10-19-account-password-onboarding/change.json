@@ -3,7 +3,7 @@
   "id": "account-password-onboarding",
   "title": "账号密码登录与 Agent 主导的首次接入",
   "size": "large",
-  "status": "active",
+  "status": "completed",
   "stage": "close",
   "branch": "codex/account-password-onboarding",
   "confirmations": {
@@ -91,6 +91,23 @@
       "result": "passed",
       "at": "2026-10-19T05:34:45.610Z",
       "summary": "独立 Codex 完整评审及自动化验证通过；集成260、core22、工具52；真实模型未运行"
+    },
+    "acceptance": {
+      "result": "accepted",
+      "at": "2026-10-19T07:47:37.418Z",
+      "summary": "用户认可交付并明确要求合入 develop 与发布 npm 预发行",
+      "source": "用户：先合入 dev 分支吧。 npm 包发布预发布版本。"
+    },
+    "specs": {
+      "result": "synced",
+      "at": "2026-10-19T07:49:57.022Z",
+      "summary": "同步账号凭据、确认即激活、CLI 与 Web、首次体验及当前数据格式"
+    },
+    "archive": {
+      "result": "done",
+      "at": "2026-10-19T07:49:58.297Z",
+      "summary": "用户验收并授权 develop 集成及 npm 预发行，当前规格已同步",
+      "path": "docs/project/archive/2026-10-19-account-password-onboarding"
     }
   },
   "clarifications": {
@@ -138,9 +155,5 @@
         "digest": "sha256:8b68e9671a3b9e03252da8ebbd3698bd1a61ab0526e4fa5032764bd5548964cd"
       }
     }
-  ],
-  "waitingFor": {
-    "kind": "confirmation",
-    "summary": "账号与 CLI 核心能力已实现，等待用户验收后同步 Specs 并集成 develop"
-  }
+  ]
 }

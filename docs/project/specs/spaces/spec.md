@@ -20,7 +20,7 @@ Hub 空间是成员授权边界，不是 Git 仓库、磁盘工作区或 HAPI na
 
 ## 接口与持久化
 
-前缀 `/api/runweft/hub`，凭 [身份 token](../identity/spec.md) 操作：
+前缀 `/api/runweft/hub`，凭[账号的有效用户凭据](../identity/spec.md)操作：
 
 | 路径 | 方法 |
 | --- | --- |
@@ -36,3 +36,9 @@ Hub 空间是成员授权边界，不是 Git 仓库、磁盘工作区或 HAPI na
 Web `/hub` 提供上述管理动作，按钮使用服务端 permissions，空间切换仅改变当前选中项；服务端始终复核权限。状态在同一业务库的 hub_spaces/hub_memberships/hub_invitations 表中持久保存。数据库只支持[当前格式](../deployment/spec.md)，不通过升级或身份创建自动认领历史对象。
 
 成员移除还在同一事务撤销该空间的任务凭据、取消派生与文件输出许可，并撤回该成员拥有的机器关联及 runtime 分享；同时删除其 checkout、个人 Agent 选择和对其显式授权，并将其 owned Agent 的分享撤为 private；内容版本、登记与治理事实保留。重新加入不恢复旧许可、个人配置关联或 owned Agent 分享。集中资源治理见 [Hub 资源归属](../resources/spec.md)。独立网关的请求与长连接如何失权见[执行通道授权](../execution/access/spec.md)。
+
+## CLI 与邀请交付
+
+space list/show/create/rename/use/permissions/leave 及 space member list/set-role/remove、space invitation list/create/revoke/accept 复用相同领域权限。create 和加入空间不切换默认值；use 校验成员资格后保存本机默认。全局 --space 仅影响当前调用，支持 root 与 hub 命令，不改写已有任务或 MCP 的空间上下文；默认空间失效时仍可 list 并重新选择。
+
+Web 下载与 CLI --output 创建使用同一邀请 JSON 文件，接收方通过 --file 消费；CLI 文件为 0600，不覆盖已有文件。无文件时只支持人工隐藏输入，不向模型对话输出邀请秘密。邀请仍遵循一次消费、期限与权限复核规则。
