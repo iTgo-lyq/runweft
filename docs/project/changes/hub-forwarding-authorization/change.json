@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "id": "hub-forwarding-authorization",
+  "title": "支持端口转发下的账号连接授权与本机试用",
+  "size": "small",
+  "status": "active",
+  "stage": "requirement",
+  "branch": "develop",
+  "confirmations": {},
+  "tasks": {
+    "T1": {
+      "title": "修复转发授权并交付测试与全局本地安装",
+      "status": "todo"
+    }
+  },
+  "closure": {},
+  "followUpOf": "account-password-onboarding",
+  "followUpTitle": "账号登录与首次接入"
+}
