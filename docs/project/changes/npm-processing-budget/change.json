@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "id": "npm-processing-budget",
+  "title": "延长 npm 异步处理确认预算",
+  "size": "small",
+  "status": "active",
+  "stage": "requirement",
+  "branch": "develop",
+  "confirmations": {},
+  "tasks": {
+    "T1": {
+      "title": "延长处理等待并准备 beta.3 发行候选",
+      "status": "todo"
+    }
+  },
+  "closure": {}
+}
