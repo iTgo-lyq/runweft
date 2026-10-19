@@ -1,4 +1,4 @@
-import { fixtureCredential } from '../identity-fixture';
+import { saveTestConnection, fixtureCredential } from '../identity-fixture';
 import assert from 'node:assert/strict';
 import { createHash, randomUUID } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
@@ -55,11 +55,12 @@ test('workspace-preparation real integration', async () => {
         try {
             await service(center, ['init']); await service(center, ['config', 'set', 'server.port', String(port)]);
             await service(center, ['config', 'set', 'server.runner', 'false']); await service(center, ['config', 'set', 'hapi.executable', hapiBinary]); await service(center, ['start']);
-            const response = await fetch(url + '/api/runweft/hub/identities', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: 'Compiled diagnostic owner' }) });
+            const response = await fetch(url + '/api/runweft/hub/accounts', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ username: 'fixture-'+crypto.randomUUID().slice(0,12), password: 'a synthetic integration passphrase' }) });
             assert.equal(response.status, 201); const user = await response.json(), space = user.personalSpace.id;
             writeFileSync(identityFile, user.token, { mode: 0o600 });
             async function hubCli(args: string[], home = center) {
-                return service(home, ['hub', '--url', url, '--identity-file', identityFile, '--space', space, ...args]);
+                await saveTestConnection(home, url, user.token, space);
+                return service(home, ['hub', '--url', url, '--space', space, ...args]);
             }
             const resources = new HubResourceClient({ url, credential: fixtureCredential(identityFile), space });
             async function waitRunner(machineId: string) {
@@ -73,7 +74,7 @@ test('workspace-preparation real integration', async () => {
                 await service(home, ['init']); await service(home, ['config', 'set', 'hub.url', url]); await service(home, ['config', 'set', 'hapi.executable', hapiBinary]);
                 const paths = hubConnectionPaths(home, url); secrets.add(paths.identityConnection);
                 mkdirSync(dirname(paths.identityConnection), { recursive: true });
-                writeFileSync(paths.identityConnection, JSON.stringify({ schemaVersion: 1, hub: url, ownerId: user.identity.id, spaceId: space, token: user.token, requestId: randomUUID(), createdAt: Date.now() }), { mode: 0o600 });
+                await saveTestConnection(home, url, user.token, space);
                 const enrolled = await hubCli(['machine', 'enroll'], home); secrets.add(enrolled.credentialFile);
                 secrets.add(join(paths.connection, 'hapi', 'settings.json'));
                 const item = { home, machineId: enrolled.machineId }; runners.push(item); runnerHomes.push(home);
@@ -97,7 +98,7 @@ test('workspace-preparation real integration', async () => {
     async function cli(home: string, args: string[], options: { cwd?: string; input?: string; code?: number } = {}) {
         const actualHome = home === sourceHome || home === center ? sourceRunner.home : home === targetHome ? targetRunner.home : home;
         const child = Bun.spawn([binary, '--home', actualHome, '--json', 'hub', '--url', fixture!.url,
-            '--identity-file', fixture!.identityFile, '--space', fixture!.space, ...args], { cwd: options.cwd ?? project, env, stdout: 'pipe', stderr: 'pipe' });
+            '--space', fixture!.space, ...args], { cwd: options.cwd ?? project, env, stdout: 'pipe', stderr: 'pipe' });
         const [code, stdout, stderr] = await Promise.all([child.exited, new Response(child.stdout).text(), new Response(child.stderr).text()]);
         assert(!(stdout + stderr).includes(fixture!.user.token), 'Credential leaked');
         assert.equal(code, options.code ?? 0, `${args.join(' ')}: ${stderr}`);

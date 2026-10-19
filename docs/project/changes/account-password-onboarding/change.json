@@ -64,7 +64,7 @@
     },
     "T8": {
       "title": "交付 Agent 首次体验并完成整体验证",
-      "status": "todo"
+      "status": "doing"
     },
     "T9": {
       "title": "修复非交互账号命令的结构化错误输出",

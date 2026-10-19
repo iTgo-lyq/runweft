@@ -74,3 +74,11 @@ runweft agent unselect --repository <repositoryId>
 ```
 
 无 repository 选项表示本人的空间默认；仓库个人选择独立于其他成员。override 不改共享定义。显式 Agent/当前仓库选择/空间默认按中心规则解析，保存的失效引用会报错，不自动退回其他定义。查看 eligibility、版本快照与机器再委派。清除选择后才按剩余规则解析；既有任务保留已固定配置，修改定义不重定向它。
+
+## 账号与空间
+
+账号由用户在 Web 或自己的终端输入密码；Agent 不代收。account show/rename、credentials list/revoke 可用 CLI；password/logout-all/recover 由人工隐藏输入或 Web 设置操作。忘记密码联系部署者在服务器运行 account reset-password <username> --output <新文件>，用户在自己的表单消费短期重置码，不让 Agent 读取码。退出当前 auth logout 只撤销此 CLI；改密/重置/全端退出撤销用户环境，Runner 和已接受任务独立。
+
+space list/show/create/rename/permissions/use/leave，space member list/set-role/remove 与 Web 共用权限。用 space use <id> 保存默认，单次 --space 不改变默认；创建或加入不自动切换，失效默认仍能 list/use。既有任务和运行 MCP 固定原空间。
+
+邀请用 space invitation create --role member --output <新的受限文件>，只交付文件引用；accept --file <邀请文件>，list/revoke 按当前空间操作。创建命令不覆盖旧文件，不能把邀请秘密抄进对话或 argv。资源分享和成员治理只在用户原授权范围内执行，不作为首次体验的额外设置步骤。

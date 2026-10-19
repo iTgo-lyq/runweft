@@ -1,4 +1,4 @@
-import { fixtureCredential } from '../identity-fixture';
+import { saveTestConnection, fixtureCredential } from '../identity-fixture';
 import { createTestIdentity } from '../identity-fixture';
 import assert from 'node:assert/strict';
 import { randomBytes } from 'node:crypto';
@@ -55,7 +55,8 @@ test('hub-resources-live real integration', async () => {
         atomicWrite(file, `Runweft Hub: ${base}\n身份 ID: ${user.identity.id}\n${user.token}\n`); secrets.push(user.token); secretFiles.add(file); return file;
     }
     async function cli(file: string, args: string[], space?: string, expected = 0) {
-        const child = Bun.spawn([cliBinary, '--home', home, '--json', 'hub', '--url', base, '--identity-file', file,
+        await saveTestConnection(home, base, fixtureCredential(file).token, space);
+        const child = Bun.spawn([cliBinary, '--home', home, '--json', 'hub', '--url', base,
             ...(space ? ['--space', space] : []), ...args], { env, stdout: 'pipe', stderr: 'pipe' });
         const [exit, stdout, stderr] = await Promise.all([child.exited, new Response(child.stdout).text(), new Response(child.stderr).text()]);
         for (const secret of secrets) assert(!(stdout + stderr).includes(secret), 'Credential appeared in CLI output');

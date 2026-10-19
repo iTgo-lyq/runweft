@@ -1,5 +1,6 @@
-import { fixtureCredential } from '../identity-fixture';
-import { createTestIdentity, createIdentityToken } from '../identity-fixture';
+import { saveTestConnection, fixtureCredential } from '../identity-fixture';
+import { createTestIdentity } from '../identity-fixture';
+import { hubConnectionPaths } from '../../src/hub/resources/connection';
 import { afterAll, test } from 'bun:test';
 import assert from 'node:assert/strict';
 import { randomBytes, randomUUID } from 'node:crypto';
@@ -44,8 +45,9 @@ test('CLI resolves a saved Agent through the gateway and real Runner; revoked ru
     secretFiles.add(identityFile);
     const secrets = [rootToken, owner.token];
     async function cli(args: string[], expected = 0, identity = identityFile) {
+        await saveTestConnection(join(root, 'client'), base, fixtureCredential(identity).token, space);
         const child = Bun.spawn([binaries.runweft.path, '--home', join(root, 'client'), '--json', 'hub', '--url', base,
-            '--identity-file', identity, '--space', space, ...args], { env, stdout: 'pipe', stderr: 'pipe' });
+            '--space', space, ...args], { env, stdout: 'pipe', stderr: 'pipe' });
         processes.add(child); resources.push(async () => { if (child.exitCode === null && child.signalCode === null) await stopSmokeProcess(child); });
         const [exit, stdout, stderr] = await Promise.all([child.exited, new Response(child.stdout).text(), new Response(child.stderr).text()]);
         for (const secret of secrets) assert(!(stdout + stderr).includes(secret), 'Credential appeared in CLI output');
@@ -82,9 +84,10 @@ test('CLI resolves a saved Agent through the gateway and real Runner; revoked ru
     assert.deepEqual(resolved.launchOptions, { agent: 'codex', model: 'custom-codex', modelReasoningEffort: 'high', disabledMcpServers: ['runweft'] });
     await cli(['runtime', 'unregister', runtime.id]);
     assert.equal((await cli(['agent', 'resolve', '--repository', repository.id], 1)).error.code, 'runtime_unregistered');
-    const invalid = join(root, 'invalid-identity');
-    atomicWrite(invalid, `Runweft Hub: ${base}\n身份 ID: ${owner.identity.id}\n${createIdentityToken()}\n`);
-    assert.equal((await cli(['agent', 'list'], 1, invalid)).error.code, 'user_session_invalid');
+    const saved = hubConnectionPaths(join(root, 'client'), base).identityConnection;
+    const record = JSON.parse(readFileSync(saved, 'utf8')); record.token = 'rw_cli_' + 'x'.repeat(43);
+    atomicWrite(saved, JSON.stringify(record));
+    assert.equal((await cli(['agent', 'list'], 1)).error.code, 'user_session_invalid');
     assert.equal((gateway.store.db.query('SELECT COUNT(*) AS n FROM delegation_tasks').get() as { n: number }).n, 0);
     await closeSmoke(resources);
 }, 120_000);

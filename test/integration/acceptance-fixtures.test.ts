@@ -72,7 +72,7 @@ test('native entry rejects missing candidates and preserves failure receipts; re
     const git = (...args: string[]) => { const r = spawnSync('git', args, { encoding: 'utf8' }); expect(r.status).toBe(0); return r.stdout.trim(); };
     const source = git('rev-parse', 'HEAD'), hash = (paths: string[]) => createHash('sha256').update(git('ls-tree', '-r', source, '--', ...paths)).digest('hex');
     const pkg = JSON.parse(git('show', source + ':package.json'));
-    const inputs = ['test/acceptance', 'test/integration/console-history.ts', 'test/integration/native-files.ts', 'test/integration/fixture-round.ts', 'test/preflight.ts', 'test/lifecycle.ts', 'test/deadline.ts', 'scripts/candidate.mjs', 'scripts/installed-binaries.mjs', 'scripts/release-inputs.mjs', 'package.json', 'bun.lock'];
+    const inputs = ['test/acceptance', 'test/integration/console-history.ts', 'test/integration/native-files.ts', 'test/integration/fixture-round.ts', 'test/preflight.ts', 'test/identity-fixture.ts', 'test/lifecycle.ts', 'test/deadline.ts', 'scripts/candidate.mjs', 'scripts/installed-binaries.mjs', 'scripts/release-inputs.mjs', 'package.json', 'bun.lock'];
     const stamp = new Date().toISOString();
     const record: any = { kind: 'runweft-native-v1', success: true, startedAt: stamp, finishedAt: stamp, binding: { source, testSource: source, packageInputs: hash(packageInputs), testInputs: hash(inputs), hapi: pkg.hapi,
         bun: pkg.packageManager.split('@')[1], build: 'package-default', platform: 'linux-x64', binaries: { runweft: 'a'.repeat(64), hapi: 'b'.repeat(64) },

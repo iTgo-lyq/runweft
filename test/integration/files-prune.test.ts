@@ -1,4 +1,4 @@
-import { fixtureCredential } from '../identity-fixture';
+import { saveTestConnection, fixtureCredential } from '../identity-fixture';
 import assert from 'node:assert/strict';
 import { Database } from 'bun:sqlite';
 import { createHash, randomUUID } from 'node:crypto';
@@ -27,7 +27,8 @@ test('files-prune real integration', async () => {
     let remoteUrl = ''; let token = '', url = '', identityFile = '', spaceId = ''; const secrets: string[] = [];
     let proxy: ReturnType<typeof Bun.serve> | undefined;
     async function cli(selectedHome: string, args: string[], expected = 0) {
-        const child = Bun.spawn([binary, '--home', selectedHome, '--json', ...(args[0] === 'artifact' ? ['hub', '--url', selectedHome === home ? url : remoteUrl, '--identity-file', identityFile, '--space', spaceId] : []), ...args], { env, stdout: 'pipe', stderr: 'pipe' });
+        if (args[0] === 'artifact') await saveTestConnection(selectedHome, selectedHome === home ? url : remoteUrl, fixtureCredential(identityFile).token, spaceId);
+        const child = Bun.spawn([binary, '--home', selectedHome, '--json', ...(args[0] === 'artifact' ? ['hub', '--url', selectedHome === home ? url : remoteUrl, '--space', spaceId] : []), ...args], { env, stdout: 'pipe', stderr: 'pipe' });
         const [code, stdout, stderr] = await Promise.all([child.exited, new Response(child.stdout).text(), new Response(child.stderr).text()]);
         for (const secret of secrets) assert(!`${stdout}${stderr}`.includes(secret), 'Credential leaked');
         assert.equal(code, expected, `${args.slice(0, 2).join(' ')}: ${stderr}`);
@@ -63,7 +64,7 @@ test('files-prune real integration', async () => {
         await cli(home, ['config', 'set', 'server.artifacts.unreferencedDays', '1']);
         await cli(home, ['config', 'set', 'server.artifacts.pendingHours', '1']); await cli(home, ['start']);
         const paths = (await cli(home, ['paths'])).value;
-        const user = await (await fetch(url + '/api/runweft/hub/identities', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: 'Prune owner' }) })).json();
+        const user = await (await fetch(url + '/api/runweft/hub/accounts', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ username: 'fixture-'+crypto.randomUUID().slice(0,12), password: 'a synthetic integration passphrase' }) })).json();
         token = user.token; secrets.push(token); spaceId = user.personalSpace.id; identityFile = join(root, 'identity.txt'); await writeFile(identityFile, token, { mode: 0o600 });
         const hapi = new HubClient({ url, credential: fixtureCredential(identityFile), space: spaceId }, 'hubAccess', 'hub_access_unavailable').http;
         let losePruneResponse = false;
@@ -135,7 +136,7 @@ test('files-prune real integration', async () => {
         const download = join(root, 'protected-download.txt');
         await cli(remote, ['artifact', 'download', pinned[0]!.id, '--output', download]);
         assert.equal(await readFile(download, 'utf8'), 'retained file bytes');
-        const otherUser = await (await fetch(url + '/api/runweft/hub/identities', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: 'Other prune owner' }) })).json();
+        const otherUser = await (await fetch(url + '/api/runweft/hub/accounts', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ username: 'fixture-'+crypto.randomUUID().slice(0,12), password: 'a synthetic integration passphrase' }) })).json();
         secrets.push(otherUser.token); const otherFile = join(root, 'other-identity.txt'); await writeFile(otherFile, otherUser.token, { mode: 0o600 });
         const other = new HubClient({ url, credential: fixtureCredential(otherFile), space: otherUser.personalSpace.id }, 'hubAccess', 'hub_access_unavailable').http;
         assert.equal((await other.request('/api/artifacts/prune', { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' })).candidates.length, 0);

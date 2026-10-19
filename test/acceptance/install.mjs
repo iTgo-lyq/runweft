@@ -61,13 +61,14 @@ async function verify(layout) {
         run(['config', 'set', 'server.port', String(port)]);
         run(['config', 'set', 'hub.url', url]);
         assert(run(['start']).service.running);
-        const identity = await (await fetch(url + '/api/runweft/hub/identities', { method: 'POST',
-            headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: 'installation' }) })).json();
+        const identity = await (await fetch(url + '/api/runweft/hub/accounts', { method: 'POST',
+            headers: { 'content-type': 'application/json' }, body: JSON.stringify({ username: 'installation', password: 'an isolated installation password' }) })).json();
         const paths = run(['paths']);
         if (layout === 'npm') item.versionMismatch = await verifyServiceVersionDiagnosis(installed.cli, root, installed.env, JSON.parse(readFileSync(paths.process, 'utf8')), url);
-        mkdirSync(dirname(paths.identityConnection), { recursive: true });
-        writeFileSync(paths.identityConnection, JSON.stringify({ schemaVersion: 1, hub: url, ownerId: identity.identity.id,
-            spaceId: identity.personalSpace.id, token: identity.token, requestId: randomUUID(), createdAt: Date.now() }), { mode: 0o600 });
+        const pending = run(['hub', '--url', url, 'connect', 'begin']);
+        const confirmed = await fetch(url + `/api/runweft/connect/${pending.requestId}/confirm`, { method: 'POST',
+            headers: { authorization: `Bearer ${identity.token}`, 'content-type': 'application/json' }, body: JSON.stringify({ spaceId: identity.personalSpace.id }) });
+        assert.equal(confirmed.status, 200); run(['hub', '--url', url, 'connect', 'complete']);
         const machine = run(['machine', 'enroll']); run(['machine', 'associate', machine.machineId, identity.personalSpace.id]);
         assert(run(['runner', 'start']).online);
         run(['mcp', 'install', '--client', 'claude']);

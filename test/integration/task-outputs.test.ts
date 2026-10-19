@@ -1,3 +1,4 @@
+import { saveTestConnection } from '../identity-fixture';
 import { fixtureCleanup } from '../fixture-cleanup';
 import { afterEach, expect, test } from 'bun:test';
 import { createHash, randomUUID } from 'node:crypto';
@@ -109,7 +110,7 @@ async function harness(worktree = false) {
             return Response.json({ operation });
         });
         h.machines.find(machine => machine.id === h.machineId)!.runnerState!.capabilities!.artifactOutputs = 1;
-        const http = () => new HubClient({ url: h.url, space: h.space, env: { RUNWEFT_IDENTITY_TOKEN: h.owner.token } }, 'hubAccess', 'hub_access_unavailable').http;
+        const http = () => new HubClient({ url: h.url, space: h.space, credential: { token: h.owner.token }, env: {} }, 'hubAccess', 'hub_access_unavailable').http;
         const artifacts = new ArtifactClient({ request: (path, options) => http().request(path, options), response: (path, options) => http().response(path, options) });
         const spawn = (names: string[]) => h.post('spawn', { ...h.payload(), intent: { ...h.payload().intent, workspaceMode: worktree ? 'worktree' : 'shared', outputs: names.map(name => ({ name, relativePath: name })) } });
         async function started(id: string, roundId?: string) { return until(() => h.post('read', { id, roundId }), value => value.inputs[0]?.observation?.phase === 'accepted'); }
@@ -193,7 +194,7 @@ test('MCP retry fixed candidates and collect new versions with native call idemp
     for (const host of ['codex'] as const) {
         const h = await harness(); h.sources.set('one', 'ORIGINAL'); h.faultsFiles.failName = 'one';
         const cwd = '/', config = loadConfig(h.home, {}), paths = hubConnectionPaths(h.home, h.url), credential = h.machineConnections.get(h.machineId)!;
-        atomicWrite(paths.identityConnection, JSON.stringify({ schemaVersion: 1, hub: h.url, ownerId: h.owner.identity.id, spaceId: h.space, token: h.owner.token, requestId: randomUUID(), createdAt: Date.now() }));
+        await saveTestConnection(h.home, h.url, h.owner.token, h.space);
         atomicWrite(paths.machineConnection, JSON.stringify({ schemaVersion: 1, hub: h.url, ownerId: h.owner.identity.id, requestId: credential.requestId, machineId: h.machineId, active: { token: credential.token, credentialId: credential.credentialId }, createdAt: Date.now() }));
         const server = createMcpServer({ client: host, cwd, config: () => config, hub: () => ({ url: h.url, home: h.home, env: config.env }) }), client = new Client({ name: 'file-recovery', version: '1' });
         cleanup.push(() => server.close(), () => client.close());

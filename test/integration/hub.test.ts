@@ -142,10 +142,10 @@ test('new APIs reject HAPI and query/cookie credentials, reject malformed input 
     const old = await fetch(`${h.url}/api/runweft/identity`, { headers: { authorization: `Bearer ${a.token}` } });
     expect(old.status).toBe(401);
     expect((await h.api('/identity', a.token, { token: a.token, name: 'a' }, 'PATCH')).status).toBe(400);
-    const invalid = await h.api('/identities', '', { name: 'a'.repeat(20_000), token: a.token });
+    const invalid = await h.api('/accounts', '', { name: 'a'.repeat(20_000), token: a.token });
     expect(invalid.status).toBe(413); expect(JSON.stringify(invalid)).not.toContain(a.token);
-    const plain = await fetch(h.url + prefix + '/identities', { method: 'POST', body: JSON.stringify({ name: 'cross-origin' }) });
+    const plain = await fetch(h.url + prefix + '/accounts', { method: 'POST', body: JSON.stringify({ name: 'cross-origin' }) });
     expect(plain.status).toBe(415); expect(plain.headers.get('access-control-allow-origin')).toBeNull();
-    const malformed = await fetch(h.url + prefix + '/identities', { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{' });
+    const malformed = await fetch(h.url + prefix + '/accounts', { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{' });
     expect(malformed.status).toBe(400);
 });

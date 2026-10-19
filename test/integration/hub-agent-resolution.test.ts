@@ -17,7 +17,7 @@ async function setup() {
     h.hub.acceptInvitation(h.c.identity.id, h.hub.invite(h.a.identity.id, space, 'member').token);
     const actor = h.access.authenticate(h.a.token, space), member = h.access.authenticate(h.c.token, space), admin = h.access.authenticate(h.b.token, space);
     const repos = new RepositoryStore(h.store), agents = new HubAgentStore(repos), selections = new AgentSelectionStore(agents);
-    const client = (token = h.a.token) => new HubAgentClient({ url: h.url, space, env: { RUNWEFT_IDENTITY_TOKEN: token } });
+    const client = (token = h.a.token) => new HubAgentClient({ url: h.url, space, credential: { token: token }, env: {} });
     const runtime = (who: Principal = actor, flavor: 'codex' | 'claude' = 'codex') => {
         const m = h.store.enroll(who, { requestId: randomUUID(), token: `rw_mc_${randomBytes(32).toString('base64url')}` });
         h.store.associate(who, m.machineId, space, true); h.connect(m.machineId);

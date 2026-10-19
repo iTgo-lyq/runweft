@@ -22,9 +22,10 @@ function backup(home: string, url: string, identity: { identity: { id: string };
     return path;
 }
 async function cli(home: string, url: string, file: string, args: string[], space?: string, extraEnv: NodeJS.ProcessEnv = {}) {
+    await saveTestConnection(home, url, fixtureCredential(file).token, space);
     const env = { ...process.env, ...extraEnv };
     delete env.RUNWEFT_IDENTITY_TOKEN; delete env.RUNWEFT_MODE; delete env.RUNWEFT_HUB_URL;
-    const child = Bun.spawn([executable, '--home', home, '--json', 'hub', '--url', url, '--identity-file', file,
+    const child = Bun.spawn([executable, '--home', home, '--json', 'hub', '--url', url,
         ...(space ? ['--space', space] : []), ...args], { env, stdout: 'pipe', stderr: 'pipe' });
     const [exit, stdout, stderr] = await Promise.all([child.exited, new Response(child.stdout).text(), new Response(child.stderr).text()]);
     return { exit, stdout, stderr, result: stdout.trim() ? JSON.parse(stdout) : undefined, error: stderr.trim() ? JSON.parse(stderr).error : undefined };
@@ -70,7 +71,7 @@ test('compiled CLI concurrently enrolls one durable machine, manages resources a
     expect((await cli(home, h.url, file, ['machine', 'revoke-credential', id])).result.credential.status).toBe('revoked');
     expect((await cli(home, h.url, file, ['machine', 'enroll'])).error.code).toBe('machine_connection_changed');
     expect((await cli(home, h.url, file, ['machine', 'rotate-credential'])).exit).toBe(0);
-    const human = Bun.spawn([executable, '--home', home, 'hub', '--url', h.url, '--identity-file', file, 'machine', 'enroll'], { stdout: 'pipe', stderr: 'pipe' });
+    const human = Bun.spawn([executable, '--home', home, 'hub', '--url', h.url, 'machine', 'enroll'], { stdout: 'pipe', stderr: 'pipe' });
     const [humanExit, humanOut, humanErr] = await Promise.all([human.exited, new Response(human.stdout).text(), new Response(human.stderr).text()]);
     expect(humanExit).toBe(0); expect(humanOut).toContain(id); expect(humanOut).toContain(path);
     expect(humanOut + humanErr).not.toContain(JSON.parse(readFileSync(path, 'utf8')).active.token);
@@ -79,7 +80,7 @@ test('compiled CLI concurrently enrolls one durable machine, manages resources a
 
 test('lost enrollment and rotation responses retain saved requests; stale pending cannot revoke a newer credential without explicit replacement', async () => {
     const h = await hubResourceFixture(cleanups), home = join(h.home, 'client');
-    const options = { url: h.url, env: { RUNWEFT_IDENTITY_TOKEN: h.a.token } };
+    const options = { url: h.url, credential: { token: h.a.token }, env: {} };
     const paths = hubConnectionPaths(home, h.url);
     class LosingClient extends HubResourceClient {
         override async enroll(value: Parameters<HubResourceClient['enroll']>[0]): Promise<never> {
@@ -119,7 +120,7 @@ test('lost enrollment and rotation responses retain saved requests; stale pendin
 
 test('explicit rotation recovers a lost first enrollment receipt even when its original credential was revoked', async () => {
     const h = await hubResourceFixture(cleanups), home = join(h.home, 'client');
-    const options = { url: h.url, env: { RUNWEFT_IDENTITY_TOKEN: h.a.token } };
+    const options = { url: h.url, credential: { token: h.a.token }, env: {} };
     class LostEnrollment extends HubResourceClient {
         override async enroll(input: Parameters<HubResourceClient['enroll']>[0]): Promise<never> {
             const reply = await super.enroll(input);
@@ -137,12 +138,11 @@ test('explicit rotation recovers a lost first enrollment receipt even when its o
     expect(h.access.authenticate(record.active.token).id).toBe(rotated.credentialId);
 });
 
-test('Hub origins, identity backup IDs and legacy tokens cannot be mixed; unknown servers receive no credentials', async () => {
+test('Hub connection origins and identity IDs cannot be mixed; unknown servers receive no credentials', async () => {
     const h = await hubResourceFixture(cleanups), second = await hubResourceFixture(cleanups), home = join(h.home, 'client');
     const firstFile = backup(h.home, h.url, h.a), secondFile = backup(second.home, second.url, second.a);
     const first = await cli(home, h.url, firstFile, ['machine', 'enroll']);
-    const wrong = await cli(home, second.url, firstFile, ['machine', 'enroll']);
-    expect(wrong.error.code).toBe('hub_identity_origin_mismatch');
+    expect(() => new HubResourceClient({ url: second.url, home, env: {} })).toThrow('尚未连接');
     expect(second.store.machines(second.actor)).toHaveLength(0);
     const two = await cli(home, second.url, secondFile, ['machine', 'enroll']);
     expect(two.exit).toBe(0); expect(two.result.credentialFile).not.toBe(first.result.credentialFile);
@@ -150,16 +150,19 @@ test('Hub origins, identity backup IDs and legacy tokens cannot be mixed; unknow
     const secondToken = JSON.parse(readFileSync(two.result.credentialFile, 'utf8')).active.token;
     expect(firstToken).not.toBe(secondToken);
     expect(() => second.access.authenticate(firstToken)).toThrow();
-    const forged = backup(h.home, h.url, { identity: h.a.identity, token: h.b.token }, 'wrong-id.txt');
-    expect((await cli(home, h.url, forged, ['identity'])).error.code).toBe('hub_identity_response_invalid');
-    expect(() => new HubResourceClient({ url: h.url, home, env: { RUNWEFT_HUB_TOKEN: h.a.token } })).toThrow('尚未连接');
+    const saved = hubConnectionPaths(home, h.url).identityConnection, current = JSON.parse(readFileSync(saved, 'utf8'));
+    writeFileSync(saved, JSON.stringify({ ...current, ownerId: h.b.identity.id }));
+    await expect(new HubResourceClient({ url: h.url, home, env: {} }).identity()).rejects.toMatchObject({ code: 'hub_identity_response_invalid' });
+    writeFileSync(saved, JSON.stringify({ ...current, hub: second.url }));
+    expect(() => new HubResourceClient({ url: h.url, home, env: {} })).toThrow('连接记录无效');
+    expect(() => new HubResourceClient({ url: h.url, home: join(home, 'empty'), env: { RUNWEFT_HUB_TOKEN: h.a.token } })).toThrow('尚未连接');
     let observed = false;
     const old = Bun.serve({ hostname: '127.0.0.1', port: 0, async fetch(request) {
         observed ||= !!request.headers.get('authorization') || (request.method !== 'GET' && (await request.text()).includes(h.a.token));
         return Response.json({ service: 'runweft', capabilities: {} });
     } });
     try {
-        await expect(new HubResourceClient({ url: old.url.origin, env: { RUNWEFT_IDENTITY_TOKEN: h.a.token } }).identity()).rejects.toMatchObject({ code: 'hub_resources_unavailable' });
+        await expect(new HubResourceClient({ url: old.url.origin, credential: { token: h.a.token }, env: {} }).identity()).rejects.toMatchObject({ code: 'hub_resources_unavailable' });
         expect(observed).toBe(false);
     } finally { old.stop(true); }
 });
@@ -196,3 +199,4 @@ test('compiled repository CLI serializes replay, matches real Git worktrees, rep
     expect((await run(['match', '--machine', machine, '--cwd', root])).result.status).toBe('unmatched');
     expect(h.calls).toEqual([]); // metadata does not probe or start the native runtime
 }, 20_000);
+import { saveTestConnection, fixtureCredential } from '../identity-fixture';

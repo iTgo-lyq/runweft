@@ -120,8 +120,8 @@ test('new runtime bindings require current rights and flavor; existing failed ta
 
 test('HTTP/client permission checks whitelist governance responses, enforce body limits and invalidate cached access after removal', async () => {
     const h = await hubResourceFixture(cleanups, true), space = h.a.personalSpace.id;
-    const owner = new HubAgentClient({ url: h.url, space, env: { RUNWEFT_IDENTITY_TOKEN: h.a.token } });
-    const admin = new HubAgentClient({ url: h.url, space, env: { RUNWEFT_IDENTITY_TOKEN: h.b.token } });
+    const owner = new HubAgentClient({ url: h.url, space, credential: { token: h.a.token }, env: {} });
+    const admin = new HubAgentClient({ url: h.url, space, credential: { token: h.b.token }, env: {} });
     const created = await owner.create(randomUUID(), { name: 'Agent', instructions: 'private text', flavor: 'claude', model: 'private model' });
     const id = created.agent.id; expect((await admin.agent(id)).agent.view).toBe('governance');
     expect(JSON.stringify(await admin.list())).not.toContain('private text');

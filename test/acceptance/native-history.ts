@@ -19,8 +19,8 @@ export async function nativeHistory(f: NativeFixture, result: any) {
         context.on('response', response => { if (response.status() === 200) responses.push(new URL(response.url()).pathname); });
         const ready = () => page.waitForFunction(() => !document.querySelector<HTMLButtonElement>('#logout')?.disabled);
         await page.goto(f.url + '/hub'); await ready();
-        await page.locator('#import-token').fill(f.user.token); await page.locator('#import-identity button').click(); await ready();
-        await page.evaluate(spaceId => { const key = 'runweft.hub.identity'; const value = JSON.parse(sessionStorage.getItem(key)!); value.spaceId = spaceId; sessionStorage.setItem(key, JSON.stringify(value)); }, f.space);
+        await page.locator('#account-username').fill(f.account.username); await page.locator('#account-password').fill(f.account.password); await page.locator('#auth-submit').click(); await page.locator('#workspace').waitFor(); await ready();
+        await page.evaluate(spaceId => { const key = 'runweft.hub.session'; const value = JSON.parse(sessionStorage.getItem(key)!); value.spaceId = spaceId; sessionStorage.setItem(key, JSON.stringify(value)); }, f.space);
         await page.reload(); await ready();
         const tab = await openTaskHistory(page, result.agent_id, result.session_id);
         await tab.getByText(getSessionTitle(native), { exact: true }).first().waitFor();

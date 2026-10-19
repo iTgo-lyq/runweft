@@ -131,7 +131,7 @@ test('repository roles, replay, alias conflicts, private checkout paths, member 
 
 test('configuration gateway and shared Hub client enforce capabilities, selected space, strict bodies and current identity without native calls', async () => {
     const h = await hubResourceFixture(cleanups, true), space = h.a.personalSpace.id;
-    const c = new HubRepositoryClient({ url: h.url, space, env: { RUNWEFT_IDENTITY_TOKEN: h.a.token } });
+    const c = new HubRepositoryClient({ url: h.url, space, credential: { token: h.a.token }, env: {} });
     const repo = (await c.create({ requestId: randomUUID(), name: 'API', aliases: ['git@example.invalid:team/repo.git'] })).repository;
     expect((await c.repository(repo.id)).repository).toEqual(repo);
     expect((await c.alias(repo.id, 'https://example.invalid/team/repo', true)).repository.aliases).toHaveLength(2);
@@ -141,13 +141,13 @@ test('configuration gateway and shared Hub client enforce capabilities, selected
     expect((await h.request(prefix, jwt, 'POST', { requestId: randomUUID(), name: 'Bad', ownerId: h.b.identity.id })).status).toBe(400);
     expect((await h.request(prefix + '?ownerId=' + h.a.identity.id, jwt)).status).toBe(400);
     expect((await h.request(prefix + '/' + repo.id + '/register', jwt, 'POST', { unexpected: true })).status).toBe(400);
-    const noSpace = new HubRepositoryClient({ url: h.url, env: { RUNWEFT_IDENTITY_TOKEN: h.a.token } });
+    const noSpace = new HubRepositoryClient({ url: h.url, credential: { token: h.a.token }, env: {} });
     await expect(noSpace.list()).rejects.toMatchObject({ code: 'repository_space_required' });
     expect(h.calls).toEqual([]);
     const health = await (await fetch(h.url + '/api/runweft/health')).json() as any;
     expect(health.capabilities).toMatchObject({ hubAccess: 1, hubResources: 1, hubRepositories: 1 }); expect(health.capabilities.hubAgents).toBe(1);
-    const resource = new HubResourceClient({ url: h.url, env: { RUNWEFT_IDENTITY_TOKEN: h.a.token } }); expect((await resource.identity()).id).toBe(h.a.identity.id);
-    const legacy = await hubResourceFixture(cleanups); const repositoryClient = new HubRepositoryClient({ url: legacy.url, space, env: { RUNWEFT_IDENTITY_TOKEN: h.a.token } });
+    const resource = new HubResourceClient({ url: h.url, credential: { token: h.a.token }, env: {} }); expect((await resource.identity()).id).toBe(h.a.identity.id);
+    const legacy = await hubResourceFixture(cleanups); const repositoryClient = new HubRepositoryClient({ url: legacy.url, space, credential: { token: h.a.token }, env: {} });
     await expect(repositoryClient.list()).rejects.toMatchObject({ code: 'hub_repositories_unavailable' });
     const rotated = `rw_web_${randomBytes(32).toString('base64url')}`; replaceTestCredential(h.hub, h.a.identity, h.a.token, rotated);
     await expect(c.list()).rejects.toMatchObject({ code: 'user_session_invalid' });

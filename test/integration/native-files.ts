@@ -1,4 +1,4 @@
-import { fixtureCredential } from '../identity-fixture';
+import { saveTestConnection, fixtureCredential } from '../identity-fixture';
 import { createTestIdentity } from '../identity-fixture';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
@@ -47,8 +47,9 @@ export async function nativeFileSmoke(root: string, command: string[], hapiBinar
         files.add(identityFile); writeFileSync(identityFile, user.token, { mode: 0o600 }); secrets.push(user.token);
         const space = user.personalSpace.id, home = join(root, 'client');
         async function cli(args: string[], selectedHome = home, expected = 0) {
+            await saveTestConnection(selectedHome, url, user.token, space);
             const child = Bun.spawn([...command, '--home', selectedHome, '--json', 'hub', '--url', url,
-                '--identity-file', identityFile, '--space', space, ...args], { env, stdout: 'pipe', stderr: 'pipe' });
+                '--space', space, ...args], { env, stdout: 'pipe', stderr: 'pipe' });
             const [code, stdout, stderr] = await Promise.all([child.exited, new Response(child.stdout).text(), new Response(child.stderr).text()]);
             for (const secret of secrets) assert(!(stdout + stderr).includes(secret), 'Credential leaked');
             assert.equal(code, expected, `${args.join(' ')}: ${stderr}`); return JSON.parse(stdout || stderr);

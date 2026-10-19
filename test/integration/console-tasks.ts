@@ -13,7 +13,7 @@ import { hubConnectionPaths } from '../../src/hub/resources/connection';
 import { openTaskHistory } from './console-history';
 
 export async function consoleTasks(options: { origin: string; home: string; root: string; page: Page; memberPage: Page; context: BrowserContext;
-    identityToken: string; memberToken: string; memberIdentity: string; ownerToken: string; spaceId: string; machineId: string; agentId: string; memberAgentId: string;
+    memberUsername: string; memberPassword: string; identityToken: string; memberToken: string; memberIdentity: string; ownerToken: string; spaceId: string; machineId: string; agentId: string; memberAgentId: string;
     ready(page: Page): Promise<void>; navigate(page: Page, name: string): Promise<void>; check(name: string): void }) {
     const { origin, home, page, memberPage, context, ready, navigate, check } = options;
     const statePath = join(home, 'server/runweft/state.sqlite'), access = new AccessStore(statePath);
@@ -112,22 +112,28 @@ export async function consoleTasks(options: { origin: string; home: string; root
         viewer.emit('terminal:create', { sessionId: other.id, terminalId: 'forbidden-shell', cols: 80, rows: 24 });
         assert.equal((await terminalDenied).code, 'access-denied');
         const previousMemberJwt = await memberNative.evaluate(() => sessionStorage.getItem('runweft.native.access'));
-        await memberPage.locator('#rotate-token').click(); await memberPage.locator('#secret-dialog[open]').waitFor();
-        const replacement = await memberPage.locator('#secret-value').innerText(); credentials.add(replacement);
-        await memberPage.locator('#apply-rotation').click(); await ready(memberPage); await memberPage.locator('#close-secret').click();
+        await memberPage.locator('#show-settings').click();
+        await memberPage.locator('#current-password').fill(options.memberPassword);
+        const newPassword = 'a changed console member passphrase';
+        await memberPage.locator('#next-password').fill(newPassword); await memberPage.locator('#change-password button[type=submit]').click();
+        await memberPage.locator('#auth-form').waitFor();
         assert.equal((await fetch(origin + '/api/auth', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ accessToken: options.memberIdentity, spaceId: options.spaceId }) })).status, 401);
         assert.equal((await fetch(origin + `/api/sessions/${other.id}`, { headers: { authorization: `Bearer ${previousMemberJwt}` } })).status, 401);
-        // Actual rotation redirects the native tab. Do not create an unauthenticated EventSource on the new Hub page.
+        // Password change redirects the native tab. Do not create an unauthenticated EventSource on the new Hub page.
         await memberNative.waitForURL(/\/hub#native-expired/);
         assert(await memberNative.evaluate(() => sessionStorage.getItem('runweft.native.access') === null), 'Revoked native credential must clear');
         assert.equal((await fetch(origin + `/api/sessions/${owner.id}`, { headers: { authorization: `Bearer ${options.ownerToken}` } })).status, 200);
+        await memberPage.locator('#account-username').fill(options.memberUsername); await memberPage.locator('#account-password').fill(newPassword); await memberPage.locator('#auth-submit').click();
+        await memberPage.locator('#workspace').waitFor(); await ready(memberPage);
+        await memberPage.locator('#spaces button').filter({ hasText: 'console-owner' }).click(); await ready(memberPage);
+        const replacement = await memberPage.evaluate(() => JSON.parse(sessionStorage.getItem('runweft.hub.session')!).token as string); credentials.add(replacement);
         await navigate(memberPage, '任务');
         await memberPage.locator(`[data-task-id="${other.taskId}"]`).getByRole('button', { name: '查看任务详情' }).click(); await ready(memberPage);
         const renewedPopup = context.waitForEvent('page'); await memberPage.getByRole('button', { name: '打开原生详情 / 审批' }).click();
         const renewed = await renewedPopup; await renewed.getByText('MEMBER_ONLY_HISTORY_NATIVE_MESSAGE', { exact: true }).waitFor();
         assert((await renewed.evaluate(() => sessionStorage.getItem('runweft.native.access'))) !== previousMemberJwt, 'Explicit reopen must issue a new credential');
-        assert(JSON.parse(await memberPage.evaluate(() => sessionStorage.getItem('runweft.hub.identity')) as string).token === replacement, 'Member identity rotation must persist');
-        check('actual identity rotation rejects old long token and native JWT, expired SSE clears tab credential; independent owner remains authorized and explicit reopen gets new scope token');
+        assert(JSON.parse(await memberPage.evaluate(() => sessionStorage.getItem('runweft.hub.session')) as string).token === replacement, 'Member account session must persist');
+        check('password change rejects all old browser sessions and native JWT, expired SSE clears tab credential; independent owner remains authorized and explicit reopen gets new scope token');
         assert(urls.every(url => !new URL(url).searchParams.has('token'))); assert.deepEqual(errors, []);
         check('same-browser native tabs keep different identities; foreign API, managed resume and shared-machine terminal denied');
     } catch (error) {

@@ -1,3 +1,4 @@
+import { saveTestConnection } from '../identity-fixture';
 import { fixtureCredential } from '../identity-fixture';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
@@ -41,7 +42,7 @@ export async function nativeUserSmoke(root: string, binary: string, env: NodeJS.
         secrets.add(join(server, 'server/hapi/settings.json')); secrets.add(join(server, 'server/hapi/jwt-secret.json'));
         resources.push(() => { cli(server, ['stop']); const status = cli(server, ['status']); assert(!status.service.running && !status.runner.running); stopped = true; });
         cli(server, ['start']); const status = cli(server, ['status']); assert.equal(status.hapiRevision, pkg.hapi.revision, 'Compiled candidate HAPI pin differs from this source'); const url = status.url;
-        const response = await fetch(url + '/api/runweft/hub/identities', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: 'Native execution smoke' }) });
+        const response = await fetch(url + '/api/runweft/hub/accounts', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ username: 'native-smoke', password: 'an isolated native test password' }) });
         assert.equal(response.status, 201); const user = await response.json() as any, space = user.personalSpace.id; credentialValues.add(user.token);
         const identityFile = join(root, 'identity.txt'); secrets.add(identityFile); writeFileSync(identityFile, user.token, { mode: 0o600 });
         async function runner(home: string, flavors: Array<'codex' | 'claude'> = ['codex', 'claude']) {
@@ -50,7 +51,7 @@ export async function nativeUserSmoke(root: string, binary: string, env: NodeJS.
             if (home === server) cli(home, ['config', 'set', 'hub.url', url]);
             cli(home, ['config', 'set', 'hapi.executable', binaries.hapi.path]);
             secrets.add(paths.identityConnection);
-            atomicWrite(paths.identityConnection, JSON.stringify({ schemaVersion: 1, hub: url, ownerId: user.identity.id, spaceId: space, token: user.token, requestId: randomUUID(), createdAt: Date.now() }));
+            await saveTestConnection(home, url, user.token, space);
             const enrollment = cli(home, ['machine', 'enroll']); secrets.add(enrollment.credentialFile); credentialValues.add(JSON.parse(readFileSync(enrollment.credentialFile, 'utf8')).active.token); secrets.add(join(paths.connection, 'hapi/settings.json'));
             cli(home, ['machine', 'associate', enrollment.machineId, space]);
             resources.push(() => { cli(home, ['runner', 'stop']); assert.equal(cli(home, ['status']).runner.running, false); });
@@ -67,7 +68,7 @@ export async function nativeUserSmoke(root: string, binary: string, env: NodeJS.
             }
             throw new Error('Runner actual discovery RPC timed out');
         }
-        return { server, url, user, space, identityFile, run, cli, runner, binaries,
+        return { server, url, user, space, account: { username: 'native-smoke', password: 'an isolated native test password' }, identityFile, run, cli, runner, binaries,
             async restart() { cli(server, ['restart']); for (const [home, item] of registered) { cli(home, ['runner', 'start']); await ready(home, item.id, item.flavors); } },
             proxyHttp: (url: string) => new HubClient({ url, credential: fixtureCredential(identityFile), space }, 'hubAccess', 'unavailable').http,
             candidate: { entry: 'compiled CLI + compiled serve + real HAPI/Runner', invokedCLI: binary, binaries,

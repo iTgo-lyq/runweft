@@ -26,7 +26,8 @@ export async function taskResultsProbe(p: { root: string; center: string; source
     const { hapi, source, targetSource, repo } = p;
     const credentials = [p.fixture.user.token, ...[p.sourceRunner, p.targetRunner].map(runner => JSON.parse(readFileSync(runner.credentialFile, 'utf8')).active.token)];
     const cli = async (home: string, args: string[], cwd = p.root) => {
-        const child = Bun.spawn([p.binary, '--home', home, '--json', 'hub', '--url', p.fixture.url, '--identity-file', p.fixture.identityFile, '--space', p.fixture.space, ...args], { cwd, env: p.env, stdout: 'pipe', stderr: 'pipe' });
+        await saveTestConnection(home, p.fixture.url, p.fixture.user.token, p.fixture.space);
+        const child = Bun.spawn([p.binary, '--home', home, '--json', 'hub', '--url', p.fixture.url, '--space', p.fixture.space, ...args], { cwd, env: p.env, stdout: 'pipe', stderr: 'pipe' });
         const [status, stdout, stderr] = await Promise.all([child.exited, new Response(child.stdout).text(), new Response(child.stderr).text()]);
         for (const credential of credentials) assert(!(stdout + stderr).includes(credential), 'Credential leaked in compiled CLI output');
         assert.equal(status, 0, stderr); return JSON.parse(stdout);
@@ -138,3 +139,4 @@ export async function taskResultsProbe(p: { root: string; center: string; source
         p.note('compiled CLI and MCP tool fetch both fixed rounds from restarted center with executor and target Git directories offline; no branch refs required, parent index/config/dirty files preserved, explicit merge restores code and LFS');
     } finally { baselines.close(); }
 }
+import { saveTestConnection } from '../identity-fixture';
