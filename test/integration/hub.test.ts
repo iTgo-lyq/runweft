@@ -1,3 +1,4 @@
+import { createIdentityToken } from '../identity-fixture';
 import { afterEach, expect, test } from 'bun:test';
 import { Database } from 'bun:sqlite';
 import { randomBytes } from 'node:crypto';
@@ -6,7 +7,7 @@ import { join, resolve } from 'node:path';
 import { SignJWT } from 'jose';
 import { createDelegationGateway } from '../../src/hub/delegation/gateway';
 import { fixtureCleanup } from '../fixture-cleanup';
-import { createIdentityToken, HubStore } from '../../src/hub/store';
+import {  HubStore } from '../../src/hub/store';
 import { fixture } from '../helpers';
 
 const cleanup: (() => Promise<void> | void)[] = [];
@@ -27,7 +28,7 @@ async function setup() {
             ...(value !== undefined ? { 'content-type': 'application/json' } : {}) }, body: value !== undefined ? JSON.stringify(value) : undefined });
         return { status: response.status, data: await response.json() as any };
     };
-    const create = async (name: string) => { const result = await api('/identities', '', { name }); expect(result.status).toBe(201); return result.data; };
+    const create = async (name: string) => { const username='test-'+crypto.randomUUID().slice(0,20); const result = await api('/accounts', '', { username, password: 'an isolated test password' }); expect(result.status).toBe(201); result.data.identity=(await api('/identity',result.data.token,{name},'PATCH')).data.identity; return result.data; };
     const joinSpace = async (owner: any, user: any, role = 'member', spaceId = owner.personalSpace.id) => {
         const invite = await api(`/spaces/${spaceId}/invitations`, owner.token, { role }); expect(invite.status).toBe(200);
         const joined = await api('/invitations/accept', user.token, { token: invite.data.token }); expect(joined.status).toBe(200);
@@ -36,7 +37,7 @@ async function setup() {
     return { home, path, key, url, api, create, joinSpace };
 }
 
-test('identities persist, secrets are hashed, rotation retains ownership and old credentials fail', async () => {
+test('accounts persist and independent browser sessions retain stable ownership after logout', async () => {
     const h = await setup(), a = await h.create('甲'), b = await h.create('甲');
     expect(a.identity.id).not.toBe(b.identity.id); expect(a.token).not.toBe(b.token); expect(a.personalSpace.id).not.toBe(b.personalSpace.id);
     const connection = new HubStore(h.path);
@@ -45,18 +46,15 @@ test('identities persist, secrets are hashed, rotation retains ownership and old
     expect((await h.api('/identity', a.token)).data).toEqual({ identity: a.identity });
     expect((await h.api('/identity', a.token, { name: '新名称', id: b.identity.id }, 'PATCH')).status).toBe(400);
     expect((await h.api('/identity', a.token, { name: '新名称' }, 'PATCH')).data.identity.id).toBe(a.identity.id);
-    const next = createIdentityToken(), another = createIdentityToken();
-    const rotations = await Promise.all([h.api('/identity/rotate', a.token, { token: next }), h.api('/identity/rotate', a.token, { token: another })]);
-    expect(rotations.map(r => r.status).sort()).toEqual([200, 401]);
-    const saved = rotations[0].status === 200 ? next : another;
+    const saved = (await h.api('/sessions','',{username:a.username,password:'an isolated test password'})).data.token;
+    expect((await h.api('/sessions/logout',a.token,{})).status).toBe(200);
     expect((await h.api('/identity', a.token)).status).toBe(401);
     expect((await h.api('/identity', saved)).data.identity).toMatchObject({ id: a.identity.id, name: '新名称' });
     expect((await h.api('/spaces', saved)).data.spaces).toEqual([a.personalSpace]);
     expect((await h.api('/identity', b.token)).status).toBe(200);
-    expect(JSON.stringify(rotations)).not.toContain(saved);
     const db = new Database(h.path, { readonly: true });
     try {
-        expect(db.query('SELECT tokenDigest FROM hub_users').all()).toHaveLength(2);
+        expect(db.query('SELECT id FROM hub_users').all()).toHaveLength(2);
         const serialized = Buffer.from(db.serialize());
         for (const secret of [a.token, b.token, saved]) expect(serialized.includes(Buffer.from(secret))).toBe(false);
     } finally { db.close(); }

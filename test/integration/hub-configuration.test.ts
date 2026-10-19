@@ -1,3 +1,4 @@
+import { createTestIdentity, createIdentityToken } from '../identity-fixture';
 import { afterAll, test } from 'bun:test';
 import assert from 'node:assert/strict';
 import { randomBytes, randomUUID } from 'node:crypto';
@@ -8,7 +9,7 @@ import { atomicWrite } from '../../src/config';
 import { freePort } from '../../src/services';
 import { createConfigurationGateway } from '../../src/hub/configuration/gateway';
 import { HubResourceClient } from '../../src/hub/resources/client';
-import { HubStore, createIdentityToken } from '../../src/hub/store';
+import { HubStore } from '../../src/hub/store';
 import { preflightBinaries } from '../preflight';
 import { closeSmoke, removeSmokeSecrets, startSmokeHapi, stopSmokeProcess } from '../lifecycle';
 
@@ -37,7 +38,7 @@ test('CLI resolves a saved Agent through the gateway and real Runner; revoked ru
     resources.push(() => gateway.close());
     const store = new HubStore(statePath); resources.push(() => store.close());
     const base = `http://127.0.0.1:${(gateway.server.address() as { port: number }).port}`;
-    const owner = store.createIdentity('owner'), space = owner.personalSpace.id, identityFile = join(root, 'identity');
+    const owner = createTestIdentity(store, 'owner'), space = owner.personalSpace.id, identityFile = join(root, 'identity');
     atomicWrite(identityFile, `Runweft Hub: ${base}\n身份 ID: ${owner.identity.id}\n${owner.token}\n`);
     secretFiles.add(identityFile);
     const secrets = [rootToken, owner.token];
@@ -82,7 +83,7 @@ test('CLI resolves a saved Agent through the gateway and real Runner; revoked ru
     assert.equal((await cli(['agent', 'resolve', '--repository', repository.id], 1)).error.code, 'runtime_unregistered');
     const invalid = join(root, 'invalid-identity');
     atomicWrite(invalid, `Runweft Hub: ${base}\n身份 ID: ${owner.identity.id}\n${createIdentityToken()}\n`);
-    assert.equal((await cli(['agent', 'list'], 1, invalid)).error.code, 'identity_token_invalid');
+    assert.equal((await cli(['agent', 'list'], 1, invalid)).error.code, 'user_session_invalid');
     assert.equal((gateway.store.db.query('SELECT COUNT(*) AS n FROM delegation_tasks').get() as { n: number }).n, 0);
     await closeSmoke(resources);
 }, 120_000);

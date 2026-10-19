@@ -1,3 +1,4 @@
+import { createTestIdentity } from '../identity-fixture';
 import { expect, test } from 'bun:test';
 import { createServer } from 'node:http';
 import { randomBytes, randomUUID } from 'node:crypto';
@@ -17,7 +18,7 @@ import { HubError } from '../../src/hub/types';
 
 test('actual outgoing native RPC rechecks resource governance after HTTP preflight and receipt allocation', async () => {
     const home = fixture('resource-dispatch'), statePath = join(home, 'state.sqlite'), key = randomBytes(32);
-    const identities = new HubStore(statePath), a = identities.createIdentity('machine owner'), sid = a.personalSpace.id;
+    const identities = new HubStore(statePath), a = createTestIdentity(identities, 'machine owner'), sid = a.personalSpace.id;
     const nativeToken = await new SignJWT({ uid: 1, ns: 'runweft' }).setProtectedHeader({ alg: 'HS256' }).sign(key);
     const receipts = new Map<string, object>();
     let beforeRpc = () => {}, beforeAck = () => {}, nativeSocket: any, down: Socket | undefined, nativeCount = 0, machineId = '', blockedTask: string | undefined;
@@ -73,7 +74,7 @@ test('actual outgoing native RPC rechecks resource governance after HTTP preflig
         expect(nativeCount).toBe(1); // The second payload never reached the external Runner socket.
         expect(gateway.store.list(actor, 'session')).toHaveLength(2); // Even the denied preallocated row has trusted ownership.
         resources.block(actor, sid, 'runtime', runtime.id, false); beforeRpc = () => {};
-        const b = identities.createIdentity('task owner'); identities.acceptInvitation(b.identity.id, identities.invite(a.identity.id, sid, 'member').token);
+        const b = createTestIdentity(identities, 'task owner'); identities.acceptInvitation(b.identity.id, identities.invite(a.identity.id, sid, 'member').token);
         resources.share(actor, runtime.id, sid, true);
         const taskId = randomUUID();
         gateway.store.bind({ kind: 'task', id: taskId, ownerId: b.identity.id, spaceId: sid, machineId });

@@ -26,11 +26,13 @@
   "tasks": {
     "T1": {
       "title": "交付账号与首次接入交互原型",
-      "status": "doing"
+      "status": "done",
+      "verification": "用户明确验收：交互可以，继续实现 Web 页面；固定 R2 原型、18 组本地交互及发布后桌面/手机操作已验证。"
     },
     "T2": {
       "title": "交付账户、独立凭据与稳定后台身份",
-      "status": "doing"
+      "status": "done",
+      "verification": "schema 20 账户及凭据 API、JWT ref 和可信后台主体接通；core 22 pass、身份/授权集成 15 pass、typecheck 通过。连接及 Web 入口待 T3/T7。"
     },
     "T3": {
       "title": "交付确认即激活与人工 CLI 登录",
@@ -103,9 +105,5 @@
         "digest": "sha256:8b68e9671a3b9e03252da8ebbd3698bd1a61ab0526e4fa5032764bd5548964cd"
       }
     }
-  ],
-  "waitingFor": {
-    "kind": "confirmation",
-    "summary": "账号原型已发布，待验收后实现对应 Web；T2 账户后端基础已开始，保持进行中。"
-  }
+  ]
 }

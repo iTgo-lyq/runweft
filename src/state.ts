@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { ensureDirectory } from './config';
 import { ResourceError } from './resources/types';
 
-export const STATE_SCHEMA_VERSION = 19;
+export const STATE_SCHEMA_VERSION = 20;
 
 /** The only supported business format. Native history remains owned by HAPI. */
 const schema = `
@@ -81,8 +81,22 @@ CREATE TABLE delegation_code_fetches (
 );
 CREATE INDEX delegation_code_fetch_task ON delegation_code_fetches(taskId);
 CREATE TABLE hub_users (
-    id TEXT PRIMARY KEY, name TEXT NOT NULL, tokenDigest TEXT NOT NULL UNIQUE,
-    createdAt INTEGER NOT NULL
+    id TEXT PRIMARY KEY, name TEXT NOT NULL, createdAt INTEGER NOT NULL
+);
+CREATE TABLE hub_accounts (
+    userId TEXT PRIMARY KEY REFERENCES hub_users(id), username TEXT NOT NULL UNIQUE,
+    passwordHash TEXT NOT NULL, passwordChangedAt INTEGER NOT NULL
+);
+CREATE TABLE hub_user_credentials (
+    id TEXT PRIMARY KEY, userId TEXT NOT NULL REFERENCES hub_users(id),
+    kind TEXT NOT NULL CHECK(kind IN ('browser', 'cli')), tokenDigest TEXT NOT NULL UNIQUE,
+    label TEXT NOT NULL, createdAt INTEGER NOT NULL, lastUsedAt INTEGER NOT NULL,
+    expiresAt INTEGER NOT NULL, revokedAt INTEGER
+);
+CREATE INDEX hub_user_credential_owner ON hub_user_credentials(userId);
+CREATE TABLE hub_password_resets (
+    userId TEXT PRIMARY KEY REFERENCES hub_users(id), tokenDigest TEXT NOT NULL UNIQUE,
+    expiresAt INTEGER NOT NULL, consumedAt INTEGER
 );
 CREATE TABLE hub_spaces (
     id TEXT PRIMARY KEY, name TEXT NOT NULL, createdAt INTEGER NOT NULL
@@ -234,13 +248,12 @@ CREATE TABLE hub_delegation_scopes (
 );
 CREATE TABLE hub_connection_requests (
     id TEXT PRIMARY KEY, fingerprint TEXT NOT NULL, origin TEXT NOT NULL, label TEXT NOT NULL,
-    publicKey TEXT NOT NULL, pollingDigest TEXT NOT NULL, code TEXT NOT NULL,
-    createdAt INTEGER NOT NULL, expiresAt INTEGER NOT NULL,
-    status TEXT NOT NULL CHECK(status IN ('pending', 'confirmed', 'consumed', 'cancelled')),
+    tokenDigest TEXT NOT NULL, code TEXT NOT NULL, createdAt INTEGER NOT NULL, expiresAt INTEGER NOT NULL,
+    status TEXT NOT NULL CHECK(status IN ('pending', 'confirmed', 'cancelled')),
     ownerId TEXT REFERENCES hub_users(id), spaceId TEXT REFERENCES hub_spaces(id),
-    identityDigest TEXT, ciphertext TEXT
+    credentialId TEXT REFERENCES hub_user_credentials(id)
 );
-PRAGMA user_version=19;
+PRAGMA user_version=20;
 `;
 type SchemaRow = { type: string; name: string; tbl_name: string; sql: string | null };
 function structure(db: Database) {

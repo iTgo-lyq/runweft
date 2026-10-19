@@ -1,3 +1,4 @@
+import { createIdentityToken, replaceTestCredential } from '../identity-fixture';
 import { Database } from 'bun:sqlite';
 import { parentKey } from '../../src/tasks/types';
 import { afterEach, expect, test } from 'bun:test';
@@ -5,7 +6,7 @@ import { randomUUID } from 'node:crypto';
 import { hubDelegationFixture } from './hub-delegation-fixture';
 import { until } from '../helpers';
 import { resourceInspection } from './native-fixture';
-import { createIdentityToken } from '../../src/hub/store';
+
 import { TaskStore } from '../../src/tasks/store';
 import { BaselineStore } from '../../src/remote/store';
 
@@ -79,7 +80,7 @@ test('identity rotation aborts an outstanding wait but accepted work keeps its s
     const active = await until(() => h.post('read', { id: accepted.agent_id }), v => v.inputs[0]?.observation?.phase === 'accepted');
     const waiting = h.request('wait', { parent: h.parent, ids: [accepted.agent_id], timeoutMs: 10_000 });
     await Bun.sleep(30);
-    const replacement = createIdentityToken(); h.hub.rotate(h.owner.identity, h.owner.token, replacement);
+    const replacement = createIdentityToken(); replaceTestCredential(h.hub, h.owner.identity, h.owner.token, replacement);
     const aborted = await waiting; expect(aborted.status).toBe(401);
     await h.use(replacement);
     expect((await h.post('read', { id: accepted.agent_id })).phase).toBe('running'); expect(h.calls.send).toBe(1); expect(h.calls.stop).toBe(0);

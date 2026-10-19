@@ -1,3 +1,4 @@
+import { createIdentityToken } from '../identity-fixture';
 import { compiledCli } from './compiled-cli';
 import { fixtureCleanup } from '../fixture-cleanup';
 import { afterEach, expect, test } from 'bun:test';
@@ -10,7 +11,7 @@ import { join } from 'node:path';
 import { loadConfig } from '../../src/config';
 import { HapiClient } from '../../src/hapi';
 import { hubOptions } from '../../src/hub/delegation/client';
-import { createIdentityToken } from '../../src/hub/store';
+
 import { recordClaudeCall, consumeClaudeCall, CLAUDE_CALL_TTL_MS } from '../../src/mcp/claude-hook';
 import { resolveHostIdentity } from '../../src/mcp/identity';
 import { createMcpServer, type McpTool } from '../../src/mcp/server';

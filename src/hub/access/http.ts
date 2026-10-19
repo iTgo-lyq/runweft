@@ -67,7 +67,7 @@ export async function createAccessGateway(options: AccessGatewayOptions) {
             || (url.searchParams.has('token') && path !== '/api/events')) throw inputError();
         if (hubPage(request, response) || await handleConnectionRequest(request, response, connections) || await handleHubRequest(request, response, identities)) return;
         if (path === '/api/runweft/health' && method === 'GET') {
-            jsonResponse(response, 200, options.health?.() ?? { service: 'runweft', protocolVersion: 1, ready: true, capabilities: { hubIdentity: 1, hubAccess: 1, hubConnect: 1 } }); return;
+            jsonResponse(response, 200, options.health?.() ?? { service: 'runweft', protocolVersion: 1, ready: true, capabilities: { hubIdentity: 1, hubAccess: 1, hubConnect: 0, hubAccounts: 1 } }); return;
         }
         if (path === '/health' && method === 'GET') { jsonResponse(response, 200, await native.json('/health')); return; }
         if (path === '/api/auth' && method === 'POST') {

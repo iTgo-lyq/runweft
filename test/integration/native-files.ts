@@ -1,3 +1,4 @@
+import { createTestIdentity } from '../identity-fixture';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { randomBytes, randomUUID, createHash } from 'node:crypto';
@@ -41,7 +42,7 @@ export async function nativeFileSmoke(root: string, command: string[], hapiBinar
         }
         await openGateway();
         identities = new HubStore(statePath); resources.push(() => identities.close());
-        const user = identities.createIdentity('Native file smoke owner'), identityFile = join(root, 'identity.txt');
+        const user = createTestIdentity(identities, 'Native file smoke owner'), identityFile = join(root, 'identity.txt');
         files.add(identityFile); writeFileSync(identityFile, user.token, { mode: 0o600 }); secrets.push(user.token);
         const space = user.personalSpace.id, home = join(root, 'client');
         async function cli(args: string[], selectedHome = home, expected = 0) {

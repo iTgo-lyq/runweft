@@ -1,3 +1,4 @@
+import { replaceTestCredential } from '../identity-fixture';
 import { afterEach, expect, test } from 'bun:test';
 import { randomBytes, randomUUID } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
@@ -120,7 +121,7 @@ test('repository roles, replay, alias conflicts, private checkout paths, member 
     const cm = machine(h, member); h.repos.bind(member, { machineId: cm, observation: seen, repositoryId: personal.id });
     expect(h.repos.checkouts(member)).toHaveLength(1);
     h.hub.changeMember(h.a.identity.id, h.space, h.c.identity.id, null);
-    code(() => h.repos.checkouts(member), 'identity_token_invalid');
+    code(() => h.repos.checkouts(member), 'user_session_invalid');
     h.hub.acceptInvitation(h.c.identity.id, h.hub.invite(h.a.identity.id, h.space, 'member').token);
     expect(h.repos.checkouts(h.access.authenticate(h.c.token, h.space))).toEqual([]);
     const persisted = openState(h.path); expect(persisted.query('PRAGMA user_version').get()).toEqual({ user_version: STATE_SCHEMA_VERSION });
@@ -148,6 +149,6 @@ test('configuration gateway and shared Hub client enforce capabilities, selected
     const resource = new HubResourceClient({ url: h.url, env: { RUNWEFT_IDENTITY_TOKEN: h.a.token } }); expect((await resource.identity()).id).toBe(h.a.identity.id);
     const legacy = await hubResourceFixture(cleanups); const repositoryClient = new HubRepositoryClient({ url: legacy.url, space, env: { RUNWEFT_IDENTITY_TOKEN: h.a.token } });
     await expect(repositoryClient.list()).rejects.toMatchObject({ code: 'hub_repositories_unavailable' });
-    const rotated = `rw_id_${randomBytes(32).toString('base64url')}`; h.hub.rotate(h.a.identity, h.a.token, rotated);
-    await expect(c.list()).rejects.toMatchObject({ code: 'identity_token_invalid' });
+    const rotated = `rw_web_${randomBytes(32).toString('base64url')}`; replaceTestCredential(h.hub, h.a.identity, h.a.token, rotated);
+    await expect(c.list()).rejects.toMatchObject({ code: 'user_session_invalid' });
 });

@@ -131,7 +131,7 @@ test('asynchronous probe rechecks content, preferences, sharing, runtime authori
         if (scenario === 'repository') h.repos.register(h.actor, repo.id, false);
         if (scenario === 'membership') h.hub.changeMember(h.a.identity.id, h.space, h.c.identity.id, null);
         release(); const result = await outcome;
-        expect(result.code).toBe({ content: 'agent_configuration_changed', flavor: 'agent_configuration_changed', preference: 'agent_configuration_changed', sharing: 'hub_object_not_found', runtime: 'runtime_private', repository: 'repository_unregistered', membership: 'identity_token_invalid' }[scenario]);
+        expect(result.code).toBe({ content: 'agent_configuration_changed', flavor: 'agent_configuration_changed', preference: 'agent_configuration_changed', sharing: 'hub_object_not_found', runtime: 'runtime_private', repository: 'repository_unregistered', membership: 'user_session_invalid' }[scenario]);
     }
 }, 20_000);
 

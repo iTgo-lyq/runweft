@@ -1,3 +1,4 @@
+import { createIdentityToken } from '../identity-fixture';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { spawn } from 'node:child_process';
@@ -5,7 +6,7 @@ import { existsSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
-import { createIdentityToken } from '../../src/hub/store';
+
 import { closeSmoke } from '../lifecycle';
 import { withSmokeDeadline } from '../deadline';
 

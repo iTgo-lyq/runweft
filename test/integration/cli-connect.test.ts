@@ -1,3 +1,4 @@
+import { replaceTestCredential } from '../identity-fixture';
 import { compiledCli } from './compiled-cli';
 import { fixtureCleanup } from '../fixture-cleanup';
 import { loadConfig } from '../../src/config';
@@ -111,7 +112,7 @@ test('server rejects secret-less polling, replacement confirmations, query secre
     const ciphertext = await confirm(h, c);
     expect((await h.request(path + '/confirm', h.a.token, 'POST', { spaceId: h.a.personalSpace.id, ciphertext })).status).toBe(200);
     expect((await h.request(path + '/confirm', h.b.token, 'POST', { spaceId: h.a.personalSpace.id, ciphertext })).status).toBe(409);
-    h.hub.rotate(h.a.identity, h.a.token, `rw_id_${randomBytes(32).toString('base64url')}`);
+    replaceTestCredential(h.hub, h.a.identity, h.a.token, `rw_web_${randomBytes(32).toString('base64url')}`);
     await expect(c.complete()).rejects.toMatchObject({ code: 'connection_authorization_changed' }); expect(existsSync(c.paths.identityConnection)).toBe(false);
     await c.cancel();
     await c.begin(); await confirm(h, c, h.b, h.a.personalSpace.id);

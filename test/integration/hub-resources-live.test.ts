@@ -1,3 +1,4 @@
+import { createTestIdentity } from '../identity-fixture';
 import assert from 'node:assert/strict';
 import { randomBytes } from 'node:crypto';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync, symlinkSync, readdirSync } from 'node:fs';
@@ -48,7 +49,7 @@ test('hub-resources-live real integration', async () => {
         while (Date.now() < end) { if (await fn()) return; await Bun.sleep(250); }
         throw new Error(message);
     }
-    function backup(user: ReturnType<HubStore['createIdentity']>, name: string) {
+    function backup(user: ReturnType<typeof createTestIdentity>, name: string) {
         const file = join(root, name + '.txt');
         atomicWrite(file, `Runweft Hub: ${base}\n身份 ID: ${user.identity.id}\n${user.token}\n`); secrets.push(user.token); secretFiles.add(file); return file;
     }
@@ -92,7 +93,7 @@ test('hub-resources-live real integration', async () => {
         resources.push(() => hub?.close(), () => gateway?.close(), () => stopRunner());
         resources.push(() => { socket?.disconnect(); });
         await startGateway(); hub = new HubStore(statePath);
-        const a = hub.createIdentity('machine owner'), b = hub.createIdentity('shared user'), c = hub.createIdentity('space admin');
+        const a = createTestIdentity(hub, 'machine owner'), b = createTestIdentity(hub, 'shared user'), c = createTestIdentity(hub, 'space admin');
         const sid = a.personalSpace.id, tid = c.personalSpace.id;
         for (const [issuer, user, space, role] of [[a, b, sid, 'member'], [a, c, sid, 'admin'], [c, a, tid, 'member'], [c, b, tid, 'member']] as const) {
             hub.acceptInvitation(user.identity.id, hub.invite(issuer.identity.id, space, role).token);
