@@ -59,8 +59,8 @@ export function addHubCommands(program: Command, output: (value: unknown, human:
         if (result.status === 'connected') setConfig(context(), 'hub.url', hub.opts().url);
         output(result, result.status === 'pending' ? `等待 Web 确认：${'confirmationUrl' in result ? result.confirmationUrl : ''}` : `身份连接已保存。\n${JSON.stringify(result, null, 2)}`);
     });
-    connect.command('cancel').description('取消待确认请求，保留已保存身份').action(async () => {
-        output(await new IdentityConnection(home(), hub.opts().url).cancel(), '待确认连接已取消；已有身份连接保留。');
+    connect.command('cancel').description('取消本次待连接请求；确认后撤销本次授权，保留其他连接').action(async () => {
+        output(await new IdentityConnection(home(), hub.opts().url).cancel(), '本次待连接请求已取消；本请求已有授权已撤销，其他连接保留。');
     });
     connect.command('status').description('显示本机连接摘要，不输出凭据；不代表远端授权仍有效').action(() => {
         const result = new IdentityConnection(home(), hub.opts().url).status(); output(result, JSON.stringify(result, null, 2));

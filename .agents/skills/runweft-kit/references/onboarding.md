@@ -37,7 +37,7 @@ runweft hub connect status
 runweft hub identity
 ```
 
-`complete` 可重跑并继续同一请求，只有 `connected` 才算完成；授权确认已激活独立 CLI 凭据，它校验后保存在本机受限文件并保存 `hub.url`。`status` 仅是本机记录，`identity` 才核对当前远端授权。确认前过期需先 cancel 再 begin；确认后原期限到期仍可用原记录 complete。响应未知优先 complete，不新建身份。`connect cancel` 只取消待确认请求，保留既有连接。
+`complete` 可重跑并继续同一请求，只有 `connected` 才算完成；授权确认已激活独立 CLI 凭据，它校验后保存在本机受限文件并保存 `hub.url`。`status` 仅是本机记录，`identity` 才核对当前远端授权。确认前过期需先 cancel 再 begin；确认后原期限到期仍可用原记录 complete。响应未知优先 complete，不新建身份。`connect cancel` 取消本次待连接请求；确认后会撤销本请求的凭据，保留其他连接。
 
 在另一台机器通过同样流程连接用户选择的身份/空间；不要复制 Hub 内部 root token。后续命令默认使用已保存空间，需要临时空间时使用全局 `--space`，使用 space list/use 修复默认，不编辑连接文件。仅查询 task list --all/show/wait/result show/artifacts show 不需要机器或 Runner。人工终端也可 auth register/login --interactive --url <地址>，密码隐藏输入；Agent 默认仍提供浏览器链接。
 
