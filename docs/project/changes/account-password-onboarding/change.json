@@ -30,7 +30,7 @@
     },
     "T2": {
       "title": "交付账户、独立凭据与稳定后台身份",
-      "status": "todo"
+      "status": "doing"
     },
     "T3": {
       "title": "交付确认即激活与人工 CLI 登录",
