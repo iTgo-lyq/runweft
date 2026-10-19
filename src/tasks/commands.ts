@@ -6,6 +6,8 @@ import { type ResolvedConfig } from '../config';
 import { ArtifactOutputsSchema, type ArtifactOutput } from '../../hapi/shared/src/artifactTransfers';
 import type { OutputManifest } from './output-types';
 import { RunweftError } from '../errors';
+import { openBrowser } from '../browser';
+import { HubClient } from '../hub/client';
 import { ArtifactInputSchema, parseTask, type ArtifactInput } from './types';
 import type { HubTaskClient } from '../hub/delegation/client';
 import type { overview } from './views';
@@ -58,7 +60,16 @@ export function announceRequest(program: Command, requested?: string) {
 export function addTaskCommands(program: Command, context: () => ResolvedConfig, output: (value: unknown, human: string) => void,
     hub: { client: () => HubTaskClient; url: () => string }) {
     const client = hub.client;
+    function taskUrl(id:string,roundId?:string,spaceId?:string|null){
+        parseTask(z.uuid(),id);if(roundId)parseTask(z.uuid(),roundId);
+        const target=new URL('/hub',hub.url());
+        const space=spaceId??new HubClient({url:hub.url(),home:context().home,space:program.optsWithGlobals().space},'hubAccounts','hub_accounts_unavailable').spaceId;
+        if(!space)throw new RunweftError('hub_space_required','请先选择当前 Hub 空间。');
+        target.hash=new URLSearchParams({space,task:id,...(roundId?{round:roundId}:{})}).toString();return target.toString();
+    }
     const task = program.command('task').description('派生、续接与控制本机共享或本机/远端独立任务');
+    task.command('open <id>').description('打开指定任务的 Hub 详情；登录后恢复定位').option('--round <id>','指定历史轮次').option('--print','只输出无凭据链接')
+        .action(async(id,options)=>{const url=taskUrl(id,options.round);if(!options.print)await openBrowser(url);output({url,opened:!options.print},url);});
     task.command('workspace').description('管理保留的独立工作区').command('remove <id>').description('显式删除已结束任务的工作区；远端需已交付或明确放弃代码')
         .option('--discard-ignored', '明确丢弃 ignored 依赖和文件；默认存在时拒绝删除')
         .action(async (id, options) => {
@@ -178,11 +189,11 @@ export function addTaskCommands(program: Command, context: () => ResolvedConfig,
         });
     task.command('show <id>').description('查看任务事实与报告').option('--round <id>', '历史轮次').option('--offset <n>', '报告字符偏移', '0').option('--limit <n>', '报告最多字符数', '16000')
         .action(async (id, options) => {
-            const result = await client().read(id, { roundId: options.round, offset: Number(options.offset), limit: Number(options.limit) });
+            const current=client();const result = await current.read(id, { roundId: options.round, offset: Number(options.offset), limit: Number(options.limit) });
             const permissions = Object.entries(result.permissions ?? {}).map(([requestId, request]) => `\n待审批：${requestId} · ${request.tool}\n参数：${JSON.stringify(request.arguments).slice(0, 1200)}\n`
                 + `响应：runweft task permission ${id} --round ${result.round_id} --request ${requestId} --decision <approved|denied|abort>`).join('\n');
             output(result, taskText(result) + `\n原生会话：${result.session_id ?? '未建立'}\n执行关闭：${result.stop} · 收尾：${result.finish}`
-                + (result.session_id ? `\nHAPI 详情：${hub.url()}/sessions/${encodeURIComponent(result.session_id)}` : '') + permissions
+                + `\nWeb 详情：${taskUrl(id,result.round_id,current.connection.spaceId)}` + permissions
                 + (result.input_files?.paths.map(file => `\n输入 ${file.name}：${file.path}`).join('') ?? ''));
         });
     task.command('wait <ids...>').description('等待完成或需要处理；超时和取消不终止任务').option('--timeout <ms>', '等待毫秒数（0–540000）', '30000')

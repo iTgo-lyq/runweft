@@ -95,6 +95,7 @@ export function clearConsole() {
     document.getElementById('console-navigation')?.replaceChildren();
 }
 export async function mountConsole(context: ConsoleContext) {
+    if(new URLSearchParams(location.hash.slice(1)).has('task'))active='tasks';
     const epoch = ++generation;
     const content = document.getElementById('console-content')!, navigation = document.getElementById('console-navigation')!;
     const members = document.getElementById('members-panel')!;
@@ -126,6 +127,6 @@ export async function mountConsole(context: ConsoleContext) {
         button.dataset.view = mode.id; return button;
     }));
     const guide = document.getElementById('agent-onboarding')!;
-    guide.textContent = `请按 Runweft 产品 Skill 帮我接入 ${location.origin}。先检查已有安装和此 Hub 的连接；没有身份时发起 hub connect begin，让我在 Web 领取或导入 token 并确认，随后 complete。不要让我把凭据发到对话。分别登记机器、Runtime 和 Agent，保留其他 MCP 与原生配置，完成首次委派后返回 Hub 页面。`;
+    guide.textContent = `请按 Runweft 产品 Skill 帮我接入 ${location.origin} 并完成一次只读评审体验。先检查已有安装和连接；没有有效连接时给我浏览器注册/登录授权链接，再用 complete --wait 60 继续。密码由我在自己的界面输入。通过 CLI 复用或准备机器、Runtime、当前仓库关联和私有评审 Agent，发起任务并读回完整报告；保留其他 MCP 与原生配置，MCP 重载及实际可用性单独报告。`;
     await render(true);
 }

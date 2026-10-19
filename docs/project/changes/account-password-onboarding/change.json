@@ -54,7 +54,9 @@
     },
     "T7": {
       "title": "交付 Web 账户流程与任务定位",
-      "status": "todo"
+      "status": "done",
+      "verification": "typecheck/build；Playwright 真实 Hub/HAPI 三组 Web 回归 3 pass、0 fail；check-docs、diff --check",
+      "commitTitle": "account-password-onboarding T7: implement account Web flows and task links"
     },
     "T8": {
       "title": "交付 Agent 首次体验并完成整体验证",
