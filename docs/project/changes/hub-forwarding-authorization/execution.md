@@ -83,3 +83,10 @@
 原 Claude 包装器无需修改：`iptables` 实际位于 `/usr/sbin/iptables`，在隔离验收进程 PATH 增加 `/usr/sbin:/sbin` 后，`claude --version` 返回 `2.1.303 (Claude Code)`、退出 0。原生验收复用配置中的 Codex `gpt-6.1-sol/xhigh`、Claude `opus`；Claude 配置未声明 effort，验收进程显式使用 `high`，不写入用户配置。
 
 首次正式候选来自 `5a2f06a`，双布局安装通过；原生主集合在 N1 的轮询阶段因验收脚本仍按旧 `task list.agents[].agent_id` 读取而失败，关闭/凭据清理无错误，其他模型案例尚未运行。核对当前 CLI 与真实接口的 `items[].id`、`total` 契约后修正该轮询，仍检查只有一个任务；不修改产品行为或降低断言。此修正改变验收输入，旧失败报告保留独立证据，后续从新冻结版本重新构建并单项运行，不能冒充相同输入的环境重试。
+
+### 发行前实际结果
+
+- 正式版本的本机完整无模型集成为 261 项通过、1 项 `hub-resources-live` 失败，共 4435 个断言。直接 Claude 版本探测虽通过，Bun `node:child_process.execFile` 创建的标准 FD 0/1/2 均为 AF_UNIX socket（family=1），仍被 `claude-dmit` 包装器以 `network socket on standard FD rejected` 拒绝、退出 125。已明确反馈用户，未修改或绕过包装器，未继续本地 Claude 模型验收。
+- 用户明确回复“本地先跳过 Claude 校验吧，GitHub 发布流程依赖吗？如果依赖就先暂停”。已说明 GitHub 不消费本机模型报告、不访问本机包装器，而是在独立 runner 安装官方客户端完成无模型检查；本次按该指示跳过本地 N4、N5、C-claude 及受影响的 Claude 版本发现项，不把跳过记为成功，不更改长期发行门禁或托管测试。
+- 从新干净提交 `11e95cd827771859d6b15fd40d18bdebd6a080f6` 重新构建正式候选，包内 Runweft/HAPI 摘要与已通过的双布局安装报告一致。真实 N1 与 C-codex 均通过且清理无错误，分别覆盖两轮委派/记忆续接/真实历史与审批批准/拒绝/steer/中断/共享宿主隔离；使用报告校验器按本次显式必需集合 `N1,C-codex` 校验通过。旧输入失败报告没有混入新输入证明。
+- 类型检查、核心 22 项、工具 53 项、Skill 结构检查、官网构建和三页桌面/手机自动浏览器检查通过。GitHub 运行 [39292614591](https://github.com/iTgo-lyq/runweft/actions/runs/39292614591) 已全部通过，包括完整无模型检查、原型及四平台安装；其中 Claude 来自 runner 独立安装的官方客户端，不依赖本机包装器。

@@ -22,7 +22,9 @@
     },
     "T3": {
       "title": "准备正式版本和说明并完成发行前验收",
-      "status": "doing"
+      "status": "done",
+      "verification": "正式1.2.0候选及说明已冻结；类型/核心22/工具53/双布局安装/官网浏览器通过；新输入N1和C-codex真实模型及报告校验通过；本机261通过1项Claude包装器失败依用户指示跳过相关本地Claude项，GitHub39292614591全项及四平台安装通过。",
+      "commitTitle": "hub-forwarding-authorization T3: record stable release verification"
     }
   },
   "closure": {},
