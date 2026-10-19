@@ -19,4 +19,22 @@
 - `node scripts/check-runweft-kit.mjs` 与 skill-creator 的 `quick_validate.py` 通过。
 - 独立 Agent 静态场景验收覆盖已有转发、转发端口变化、任务深链接、Host 改写及旧数据/缺少工具四类条件，未发现阻塞性指引缺口。该结果不代表模型或真实 Codex 转发实测。
 
-源码版本使用 `1.2.0-beta.4` 区分本地候选，不创建 tag、不发布 npm、不更新公开 Skill。当前全局程序与运行中 Hub 均为 1.1.8；已安装全局 Skill 的六个文件与修改前源码一致，没有发现自定义改动。全局更新与安装验证在候选打包后继续进行，旧数据和其他原生工具配置保留。
+源码版本使用 `1.2.0-beta.4` 区分本地候选，不创建 tag、不发布 npm、不更新公开 Skill。候选来自干净提交 `2c208ee9d6b771cd266de63db95860150516553a`，HAPI pin 未变化。
+
+### 集成及安装结果
+
+- 同提交 [Development checks](https://github.com/iTgo-lyq/runweft/actions/runs/39254661633) 全部通过：262 项无模型集成、核心/工具检查、四平台安装及原型检查。此处是 CI 结果，不代替本机条件。
+- 本机完整无模型集成为 261 项通过、1 项 `hub-resources-live` 失败，共 4431 个断言。失败处为 Claude 原生命令版本探测，转发授权和任务链接用例均通过；保留 `/tmp/runweft-forwarding-integration.log` 和失败 fixture 的无凭据证据。
+- 定位发现本机 `claude` 是 `claude-dmit` 包装入口。在专用无凭据测试 HOME 中执行 `--version` 因 `resolv.conf` bind mount 失败而退出 125；Codex 版本探测成功。没有更改包装器、模型配置或凭据，没有调用模型。用户随后说明正在操作 Claude，要求发现问题先反馈，已停止 Claude 相关探测，未绕过包装器或改变测试令其通过；本机完整验收中的这一项保留待处理。
+- `bun run test:install --candidate dist/packages --case all --report /tmp/runweft-forwarding-install.json` 两种布局均通过，覆盖正常 npm 可选依赖布局、配套程序、MCP 握手、信号转发、失败卸载保留及完整卸载；使用隔离目录，不操作全局用户配置。
+- 更新全局安装后，以实际全局入口再运行新增真实浏览器转发用例：1 项、24 个断言通过，日志 `/tmp/runweft-forwarding-global-smoke.log`。
+
+### 当前机器交付
+
+安装前全局程序和运行中 Hub 均为 1.1.8，已有全局 Skill 的六个文件与修改前源码一致。旧程序目录、Skill 及 npm 版本清单保存在 `/home/tiger/.local/share/runweft/local-install-backups/forwarding-XGhUkh`，位于 Skill 扫描目录之外。
+
+通过一次性 loopback npm 源安装未改写的本地主包及 Linux x64 平台包，安装后关闭该源；没有向公共 registry 发布。当前 Node 全局入口 `/home/tiger/.nvm/versions/node/v24.21.0/bin/runweft` 返回 `1.2.0-beta.4`，实际 Runweft/HAPI 的摘要与候选完全一致，其他全局包版本未变化。全局 Skill 安装于 `/home/tiger/.codex/skills/runweft-kit`，六文件与源码及包内内容一致；原目录保留在备份中，没有新增重复发现入口。
+
+旧 `http://127.0.0.1:3210` Hub 保持 1.1.8，旧数据保留。修复版试用 Hub 已通过全局程序启动在 `http://127.0.0.1:3211`，数据根为 `/home/tiger/.local/share/runweft/local-trials/forwarding-beta4-3cpXrb`；健康检查确认版本、hubConnect=2 和 hubAccounts=1。试用尚未创建用户账号、连接机器或运行模型，后续由用户在自己的浏览器授权。
+
+全局安装证据为 `/tmp/runweft-forwarding-global-install.json`。用户体验时应显式使用上述新 home 和 3211 Hub，并由宿主转发到浏览器；现有转发到 3210 的入口仍指向旧版本。当前等待用户本机体验及 Claude 环境问题的反馈，不提前归档、合入 main 或发布包。

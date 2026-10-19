@@ -10,10 +10,16 @@
   "tasks": {
     "T1": {
       "title": "修复转发授权并交付测试与全局本地安装",
-      "status": "doing"
+      "status": "done",
+      "verification": "修复及全局本地安装完成；CI 同提交262项集成全通过，核心22/工具53及两布局安装通过；全局入口转发回归1项24断言通过；本机全量261通过1项Claude包装器探测失败已报告并暂停续验，等待用户本机体验。",
+      "commitTitle": "hub-forwarding-authorization T1: record local installation and forwarded trial evidence"
     }
   },
   "closure": {},
   "followUpOf": "account-password-onboarding",
-  "followUpTitle": "账号登录与首次接入"
+  "followUpTitle": "账号登录与首次接入",
+  "waitingFor": {
+    "kind": "confirmation",
+    "summary": "本地包与全局 Skill 已安装，等待用户转发体验；Claude 包装器探测问题已反馈，相关检查暂停。"
+  }
 }
