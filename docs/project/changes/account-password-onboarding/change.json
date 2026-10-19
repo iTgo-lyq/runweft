@@ -4,10 +4,59 @@
   "title": "账号密码登录与 Agent 主导的首次接入",
   "size": "large",
   "status": "active",
-  "stage": "requirement",
+  "stage": "plan",
   "branch": "develop",
-  "confirmations": {},
-  "tasks": {},
+  "confirmations": {
+    "requirement": {
+      "at": "2026-10-19T04:16:28.971Z",
+      "summary": "账号密码与双入口登录保留身份空间权限并补齐 CLI 核心能力",
+      "source": "用户：方案可以，就按这个方向拆好实施计划，然后开始实现。"
+    },
+    "technical": {
+      "at": "2026-10-19T04:16:30.295Z",
+      "summary": "身份凭据分离、确认即激活、复用领域接口与 HAPI 完成接入",
+      "source": "用户：方案可以，就按这个方向拆好实施计划，然后开始实现。"
+    },
+    "plan": {
+      "at": "2026-10-19T04:18:08.910Z",
+      "summary": "八项场景任务依赖推进，原型与后端先行后完成双入口及首次体验",
+      "source": "用户授权：方案可以，就按这个方向拆好实施计划，然后开始实现；任务粒度与执行安排由 Agent 落实。"
+    }
+  },
+  "tasks": {
+    "T1": {
+      "title": "交付账号与首次接入交互原型",
+      "status": "todo"
+    },
+    "T2": {
+      "title": "交付账户、独立凭据与稳定后台身份",
+      "status": "todo"
+    },
+    "T3": {
+      "title": "交付确认即激活与人工 CLI 登录",
+      "status": "todo"
+    },
+    "T4": {
+      "title": "交付账号管理与部署者协助恢复",
+      "status": "todo"
+    },
+    "T5": {
+      "title": "交付空间协作 CLI",
+      "status": "todo"
+    },
+    "T6": {
+      "title": "交付无需机器的任务查询与诊断",
+      "status": "todo"
+    },
+    "T7": {
+      "title": "交付 Web 账户流程与任务定位",
+      "status": "todo"
+    },
+    "T8": {
+      "title": "交付 Agent 首次体验并完成整体验证",
+      "status": "todo"
+    }
+  },
   "closure": {},
   "clarifications": {
     "Q1": {
@@ -36,9 +85,5 @@
     "at": "2026-10-19T04:02:08.172Z",
     "reason": "用户要求以 CLI 为核心补齐必要能力，并确认账号操作支持 CLI 与 Web",
     "approach": "保留确认即激活，补齐账户和空间管理、任务只读查询与诊断、可定位的 Web 交接；复用现有领域接口"
-  },
-  "waitingFor": {
-    "kind": "confirmation",
-    "summary": "CLI 核心能力及账号双入口方案已同步，iclaude 聚焦复审无阻塞；待整体方案审阅，尚未进入实现。"
   }
 }
