@@ -46,3 +46,14 @@
 删除默认 `/home/tiger/.runweft`、上述隔离试用目录和旧安装备份，以及 297 项已核对归属的 Runweft 测试临时文件/目录（包括前述 `/tmp` 原始日志、失败 fixture 和安装证据）。无备份保留测试账户、空间、连接、任务或日志；源码与已提交验证结论保留。复查相关数据根及临时项均不存在。
 
 全局 Runweft/HAPI 程序和六文件 Skill 在清理前后摘要一致，`runweft --version` 仍为 `1.2.0-beta.4`。未修改或探测 Claude 环境，未重启服务。后续直接按全局 Skill 使用默认 home 重新初始化、启动和接入，无需沿用已删除的隔离路径；当前等待用户重新体验及 Claude 环境问题反馈，不提前归档、合入 main 或发布包。
+
+### Claude 修复反馈后的定向复验
+
+用户反馈“Claude 问题应该修复了”后，仅在新的临时 HOME、CODEX_HOME、CLAUDE_CONFIG_DIR 中复验 `/home/tiger/.nvm/versions/node/v24.21.0/bin/claude --version`，保留当前 PATH，去除模型凭据及 Runweft/HAPI 环境覆盖，不调用模型。命令 stdout 为空，仍退出 125；这次完整 stderr 为：
+
+```text
+[claude-dmit] run=/home/tiger/.cache/claude-dmit-isolated/run-mrh9jcrs
+[claude-dmit] FAIL CLOSED: [Errno 2] No such file or directory: 'iptables'
+```
+
+与上次 resolv.conf bind mount 报错不同，本次包装器启动时找不到 `iptables` 命令。已反馈用户并暂停后续 `hub-resources-live`，没有执行新一轮集成或修改 Claude 程序、配置、凭据及包装器生成的缓存。Runweft 本次临时隔离目录已删除，未启动 Hub/Runner；此前 CI 与本机测试结论保持原始记录。

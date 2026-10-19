@@ -20,6 +20,6 @@
   "followUpTitle": "账号登录与首次接入",
   "waitingFor": {
     "kind": "confirmation",
-    "summary": "旧试用服务及数据已清空，保留全局包与 Skill，等待用户从默认目录重新体验；Claude 检查保持暂停。"
+    "summary": "等待用户重新体验；Claude 版本复验仍失败，包装器找不到 iptables，已反馈并暂停后续测试。"
   }
 }
