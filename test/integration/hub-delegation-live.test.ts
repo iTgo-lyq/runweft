@@ -1,3 +1,4 @@
+import { createTestIdentity } from '../identity-fixture';
 import assert from 'node:assert/strict';
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
@@ -62,7 +63,7 @@ test('hub-delegation-live real integration', async () => {
         await gateway.delegation.coordinator.close();
         const base = `http://127.0.0.1:${(gateway.server.address() as { port: number }).port}`;
         identities = new HubStore(statePath); cleanup.push(() => identities?.close());
-        const a = identities.createIdentity('Runner owner'), b = identities.createIdentity('task owner'), sid = a.personalSpace.id;
+        const a = createTestIdentity(identities, 'Runner owner'), b = createTestIdentity(identities, 'task owner'), sid = a.personalSpace.id;
         secrets.push(a.token, b.token); identities.acceptInvitation(b.identity.id, identities.invite(a.identity.id, sid, 'member').token);
         const actorA = gateway.store.authenticate(a.token, sid), actorB = gateway.store.authenticate(b.token, sid), resources = gateway.resources.store;
         const machineToken = `rw_mc_${randomBytes(32).toString('base64url')}`; secrets.push(machineToken);

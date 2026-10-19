@@ -1,6 +1,6 @@
 # 委派与成果
 
-在用户的实际工作目录使用 MCP。先 `runweft_status` 和 `list_agent_definitions` 核对 Hub、空间、原生父身份、仓库和执行目标；错误不自动触发新身份或配置回退。
+在用户的实际工作目录以 CLI 为主要入口；MCP 已加载时可复用。先 `runweft_status` 和 `list_agent_definitions` 核对 Hub、空间、原生父身份、仓库和执行目标；错误不自动触发新身份或配置回退。
 
 ## MCP 主流程
 
@@ -17,7 +17,7 @@
 
 同一次调用有稳定请求 ID；另一次新调用可能是新任务。未知响应先查询，必要时保持原 request ID 和完整原参数重试。`unknown` 不等于失败或确切缺失；只有原生确认历史缺失才由系统重建有界历史，不由 Agent 删除索引触发重跑。
 
-每轮关闭进程，保留原生 session 与 worktree。继续任务优先复用；主宿主退出不会自动把旧父身份注入新宿主。CLI 可以用同一 Hub 用户/空间查看维护本人任务，MCP 仍只操作当前父会话任务。新电脑的 task CLI 也要求先 machine enroll，哪怕只是 list/show；仅查看 Web 本人任务则不需要本机登记或 Runner。读取已保存报告无需启动执行，但续接/停止/收尾仍依赖原执行机。
+每轮关闭进程，保留原生 session 与 worktree。继续任务优先复用；主宿主退出不会自动把旧父身份注入新宿主。CLI 可以用同一 Hub 用户/空间查看维护本人任务，MCP 仍只操作当前父会话任务。新终端仅登录即可 task list --all/show/wait/result show/artifacts show/messages/open，不需登记机器或 Runner；默认 task list 精确限定本机 machineId+cwd，未登记时明确使用 --all。筛选参数 --workspace/--parent/--status/--page/--limit 与 Web 同义，JSON 返回 items/total/page/limit/pages/scope。读取已保存报告无需启动执行，但续接/停止/收尾仍依赖原执行机。
 
 ## 工作区
 
@@ -34,11 +34,15 @@ runweft task spawn <agentId> --message "只读检查当前改动"
 runweft task spawn <agentId> --workspace-mode worktree --base HEAD --message-file <任务文件>
 runweft task list --all
 runweft task show <taskId> --round <roundId>
+runweft task messages <taskId> --round <roundId> --limit 50
+runweft task open <taskId> --print
 runweft task wait <taskId> --timeout 65000
 runweft task send <taskId> --message "继续处理"
 runweft task interrupt <taskId> --round <roundId>
 runweft task permission <taskId> --round <roundId> --request <原生审批ID> --decision approved
 ```
+
+messages 最多 200 条，前翻同时传 --before-at/--before-seq；原生会话可能跨轮，不替代单轮报告。无会话或撤权按错误事实处理，不恢复或重发执行。只读 CLI 也保留 HAPI_SESSION_ID 的受管子任务拒绝，不绕过。
 
 `task spawn` 可省略 Agent 使用本人已配置选择；`--runtime` 是本次显式 override。权限审批只在用户已授权范围内处理，不能为跑通验收批准任意操作。Web `/hub` 展示本人任务；从任务页打开受限 HAPI 详情/文件/审批，不手工拼带 token 链接。短凭据到期返回 Hub 重开，不能重新创建身份。
 

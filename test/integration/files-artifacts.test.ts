@@ -1,3 +1,4 @@
+import { saveTestConnection, fixtureCredential } from '../identity-fixture';
 import assert from 'node:assert/strict';
 import { createHash, randomUUID } from 'node:crypto';
 import { mkdir, mkdtemp, open, readFile, stat, writeFile, rm } from 'node:fs/promises';
@@ -25,7 +26,8 @@ test('files-artifacts real integration', async () => {
     for (const key of Object.keys(env)) if (key.startsWith('RUNWEFT_')) delete env[key];
     let remoteUrl = ''; let token: string | undefined; let url = '', identityFile = '', spaceId = ''; const secrets: string[] = [];
     async function cli(selectedHome: string, args: string[], expected = 0) {
-        const child = Bun.spawn([binary, '--home', selectedHome, '--json', ...(args[0] === 'artifact' ? ['hub', '--url', selectedHome === home ? url : remoteUrl, '--identity-file', identityFile, '--space', spaceId] : []), ...args], { env, stdout: 'pipe', stderr: 'pipe' });
+        if (args[0] === 'artifact') await saveTestConnection(selectedHome, selectedHome === home ? url : remoteUrl, fixtureCredential(identityFile).token, spaceId);
+        const child = Bun.spawn([binary, '--home', selectedHome, '--json', ...(args[0] === 'artifact' ? ['hub', '--url', selectedHome === home ? url : remoteUrl, '--space', spaceId] : []), ...args], { env, stdout: 'pipe', stderr: 'pipe' });
         const [code, stdout, stderr] = await Promise.all([child.exited, new Response(child.stdout).text(), new Response(child.stderr).text()]);
         for (const secret of secrets) assert(!`${stdout}${stderr}`.includes(secret), 'Credential leaked');
         assert.equal(code, expected, `${args.slice(0, 2).join(' ')}: ${stderr}`);
@@ -69,9 +71,9 @@ test('files-artifacts real integration', async () => {
         await cli(home, ['start']);
         const paths = (await cli(home, ['paths'])).value;
         url = `http://127.0.0.1:${port}`; remoteUrl = url;
-        const user = await (await fetch(url + '/api/runweft/hub/identities', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: 'Artifact owner' }) })).json();
+        const user = await (await fetch(url + '/api/runweft/hub/accounts', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ username: 'fixture-'+crypto.randomUUID().slice(0,12), password: 'a synthetic integration passphrase' }) })).json();
         token = user.token; secrets.push(user.token); spaceId = user.personalSpace.id; identityFile = join(root, 'identity.txt'); await writeFile(identityFile, user.token, { mode: 0o600 });
-        const hapi = new HubClient({ url, identityFile, space: spaceId }, 'hubAccess', 'hub_access_unavailable').http;
+        const hapi = new HubClient({ url, credential: fixtureCredential(identityFile), space: spaceId }, 'hubAccess', 'hub_access_unavailable').http;
         const status = (await cli(home, ['status'])).value; assert.equal(status.runner.running, false);
         assert.equal((await hapi.request('/api/sessions')).sessions.length, 0);
         assert.equal((await hapi.request('/api/runweft/resources/machines')).machines.length, 0);
@@ -115,9 +117,9 @@ test('files-artifacts real integration', async () => {
         assert((await cli(home, ['artifact', 'remove', object.id], 1)).stderr.includes('artifact_referenced'));
         await hapi.request(refPath, { method: 'DELETE' });
         assert.equal((await cli(home, ['artifact', 'remove', object.id])).value.state, 'deleted');
-        const another = await (await fetch(url + '/api/runweft/hub/identities', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: 'Other owner' }) })).json();
+        const another = await (await fetch(url + '/api/runweft/hub/accounts', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ username: 'fixture-'+crypto.randomUUID().slice(0,12), password: 'a synthetic integration passphrase' }) })).json();
         secrets.push(another.token); const otherFile = join(root, 'other-identity.txt'); await writeFile(otherFile, another.token, { mode: 0o600 });
-        const other = new HubClient({ url, identityFile: otherFile, space: another.personalSpace.id }, 'hubAccess', 'hub_access_unavailable').http;
+        const other = new HubClient({ url, credential: fixtureCredential(otherFile), space: another.personalSpace.id }, 'hubAccess', 'hub_access_unavailable').http;
         await assert.rejects(() => other.request(`/api/artifacts/${evidence.cases[0]!.artifactId}`), { status: 404 });
         const rootCredential = JSON.parse(await readFile(join(paths.hapiServer, 'settings.json'), 'utf8')).cliApiToken;
         const runnerRead = await fetch(url + `/cli/artifacts/${evidence.cases[0]!.artifactId}`, { headers: { authorization: `Bearer ${rootCredential}` } });

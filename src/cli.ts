@@ -4,6 +4,8 @@ import { stringify } from 'yaml';
 import pkg from '../package.json';
 import { configPath, dataPaths, initializeConfig, loadConfig, setConfig, type ResolvedConfig } from './config';
 import { errorDetails } from './errors';
+import { addAccountCommands } from './hub/accounts/commands';
+import { addSpaceCommands } from './hub/spaces/commands';
 import { addServiceCommands } from './service-commands';
 import { addMcpCommands } from './mcp/commands';
 import { addAgentCommands } from './hub/agents/commands';
@@ -16,6 +18,7 @@ import { addUninstallCommand } from './uninstall';
 import { addRepositoryCommands } from './hub/repositories/commands';
 import { HubClient } from './hub/client';
 import { HubTaskClient, HubPreparationClient, hubOptions } from './hub/delegation/client';
+import { HubTaskReader } from './hub/delegation/reader';
 import { ArtifactClient } from './artifacts/client';
 
 export const VERSION = pkg.version;
@@ -26,7 +29,6 @@ export function createProgram() {
         .version(VERSION)
         .option('--home <directory>', '配置与数据根目录（默认 ~/.runweft）')
         .option('--space <id>', '本次操作的空间 UUID；默认已保存的连接空间')
-        .option('--identity-file <file>', '本次操作的身份备份文件')
         .option('--json', '输出结构化 JSON')
         .enablePositionalOptions()
         .showHelpAfterError()
@@ -84,13 +86,15 @@ export function createProgram() {
     const workspace = program.command('workspace').description('通过中心配置诊断独立 Git 工作区；仓库关联使用 repository');
     addPreparationCommands(workspace, program, context, output, () => new HubPreparationClient(connection(), process.cwd()));
     addServiceCommands(program, context, output);
+    addAccountCommands(program,context,output);
+    addSpaceCommands(program,connection,()=>context().home,output);
     addMcpCommands(program, context, output);
     addUninstallCommand(program, output);
     addHubResourceCommands(program, connection, () => context().home, output);
     addHubCommands(program, output);
     addRepositoryCommands(program, output, connection);
     addAgentCommands(program, output, connection);
-    addTaskCommands(program, context, output, { client: () => new HubTaskClient(connection(), process.cwd()), url: () => connection().url });
+    addTaskCommands(program, context, output, { client: () => new HubTaskClient(connection(), process.cwd()), reader: () => new HubTaskReader(connection(), process.cwd()), url: () => connection().url });
     addArtifactCommands(program, context, output, () => new ArtifactClient(new HubClient(connection(), 'hubAccess', 'hub_access_unavailable').http));
     program.addHelpText('after', '\n开始使用：\n  runweft start\n  runweft open\n\n编辑配置：runweft init，然后 runweft config show。\n持久数据默认位于 ~/.runweft；使用 --home 可选择其他位置。');
     return program;

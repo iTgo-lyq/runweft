@@ -26,7 +26,7 @@ async function fixture() {
     const store = new Store(join(root, 'hapi.db'));
     const service = new ArtifactService(store.artifacts, join(root, 'artifacts'), { ...ARTIFACT_DEFAULT_LIMITS, maxFileBytes: 1024 * 1024 });
     const secret = new TextEncoder().encode('artifact-client-test-signing-only');
-    const owner = randomUUID(), space = randomUUID(), identityToken = 'rw_id_' + 'a'.repeat(43);
+    const owner = randomUUID(), space = randomUUID(), identityToken = 'rw_cli_' + 'a'.repeat(43);
     const token = await new SignJWT({ uid: 1, ns: 'default', kind: 'user', sub: owner, space }).setProtectedHeader({ alg: 'HS256' }).setExpirationTime('1h').sign(secret);
     const app = new Hono<WebAppEnv>();
     app.get('/api/runweft/health', c => c.json({ service: 'runweft', capabilities: { hubAccess: 1 } }));
@@ -44,7 +44,7 @@ async function fixture() {
     } });
     const url = `http://127.0.0.1:${server.port}`;
     await writeFile(join(home, 'config.yaml'), `mode: hub\nhub:\n  url: ${url}\n`);
-    atomicWrite(hubConnectionPaths(home, url).identityConnection, JSON.stringify({ schemaVersion: 1, hub: url, ownerId: owner, spaceId: space, token: identityToken, requestId: randomUUID(), createdAt: Date.now() }));
+    atomicWrite(hubConnectionPaths(home, url).identityConnection, JSON.stringify({ schemaVersion: 2, hub: url, ownerId: owner, spaceId: space, token: identityToken, requestId: randomUUID(), createdAt: Date.now() }));
     const env: NodeJS.ProcessEnv = { ...process.env, ARTIFACT_TEST_TOKEN: 'test-access' };
     for (const key of Object.keys(env)) if (key.startsWith('RUNWEFT_')) delete env[key];
     const binary = await compiledCli();

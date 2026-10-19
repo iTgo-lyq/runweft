@@ -35,7 +35,7 @@ test('format validation accepts freshly closed empty WAL databases without chang
     }
 });
 test('unsupported versions, including a version present only in WAL, are refused without writes', () => {
-    for (const version of [0, 18, STATE_SCHEMA_VERSION + 1]) {
+    for (const version of [0, 19, STATE_SCHEMA_VERSION + 1]) {
         const { root, path } = location(); const db = new Database(path);
         db.exec(`CREATE TABLE keep(value TEXT); INSERT INTO keep VALUES ('untouched'); PRAGMA user_version=${version};`); db.close(); chmodSync(path, 0o640);
         refuse(root, path, 'state_format_unsupported');
@@ -61,7 +61,7 @@ test('concurrent fresh creators keep every committed row and leave no constructi
     const { root, path } = location();
     const module = resolve('src/state.ts');
     const children = Array.from({ length: 6 }, (_, i) => Bun.spawn([process.execPath, '-e',
-        `import {openState} from ${JSON.stringify(module)}; const db=openState(process.argv[1]); db.query('INSERT INTO hub_users VALUES (?, ?, ?, ?)').run(process.argv[2], 'Owner', process.argv[2], 1); db.close();`, path, String(i)], { stdout: 'pipe', stderr: 'pipe' }));
+        `import {openState} from ${JSON.stringify(module)}; const db=openState(process.argv[1]); db.query('INSERT INTO hub_users VALUES (?, ?, ?)').run(process.argv[2], 'Owner', 1); db.close();`, path, String(i)], { stdout: 'pipe', stderr: 'pipe' }));
     const results = await Promise.all(children.map(async child => ({ code: await child.exited, error: await new Response(child.stderr).text() })));
     expect(results).toEqual(Array.from({ length: 6 }, () => ({ code: 0, error: '' })));
     const db = openState(path); expect(db.query('SELECT COUNT(*) AS n FROM hub_users').get()).toEqual({ n: 6 }); db.close();

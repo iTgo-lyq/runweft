@@ -18,7 +18,7 @@ async function overviewFixture(options: NativeFixtureOptions = {}) {
         const actor = other ? h.outsider : h.actor, machineId = other || snapshots.size ? h.machine(actor) : h.machineId;
         const runtime = h.gateway.resources.store.registerRuntime(actor, { machineId, flavor }, resourceInspection(flavor));
         const agent = h.gateway.agents.create(actor, { requestId: crypto.randomUUID(), definition: { name: 'Review', instructions: 'PRIVATE DEFINITION', runtimeId: runtime.id, flavor } });
-        const resolution = (await new HubAgentClient({ url: h.url, space: h.space, env: { RUNWEFT_IDENTITY_TOKEN: other ? h.other.token : h.owner.token } }).resolve({ agentId: agent.id })).resolution;
+        const resolution = (await new HubAgentClient({ url: h.url, space: h.space, credential: { token: other ? h.other.token : h.owner.token }, env: {} }).resolve({ agentId: agent.id })).resolution;
         snapshots.set(runtime.id, agentSnapshot(h.gateway.delegation.scopes.ensure(actor), resolution));
         return runtime;
     }

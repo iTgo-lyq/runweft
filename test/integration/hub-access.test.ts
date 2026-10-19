@@ -1,3 +1,4 @@
+import { createTestIdentity, createIdentityToken, replaceTestCredential } from '../identity-fixture';
 import { afterEach, expect, test } from 'bun:test';
 import { Database } from 'bun:sqlite';
 import { randomBytes, randomUUID } from 'node:crypto';
@@ -5,7 +6,7 @@ import { readFileSync, rmSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { decodeJwt, SignJWT } from 'jose';
 import { fixture } from '../helpers';
-import { createIdentityToken, HubStore } from '../../src/hub/store';
+import {  HubStore } from '../../src/hub/store';
 import { AccessStore } from '../../src/hub/access/store';
 import { AccessAuthority } from '../../src/hub/access/auth';
 import { FileAccessStore } from '../../src/hub/access/file-store';
@@ -17,7 +18,7 @@ function setup() {
     cleanup.push(() => rmSync(home, { recursive: true, force: true }));
     const hub = new HubStore(path), access = new AccessStore(path), other = new AccessStore(path), key = randomBytes(32);
     cleanup.push(() => { other.close(); access.close(); hub.close(); });
-    const a = hub.createIdentity('machine owner'), b = hub.createIdentity('task owner'), c = hub.createIdentity('unrelated');
+    const a = createTestIdentity(hub, 'machine owner'), b = createTestIdentity(hub, 'task owner'), c = createTestIdentity(hub, 'unrelated');
     const sid = a.personalSpace.id;
     const invite = hub.invite(a.identity.id, sid, 'member'); hub.acceptInvitation(b.identity.id, invite.token);
     access.bind({ kind: 'machine', id: 'machine-a', ownerId: a.identity.id });
@@ -67,7 +68,7 @@ test('purpose-bound short JWTs revalidate identity and selected space; native HA
     await expect(h.authority.exchange('root:namespace')).rejects.toMatchObject({ status: 401 });
     await expect(h.authority.exchange(h.machine.token, h.sid)).rejects.toMatchObject({ status: 401 });
     const replacement = createIdentityToken(), inFlightExchange = h.authority.exchange(h.b.token, h.sid);
-    h.hub.rotate(h.b.identity, h.b.token, replacement);
+    replaceTestCredential(h.hub, h.b.identity, h.b.token, replacement);
     await expect(inFlightExchange).rejects.toMatchObject({ status: 401 });
     await expect(h.authority.verify(response.token)).rejects.toMatchObject({ status: 401 });
     expect((await h.authority.exchange(replacement, h.sid)).user.id).toBe(response.user.id);

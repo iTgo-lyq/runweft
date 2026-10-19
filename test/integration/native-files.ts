@@ -1,3 +1,5 @@
+import { saveTestConnection, fixtureCredential } from '../identity-fixture';
+import { createTestIdentity } from '../identity-fixture';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { randomBytes, randomUUID, createHash } from 'node:crypto';
@@ -41,12 +43,13 @@ export async function nativeFileSmoke(root: string, command: string[], hapiBinar
         }
         await openGateway();
         identities = new HubStore(statePath); resources.push(() => identities.close());
-        const user = identities.createIdentity('Native file smoke owner'), identityFile = join(root, 'identity.txt');
+        const user = createTestIdentity(identities, 'Native file smoke owner'), identityFile = join(root, 'identity.txt');
         files.add(identityFile); writeFileSync(identityFile, user.token, { mode: 0o600 }); secrets.push(user.token);
         const space = user.personalSpace.id, home = join(root, 'client');
         async function cli(args: string[], selectedHome = home, expected = 0) {
+            await saveTestConnection(selectedHome, url, user.token, space);
             const child = Bun.spawn([...command, '--home', selectedHome, '--json', 'hub', '--url', url,
-                '--identity-file', identityFile, '--space', space, ...args], { env, stdout: 'pipe', stderr: 'pipe' });
+                '--space', space, ...args], { env, stdout: 'pipe', stderr: 'pipe' });
             const [code, stdout, stderr] = await Promise.all([child.exited, new Response(child.stdout).text(), new Response(child.stderr).text()]);
             for (const secret of secrets) assert(!(stdout + stderr).includes(secret), 'Credential leaked');
             assert.equal(code, expected, `${args.join(' ')}: ${stderr}`); return JSON.parse(stdout || stderr);
@@ -61,7 +64,7 @@ export async function nativeFileSmoke(root: string, command: string[], hapiBinar
             processes.add(item.child); await waitRunner(item);
         }
         async function waitRunner(item: typeof runners[number]) {
-            const client = new HubResourceClient({ url, identityFile, space });
+            const client = new HubResourceClient({ url, credential: fixtureCredential(identityFile), space });
             const deadline = Date.now() + 30_000;
             while (Date.now() < deadline) {
                 assert.equal(item.child!.exitCode, null, 'Runner exited');
@@ -106,7 +109,7 @@ export async function nativeFileSmoke(root: string, command: string[], hapiBinar
         }
         return { get gateway() { return gateway; }, get url() { return url; }, nativeUrl: target,
             losingNative: (client: DelegationNativeClient, proxyUrl: string) => new DelegationNativeClient(gateway.resources.store, new NativeTransport(proxyUrl, rootToken), client.scope), user, space, identityFile, home, statePath, runners,
-            http: new HubClient({ url, identityFile, space }, 'hubAccess', 'hub_access_unavailable').http, cli, addRunner, scoped, startRunner, stopRunner, restart,
+            http: new HubClient({ url, credential: fixtureCredential(identityFile), space }, 'hubAccess', 'hub_access_unavailable').http, cli, addRunner, scoped, startRunner, stopRunner, restart,
             async reopenGateway(scan = false) { await gateway.close(); await openGateway(scan); for (const item of runners.filter(item => item.child)) await waitRunner(item); },
             candidate: { cli: command, entry: command.length === 1 ? 'compiled CLI + source gateway' : 'source CLI + source gateway', bun: Bun.version, revision: execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(), hapiBinary, hashes: { cli: createHash('sha256').update(readFileSync(command.at(-1)!)).digest('hex'), hapi: createHash('sha256').update(readFileSync(hapiBinary)).digest('hex') },
                 kind: 'current domain seeds; real Hub authorization/Git/RPC/bytes; no Task coordinator end-to-end' },

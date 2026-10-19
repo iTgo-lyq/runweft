@@ -1,3 +1,4 @@
+import { createTestIdentity, createIdentityToken, replaceTestCredential } from '../identity-fixture';
 import assert from 'node:assert/strict';
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import { existsSync, mkdirSync, mkdtempSync, writeFileSync, readFileSync } from 'node:fs';
@@ -7,7 +8,7 @@ import { Database } from 'bun:sqlite';
 import { io, type Socket } from 'socket.io-client';
 import { createAccessGateway } from '../../src/hub/access/http';
 import { fingerprint, fileNamespace } from '../../src/hub/access/transport';
-import { HubStore, createIdentityToken } from '../../src/hub/store';
+import { HubStore } from '../../src/hub/store';
 import { freePort } from '../../src/services';
 import { closeSmoke, removeSmokeSecrets, startSmokeHapi, stopSmokeProcess } from '../lifecycle';
 import { afterEach, test } from 'bun:test';
@@ -64,7 +65,7 @@ test('files-access real integration', async () => {
     try {
         child = await startSmokeHapi(integrationBinaries().hapi.path, root, process.env, hapiPort, rootToken, processes);
         await startGateway(); hub = new HubStore(statePath);
-        const a = hub.createIdentity('machine owner'), b = hub.createIdentity('task owner'), c = hub.createIdentity('other owner');
+        const a = createTestIdentity(hub, 'machine owner'), b = createTestIdentity(hub, 'task owner'), c = createTestIdentity(hub, 'other owner');
         const sid = a.personalSpace.id, invitation = hub.invite(a.identity.id, sid, 'member'); hub.acceptInvitation(b.identity.id, invitation.token);
         const auth = async (token: string, spaceId?: string) => (await api('/api/auth', '', { accessToken: token, ...(spaceId ? { spaceId } : {}) })).token as string;
         const aj = await auth(a.token, sid), bj = await auth(b.token, sid), cj = await auth(c.token, c.personalSpace.id);
@@ -223,7 +224,7 @@ test('files-access real integration', async () => {
         assert(terminated); assert(received < largeSize, 'backpressured download must stop before delivering all bytes after revocation');
         check('revoking a grant terminates a backpressured download without delivering the remaining file');
 
-        const replacement = createIdentityToken(); hub.rotate(b.identity, b.token, replacement);
+        const replacement = createIdentityToken(); replaceTestCredential(hub, b.identity, b.token, replacement);
         await api(`/api/sessions/${sb}`, bj, undefined, 'GET', 401);
         check('rotation rejects previously issued API JWTs');
         for (const path of ['hapi-out.log', 'hapi-err.log']) {

@@ -1,3 +1,5 @@
+import { createUserSecret } from '../../src/hub/accounts/credentials';
+import { hubConnectionPaths } from '../../src/hub/resources/connection';
 import { compiledCli } from './compiled-cli';
 import { fixtureCleanup } from '../fixture-cleanup';
 import { afterEach, expect, test } from 'bun:test';
@@ -7,10 +9,10 @@ import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { Database } from 'bun:sqlite';
 import { existsSync, mkdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { loadConfig } from '../../src/config';
+import { atomicWrite, loadConfig } from '../../src/config';
 import { HapiClient } from '../../src/hapi';
 import { hubOptions } from '../../src/hub/delegation/client';
-import { createIdentityToken } from '../../src/hub/store';
+
 import { recordClaudeCall, consumeClaudeCall, CLAUDE_CALL_TTL_MS } from '../../src/mcp/claude-hook';
 import { resolveHostIdentity } from '../../src/mcp/identity';
 import { createMcpServer, type McpTool } from '../../src/mcp/server';
@@ -102,7 +104,9 @@ test('discovery is static and side-effect-free; tool responses carry identity an
         }
         // A closed port provides a real current Hub connection failure without starting a service.
         const port = Bun.serve({ port: 0, fetch: () => new Response() });
-        x.c.config.hub.url = port.url.origin; x.c.env.RUNWEFT_IDENTITY_TOKEN = createIdentityToken(); await port.stop(true);
+        x.c.config.hub.url = port.url.origin;
+        atomicWrite(hubConnectionPaths(x.c.home, port.url.origin).identityConnection, JSON.stringify({ schemaVersion: 2, hub: port.url.origin, ownerId: crypto.randomUUID(), spaceId: crypto.randomUUID(), token: createUserSecret('cli').token, requestId: crypto.randomUUID(), createdAt: Date.now() }));
+        await port.stop(true);
         const response = await x.client.callTool({ name: 'runweft_status', arguments: {}, _meta: meta('a') });
         expect(response).toMatchObject({ structuredContent: { identity: { nativeSessionId: 'a', cwd: x.cwd }, connection: { connected: false }, backgroundWake: false } });
         expect(existsSync(join(x.c.home, 'client.sqlite'))).toBe(false);

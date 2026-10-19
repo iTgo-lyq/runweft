@@ -1,3 +1,4 @@
+import { createTestIdentity, createIdentityToken, replaceTestCredential } from '../identity-fixture';
 import { setupHubResources, hubResourceFixture } from './hub-resources-fixture';
 import { afterEach, expect, test } from 'bun:test';
 import { randomBytes, randomUUID } from 'node:crypto';
@@ -5,7 +6,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { AccessStore } from '../../src/hub/access/store';
 import { HubResourceStore } from '../../src/hub/resources/store';
-import { createIdentityToken } from '../../src/hub/store';
+
 import { resourceInspection } from './native-fixture';
 
 const cleanups: (() => void | Promise<void>)[] = [];
@@ -85,7 +86,7 @@ test('registration is separate from connection authority; association never gran
     expect(h.second.spaces(h.member, id)).toEqual([]);
     h.store.associate(h.member, id, sid, true);
     expect(h.second.spaces(h.member, id)).toEqual([sid]);
-    h.hub.rotate(h.b.identity, h.b.token, createIdentityToken());
+    replaceTestCredential(h.hub, h.b.identity, h.b.token, createIdentityToken());
     expect(() => h.store.register(h.member, id, false)).toThrow();
 });
 
@@ -159,7 +160,7 @@ test('resource HTTP handles owner lifecycle, pending machines and native rename;
 test('HTTP async native inventory rechecks identity before returning or starting a rename', async () => {
     const h = await httpSetup(), jwt = await h.auth(h.a.token), { machineId } = h.store.enroll(h.actor, enrollmentInput());
     h.connect(machineId);
-    h.setInventoryHook(() => { h.hub.rotate(h.a.identity, h.a.token, createIdentityToken()); });
+    h.setInventoryHook(() => { replaceTestCredential(h.hub, h.a.identity, h.a.token, createIdentityToken()); });
     const result = await h.request(`${prefix}/machines/${machineId}`, jwt, 'PATCH', { name: 'must not apply' });
     expect(result.status).toBe(401);
     expect(h.calls.some(call => call.startsWith('PATCH'))).toBe(false);
@@ -168,7 +169,7 @@ test('HTTP async native inventory rechecks identity before returning or starting
 
 test('runtime sharing grants use only; governance is space local, persistent through toggles, and association removal cascades', () => {
     const h = setup(), sid = h.a.personalSpace.id, tid = h.c.personalSpace.id;
-    const d = h.hub.createIdentity('ordinary member');
+    const d = createTestIdentity(h.hub, 'ordinary member');
     for (const [issuer, target, space] of [[h.a, d, sid], [h.c, h.a, tid], [h.c, d, tid]] as const) {
         h.hub.acceptInvitation(target.identity.id, h.hub.invite(issuer.identity.id, space, 'member').token);
     }
@@ -228,7 +229,7 @@ test('runtime sharing grants use only; governance is space local, persistent thr
 
 test('shared and governance DTOs exclude native paths, other shares and private tools; offline observations are historical', async () => {
     const h = await httpSetup(), sid = h.a.personalSpace.id;
-    const d = h.hub.createIdentity('member'); h.hub.acceptInvitation(d.identity.id, h.hub.invite(h.a.identity.id, sid, 'member').token);
+    const d = createTestIdentity(h.hub, 'member'); h.hub.acceptInvitation(d.identity.id, h.hub.invite(h.a.identity.id, sid, 'member').token);
     const jwt = await h.auth(h.a.token, sid), admin = await h.auth(h.b.token, sid), member = await h.auth(d.token, sid);
     const { machineId } = h.store.enroll(h.actor, enrollmentInput()); h.connect(machineId); h.store.associate(h.actor, machineId, sid, true);
     const [reg, concurrent] = await Promise.all([h.request(prefix + '/runtimes', jwt, 'POST', { machineId, flavor: 'codex' }),

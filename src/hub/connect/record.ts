@@ -2,11 +2,12 @@ import { existsSync, readFileSync } from 'node:fs';
 import { z } from 'zod';
 import { hubOrigin } from '../../config';
 import { RunweftError } from '../../errors';
-import { IdentityToken } from '../types';
+import { PollingSecret } from './types';
+
 import { hubConnectionPaths } from '../resources/connection';
 
-export const IdentityConnectionSchema = z.object({ schemaVersion: z.literal(1), hub: hubOrigin, ownerId: z.uuid(),
-    spaceId: z.uuid(), token: IdentityToken, requestId: z.uuid(), createdAt: z.number().int() }).strict();
+export const IdentityConnectionSchema = z.object({ schemaVersion: z.literal(2), hub: hubOrigin, ownerId: z.uuid(),
+    spaceId: z.uuid(), token: PollingSecret, requestId: z.uuid(), createdAt: z.number().int() }).strict();
 export type IdentityConnectionRecord = z.infer<typeof IdentityConnectionSchema>;
 export function readIdentityConnection(home: string, url: string): IdentityConnectionRecord | undefined {
     const paths = hubConnectionPaths(home, url);

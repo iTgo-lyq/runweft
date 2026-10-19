@@ -2,7 +2,7 @@
 
 默认数据根 `~/.runweft`，全局 `--home` 优先于 `RUNWEFT_HOME`。`init` 生成有注释的 config.yaml，已有文件不覆盖。config path/show/check/set 定位、展示来源、校验和编辑；字段环境变量优先于 YAML，再取默认值。未知字段、重复键、错误值和含凭据/路径/查询参数的 Hub 地址被拒绝，无效编辑不替换配置。
 
-配置包含 schemaVersion、mode、server、hub.url 和可选 hapi.executable。schemaVersion省略时取当前默认值1，显式非1拒绝。mode 表示部署角色，hub.url 独立选择业务连接；模式切换不迁移身份或历史，不替用户停止另一个连接。YAML 不保存 Agent、runtime 选择或身份 token。
+配置包含 schemaVersion、mode、server、hub.url 和可选 hapi.executable。schemaVersion省略时取当前默认值1，显式非1拒绝。mode 表示部署角色，hub.url 独立选择业务连接；模式切换不迁移身份或历史，不替用户停止另一个连接。YAML 不保存 Agent、runtime 选择、密码或用户凭据。
 
 | 角色 | 行为 |
 | --- | --- |
@@ -20,7 +20,7 @@ Runner停止同步拒绝新执行/RPC并取消心跳和状态重试；有连接�
 
 Runner凭据在启动时载入，替换本地凭据不会热更新现有进程。轮换后停止旧Runner，再以新凭据启动，保持machineId；停止本身保留独立原生session，不能据此推断任务已停止或完成。
 
-用户先通过 Web 领取/导入独立身份，再用 [hub connect](../identity/spec.md) 交接到本机。auth login 生成相同确认流程，auth status 核对身份与空间。open 打开 /hub，--print 只输出无秘密地址，--hapi 打开原生界面；浏览器使用自身身份，URL 不注入 token。已移除 auth token、--token-stdin 和 hub.tokenEnv。
+用户通过 Web 注册/登录账号，再用 [hub connect](../identity/spec.md) 确认并激活本机独立 CLI 凭据；人工 CLI 也支持隐藏输入。auth login 生成相同确认流程，auth status 核对身份与空间。open 打开 /hub，--print 只输出无秘密地址，--hapi 打开原生界面；浏览器使用自身身份，URL 不注入 token。已移除 auth token、--token-stdin 和 hub.tokenEnv。
 
 托管原生进程的目录、数据库、地址、凭据、CORS 由 Runweft 设置，忽略冲突部署环境；用户身份环境变量不传给原生子进程。其余模型配置沿原生机制继承，不改变权限默认值或增加审批绕过。
 
@@ -32,10 +32,10 @@ paths 列出实际绝对路径：
 | --- | --- |
 | config.yaml | 本机部署和选中 Hub 地址 |
 | server/hapi/ | 托管 HAPI 数据库、私有服务凭据、日志和 artifacts 字节 |
-| server/runweft/state.sqlite | 中心身份摘要、空间/成员、授权对象、机器/runtime、仓库/Agent/个人选择、Task/Round、文件与代码关联；固定schema 19 |
+| server/runweft/state.sqlite | 账号密码哈希、用户凭据摘要、空间/成员、授权对象、机器/runtime、仓库/Agent/个人选择、Task/Round、文件与代码关联；固定schema 20 |
 | server/process.json | 托管进程及 instanceId；正常停止后移除 |
-| connections/<主机名>-<origin hash>/identity.json | 0600 用户身份与空间连接 |
-| 同目录 connect.json、machine.json | 0600 待确认交接及独立机器接入记录 |
+| connections/<主机名>-<origin hash>/identity.json | 0600 schema 2 用户凭据与空间连接 |
+| 同目录 connect.json、machine.json | 0600 schema 2 待连接记录及独立 schema 1 机器接入记录 |
 | 同目录 hapi/ | 当前连接 Runner 的 settings、状态和原生日志 |
 | 同目录 hapi/workspaces/environments/ | 持久独立工作区、树外输入与准备/成果回执 |
 | 同目录 hapi/workspaces/repositories/ | Git、子模块、LFS 缓存 |
@@ -55,12 +55,12 @@ paths 列出实际绝对路径：
 
 ## 当前数据格式
 
-首次部署的数据结构基线为Runweft源码`afdcd81a4e062f56edab533b9874f266b70f655b`：中心库schema19、本机client库schema1、配置schemaVersion1，以及该提交的连接文件、Task/Round定义。工程版本号不代替结构识别；基线之前的测试格式不提供迁移。
+首次部署的数据结构基线为 Runweft 源码 `150d8ddb1270945dc5da9ada03ac709c300c3a83`：中心库 schema20、本机 client 库 schema1、配置 schemaVersion1、identity.json/connect.json schema2、machine.json schema1，以及该提交的 Task/Round 定义。用户确认尚无服务部署，本次直接采用当前格式，不迁移测试数据。工程版本号不代替结构识别；基线之前的测试格式不提供迁移。
 
-Runweft只创建和读取唯一当前格式：中心库schema19、本机client库schema1。全新库一次创建完整结构；已有库核验版本及表、索引和约束，同格式正常打开。旧版、未知版本或结构损坏明确拒绝，不增量建表、不补字段、不迁移或清理原目录，也不提供data/reset。
+Runweft只创建和读取唯一当前格式：中心库schema20、本机client库schema1。全新库一次创建完整结构；已有库核验版本及表、索引和约束，同格式正常打开。旧版、未知版本或结构损坏明确拒绝，不增量建表、不补字段、不迁移或清理原目录，也不提供data/reset。
 
 已有库核验不写原主库或WAL/SHM；拒绝时保留原字节、权限与文件集。格式不支持返回503/state_format_unsupported，损坏或结构不符返回503/state_format_invalid，提示使用独立新--home并自行保管原目录。start、serve、restart在创建服务凭据、日志或进程以及停止现有服务之前预检本机两种业务库。此约束不改造独立HAPI的内部持久化。
 
 当前配置的正常省略值、身份轮换、现行任务恢复和显式成果留存不属于历史格式转换；它们仍按各自权限和固定回执执行。
 
-当前业务格式验证读取专用临时副本；以读写方式打开副本，允许macOS为WAL模式数据库创建所需边文件，原数据库、WAL、SHM与身份字节不变。业务库固定schema19/client1，配置固定schemaVersion1；两个Mac原生空WAL/旧损坏拒绝/并发创建回归及四平台实际npm服务验收通过，来源见[本轮验收](../../archive/2026-10-11-npm-hapi-fix-release/acceptance.md)。
+当前业务格式验证读取专用临时副本；以读写方式打开副本，允许 macOS 为 WAL 模式数据库创建所需边文件，原数据库、WAL、SHM 与身份字节不变。schema20 的账户、连接与现行业务通过本次无模型集成和本机安装验收；既有两 Mac 空 WAL/拒绝损坏及四平台安装证据属于旧 schema19，保留于[历史验收](../../archive/2026-10-11-npm-hapi-fix-release/acceptance.md)，不冒充 schema20 的跨平台实测。

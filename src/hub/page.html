@@ -5,26 +5,45 @@
 <a class="skip" href="#main">跳到主内容</a>
 <header><a class="brand" href="/hub">Runweft <span>Hub</span></a><span id="host"></span><button id="logout" class="secondary" hidden>退出此浏览器</button></header>
 <main id="main">
-<div class="heading"><p class="eyebrow">RUNWEFT / 协作工作台</p><h1 id="headline">从你的身份开始</h1><p id="intro">无需注册。保存你的身份 token，下次凭它回到自己的空间。</p></div>
+<div class="heading"><p class="eyebrow">RUNWEFT / 协作工作台</p><h1 id="headline">欢迎使用 Runweft</h1><p id="intro">用账号密码登录，回到你的空间和任务。</p></div>
 <p id="notice" role="status" aria-live="polite" hidden></p>
-<section id="connect-request" class="panel" aria-label="确认本机连接" hidden>
-  <h2>连接你的 Agent 工作环境</h2><p id="connect-details"></p><p>核对码：<strong id="connect-code"></strong></p>
-  <p id="connect-identity" class="muted"></p><p id="connect-status" role="status"></p>
-  <button id="confirm-connection" hidden>确认连接此身份与空间</button>
-  <p class="hint">只确认自己刚发起的请求，并核对 Hub 地址、机器名称和代码。身份凭据会加密交给该环境，由 CLI 直接保存，不需要发送到对话中。此连接共用你的身份 token；需要撤销设备时，请更换 token 并更新其他设备。</p>
+<section id="entry" class="entry" data-connect="false" aria-label="账号登录">
+  <section class="panel account-panel">
+    <form id="auth-form"><h2 id="auth-title">欢迎回来</h2><p id="auth-description" class="muted">用账号密码回到你的空间。</p>
+      <label for="account-username">用户名</label><input id="account-username" required minlength="3" maxlength="32" autocomplete="username" pattern="[A-Za-z0-9]([A-Za-z0-9._]|-){2,31}" aria-describedby="username-help">
+      <p id="username-help" class="hint">3–32 位字母、数字、点、下划线或短横线。</p>
+      <label for="account-password">密码</label><div class="password-input"><input id="account-password" type="password" required minlength="15" maxlength="256" autocomplete="current-password" aria-describedby="password-help"><button type="button" class="secondary" data-password="account-password" aria-label="显示密码">显示</button></div>
+      <p id="password-help" class="hint">15–128 个字符，允许空格、粘贴和密码管理器。</p><button type="submit" id="auth-submit">登录</button>
+    </form>
+    <p><button id="toggle-auth" class="quiet" type="button">没有账号？注册</button> <button id="forgot-password" class="quiet" type="button">忘记密码？</button></p>
+    <form id="reset-form" hidden><h2>重置密码</h2><p class="muted">请联系 Hub 部署者获取一次性重置码，再设置新密码。</p>
+      <label>用户名<input id="reset-username" autocomplete="username" required></label>
+      <label>一次性重置码<input id="reset-code" type="password" autocomplete="off" required></label>
+      <label for="reset-password">新密码</label><div class="password-input"><input id="reset-password" type="password" autocomplete="new-password" minlength="15" maxlength="256" required><button type="button" class="secondary" data-password="reset-password" data-password-label="新密码" aria-label="显示新密码">显示</button></div>
+      <button type="submit">重置密码</button><button id="back-login" type="button" class="secondary">返回登录</button>
+    </form>
+  </section>
+  <aside id="connect-request" class="panel" aria-label="确认本机连接" hidden>
+    <h2>连接你的工作环境</h2><p id="connect-details"></p><p>核对码：<strong id="connect-code"></strong></p>
+    <p id="connect-identity" class="muted"></p><p id="connect-status" role="status" aria-live="polite"></p>
+    <label id="connect-space-label" hidden>默认工作空间<select id="connect-space"></select></label>
+    <button id="confirm-connection" hidden>确认连接此账号</button><button id="leave-connection" class="secondary" hidden>前往账号登录</button>
+    <p class="hint">请与 Agent 给出的 Hub、设备和核对码核对。这个命令行环境能以你的账号访问有权使用的资源，可随时在账号设置中断开。</p>
+  </aside>
 </section>
-<section id="entry" class="entry" aria-label="接入 Hub">
-  <form id="create-identity" class="panel"><h2>创建新身份</h2><p class="muted">第一次使用这个 Hub，从这里开始。</p><label>显示名称<input id="new-name" required maxlength="80" autocomplete="nickname" placeholder="你希望如何被称呼"></label><button type="submit">领取身份 token</button><p class="hint">这会创建一个独立身份和初始空间，不会继承其他身份的配置。</p></form>
-  <form id="import-identity" class="panel"><h2>使用已有 token</h2><p class="muted">换了设备或关闭过浏览器，使用保存的 token。</p><label>身份 token<input id="import-token" type="password" required autocomplete="off" spellcheck="false" placeholder="rw_id_…"></label><button type="submit" class="secondary">进入原身份</button><p class="hint">没有 token 副本时无法找回原身份。重新领取会创建另一个身份。</p></form>
+<section id="connection-success" class="panel account-success" hidden><span class="eyebrow">已授权</span><h2>可以返回原对话了</h2><p>Agent 会继续完成接入，并把第一份评审报告带回原对话。无需再发送“已经点好”。</p><p class="hint">本机连接和执行工具是否就绪，由 Agent 核对后告诉你。</p><button id="view-workspace" class="secondary">查看工作台</button></section>
+<section id="account-settings" class="panel" hidden aria-label="账号设置"><h2>账号设置</h2><p id="settings-username"></p><button id="close-settings" class="secondary">返回工作台</button><h3>登录环境</h3><p class="hint">断开只影响该环境的账号访问，已接受的任务会继续执行。</p><div id="credentials-list"></div>
+  <form id="change-password"><h3>修改密码</h3><label for="current-password">当前密码</label><div class="password-input"><input id="current-password" type="password" autocomplete="current-password" required><button type="button" class="secondary" data-password="current-password" data-password-label="当前密码" aria-label="显示当前密码">显示</button></div><label for="next-password">新密码</label><div class="password-input"><input id="next-password" type="password" autocomplete="new-password" minlength="15" maxlength="256" required><button type="button" class="secondary" data-password="next-password" data-password-label="新密码" aria-label="显示新密码">显示</button></div><button type="submit">修改密码并退出全部环境</button></form>
+  <details><summary>退出全部登录环境</summary><form id="logout-all-form"><label for="all-password">验证当前密码</label><div class="password-input"><input id="all-password" type="password" autocomplete="current-password" required><button type="button" class="secondary" data-password="all-password" data-password-label="验证当前密码" aria-label="显示验证当前密码">显示</button></div><button type="submit">确认退出全部环境</button></form></details>
 </section>
 <div id="workspace" class="workspace" hidden>
   <aside>
-    <section class="identity-card" aria-label="当前身份"><span class="eyebrow">当前身份</span><h2 id="identity-name"></h2><code id="identity-id"></code><div class="actions"><button id="backup-token" class="secondary">备份 token</button><button id="rotate-token" class="quiet">更换 token</button></div><details><summary>修改显示名称</summary><form id="rename-identity"><label>新的显示名称<input id="identity-name-input" maxlength="80" required></label><button type="submit" class="secondary">保存名称</button></form></details></section>
+    <section class="identity-card" aria-label="当前身份"><span class="eyebrow">当前身份</span><h2 id="identity-name"></h2><code id="identity-id"></code><div class="actions"><button id="show-settings" class="secondary">账号设置</button></div><details><summary>修改显示名称</summary><form id="rename-identity"><label>新的显示名称<input id="identity-name-input" maxlength="80" required></label><button type="submit" class="secondary">保存名称</button></form></details></section>
     <section class="space-navigation" aria-label="我的空间"><h2>我的空间</h2><nav id="spaces" aria-label="选择空间"></nav><details><summary>创建协作空间</summary><form id="create-space"><label>空间名称<input id="new-space-name" maxlength="80" required></label><button type="submit" class="secondary">创建空间</button></form></details><details><summary>接受空间邀请</summary><form id="accept-invitation"><label>邀请 token<input id="invitation-token" type="password" required autocomplete="off" spellcheck="false" placeholder="rw_inv_…"></label><button type="submit" class="secondary">加入空间</button></form></details></section>
   </aside>
   <section class="space-content" aria-label="空间详情">
     <div class="section-heading"><div><p class="eyebrow" id="space-role"></p><h2 id="space-name"></h2><code id="space-id"></code></div><button id="refresh" class="secondary">刷新</button></div>
-    <details class="onboarding"><summary>让 Agent 帮我接入此 Hub</summary><p>复制以下说明交给 Codex 或 Claude Code。身份 token 只在本页面领取或导入，不要发送给模型。</p><pre id="agent-onboarding" tabindex="0"></pre></details>
+    <details class="onboarding"><summary>让 Agent 帮我接入此 Hub</summary><p>复制以下说明交给 Codex 或 Claude Code。用户在自己的终端或浏览器输入密码，不要发送给模型。</p><pre id="agent-onboarding" tabindex="0"></pre></details>
     <nav id="console-navigation" aria-label="资源导航"></nav>
     <div id="console-content" aria-live="polite"></div>
     <div id="members-panel" hidden>
@@ -35,8 +54,8 @@
     </div>
   </section>
 </div>
-<footer>身份只在当前浏览器会话中保存。请自行保留 token 副本。</footer>
+<footer>当前标签页保存有限期的登录会话。退出或到期后，用账号密码重新登录。</footer>
 </main>
-<dialog id="secret-dialog" aria-labelledby="secret-title"><h2 id="secret-title"></h2><p id="secret-description"></p><pre id="secret-value" tabindex="0"></pre><div class="actions"><button id="copy-secret">复制</button><button id="download-secret" class="secondary">下载备份</button><button id="apply-rotation" hidden>应用新 token</button><button id="close-secret" class="quiet">关闭</button></div><p id="secret-status" role="status" aria-live="polite"></p></dialog>
+<dialog id="secret-dialog" aria-labelledby="secret-title"><h2 id="secret-title"></h2><p id="secret-description"></p><pre id="secret-value" tabindex="0"></pre><div class="actions"><button id="copy-secret">复制</button><button id="download-secret" class="secondary">下载备份</button><button id="close-secret" class="quiet">关闭</button></div><p id="secret-status" role="status" aria-live="polite"></p></dialog>
 <dialog id="confirm-dialog" aria-labelledby="confirm-title"><h2 id="confirm-title">确认操作</h2><p id="confirm-description"></p><form method="dialog" class="actions"><button value="yes">确认</button><button value="no" class="secondary">取消</button></form></dialog>
 </body></html>

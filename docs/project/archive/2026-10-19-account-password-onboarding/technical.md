@@ -43,8 +43,9 @@ Web Storage 对同源脚本可读，无法抵御该页面的 XSS；OWASP 因此�
 
 | 接口 | 行为 |
 | --- | --- |
-| `POST /accounts` | 用户名+密码注册，创建身份/初始空间；Web 返回 browser 凭据，人工 CLI 则激活已登记的本机连接请求 |
-| `POST /sessions` | 密码登录；Web 创建独立 browser 凭据，人工 CLI 激活本机连接请求，不复制旧会话 |
+| `POST /accounts` | Web 用户名+密码注册，创建身份/初始空间及 browser 凭据 |
+| `POST /sessions` | Web 密码登录，创建独立 browser 凭据，不复制旧会话 |
+| `POST /api/runweft/connect/:id/password`（表外前缀） | 人工 CLI 用密码与本机秘密授权已登记请求，复用账户领域与同一激活事务 |
 | `GET /identity`、`PATCH /identity` | 保留身份查询与显示名修改，改用当前用户凭据认证 |
 | `POST /sessions/logout` | 撤销当前 browser 或 CLI 凭据，成功或已撤销后清理对应本地记录 |
 | `GET /credentials`、`DELETE /credentials/:id` | 本人登录环境的名称、类型、创建/最近使用/到期时间，单项撤销；不返回秘密/摘要 |
@@ -62,7 +63,7 @@ Q3 已确认 CLI 与 Web 都支持。`auth login` 默认保持浏览器连接方
 
 需要密码或重置码的命令从人工 TTY 隐藏读取，不提供秘密 argv/env 参数，不让 Agent 启动伪终端代收；提示走 stderr，stdout/JSON 只含非秘密结果。没有可用人工交互时立即返回明确错误和对应 Web 入口，Agent 默认使用浏览器路径。命令输出沿用现有 `--json`、错误码与退出码，不为同一操作新建脚本专用协议。
 
-人工 CLI 登录也复用下节的本地待连接记录：先生成秘密、登记 requestId/摘要，在终端展示 Hub、环境及授权效果，再由用户输入密码提交注册或登录。密码接口的 CLI 分支须携带原请求和持有该秘密的证明；校验密码与期限后调用同一确认事务，绑定身份并激活 CLI 凭据，不额外创建 browser 凭据或要求浏览器再确认。
+人工 CLI 登录也复用下节的本地待连接记录：先生成秘密、登记 requestId/摘要，在终端展示 Hub、环境及授权效果，再由用户输入密码提交注册或登录。连接域的 password 入口须携带原请求和持有该秘密的证明；校验密码与期限后复用账户领域和同一确认事务，绑定身份并激活 CLI 凭据，不额外创建 browser 凭据或要求浏览器再确认。
 
 CLI 凭据代表身份，空间只是本地默认，因此人工密码分支允许 confirmed 记录暂不指定默认 space。激活后由 complete 用新凭据列出可用空间：复用有效的显式/已存选择，单空间自动选择，多空间且无有效默认时在终端选择一次；核对选中空间的当前成员资格后再保存。浏览器分支仍在已登录页面选定空间后确认，confirmed 返回该默认值。两条路径共用激活和保存实现，不新增认证前列空间接口、不让用户为选空间重复输入密码；恢复仍使用原请求和凭据，不再激活。
 
@@ -127,7 +128,7 @@ HTTP lease、Socket、SSE 和文件流继续复用现有动态检查，空闲长
 
 ### 只读任务访问与筛选
 
-将只需身份/空间的 CLI 查询从创建 `Parent` 的执行 client 中分离。list/show 复用现有 Web overview/details 投影；wait/result show/artifacts show 提取只读领域操作并增加用户空间入口，不为只读调用伪造 machineId 或 MCP 父身份。任务仍限制为当前 owner/space，可读不等于可继续执行；控制、取回/释放操作和 MCP 保留现有授权路径。留存 release 的 preview 会涉及计划和能力检查，与 apply 一起沿用原流程。
+将只需身份/空间的 CLI 查询从创建 `Parent` 的执行 client 中分离。list/show 复用现有 Web overview/details 投影；wait/result show/artifacts show 提取只读领域操作并增加用户空间入口，不为只读调用伪造 machineId 或 MCP 父身份。任务仍限制为当前 owner/space，可读不等于可继续执行；CLI 只读传输使用 POST `/api/runweft/tasks/query/{list,read,wait,result,artifacts}`，携带只读 context（可选 HAPI_SESSION_ID），服务端从已认证 owner/space 推导 namespace；list 同时传 local 精确范围或 all 和 overview 筛选，不接收伪造的 Parent。消息在授权 read 后通过现有原生 GET 网关读取。控制、取回/释放操作和 MCP 保留现有授权路径。留存 release 的 preview 会涉及计划和能力检查，与 apply 一起沿用原流程。
 
 去掉机器登记前置不等于丢弃调用环境：只读 CLI 仍传递已有 `HAPI_SESSION_ID` 上下文，服务端复用现有受管子任务识别与拒绝判断，覆盖查询、等待、清单和消息入口；它只用于延续调用限制，不能用来授予 owner/space 权限。不构造完整 Parent，也不借此次拆分开放受管子任务读取兄弟任务；普通用户终端无需机器或原生会话 ID 即可读取。
 

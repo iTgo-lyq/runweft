@@ -1,3 +1,4 @@
+import { createIdentityToken, replaceTestCredential } from '../identity-fixture';
 import { afterEach, expect, test } from 'bun:test';
 import { createHmac, randomBytes, randomUUID } from 'node:crypto';
 import { SignJWT, decodeJwt } from 'jose';
@@ -5,7 +6,7 @@ import { hubDelegationFixture } from './hub-delegation-fixture';
 import { hubResourceFixture } from './hub-resources-fixture';
 import { until } from '../helpers';
 import { authorizeTerminal } from '../../src/hub/access/sockets';
-import { createIdentityToken } from '../../src/hub/store';
+
 
 const cleanups: (() => void | Promise<void>)[] = [];
 afterEach(async () => { for (const cleanup of cleanups.splice(0).reverse()) await cleanup(); });
@@ -36,7 +37,7 @@ test('native browser reauthentication preserves exact JWT scope and lifetime, re
     const member = await fixture.auth(fixture.b.token, space);
     fixture.hub.changeMember(fixture.a.identity.id, space, fixture.b.identity.id, null);
     expect((await exchange(member)).status).toBe(401);
-    fixture.hub.rotate(fixture.a.identity, fixture.a.token, createIdentityToken());
+    replaceTestCredential(fixture.hub, fixture.a.identity, fixture.a.token, createIdentityToken());
     expect((await exchange(token)).status).toBe(401);
     for (const query of ['hub=https://other.invalid', 'server=https://other.invalid', 'token=secret', 'initData=x']) {
         expect((await fetch(fixture.url + '/sessions/example/files?' + query)).status).toBe(400);

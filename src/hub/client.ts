@@ -2,14 +2,15 @@ import { readFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { decodeJwt } from 'jose';
 import { z } from 'zod';
-import { configPath, expandPath, hubOrigin } from '../config';
+import { configPath, hubOrigin } from '../config';
 import { RunweftError } from '../errors';
 import { fetchJson, fetchResponse, HapiRequestError, type HapiHttp } from '../hapi';
-import { IdentityToken, type Identity } from './types';
+import { userCredentialKind } from './accounts/credentials';
+import { type Identity } from './types';
 import { readIdentityConnection } from './connect/record';
 
-export type HubConnectionOptions = { url: string; identityFile?: string; space?: string; home?: string; env?: NodeJS.ProcessEnv };
-const missingIdentity = () => new RunweftError('hub_identity_missing', '尚未连接此 Hub 的身份。', '执行 hub connect begin，在 Web 确认后执行 hub connect complete；也可显式使用 --identity-file 或 RUNWEFT_IDENTITY_TOKEN。');
+export type HubConnectionOptions = { url: string; credential?: {token: string; ownerId?: string; spaceId?: string | null}; space?: string; home?: string; env?: NodeJS.ProcessEnv };
+const missingIdentity = () => new RunweftError('hub_identity_missing', '尚未连接此 Hub 的身份。', '执行 hub connect begin，在 Web 确认后执行 hub connect complete；普通用户无需保管 token。');
 
 /** Never starts a local service, accepts the legacy root credential, or keeps a central authority copy. */
 export class HubClient {
@@ -28,32 +29,12 @@ export class HubClient {
         this.url = parsed.data;
         if (options.space && !z.uuid().safeParse(options.space).success) throw new RunweftError('hub_space_invalid', '空间 ID 必须是 Hub 分配的 UUID。');
         this.spaceId = options.space ?? null;
-        let token: string | undefined;
-        if (options.identityFile) {
-            let contents: string;
-            try { contents = readFileSync(expandPath(options.identityFile), 'utf8').trim(); }
-            catch { throw new RunweftError('hub_identity_file_unreadable', '无法读取身份备份文件。', '检查 --identity-file 的路径和权限。'); }
-            if (contents.length > 16_384) throw missingIdentity();
-            if (IdentityToken.safeParse(contents).success) token = contents;
-            else {
-                const lines = contents.split(/\r?\n/).map(line => line.trim()).filter(Boolean);
-                const source = lines.find(line => line.startsWith('Runweft Hub: '))?.slice('Runweft Hub: '.length);
-                const identity = lines.find(line => line.startsWith('身份 ID: '))?.slice('身份 ID: '.length);
-                const backupOrigin = hubOrigin.safeParse(source);
-                if (!backupOrigin.success || backupOrigin.data !== this.url) throw new RunweftError('hub_identity_origin_mismatch', '备份文件的 Hub 地址与当前 --url 不一致。', '选择此 Hub 的身份备份；不会把身份 token 发送到另一个 Hub。');
-                if (!z.uuid().safeParse(identity).success) throw missingIdentity();
-                const tokens = lines.filter(line => IdentityToken.safeParse(line).success);
-                if (tokens.length !== 1) throw missingIdentity();
-                token = tokens[0]; this.expectedIdentity = identity;
-            }
-        } else {
-            token = (options.env ?? process.env).RUNWEFT_IDENTITY_TOKEN;
-            if (token === undefined) {
-                const record = readIdentityConnection(dirname(configPath(options.home, options.env)), this.url);
-                if (record) { token = record.token; this.spaceId = options.space ?? record.spaceId; this.expectedIdentity = record.ownerId; }
-            }
-        }
-        if (!IdentityToken.safeParse(token).success) throw missingIdentity();
+        if ((options.env ?? process.env).RUNWEFT_IDENTITY_TOKEN) throw new RunweftError('hub_identity_input_removed','已移除身份 token 环境变量输入，请用账号连接。');
+        const record = options.credential ?? readIdentityConnection(dirname(configPath(options.home,options.env)),this.url);
+        const token = record?.token;
+        if (!userCredentialKind(token)) throw missingIdentity();
+        this.spaceId = options.space ?? record?.spaceId ?? null;
+        this.expectedIdentity = record?.ownerId;
         this.identityToken = token!;
     }
     private async checkHub(signal?: AbortSignal) {
@@ -113,6 +94,10 @@ export class HubClient {
             return this.sendResponse(path, { ...options, headers: { ...Object.fromEntries(new Headers(options.headers)), authorization: `Bearer ${jwt}` } });
         },
     };
+    async user(path: string, method = 'GET', body?: object, signal?: AbortSignal): Promise<any> {
+        const secrets = body ? Object.entries(body).filter(([key])=>/password|token|code/i.test(key)).map(([,value])=>String(value)) : [];
+        return this.send('/api/runweft/hub'+path,{method,headers:{authorization:`Bearer ${this.identityToken}`,...(body?{'content-type':'application/json'}:{})},...(body?{body:JSON.stringify(body)}:{}),signal},secrets);
+    }
     async identity(signal?: AbortSignal): Promise<Identity> {
         const reply = await this.send('/api/runweft/hub/identity', { headers: { authorization: `Bearer ${this.identityToken}` }, signal });
         const parsed = z.object({ id: z.uuid(), name: z.string(), createdAt: z.number() }).safeParse(reply.identity);

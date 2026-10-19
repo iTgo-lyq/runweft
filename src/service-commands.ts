@@ -53,15 +53,6 @@ export function addServiceCommands(program: Command, context: () => ResolvedConf
     runner.command('start').action(async () => { const result = await startRunner(context()); output(result, JSON.stringify(result, null, 2)); });
     runner.command('stop').action(async () => { const result = await stopRunner(context()); output(result, '本机 Runner 已停止；数据保留。'); });
     runner.command('status').action(async () => { const result = await runnerStatus(context()); output(result, JSON.stringify(result, null, 2)); });
-    const auth = program.command('auth').description('Hub 身份连接；凭据经 Web 加密交接');
-    auth.command('status').action(async () => {
-        const result = await new HubClient(hubOptions(context()), 'hubAccess', 'hub_access_unavailable').connection();
-        output(result, JSON.stringify(result, null, 2));
-    });
-    auth.command('login').description('生成 Web 身份确认链接；确认后运行 hub connect complete').action(async () => {
-        const c = context(), result = await new IdentityConnection(c.home, hubOptions(c).url).begin();
-        output(result, `请打开并核对：${result.confirmationUrl}\n核对码：${result.code}\n确认后执行 hub connect complete。`);
-    });
     program.command('open').description('打开 Hub 后台入口，浏览器使用自身身份').option('--hapi', '打开 HAPI 原生会话界面')
         .option('--print', '只输出无秘密地址，交给用户浏览器打开').action(async options => {
         const c = context();

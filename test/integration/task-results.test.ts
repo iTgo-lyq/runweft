@@ -17,7 +17,7 @@ async function fixture(count = 2) {
     const input = baselines.snapshot(consumer.snapshotId), source = baselines.imported(consumer.importId).source!;
     await h.gateway.delegation.coordinator.close();
     const store = h.gateway.delegation.coordinator.store;
-    const hub = (await new HubAgentClient({ url: h.url, space: h.space, env: { RUNWEFT_IDENTITY_TOKEN: h.owner.token } }).resolve({ agentId: h.agent.id })).resolution;
+    const hub = (await new HubAgentClient({ url: h.url, space: h.space, credential: { token: h.owner.token }, env: {} }).resolve({ agentId: h.agent.id })).resolution;
     const agent = agentSnapshot(h.namespace, hub);
     const task = store.accept(h.namespace, h.parent, randomUUID(), { workspaceMode: 'worktree', baseRef: input.origin.baseCommit, message: 'result test', agentType: h.agent.id }, agent, hub.target, source);
     const bundle = store.require(h.namespace, task.agent_id), round = bundle.rounds[0]!, environment = bundle.task.environment;
