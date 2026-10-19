@@ -19,6 +19,10 @@
       "status": "done",
       "verification": "共享校验及 Web 表单仅保留必填，重名拒绝；核心22/165断言、工具53通过；六文件初验20通过1手机换行失败，修复后定向复验通过；全局beta.5再验CLI/Web/转发3项54断言通过，3210 Hub生效且业务数据及独立Runner保留，临时数据已清理。",
       "commitTitle": "hub-forwarding-authorization T2: record installed account input validation"
+    },
+    "T3": {
+      "title": "准备正式版本和说明并完成发行前验收",
+      "status": "doing"
     }
   },
   "closure": {},
@@ -37,9 +41,5 @@
       "answer": "保留必填，取消其他限制。",
       "source": "用户对异步澄清问题的回复：保留必填，取消其他限制（推荐）。"
     }
-  },
-  "waitingFor": {
-    "kind": "confirmation",
-    "summary": "全局包和3210 Hub已更新为beta.5，仅保留账号必填及重名检查，等待用户刷新页面验收；Claude问题独立保留。"
   }
 }
