@@ -43,3 +43,10 @@ test('deployer reset writes a fresh 0600 file and refuses an absent Hub database
     expect(exit).toBe(0);const code=readFileSync(output,'utf8').trim();expect(statSync(output).mode&0o777).toBe(0o600);expect(stdout+stderr).not.toContain(code);
     await store.accounts.recover('alice',code,'a recovered admin passphrase');
 });
+
+test('non-interactive password operations return an actionable error instead of waiting for stdin',async()=>{
+    const h=await hubResourceFixture(cleanups),home=join(h.home,'noninteractive');
+    const child=Bun.spawn([binary,'--home',home,'--json','auth','login','--url',h.url,'--interactive'],{stdin:'ignore',stdout:'pipe',stderr:'pipe'});
+    const [exit,stdout,stderr]=await Promise.all([child.exited,new Response(child.stdout).text(),new Response(child.stderr).text()]);
+    expect(exit).toBe(1);expect(stdout).toBe('');expect(JSON.parse(stderr).error.code).toBe('account_interaction_required');
+});
