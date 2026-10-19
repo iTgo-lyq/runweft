@@ -23,13 +23,13 @@ async function terminal(home:string,args:string[],answers:[string,string][]){
 
 test('human CLI register, login, password change and recovery use hidden input and preserve the same identity',async()=>{
     const h=await hubResourceFixture(cleanups),home=join(h.home,'human');
-    await terminal(home,['auth','register','--url',h.url,'--username','tty-user','--interactive'],[['密码：','a synthetic terminal passphrase']]);
-    const account=h.hub.accounts.account('tty-user')!;
-    await terminal(home,['account','password'],[['当前密码：','a synthetic terminal passphrase'],['新密码：','a changed terminal passphrase']]);
-    await terminal(home,['auth','login','--url',h.url,'--username','tty-user','--interactive'],[['密码：','a changed terminal passphrase']]);
-    const reset=h.hub.accounts.resetCode('tty-user');
-    await terminal(home,['account','recover','--url',h.url,'--username','tty-user'],[['一次性重置码：',reset.code],['新密码：','a recovered terminal passphrase']]);
-    expect((await h.hub.accounts.login('tty-user','a recovered terminal passphrase')).identity.id).toBe(account.userId);
+    await terminal(home,['auth','register','--url',h.url,'--username','终','--interactive'],[['密码：','短!口令']]);
+    const account=h.hub.accounts.account('终')!;
+    await terminal(home,['account','password'],[['当前密码：','短!口令'],['新密码：','新!口令']]);
+    await terminal(home,['auth','login','--url',h.url,'--username','终','--interactive'],[['密码：','新!口令']]);
+    const reset=h.hub.accounts.resetCode('终');
+    await terminal(home,['account','recover','--url',h.url,'--username','终'],[['一次性重置码：',reset.code],['新密码：','恢!复口令']]);
+    expect((await h.hub.accounts.login('终','恢!复口令')).identity.id).toBe(account.userId);
 },30_000);
 
 test('deployer reset writes a fresh 0600 file and refuses an absent Hub database',async()=>{

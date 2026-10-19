@@ -2,14 +2,14 @@
 
 Runweft 为 Codex 和 Claude Code 提供 Hub 集中配置、任务委派、本地共享/独立 worktree、远端独立 worktree，以及附件和 Git 成果回收。执行基于配套 HAPI 内置适配。用户通过对话交给 Agent 安装和操作，在 Web 维护有权使用的资源、查看本人任务。
 
-本文配套 Runweft 1.2.0-beta.3。通过公共 npm 主包选择四个平台依赖；官网安装版本见 `release.json`，程序来源与验证范围以对应 [GitHub Actions 发布运行](https://github.com/iTgo-lyq/runweft/actions/workflows/npm-publish.yml)为准。
+本文配套 Runweft 1.2.0。通过公共 npm 主包选择四个平台依赖；官网安装版本见 `release.json`，程序来源与验证范围以对应 [GitHub Actions 发布运行](https://github.com/iTgo-lyq/runweft/actions/workflows/npm-publish.yml)为准。
 
 ## 通过 npm 安装
 
 支持 macOS arm64/x64、glibc Linux arm64/x64。安装需要 Node.js 20+ 和 npm；运行任务需要已登录的 Codex 或 Claude Code，Git 操作需要 Git 2.31+。LFS/子模块需在相关机器具备工具与对象访问条件。
 
 ```sh
-npm install -g runweft@1.2.0-beta.3 --registry=https://registry.npmjs.org/ --include=optional &&
+npm install -g runweft@1.2.0 --registry=https://registry.npmjs.org/ --include=optional &&
 runweft --version
 ```
 
@@ -29,7 +29,7 @@ Claude Code 使用 `--agent claude-code`。先核对已有同名 Skill，不同�
 
 把下面这段话交给正在使用的 Agent：
 
-> 通过 npm 安装 runweft@1.2.0-beta.3，从 https://github.com/iTgo-lyq/runweft-kit 安装名为 runweft-kit 的 Skill 并按其说明接入。程序安装和升级用 npm，完整卸载按 Skill 的维护说明执行。连接我指定的 Hub，否则复用既有连接；都没有时就在本机启动。保留其他 MCP 和模型配置，身份通过浏览器确认，不向我索要 token。分别登记机器和执行工具，复用或创建私有代码评审 Agent，在当前项目直接用 CLI 完成一次只读委派并读回完整报告，不等待第二段提示。
+> 通过 npm 安装 runweft@1.2.0，从 https://github.com/iTgo-lyq/runweft-kit 安装名为 runweft-kit 的 Skill 并按其说明接入。程序安装和升级用 npm，完整卸载按 Skill 的维护说明执行。连接我指定的 Hub，否则复用既有连接；都没有时就在本机启动。保留其他 MCP 和模型配置，身份通过浏览器确认，不向我索要 token。分别登记机器和执行工具，复用或创建私有代码评审 Agent，在当前项目直接用 CLI 完成一次只读委派并读回完整报告，不等待第二段提示。
 
 安装后 Skill 名为 `runweft-kit`；使用 `$runweft-kit` 可显式调用。工程内已有 `.agents/skills/runweft-kit/` 时直接复用。发现用途相同的其他名称副本时，先备份已有修改到扫描目录之外，经确认替换后仅保留新入口，避免重复加载。Skill 与 MCP 分别安装。下面是 Agent 使用的工程参考，不要求用户逐条手工执行。
 
@@ -45,7 +45,9 @@ runweft open --print
 
 本机默认入口 `http://127.0.0.1:3210/hub`，首次只启动 Hub，不自动登记身份或启动 Runner。已有 Hub 使用 `runweft init --url https://你的Hub域名`；`init` 保留已有配置。`mode local` 表示可托管本机 Hub，`mode hub` 不托管；业务连接由独立 `hub.url` 选择。
 
-在 `/hub` 注册用户名和密码，系统为账号保留稳定身份 UUID 并创建默认空间。用户名为 3–32 个 ASCII 字母/数字/点/下划线/短横线，首位为字母或数字（不区分大小写），新密码为 15–128 个 Unicode 码点。浏览器在当前标签会话保存登录；退出或换设备后用同一账号登录，空间、配置和历史仍在，不需手动保管 token。
+在 `/hub` 注册用户名和密码，系统为账号保留稳定身份 UUID 并创建默认空间。用户名和密码只要求必填，不限制长度、字符或复杂度；用户名去除首尾空格并统一大小写后检查重名，密码按原值处理，保留空格。浏览器在当前标签会话保存登录；退出或换设备后用同一账号登录，空间、配置和历史仍在，不需手动保管 token。
+
+浏览器通过端口转发访问时，CLI 继续使用执行机可达的原 Hub 地址；给用户的确认、后台和任务链接按转发工具返回的浏览器入口转换，保留原路径、查询参数和 fragment。两侧地址或端口不必相同，但转发须到达同一 Hub 并保留 HTTP Host；不要仅因浏览器端口变化重新发起连接或注册账号。
 
 账号设置可查看和撤销独立浏览器/CLI 环境。普通退出只撤销当前环境；改密码、密码恢复和全端退出撤销全部用户环境，Runner 和已接受任务独立。忘记密码联系部署者在服务器运行 `account reset-password <username> --output <新文件>`，重置码 15 分钟有效，用户在自己的 Web 或 CLI 隐藏输入中使用。
 
