@@ -107,3 +107,19 @@ typecheck/build 通过；空间、服务、账号、连接和邀请共 8 pass、
 真实 Web 的登录与账号设置另保存桌面/窄屏截图并目视检查，无溢出；截图为隔离合成账号，不包含密码或凭据。临时环境已关闭清理。源码最后仅更正用户名字符说明和 cancel 的帮助文案（确认后撤销本次授权、保留其他连接），以及调查矩阵的基线标签，不改变已评审运行逻辑；最终候选将在该说明检查点重建并验证安装。
 
 本轮没有真实模型使用授权，未复制/读取开发者原生凭据，未执行 test:native 所选模型案例。ci-scope 保守列出的 N1/N4/N5/C/R/L 不记通过；CLI、真实基础执行通路、MCP 握手/合成工具调用、真实模型完成是不同证据。完整模型首次体验仍需在已授权专用环境单独验收。本 Change 的实现与非模型验证不再依赖 iclaude。
+
+### 验收对应与证据边界
+
+| 交付场景 | 已执行证据 |
+| --- | --- |
+| 账号、稳定身份、密码/恢复、登录环境 | core account-store/accounts；account-cli 合成 PTY；hub、hub-access 与 web-identity |
+| 确认即激活、待连接恢复/取消、单页授权 | cli-connect、web-connect，含丢响应、原期限后续存、保存失败与较新连接保护 |
+| 空间、成员、邀请与默认空间 | space-cli、hub、web-invitations，含跨入口文件与根/局部 --space |
+| 无机器查询、分页、消息、深链 | task-reader、tasks-overview、web-task-links，含私有范围、受管子任务及等待取消 |
+| HAPI/Runner、权限、文件和 Git 恢复 | 完整 260 项集成中的 live、realtime、files、workspace、results；无模型进程 |
+| 首次体验指令与复用 | Kit 结构检查及独立 Codex 四类命令场景走查；真实用户指令到模型报告尚未运行 |
+| 发行/开发入口 | 两种隔离安装、MCP 握手，dev:env 启动/停止；不等于发布或模型验收 |
+
+用户此前“交互可以，继续实现 Web 页面”只记录原型验收；实现的用户验收尚待实际反馈，不用事先方案授权代替。最终 Specs 同步、归档和 develop 集成在该验收后执行；main 未改动。
+
+最终说明检查点 150d8dd 已重新 typecheck/build；账号、连接与空间命令定向 11 pass、0 fail、135 断言。按该干净源码重建当前平台候选，再执行 npm 与 standalone 两种隔离安装，二者均成功且 cleanupErrors 为空。最终官网 build、Kit 结构检查、check-docs（418 文档、1144 链接）及完整差异 diff --check 通过。全仓 check-workflow 仍仅报另一个 Change 的继承标题不一致；本 Change show 的 errors=[]。T8 以这些实际证据完成，不将未授权的真实模型案例记为通过。

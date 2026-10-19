@@ -64,7 +64,9 @@
     },
     "T8": {
       "title": "交付 Agent 首次体验并完成整体验证",
-      "status": "doing"
+      "status": "done",
+      "verification": "独立 Codex 完整评审及四场景复核；集成 260/core 22/tools 52 通过；最终构建、定向 11 项、双布局隔离安装及网站/Kit/文档通过；真实模型未授权未运行",
+      "commitTitle": "account-password-onboarding T8: complete onboarding and automated verification"
     },
     "T9": {
       "title": "修复非交互账号命令的结构化错误输出",
