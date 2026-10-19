@@ -29,7 +29,7 @@ bun run screenshots
 
 ## Cloudflare R2 发布
 
-适配器和失败测试来自 open-folio `73c07d4` 的原型包，使用相同协议，写入独立 `runweft/<requestId>/` 前缀。Bucket 采用 Standard 存储；适配器不创建资源、不调整计划、不删除文件。已有公开 R2 Bucket 可以复用，凭据由发布机器注入；`r2.env.example` 列出所需变量，真实文件放仓库外、权限 0600。自动 CI 不持有上传凭据。
+适配器和失败测试来自 open-folio `73c07d4` 的原型包，使用相同协议，写入独立 `runweft/<requestId>/` 前缀。Bucket 采用 Standard 存储；适配器不创建资源、不调整计划、不删除文件。已有公开 R2 Bucket 可以复用，凭据由发布机器注入；[根目录 `.env.example`](../../.env.example) 列出所需变量；首次配置复制为仓库根目录 `.env` 并执行 `chmod 600 .env`，已有文件只补充相关项。`.env` 和 `.env.local` 已被 Git 忽略。发布脚本按自身位置定位仓库，仅读取五项 R2 配置，优先级为进程环境变量、`.env.local`、`.env`；显式空值也保留，配置值不做变量插值。无需传入 `--env-file`，请求和回执路径仍相对当前工作目录解析。自动 CI 不持有上传凭据。
 
 先提交并推送源码、确保工作区干净，然后在仓库根目录执行：
 
@@ -41,7 +41,7 @@ prototype_publish_dir=$(mktemp -d /tmp/runweft-prototype.XXXXXX)
 node .agents/skills/spec-trail/prototype/scripts/publish.mjs prepare \
   --directory packages/prototype/dist --entries packages/prototype/publish-entries.json \
   --repository https://github.com/iTgo-lyq/runweft --out "$prototype_publish_dir/request.json"
-node --env-file="$HOME/.config/runweft/r2.env" packages/prototype/publish-r2.mjs \
+node packages/prototype/publish-r2.mjs \
   --request "$prototype_publish_dir/request.json" --result "$prototype_publish_dir/result.json"
 # change-id 替换为本次 Change；无关联 Change 时省略 --change。
 node .agents/skills/spec-trail/prototype/scripts/publish.mjs register \

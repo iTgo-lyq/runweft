@@ -3,6 +3,7 @@ import { readFile, writeFile, rename, rm } from "node:fs/promises";
 import { extname, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { parseArgs } from "node:util";
+import { loadR2Environment } from "./r2-environment.mjs";
 import {
   S3Client,
   PutObjectCommand,
@@ -217,7 +218,9 @@ if (
     request = JSON.parse(await readFile(values.request, "utf8"));
     validateRequest(request);
     output = values.result;
-    await writeResult(output, await publishToR2(request));
+    await writeResult(output, await publishToR2(request, {
+      env: await loadR2Environment(),
+    }));
     console.log(
       "R2 publication verified. Register the saved result to update references.",
     );

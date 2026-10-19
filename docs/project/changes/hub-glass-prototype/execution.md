@@ -81,3 +81,11 @@ T1 仅交付独立原型，未修改 src/hub、HAPI、产品配置或模型凭�
 ### 交付方式与边界
 
 本机没有配置 R2 发布凭据，本次没有上传 R2，也没有改变项目的 custom/R2 托管策略。按 SpecTrail Git 兜底，从已推送的源码提交 `476b858` 用 `bun build.mjs --git-preview` 生成 8 个自包含 HTML 快照，逐个 `publish.mjs register --git-entry <id> --change hub-glass-prototype` 登记到原型清单和本 Change 的 previews；旧的 `identity` 预览已从本 Change 移除。快照与通过验证的构建输出逐字节相同。SpecTrail 的 `validate.mjs` 静态检查通过；其浏览器检查固定启用 Chromium 进程沙箱，本机无法运行，等价的受限 iframe 检查已由 `verify.mjs` 在同一输出上完成。`bun run dev` 可在本机预览全部入口。另把同一份 `tasks` 构建（`476b858`）发布为私有的 claude.ai 预览页 [Runweft Hub 原型](https://claude.ai/artifact/WV5mxRngneQbETJNrPUvRR)，供用户验收时直接打开；它只是便于查看的副本，不随源码自动更新，所有入口都可从页内导航和“演示”进入。原型只证明界面与交互设计，不代表真实接口、权限执行或模型执行；示例版本、哈希和路径都是虚构的。需要用户验收原型后，才开始编写产品重构的技术方案。
+
+### R2 发布与本地配置补充
+
+按用户要求，将源码 `fc9cd7f` 的八入口原型和 48 张浅深色截图发布到 R2，上传后逐文件匿名读取校验字节及 MIME，固定引用已登记并推送（`6ca4b41`）。24 组入口交互和 hosted 浏览器检查通过。
+
+用户随后要求在本 Change 工作区补充 `.env` 与 `.env.example`。根目录 `.env` 仅保存从 open-folio 复用的五项 R2 配置，权限为 0600，Git 忽略；公开模板不含凭据。发布 CLI 按脚本位置读取根目录 `.env.local` 和 `.env`，进程环境优先，显式空值不回退；只读取 R2 字段，不修改进程环境，不增加依赖。发布说明改为直接运行 CLI，无需额外注入配置。
+
+`node --test packages/prototype/publish-r2.test.mjs` 的 12 项测试通过，覆盖配置优先级、字面密钥、缺失及不可读配置文件、不可变上传、失败回执与凭据脱敏。本次仅调整上传配置，不改原型页面；无需重新发布已验证产物。
