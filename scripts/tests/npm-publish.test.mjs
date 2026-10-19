@@ -193,3 +193,22 @@ test('public versions wait for channel tag propagation without reuploading', asy
     });
     assert.equal(result.success, true);assert.equal(uploads, 0);assert.equal(pauses, 1);
 });
+
+
+test('metadata and channel propagation share one bounded processing budget', async t => {
+    let clock = 0, pauses = 0, saved;
+    t.mock.method(Date, 'now', () => clock);
+    const uploaded = new Set();
+    await assert.rejects(publishCandidate(betaIndex, betaEntries, {
+        timeoutMs: 10,
+        metadata: async entry => uploaded.has(entry.name) && (entry.name === 'runweft' || clock >= 6) ? publicManifest(entry) : null,
+        tags: async () => ({ latest: '1.1.1', beta: clock >= 18 ? betaIndex.version : '1.2.0-beta.0' }),
+        upload: async entry => { uploaded.add(entry.name); return 0; },
+        pause: async () => { clock += 6; pauses++; },
+        save: state => { saved = structuredClone(state); },
+    }), /dist-tags pending/);
+    assert.equal(clock, 12); assert.equal(pauses, 2);
+    assert.equal(uploaded.size, 5);
+    assert.equal(saved.packages.every(p => p.status === 'confirmed'), true);
+    assert.equal(saved.success, false);
+});

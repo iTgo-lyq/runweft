@@ -143,10 +143,15 @@ export class TaskStore {
         if (!value?.files || value.files.length !== intent.inputs.length) throw new TaskError(409, 'artifact_acceptance_incomplete', '附件尚未完成冻结和留存。');
         return { reference: value.reference, files: value.files, operationId: randomUUID(), attempted: false, status: 'pending', downloaded: [], paths: [], intermediateReleased: false };
     }
-    assertCanDelegate(namespace: string, parent: Parent) {
-        if (this.options && parent.hapiSessionId && this.db.query("SELECT 1 FROM hub_execution_objects WHERE kind='session' AND id=? AND taskId IS NOT NULL").get(parent.hapiSessionId)) {
+    assertReadContext(namespace: string, hapiSessionId?: string) {
+        if (!hapiSessionId) return;
+        if (this.options && this.db.query("SELECT 1 FROM hub_execution_objects WHERE kind='session' AND id=? AND taskId IS NOT NULL").get(hapiSessionId)
+            || this.db.query('SELECT 1 FROM delegation_sessions WHERE (?=1 OR namespace=?) AND hapiId=? LIMIT 1').get(this.options ? 1 : 0, namespace, hapiSessionId)) {
             throw new TaskError(403, 'subagent_delegation_denied', 'Runweft 子任务不能再次发起 Runweft 委派。');
         }
+    }
+    assertCanDelegate(namespace: string, parent: Parent) {
+        this.assertReadContext(namespace, parent.hapiSessionId);
         const match = this.db.query(`SELECT taskId FROM delegation_sessions WHERE (?=1 OR namespace=?) AND
             ((?<>'' AND hapiId=?) OR (?<>'' AND flavor=? AND nativeId=?)) LIMIT 1`)
             .get(this.options ? 1 : 0, namespace, parent.hapiSessionId ?? '', parent.hapiSessionId ?? '', parent.kind === 'mcp' ? parent.nativeSessionId : '',

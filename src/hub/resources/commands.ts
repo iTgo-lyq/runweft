@@ -16,20 +16,26 @@ import { HubTaskClient, HubPreparationClient } from '../delegation/client';
 import { hostClientSchema } from '../../mcp/identity';
 import { serveMcp } from '../../mcp/server';
 import { RunweftError } from '../../errors';
+import { addSpaceCommands } from '../spaces/commands';
+import { HubTaskReader } from '../delegation/reader';
 
 export function addHubCommands(program: Command, output: (value: unknown, human: string) => void) {
     const hub = program.command('hub').description('通过明确 Hub 身份管理中心资源；不会启动本地服务')
         .option('--url <origin>', 'Hub HTTP(S) 根地址')
-        .option('--identity-file <file>', '显式身份备份；默认环境变量或此 Hub 已保存的身份连接')
         .option('--space <id>', '当前空间 UUID；使用 runtime 和空间治理时需要');
     addRepositoryCommands(hub, output);
     addAgentCommands(hub, output);
     const client = () => new HubResourceClient(hub.opts());
     const home = () => dirname(configPath(program.opts().home));
-    hub.hook('preAction', () => { hub.setOptionValue('home', home()); if (!hub.opts().url) hub.setOptionValue('url', loadConfig(home()).config.hub.url); });
+    hub.hook('preAction', () => {
+        hub.setOptionValue('home', home());
+        if (!hub.opts().url) hub.setOptionValue('url', loadConfig(home()).config.hub.url);
+        if (hub.opts().space === undefined && program.opts().space !== undefined) hub.setOptionValue('space', program.opts().space);
+    });
     const context = () => loadConfig(home());
+    addSpaceCommands(hub, () => hub.opts(), home, output);
     // Explicit Hub consumers are available before the default service is switched in T5.
-    addTaskCommands(hub, context, output, { client: () => new HubTaskClient(hub.opts(), process.cwd()), url: () => hub.opts().url });
+    addTaskCommands(hub, context, output, { client: () => new HubTaskClient(hub.opts(), process.cwd()), reader: () => new HubTaskReader(hub.opts(), process.cwd()), url: () => hub.opts().url });
     addArtifactCommands(hub, context, output, () => new ArtifactClient(new HubClient(hub.opts(), 'hubAccess', 'hub_access_unavailable').http));
     addPreparationCommands(hub.command('workspace').description('通过中心配置诊断独立 Git 工作区'), hub, context, output, () => new HubPreparationClient(hub.opts(), process.cwd()));
     hub.command('mcp').description('以显式 Hub 连接启动 MCP').command('serve').requiredOption('--client <codex|claude>', '接入的原生客户端')
@@ -47,13 +53,14 @@ export function addHubCommands(program: Command, output: (value: unknown, human:
         const result = await new IdentityConnection(home(), hub.opts().url).begin(options.name);
         output(result, `请在浏览器核对并确认：${result.confirmationUrl}\n本机：${result.label}\n核对码：${result.code}\n过期时间：${new Date(result.expiresAt).toISOString()}\n确认后执行 hub connect complete。`);
     });
-    connect.command('complete').description('领取并校验凭据，保存后确认消费；可重复执行').action(async () => {
-        const result = await new IdentityConnection(home(), hub.opts().url).complete();
+    connect.command('complete').description('校验并保存已授权的连接；可重复执行').option('--wait <seconds>','有界等待授权，最多 300 秒','0').action(async options => {
+        const seconds=Number(options.wait);if(!Number.isFinite(seconds)||seconds<0||seconds>300)throw new RunweftError('hub_wait_invalid','等待时间须为 0–300 秒。');
+        const result = await new IdentityConnection(home(), hub.opts().url).complete({waitMs:seconds*1000,spaceId:hub.opts().space});
         if (result.status === 'connected') setConfig(context(), 'hub.url', hub.opts().url);
         output(result, result.status === 'pending' ? `等待 Web 确认：${'confirmationUrl' in result ? result.confirmationUrl : ''}` : `身份连接已保存。\n${JSON.stringify(result, null, 2)}`);
     });
-    connect.command('cancel').description('取消待确认请求，保留已保存身份').action(async () => {
-        output(await new IdentityConnection(home(), hub.opts().url).cancel(), '待确认连接已取消；已有身份连接保留。');
+    connect.command('cancel').description('取消本次待连接请求；确认后撤销本次授权，保留其他连接').action(async () => {
+        output(await new IdentityConnection(home(), hub.opts().url).cancel(), '本次待连接请求已取消；本请求已有授权已撤销，其他连接保留。');
     });
     connect.command('status').description('显示本机连接摘要，不输出凭据；不代表远端授权仍有效').action(() => {
         const result = new IdentityConnection(home(), hub.opts().url).status(); output(result, JSON.stringify(result, null, 2));

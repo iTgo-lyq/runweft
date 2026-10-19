@@ -1,7 +1,9 @@
 import { randomBytes, randomUUID } from 'node:crypto';
 import { openState } from '../../state';
 import { tokenDigest } from '../store';
-import { HubError, IdentityToken, hubNotFound, hubUnauthorized } from '../types';
+import { AccountStore } from '../accounts/store';
+import { userCredentialKind } from '../accounts/credentials';
+import { HubError, hubNotFound, hubUnauthorized } from '../types';
 import { Binding, CredentialToken, IntentInput, type ExecutionObject, type ExecutionIntent, type ObjectKind, type Operation, type Principal, type PrincipalKind } from './types';
 
 type Credential = { id: string; kind: 'machine' | 'task'; ownerId: string; machineId: string; spaceId: string | null;
@@ -12,7 +14,9 @@ const invalid = () => new HubError(400, 'invalid_execution_binding', '执行主�
 /** Trusted service methods only. HTTP callers never supply authoritative owner or machine bindings. */
 export class AccessStore {
     readonly db;
-    constructor(path: string) { this.db = openState(path); }
+    readonly accounts: AccountStore;
+    private readonly internal = new WeakSet<Principal>();
+    constructor(path: string) { this.db = openState(path); this.accounts = new AccountStore(this.db); }
     close() { this.db.close(); }
 
     nativeClaim(field: string, nativeId: string): Pick<ExecutionObject, 'ownerId' | 'spaceId' | 'machineId'> | null {
@@ -28,8 +32,8 @@ export class AccessStore {
     }
 
     private user(id: string) {
-        const row = this.db.query('SELECT id, name, rowid AS userNumber, tokenDigest FROM hub_users WHERE id=?')
-            .get(id) as { id: string; name: string; userNumber: number; tokenDigest: string } | null;
+        const row = this.db.query('SELECT id, name, rowid AS userNumber FROM hub_users WHERE id=?')
+            .get(id) as { id: string; name: string; userNumber: number } | null;
         if (!row) throw hubUnauthorized();
         return row;
     }
@@ -106,18 +110,17 @@ export class AccessStore {
     }
     revoke(id: string) { this.db.query('UPDATE hub_execution_credentials SET revokedAt=COALESCE(revokedAt, ?) WHERE id=?').run(Date.now(), id); }
     authenticate(token: string, spaceId: string | null = null): Principal {
-        if (IdentityToken.safeParse(token).success) return this.resolve('user', tokenDigest(token), spaceId);
+        if (userCredentialKind(token)) return this.resolve('user', this.accounts.authenticate(token).credential.id, spaceId);
         if (!CredentialToken.test(token) || spaceId !== null) throw hubUnauthorized();
         return this.resolve(token.startsWith('rw_mc_') ? 'machine' : 'task', tokenDigest(token));
     }
     /** Only called with a verified JWT or a digest computed from the presented raw credential. */
     resolve(kind: PrincipalKind, digest: string, selectedSpace: string | null = null): Principal {
         if (kind === 'user') {
-            const user = this.db.query('SELECT id, name, rowid AS userNumber FROM hub_users WHERE tokenDigest=?').get(digest) as
-                { id: string; name: string; userNumber: number } | null;
+            const credential = this.accounts.credential(digest), user = this.user(credential.userId);
             if (!user || !this.member(user.id, selectedSpace)) throw hubUnauthorized();
             return { kind, id: user.id, ownerId: user.id, userNumber: user.userNumber, name: user.name,
-                digest, machineId: null, taskId: null, spaceId: selectedSpace };
+                digest, expiresAt: credential.expiresAt, machineId: null, taskId: null, spaceId: selectedSpace };
         }
         const row = this.db.query('SELECT * FROM hub_execution_credentials WHERE tokenDigest=? AND kind=?').get(digest, kind) as Credential | null;
         if (!row || row.revokedAt !== null || (row.expiresAt !== null && row.expiresAt <= Date.now()) || !this.member(row.ownerId, row.spaceId)) throw hubUnauthorized();
@@ -130,12 +133,16 @@ export class AccessStore {
             machineId: row.machineId, taskId: row.taskId, spaceId: row.spaceId };
     }
     refresh(principal: Principal): Principal {
+        if (this.internal.has(principal)) return this.serviceUser(principal.ownerId, principal.spaceId!);
         if (principal.expiresAt !== undefined && principal.expiresAt <= Date.now()) throw hubUnauthorized();
         return { ...this.resolve(principal.kind, principal.digest, principal.kind === 'user' ? principal.spaceId : null), expiresAt: principal.expiresAt };
     }
     /** Background service only: accepted work survives token rotation, never membership removal. */
     serviceUser(ownerId: string, spaceId: string): Principal {
-        return this.resolve('user', this.user(ownerId).tokenDigest, spaceId);
+        const user = this.user(ownerId); this.requireMember(ownerId,spaceId);
+        const actor: Principal = { kind: 'user', id: ownerId, ownerId, name: user.name, userNumber: user.userNumber,
+            digest: '', machineId: null, taskId: null, spaceId };
+        this.internal.add(actor); return actor;
     }
     private permitted(principal: Principal, object: ExecutionObject, operation: Operation): boolean {
         if (object.retiredAt !== null || !this.member(object.ownerId, object.spaceId)) return false;

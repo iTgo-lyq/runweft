@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "id": "prerelease-uninstall-fixture",
+  "title": "隔离预发行卸载测试的原始程序夹具",
+  "size": "small",
+  "status": "completed",
+  "stage": "close",
+  "branch": "codex/prerelease-uninstall-fixture",
+  "confirmations": {},
+  "tasks": {
+    "T1": {
+      "title": "隔离原始程序卸载夹具并准备下一预发行",
+      "status": "done",
+      "verification": "平台包输入定向卸载集成8 pass/86断言、typecheck、文档与差异检查通过，源候选保留"
+    }
+  },
+  "closure": {
+    "verification": {
+      "result": "passed",
+      "at": "2026-10-19T08:04:23.015Z",
+      "summary": "定向平台包卸载8项通过且源程序保留，类型及文档通过"
+    },
+    "acceptance": {
+      "result": "accepted",
+      "at": "2026-10-19T08:04:24.371Z",
+      "summary": "小型发行夹具修复自验收，通过真实平台包定向测试且未修改产品行为",
+      "source": "用户已授权 npm 预发行；Agent 核对原失败根因、最终差异与8项定向测试，无未决交互或产品决策"
+    },
+    "specs": {
+      "result": "synced",
+      "at": "2026-10-19T08:04:25.701Z",
+      "summary": "发行规格明确卸载夹具隔离且保留冻结共享候选"
+    },
+    "archive": {
+      "result": "done",
+      "at": "2026-10-19T08:04:26.973Z",
+      "summary": "卸载夹具修复通过定向验证并自验收，继续已授权预发行",
+      "path": "docs/project/archive/2026-10-19-prerelease-uninstall-fixture"
+    }
+  }
+}

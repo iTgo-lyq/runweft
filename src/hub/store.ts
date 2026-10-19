@@ -1,52 +1,32 @@
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
+import { AccountStore } from './accounts/store';
 import { openState } from '../state';
-import { canAssign, HubError, hubForbidden, hubNotFound, hubUnauthorized, IdentityToken, InvitationToken,
+import { canAssign, HubError, hubForbidden, hubNotFound, hubUnauthorized, InvitationToken,
     type Identity, type Invitation, type Member, type Role, type Space } from './types';
 
 const identityColumns = 'id, name, createdAt';
 const invitationColumns = 'id, spaceId, createdBy, role, createdAt, expiresAt';
 export const tokenDigest = (token: string) => createHash('sha256').update(token).digest('hex');
-export const createIdentityToken = () => `rw_id_${randomBytes(32).toString('base64url')}`;
 type InvitationRow = Invitation & { consumedBy: string | null; consumedAt: number | null; revokedAt: number | null };
 
 /** Runweft identity and membership only; native execution and history remain in HAPI. */
 export class HubStore {
-    private readonly db;
-    constructor(path: string) { this.db = openState(path); }
+    readonly db;
+    readonly accounts: AccountStore;
+    constructor(path: string) { this.db = openState(path); this.accounts = new AccountStore(this.db); }
     close() { this.db.close(); }
 
     authenticate(token: string): Identity {
-        if (!IdentityToken.safeParse(token).success) throw hubUnauthorized();
-        const identity = this.db.query(`SELECT ${identityColumns} FROM hub_users WHERE tokenDigest=?`).get(tokenDigest(token)) as Identity | null;
-        if (!identity) throw hubUnauthorized();
-        return identity;
+        return this.accounts.authenticate(token).identity;
     }
     /** Revalidate the credential within the same snapshot/lock as the operation. */
     authorized<T>(token: string, write: boolean, action: (identity: Identity) => T): T {
         const operation = this.db.transaction(() => action(this.authenticate(token)));
         return write ? operation.immediate() : operation.deferred();
     }
-    createIdentity(name: string) {
-        return this.db.transaction(() => {
-            const identity: Identity = { id: randomUUID(), name, createdAt: Date.now() };
-            const token = createIdentityToken();
-            this.db.query('INSERT INTO hub_users (id, name, tokenDigest, createdAt) VALUES (?, ?, ?, ?)')
-                .run(identity.id, identity.name, tokenDigest(token), identity.createdAt);
-            return { identity, token, personalSpace: this.createSpace(identity.id, `${name.slice(0, 77)}的空间`) };
-        }).immediate();
-    }
     renameIdentity(userId: string, name: string): Identity {
         this.db.query('UPDATE hub_users SET name=? WHERE id=?').run(name, userId);
         return this.db.query(`SELECT ${identityColumns} FROM hub_users WHERE id=?`).get(userId) as Identity;
-    }
-    rotate(identity: Identity, previous: string, next: string): Identity {
-        if (!IdentityToken.safeParse(next).success || next === previous) throw new HubError(400, 'invalid_replacement_token', '请先生成并保存一个新的身份 token。');
-        const digest = tokenDigest(next);
-        if (this.db.query('SELECT 1 FROM hub_users WHERE tokenDigest=?').get(digest)) throw new HubError(409, 'replacement_token_unavailable', '无法采用该 token，请重新生成。');
-        const updated = this.db.query('UPDATE hub_users SET tokenDigest=? WHERE id=? AND tokenDigest=?')
-            .run(digest, identity.id, tokenDigest(previous));
-        if (updated.changes !== 1) throw hubUnauthorized();
-        return identity;
     }
     spaces(userId: string): Space[] {
         return this.db.query(`SELECT s.id, s.name, s.createdAt, m.role FROM hub_spaces s

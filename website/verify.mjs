@@ -112,7 +112,7 @@ try {
   assert.equal(firstTask, homeFirstTask);
   await page.locator('[data-copy="first-task-prompt"]').click();
   assert.equal(await page.evaluate(() => navigator.clipboard.readText()), firstTask);
-  check('Home-to-guide path preserves the setup prompt and copies a separate first task');
+  check('Home-to-guide path preserves the setup prompt and copies the optional later review prompt');
   const skillCommand = await page.locator('#skill-install-command').textContent();
   assert.equal(skillCommand, 'npx skills add iTgo-lyq/runweft-kit --skill runweft-kit --agent codex -g --copy -y');
   await page.locator('[data-copy="skill-install-command"]').click();

@@ -1,3 +1,4 @@
+import { createTestIdentity } from '../identity-fixture';
 import { expect } from 'bun:test';
 import { randomBytes } from 'node:crypto';
 import { rmSync } from 'node:fs';
@@ -21,7 +22,7 @@ export function setupHubResources(cleanups: (() => void | Promise<void>)[]) {
         const hub = new HubStore(path); cleanup.resources.push(() => hub.close());
         const access = new AccessStore(path); cleanup.resources.push(() => access.close());
         const other = new AccessStore(path); cleanup.resources.push(() => other.close());
-        const a = hub.createIdentity('owner'), b = hub.createIdentity('member'), c = hub.createIdentity('unrelated');
+        const a = createTestIdentity(hub, 'owner'), b = createTestIdentity(hub, 'member'), c = createTestIdentity(hub, 'unrelated');
         const invite = hub.invite(a.identity.id, a.personalSpace.id, 'admin'); hub.acceptInvitation(b.identity.id, invite.token);
         return { home, path, hub, access, other, a, b, c, store: new HubResourceStore(access), second: new HubResourceStore(other),
             actor: access.authenticate(a.token), member: access.authenticate(b.token), unrelated: access.authenticate(c.token) };

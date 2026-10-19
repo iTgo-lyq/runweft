@@ -69,7 +69,7 @@ main 中途失败后未运行的案例需分别执行并把报告传给校验器
 
 真实模型组合和失败处置见[原生主链验收](project/archive/2026-10-03-test-backbone-slimming/acceptance.md)，长路径与退出修复见[HAPI 专项验收](project/archive/2026-10-10-hapi-session-and-shutdown/acceptance.md)，四平台公共安装/完整卸载和匿名安装见[1.1.4 发行验收](project/archive/2026-10-12-npm-uninstall-release/acceptance.md)。证据只属于对应候选，后续安装或文档验收不增加模型覆盖。
 
-四平台托管安装不代替用户 Mac 实机、Mac/arm64 模型、物理跨机/WAN 或生产 TLS 实测；同机多 Runner 不等于物理远端。规范 `X.Y.Z-beta.N` 的发布/不晋级与官网 Beta 跳过只有[本地夹具证据](project/archive/2026-10-02-npm-beta-publishing/acceptance.md)，稳定版本上传 beta 再晋级不等于已经实际发布该类预发行版本。
+四平台托管安装不代替用户 Mac 实机、Mac/arm64 模型、物理跨机/WAN 或生产 TLS 实测；同机多 Runner 不等于物理远端。规范 `X.Y.Z-beta.N` 的发布/不晋级与官网 Beta 跳过规则有[本地夹具证据](project/archive/2026-10-02-npm-beta-publishing/acceptance.md)；实际预发行结果与四平台门禁按对应 tag 查询 [GitHub Actions](https://github.com/iTgo-lyq/runweft/actions/workflows/npm-publish.yml)，不能从稳定版本上传 beta 再晋级推断预发行验证成功。
 
 [发布提速验收](project/archive/2026-10-13-release-throughput/acceptance.md)和[验收优化记录](project/archive/2026-10-13-release-validation-efficiency/execution.md)保留专项开发证据。各次正式发布的实际结果、耗时和失败恢复从 [GitHub Actions](https://github.com/iTgo-lyq/runweft/actions/workflows/npm-publish.yml) 查询，见[发布证据与排查](#发布证据与排查)。
 
@@ -84,7 +84,7 @@ gh workflow run npm-publish.yml --repo iTgo-lyq/runweft --ref main \
   -f 'release-tag=<原版本tag>' -f 'source-run-id=<原run编号>'
 ```
 
-手动参数全部留空只预演。恢复必须取得原候选描述、上传及成功的上传前检查证据，并核对来源、摘要和 packageInputs；包内说明、package.json 等输入变化后，不能从当前 main 恢复旧候选，应为下一版本重新冻结构建。部分公开、日志不可取得或上传结果未知时停止，不盲目重发。beta 是公开渠道，已公开版本不能覆盖。
+手动参数全部留空只预演。恢复必须取得原候选描述、上传及成功的上传前检查证据，并核对来源、摘要和 packageInputs；包内说明、package.json 等输入变化后，不能从当前 main 恢复旧候选，应为下一版本重新冻结构建。npm 异步处理与渠道标签确认共用一次发布的 45 分钟预算，切换阶段不重置。超时保留已接受和已确认回执。部分公开、日志不可取得或上传结果未知时停止，不盲目重发。beta 是公开渠道，已公开版本不能覆盖。
 
 调整验收脚本后，可以只读验证已公开的原候选：`gh workflow run npm-publish.yml --ref <验收分支> -f verify-run-id=<原发布run编号>`。包输入必须仍与原候选完全相同，并有原 run 的成功上传前证据；该模式实际执行全部公共分片、四平台安装/完整卸载及稳定版网页安装，跳过构建、上传、晋级和官网部署。不能同时填写 release-tag 或 source-run-id。所有手动参数均为空时仍是本地候选预演。
 

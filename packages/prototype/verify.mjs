@@ -47,11 +47,44 @@ try {
     assert.equal(handshake?.status, 'ready'); assert.equal(handshake?.version, 'local-preview');
     assert(await frame.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), `${entry.id}/${device} horizontal overflow`);
     if (screenshots) {
-      if (device === 'mobile' && entry.id !== 'identity') await f.locator('.space-content').scrollIntoViewIfNeeded();
+      if (device === 'mobile' && !['identity', 'account-onboarding'].includes(entry.id)) await f.locator('.space-content').scrollIntoViewIfNeeded();
       await page.locator('iframe').screenshot({ path: join(root, 'dist', entry.id, `${device}.png`), animations: 'disabled' });
     }
     const button = label => f.getByRole('button', { name: label, exact: true });
-    if (entry.id === 'identity') {
+    if (entry.id === 'account-onboarding') {
+      await f.getByLabel('用户名', { exact: true }).fill('demo-user');
+      await f.getByLabel('密码', { exact: true }).fill('a demo passphrase with spaces');
+      await button('注册并连接').click();
+      await f.getByRole('heading', { name: '可以返回原对话了' }).waitFor();
+      await button('已有账号').click();
+      await button('演示：多个空间').click();
+      await f.getByLabel('默认工作空间').selectOption({ label: '产品团队' });
+      await f.getByLabel('密码', { exact: true }).fill('a demo passphrase with spaces');
+      await button('登录并连接').click();
+      await f.getByRole('heading', { name: '可以返回原对话了' }).waitFor();
+      await button('请求过期').click();
+      await f.getByRole('heading', { name: '这个连接请求已过期' }).waitFor();
+      await button('忘记密码').click();
+      await f.getByLabel('一次性重置码', { exact: true }).fill('demo');
+      await f.getByLabel('新密码', { exact: true }).fill('a new demo passphrase');
+      await button('重置密码').click();
+      await f.getByText('密码已更新，请使用新密码登录。', { exact: true }).waitFor();
+      await button('账号设置').click();
+      await button('断开环境').click();
+      await f.locator('#confirm[open]').waitFor();
+      await f.locator('#confirm').getByRole('button', { name: '断开环境', exact: true }).click();
+      await f.getByText('命令行 · 已断开', { exact: true }).waitFor();
+      await f.getByLabel('当前密码', { exact: true }).fill('a demo passphrase with spaces');
+      await f.getByLabel('新密码', { exact: true }).fill('a changed demo passphrase');
+      await button('修改密码并退出全部环境').click();
+      await f.getByText('密码已更新，请使用新密码登录。', { exact: true }).waitFor();
+      await button('账号设置').click();
+      await button('退出全部环境').click();
+      await f.getByLabel('当前密码', { exact: true }).fill('a changed demo passphrase');
+      await button('确认退出全部环境').click();
+      await button('首次工作台').click();
+      await f.getByRole('heading', { name: '还没有任务' }).waitFor();
+    } else if (entry.id === 'identity') {
       await f.locator('#new-name').fill('原型体验者'); await button('领取身份 token').click();
       await f.locator('#secret-dialog[open]').waitFor(); await button('关闭').click();
       assert.equal(await f.locator('#identity-name').innerText(), '原型体验者');

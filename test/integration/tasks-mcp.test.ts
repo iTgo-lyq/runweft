@@ -1,3 +1,4 @@
+import { saveTestConnection } from '../identity-fixture';
 import { afterEach, expect, test } from 'bun:test';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
@@ -25,8 +26,7 @@ async function fixture(host: 'codex' | 'claude' = 'codex', workspaceApi?: (reque
     }
     const config = loadConfig(h.home, { ...process.env, HAPI_SESSION_ID: undefined });
     const paths = hubConnectionPaths(h.home, h.url), credential = h.machineConnections.get(h.machineId)!;
-    atomicWrite(paths.identityConnection, JSON.stringify({ schemaVersion: 1, hub: h.url, ownerId: h.owner.identity.id, spaceId: h.space,
-        token: h.owner.token, requestId: crypto.randomUUID(), createdAt: Date.now() }));
+    await saveTestConnection(h.home, h.url, h.owner.token, h.space);
     atomicWrite(paths.machineConnection, JSON.stringify({ schemaVersion: 1, hub: h.url, ownerId: h.owner.identity.id, requestId: credential.requestId,
         machineId: h.machineId, active: { token: credential.token, credentialId: credential.credentialId }, createdAt: Date.now() }));
     const hub = { url: h.url, home: h.home, env: config.env };
@@ -163,7 +163,7 @@ test('agent resolution forwards cancellation through current Hub authentication 
     } });
     cleanups.push(() => http.stop(true));
     const controller = new AbortController();
-    const pending = new HubAgentClient({ url: http.url.origin, space: h.space, env: { RUNWEFT_IDENTITY_TOKEN: h.owner.token } }).resolve({ agentId: h.agent.id }, controller.signal);
+    const pending = new HubAgentClient({ url: http.url.origin, space: h.space, credential: { token: h.owner.token }, env: {} }).resolve({ agentId: h.agent.id }, controller.signal);
     await entered; controller.abort(new Error('cancel resolution'));
     await expect(pending).rejects.toThrow('cancel resolution');
     expect(paths).toEqual(['/api/runweft/health', '/api/auth']);

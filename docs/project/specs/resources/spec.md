@@ -46,7 +46,7 @@
 | `/runtimes/:id/spaces/:spaceId` | PUT/DELETE 分享 |
 | `/spaces/:spaceId/blocks/:machine-or-runtime/:id` | PUT/DELETE 本空间治理禁用 |
 
-`runweft hub --url <origin> --identity-file <file> [--space <id>] machine/runtime …` 提供以上管理动作，具体命令见[已验收 CLI 契约](../../archive/2026-09-30-hub-resource-ownership/cli-contract.md)。省略身份文件时只读取 RUNWEFT_IDENTITY_TOKEN，不复用旧 HAPI token；Web 备份核对 origin 和身份 ID。客户端先检查能力再发送凭据，不跟随跨地址重定向、不自动启动服务或回退本地配置。check 不可用时退出 1，错误写 stderr。
+`runweft [--space <id>] hub --url <origin> machine/runtime …` 提供以上管理动作，具体命令见[已验收 CLI 契约](../../archive/2026-09-30-hub-resource-ownership/cli-contract.md)。使用所选 origin 保存的账号 CLI 连接；已移除 --identity-file 和 RUNWEFT_IDENTITY_TOKEN，缺少连接时提示账号授权，不回退 HAPI token。客户端先检查能力再发送凭据，不跟随跨地址重定向、不自动启动服务或回退本地配置。check 不可用时退出 1，错误写 stderr。
 
 ## 持久化与验证
 

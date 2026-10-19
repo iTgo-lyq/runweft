@@ -25,7 +25,7 @@ export class AccessAuthority {
         const jwt = await new SignJWT({ ref: actor.digest, kind: actor.kind, space: actor.kind === 'user' ? spaceId : null,
             uid: actor.userNumber, ns: `rw_user_${actor.ownerId}` })
             .setProtectedHeader({ alg: 'HS256', typ: 'JWT' }).setIssuer(issuer).setAudience(audience)
-            .setSubject(actor.id).setIssuedAt().setExpirationTime(`${ACCESS_JWT_SECONDS}s`).sign(this.key);
+            .setSubject(actor.id).setIssuedAt().setExpirationTime(Math.floor(Math.min(actor.expiresAt ?? Infinity, Date.now() + ACCESS_JWT_SECONDS*1000)/1000)).sign(this.key);
         // Signing is asynchronous; a concurrent rotation/removal must not get a successful exchange.
         this.store.refresh(actor);
         return { token: jwt, user: { id: actor.userNumber, firstName: actor.name } };

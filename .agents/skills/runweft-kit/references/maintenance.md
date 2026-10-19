@@ -21,7 +21,7 @@ runweft mcp check --client <codex或claude>
 | --- | --- |
 | 程序不存在或 HAPI 不兼容 | 核对安装路径、版本与同批配套 HAPI；不随便调用系统另一份 HAPI |
 | Hub 未连接 | 核对 `hub.url`、网络与 `hub identity`；按 begin/complete 接入，不要求 token |
-| 401/身份失效 | 让用户在浏览器导入本人已保存的新 token，再安全交接；不自动领取新身份 |
+| 401/身份失效 | 让用户在浏览器登录原账号并授权当前 CLI；密码留在用户界面，不自动注册新账号 |
 | 403/资源不可用 | 查当前空间、资源 permissions、登记/共享/成员关系；不改身份绕过 |
 | 无机器凭据 | 该机器 enroll、associate，再 runner start；中心不用 root token 分发 |
 | Runner 离线 | 在对应机器查 runner status，核对环境后重启；机器轮换后必须重启 |
@@ -36,7 +36,7 @@ runweft mcp check --client <codex或claude>
 
 先记录安装版本、路径、Hub 角色、数据根、活跃任务。结束/中断任务并确认停止后再停对应服务；停止 Runner/Hub 不能代替中断模型进程。
 
-升级：确认当前入口属于 npm 安装，使用 `npm install -g runweft@<目标版本> --registry=https://registry.npmjs.org/ --include=optional`；成功后核对版本和入口，再运行 `mcp install --client <宿主>` 更新入口/timeout/hook。Skill 来自 npm 包时，从更新后的包读取，比对、备份扫描目录外的旧目录再替换；通过 skills CLI 安装时，先核对来源与本地修改，有修改先备份到扫描目录外并确认替换范围，再按用户授权运行 `npx skills update runweft-kit -g -y`，项目安装则改为 `-p`。不承诺更新命令会保留个人修改。工程维护的 Skill 由工程 Git 更新，不用全局更新覆盖。Skill 版本不代替程序版本，操作前仍查实际 CLI 的 `--help`。没有 `runweft upgrade` 命令。当前业务库只支持 schema19，不通过切换程序迁移数据。
+升级：确认当前入口属于 npm 安装，使用 `npm install -g runweft@<目标版本> --registry=https://registry.npmjs.org/ --include=optional`；成功后核对版本和入口，再运行 `mcp install --client <宿主>` 更新入口/timeout/hook。Skill 来自 npm 包时，从更新后的包读取，比对、备份扫描目录外的旧目录再替换；通过 skills CLI 安装时，先核对来源与本地修改，有修改先备份到扫描目录外并确认替换范围，再按用户授权运行 `npx skills update runweft-kit -g -y`，项目安装则改为 `-p`。不承诺更新命令会保留个人修改。工程维护的 Skill 由工程 Git 更新，不用全局更新覆盖。Skill 版本不代替程序版本，操作前仍查实际 CLI 的 `--help`。没有 `runweft upgrade` 命令。当前业务库只支持 schema20，不通过切换程序迁移数据。
 
 按原角色启动：本机 Hub `start`，独立执行机 `runner start`，前台公开服务由原进程管理器执行 `serve --public`。核对 `--version/status/doctor/mcp check`，再做一次低风险真实调用。只执行用户指定范围，不更新在线其他实例。
 
@@ -63,4 +63,4 @@ runweft artifact prune
 
 以上 release/prune 默认预览，核对结果和用户意图后才加 `--apply`。丢弃未交付结果需要另外明确 `--discard-pending`。工作区删除 `task workspace remove <taskId>` 会实际执行，不能当预览；ignored 文件默认阻止删除，仅明确放弃才加 `--discard-ignored`。释放引用不删除字节，仍有引用的对象不能 remove。
 
-中心业务库只支持当前 schema19，本机 client.sqlite 只支持当前 schema1；新库直接创建，同格式库正常重开。旧版本、不匹配或损坏格式明确拒绝，不迁移、改写或清理原目录。按错误诊断使用独立新 `--home <目录>` 并自行保管原目录；不要把未知执行/回执作为删除历史的理由。当前附件/成果的 release/prune/remove 与已登记操作的回执恢复仍按各命令执行，不接管旧目录。配置省略 schemaVersion 使用当前默认值1，显式非当前版本拒绝。
+中心业务库只支持当前 schema20，本机 client.sqlite 只支持当前 schema1；新库直接创建，同格式库正常重开。旧版本、不匹配或损坏格式明确拒绝，不迁移、改写或清理原目录。按错误诊断使用独立新 `--home <目录>` 并自行保管原目录；不要把未知执行/回执作为删除历史的理由。当前附件/成果的 release/prune/remove 与已登记操作的回执恢复仍按各命令执行，不接管旧目录。配置省略 schemaVersion 使用当前默认值1，显式非当前版本拒绝。

@@ -1,3 +1,4 @@
+import { createTestIdentity } from '../identity-fixture';
 import { test, expect } from 'bun:test';
 import { randomBytes } from 'node:crypto';
 import { rmSync } from 'node:fs';
@@ -47,7 +48,7 @@ test('normal Hub shutdown reconnects a live machine without replay; credential r
         gateway = await createResourceGateway({ host: '127.0.0.1', port: 0, target, statePath: path, rootToken: 'private-test-root', key });
         const port = (gateway.server.address() as { port: number }).port;
         const hub = new HubStore(path); cleanups.push(() => hub.close());
-        const user = hub.createIdentity('socket owner'), actor = gateway.store.authenticate(user.token, user.personalSpace.id);
+        const user = createTestIdentity(hub, 'socket owner'), actor = gateway.store.authenticate(user.token, user.personalSpace.id);
         const token = `rw_mc_${randomBytes(32).toString('base64url')}`;
         const machine = gateway.resources.store.enroll(actor, { requestId: crypto.randomUUID(), token });
         const socket = io(`http://127.0.0.1:${port}/cli`, { auth: { token, machineId: machine.machineId },

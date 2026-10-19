@@ -2,6 +2,7 @@
   "name": "@runweft/prototype",
   "private": true,
   "type": "module",
+  "packageManager": "bun@1.4.2",
   "scripts": {
     "build": "bun build.mjs",
     "test": "node --test publish-r2.test.mjs && node verify.mjs",

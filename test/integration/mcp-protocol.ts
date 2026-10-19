@@ -1,3 +1,6 @@
+import { createUserSecret } from '../../src/hub/accounts/credentials';
+import { atomicWrite } from '../../src/config';
+import { hubConnectionPaths } from '../../src/hub/resources/connection';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { spawn } from 'node:child_process';
@@ -5,14 +8,14 @@ import { existsSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
-import { createIdentityToken } from '../../src/hub/store';
+
 import { closeSmoke } from '../lifecycle';
 import { withSmokeDeadline } from '../deadline';
 
 /** Compiled stdio/auth transport only; no native tools, model credentials or fake Hub authorization. */
 export async function probeMcpProtocol(binary: string, root: string) {
     mkdirSync(root, { recursive: true });
-    const home = join(root, 'client'), token = createIdentityToken(), paths: string[] = [], errors: unknown[] = [];
+    const home = join(root, 'client'), token = createUserSecret('cli').token, paths: string[] = [], errors: unknown[] = [];
     let started!: () => void, aborted!: () => void;
     let waiting = new Promise<void>(resolve => { started = resolve; }), cancelled = new Promise<void>(resolve => { aborted = resolve; });
     const server = Bun.serve({ hostname: '127.0.0.1', port: 0, fetch(request) {
@@ -22,8 +25,11 @@ export async function probeMcpProtocol(binary: string, root: string) {
         return new Promise<Response>(resolve => request.signal.addEventListener('abort', () => { aborted(); resolve(new Response()); }, { once: true }));
     } });
     const env = Object.fromEntries(Object.entries(process.env).filter(([key, value]) => typeof value === 'string' && !key.startsWith('RUNWEFT_') && !key.startsWith('HAPI_'))) as Record<string, string>;
-    Object.assign(env, { RUNWEFT_IDENTITY_TOKEN: token, CODEX_HOME: join(root, 'codex'), CLAUDE_CONFIG_DIR: join(root, 'claude') });
-    const args = ['--home', home, 'hub', '--url', server.url.origin, '--space', randomUUID(), 'mcp', 'serve', '--client', 'codex'];
+    Object.assign(env, { HOME: root, CODEX_HOME: join(root, 'codex'), CLAUDE_CONFIG_DIR: join(root, 'claude') });
+    const space = randomUUID();
+    atomicWrite(hubConnectionPaths(home, server.url.origin).identityConnection, JSON.stringify({ schemaVersion: 2, hub: server.url.origin, ownerId: randomUUID(),
+        spaceId: space, token, requestId: randomUUID(), createdAt: Date.now() }));
+    const args = ['--home', home, 'hub', '--url', server.url.origin, '--space', space, 'mcp', 'serve', '--client', 'codex'];
     const transport = new StdioClientTransport({ command: binary, args, env, stderr: 'pipe' });
     let stderr = ''; transport.stderr?.on('data', chunk => { stderr += chunk; });
     const client = new Client({ name: 'runweft-protocol-probe', version: '1' }); client.onerror = error => { errors.push(error); };
@@ -59,7 +65,7 @@ export async function probeMcpProtocol(binary: string, root: string) {
         for (const line of stdout.split('\n').filter(Boolean)) assert.equal(JSON.parse(line).jsonrpc, '2.0');
         assert(stdout.trim()); assert(!stdout.includes(token)); assert(!stderr.includes(token));
         assert.deepEqual(paths, ['/api/runweft/health', '/api/auth', '/api/runweft/health', '/api/auth']);
-        assert(!existsSync(home), 'Protocol probe must not create a data home');
+        assert(!existsSync(join(home, 'client.sqlite')) && !existsSync(join(home, 'server')), 'Protocol probe must not create business state');
         return { noHomeWrite: true, catalog: catalog.tools.map(tool => tool.name), cancellation: true, eof: true, stdoutProtocolOnly: true, paths };
     } finally { await closeSmoke(resources); }
 }

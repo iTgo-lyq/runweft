@@ -1,3 +1,4 @@
+import { createTestIdentity } from '../identity-fixture';
 import { afterEach, expect, test } from 'bun:test';
 import { randomBytes, randomUUID } from 'node:crypto';
 import { HubAgentStore } from '../../src/hub/agents/store';
@@ -85,7 +86,7 @@ test('membership removal clears explicit recipient grants and revokes departed o
     h.agents.access(h.member, two.id, { mode: 'space' }); h.agents.block(h.admin, two.id, true);
     const history = h.agents.versions(h.member, two.id);
     h.hub.changeMember(h.a.identity.id, h.space, h.c.identity.id, null);
-    code(() => h.agents.update(h.member, two.id, { expectedVersion: 1, definition: { name: 'Departed' } }), 'identity_token_invalid');
+    code(() => h.agents.update(h.member, two.id, { expectedVersion: 1, definition: { name: 'Departed' } }), 'user_session_invalid');
     expect(h.agents.agent(h.actor, two.id)).toMatchObject({ accessMode: 'private', view: 'governance', ownerPresent: false, blocked: true });
     expect(h.agents.agent(h.actor, one.id)).toMatchObject({ memberIds: [] });
     h.hub.acceptInvitation(h.c.identity.id, h.hub.invite(h.a.identity.id, h.space, 'member').token);
@@ -111,7 +112,7 @@ test('new runtime bindings require current rights and flavor; existing failed ta
     code(() => create(h, h.actor, { model: 'configured-without-flavor' }), 'agent_input_invalid');
     code(() => create(h, h.actor, { command: 'unexpected launcher' }), 'agent_input_invalid');
     code(() => create(h, h.actor, { instructions: 'a'.repeat(32769) }), 'agent_input_invalid');
-    const unrelated = h.hub.createIdentity('outside');
+    const unrelated = createTestIdentity(h.hub, 'outside');
     code(() => h.agents.access(h.actor, bound.id, { mode: 'members', memberIds: [unrelated.identity.id] }), 'agent_member_unknown');
     h.repos.register(h.actor, repo.id, false); code(() => create(h, h.actor, { repositoryId: repo.id }), 'repository_unregistered');
     const cleared = h.agents.update(h.actor, bound.id, { expectedVersion: 2, definition: { name: 'Unbound' } }); expect(definition(cleared).runtimeId).toBeNull();
@@ -119,8 +120,8 @@ test('new runtime bindings require current rights and flavor; existing failed ta
 
 test('HTTP/client permission checks whitelist governance responses, enforce body limits and invalidate cached access after removal', async () => {
     const h = await hubResourceFixture(cleanups, true), space = h.a.personalSpace.id;
-    const owner = new HubAgentClient({ url: h.url, space, env: { RUNWEFT_IDENTITY_TOKEN: h.a.token } });
-    const admin = new HubAgentClient({ url: h.url, space, env: { RUNWEFT_IDENTITY_TOKEN: h.b.token } });
+    const owner = new HubAgentClient({ url: h.url, space, credential: { token: h.a.token }, env: {} });
+    const admin = new HubAgentClient({ url: h.url, space, credential: { token: h.b.token }, env: {} });
     const created = await owner.create(randomUUID(), { name: 'Agent', instructions: 'private text', flavor: 'claude', model: 'private model' });
     const id = created.agent.id; expect((await admin.agent(id)).agent.view).toBe('governance');
     expect(JSON.stringify(await admin.list())).not.toContain('private text');
@@ -143,6 +144,6 @@ test('HTTP/client permission checks whitelist governance responses, enforce body
     expect((await admin.list()).agents).toEqual([]);
     await expect(admin.agent(id)).rejects.toMatchObject({ code: 'hub_object_not_found' });
     h.hub.changeMember(h.a.identity.id, space, h.b.identity.id, null);
-    await expect(admin.agent(id)).rejects.toMatchObject({ code: 'identity_token_invalid' });
+    await expect(admin.agent(id)).rejects.toMatchObject({ code: 'user_session_invalid' });
     expect(h.calls).toEqual([]);
 });

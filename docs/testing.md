@@ -111,7 +111,7 @@ node test/acceptance/install.mjs --candidate dist/packages --case all --report /
 
 ## 浏览器与原型
 
-Hub 页面变化选择 `web-identity`、`web-connect`、`web-console` 集成：真实身份/加密连接、配置选择、任务到原生详情，保留跨 owner 隔离、撤权失效和秘密扫描。普通任务历史是当前格式样本；真实模型历史在原生 case 内验证，不能用普通浏览器样本代替。
+Hub 页面变化选择 `web-identity`、`web-connect`、`web-console` 集成：真实账号/连接授权、配置选择、任务到原生详情，保留跨 owner 隔离、撤权失效和秘密扫描。普通任务历史是当前格式样本；真实模型历史在原生 case 内验证，不能用普通浏览器样本代替。
 
 ```sh
 bunx playwright install chromium
@@ -133,7 +133,7 @@ bun run dev:env start --candidate dist/packages --runner
 bun run dev:env stop --dir /返回的/runweft-env-目录
 ```
 
-`--bin` 使用显式程序及其相邻 HAPI 的私有副本；`--candidate` 使用已校验的候选私有安装。两者必须二选一，不自动编译或换包。默认只有 Hub，`--runner` 才登记并启动 Runner；身份和个人空间已准备好，返回 `identityFile` 供需要时读取并导入浏览器，不在终端打印 token。`cli`、`home`、`nativeHome` 分别说明专用程序、Runweft 数据与原生配置位置；后续命令带 `--home` 使用返回的数据根。
+`--bin` 使用显式程序及其相邻 HAPI 的私有副本；`--candidate` 使用已校验的候选私有安装。两者必须二选一，不自动编译或换包。默认只有 Hub，`--runner` 才登记并启动 Runner；身份和个人空间已准备好，返回受限 `accountFile` 供开发者在自己的浏览器输入合成账号，不在终端打印密码或凭据。`cli`、`home`、`nativeHome` 分别说明专用程序、Runweft 数据与原生配置位置；后续命令带 `--home` 使用返回的数据根。
 
 启动命令退出后环境仍可使用。完成业务验收后运行返回的停止命令：核对目录/程序摘要和现有产品进程状态，活跃会话、MCP 客户端、未知进程或未确认结束的任务会拒绝删除并保留目录。先用此环境的 CLI/原生会话入口结束任务、修复状态，再定向停止；不猜 PID 强杀。确认全部进程退出后删除本次专用目录，对已删除或拼错的目录均报不存在并返回失败，不声明停止了任何进程；请以第一次停止结果为准。业务结果需要留存时先保存到环境外。固定测试自行准备和清理，不调用此入口获取现场。
 

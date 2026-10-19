@@ -3,7 +3,6 @@ import { RunweftError } from '../errors';
 
 export const HubName = z.string().trim().min(1).max(80);
 export const HubRole = z.enum(['owner', 'admin', 'member']);
-export const IdentityToken = z.string().regex(/^rw_id_[A-Za-z0-9_-]{43}$/);
 export const InvitationToken = z.string().regex(/^rw_inv_[A-Za-z0-9_-]{43}$/);
 export type Role = z.infer<typeof HubRole>;
 export type Identity = { id: string; name: string; createdAt: number };
@@ -14,7 +13,7 @@ export type Invitation = { id: string; spaceId: string; createdBy: string; role:
 export class HubError extends RunweftError {
     constructor(readonly status: number, code: string, message: string, hint?: string) { super(code, message, hint); }
 }
-export const hubUnauthorized = () => new HubError(401, 'identity_token_invalid', '身份 token 无效或已被替换。', '导入此 Hub 已保存的身份 token；不会自动创建新身份。');
+export const hubUnauthorized = () => new HubError(401, 'user_session_invalid', '登录已失效，请重新登录。', '使用账号密码登录，或让 Agent 重新发起浏览器连接授权。');
 export const hubForbidden = () => new HubError(403, 'space_action_forbidden', '当前空间角色无权执行此操作。');
 export const hubNotFound = () => new HubError(404, 'hub_object_not_found', '对象不存在或不属于你可访问的空间。');
 export function hubInput<T>(schema: z.ZodType<T>, value: unknown): T {

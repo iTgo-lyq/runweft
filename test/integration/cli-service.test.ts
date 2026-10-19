@@ -6,9 +6,18 @@ import { chmodSync, existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fixture } from '../helpers';
 import { browserAddress } from '../../src/service-commands';
+import { serve } from '../../src/services';
+import { dataPaths, loadConfig } from '../../src/config';
 
 const cleanupOwner = fixtureCleanup([]), cleanups = cleanupOwner.resources;
 afterEach(() => cleanupOwner.close());
+
+test('public account URL rejects remote plaintext HTTP before creating service state', async () => {
+    const root = fixture('public-account-url', cleanups);
+    const config = loadConfig(root, { RUNWEFT_PUBLIC_URL: 'http://runweft.example.test' });
+    await expect(serve(config, true)).rejects.toMatchObject({ code: 'public_url_https_required' });
+    expect(existsSync(dataPaths(config).server)).toBe(false);
+});
 
 test('HAPI passthrough preserves argv, exit status and signals without a shell', async () => {
     const root = fixture('hapi-passthrough', cleanups);

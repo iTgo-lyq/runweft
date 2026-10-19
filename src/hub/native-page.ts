@@ -13,7 +13,7 @@ const expires = (token: string) => {
             && typeof payload.exp === 'number' ? payload.exp * 1000 : 0;
     } catch { return 0; }
 };
-sessionStorage.removeItem('runweft.hub.identity');
+sessionStorage.removeItem('runweft.hub.session');
 const token = storageGet.call(sessionStorage, sessionKey) ?? '';
 if (expires(token) <= Date.now()) {
     storageRemove.call(sessionStorage, sessionKey);

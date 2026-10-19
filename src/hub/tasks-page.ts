@@ -22,24 +22,26 @@ export function filesText(files: { status: string; retention: string; available:
 function jsonDetails(title: string, value: unknown) { return expandable(title, element('pre', JSON.stringify(value, null, 2), 'inspection-output')); }
 export async function renderTasks(target: HTMLElement, context: ConsoleContext) {
     let page = 1, chosen: string | undefined, roundId: string | undefined, offset = 0;
+    const locationQuery=new URLSearchParams(location.hash.slice(1));chosen=locationQuery.get('task')??undefined;roundId=locationQuery.get('round')??undefined;
+    function clearTarget(){locationQuery.delete('task');locationQuery.delete('round');history.replaceState(null,'',location.pathname+(locationQuery.size?'#'+locationQuery:''));}
     const workspace = field('来源工作目录筛选'), parent = field('主宿主筛选');
     const status = selectField('任务状态', [{ value: '', label: '全部状态' }, ...Object.entries(statusLabels).map(([value, label]) => ({ value, label }))]);
     const limit = selectField('每页任务数', [10, 25, 50, 100].map(value => ({ value: String(value), label: String(value) })), '25');
     const list = element('div', '', 'task-list'), details = element('section', '', 'task-detail'); details.tabIndex = -1;
     target.append(element('h3', '任务 · 只看你的执行'), element('p', '计数与内容仅来自你在当前空间的任务。共享 Agent 不分享任务；未知状态不表示可以重发。刷新查看最新观察。', 'muted'));
     target.append(submitForm('应用筛选', [workspace.node, parent.node, status.node, limit.node], async () => {
-        page = 1; chosen = undefined; details.replaceChildren(); await load();
+        page = 1; chosen = undefined; clearTarget();details.replaceChildren(); await load();
     }, context), list, details);
     async function show() {
         if (!chosen) return;
         const expanded = new Set(Array.from(details.querySelectorAll<HTMLDetailsElement>('details[open]')).map(node => node.querySelector('summary')?.textContent));
         const query = new URLSearchParams({ offset: String(offset), limit: '16000' });
         if (roundId) query.set('roundId', roundId);
-        const view: TaskDetail = await context.request(`/tasks/details/${chosen}?${query}`);
+        const view: TaskDetail = await context.request(`/tasks/details/${encodeURIComponent(chosen)}?${query}`);
         const content = element('div');
         content.append(element('h3', `${view.agent.definition.name} · 第 ${view.round} 轮`), element('code', view.agent_id));
         const navigation = element('div', '', 'actions');
-        navigation.append(control('返回任务列表', async () => { chosen = undefined; details.replaceChildren(); list.hidden = false; list.scrollIntoView({ block: 'start' }); }, context),
+        navigation.append(control('返回任务列表', async () => { chosen = undefined; clearTarget();details.replaceChildren(); await load();list.scrollIntoView({ block: 'start' }); }, context),
             control('刷新任务详情', show, context));
         content.append(navigation);
         const rounds = selectField('查看轮次', view.rounds.map(item => ({ value: item.id, label: `第 ${item.ordinal} 轮 · ${item.phase}` })), view.round_id);
@@ -103,5 +105,5 @@ export async function renderTasks(target: HTMLElement, context: ConsoleContext) 
         if (page < view.pages) navigation.append(control('下一页任务', async () => { page++; await load(); }, context));
         content.append(navigation); list.replaceChildren(content); list.hidden = false;
     }
-    await load();
+    if(chosen)await show();else await load();
 }

@@ -1,3 +1,4 @@
+import { createTestIdentity } from '../identity-fixture';
 import { randomBytes, randomUUID } from 'node:crypto';
 import { taskNativeFixture } from './task-native-fixture';
 import { fixtureCleanup } from '../fixture-cleanup';
@@ -14,7 +15,7 @@ export async function hubDelegationFixture(cleanups: (() => void | Promise<void>
         const h = await taskNativeFixture(cleanup.resources, flavor, workspaceApi, undefined, { ...nativeOptions, namespaces: ['runweft'] });
         const config = loadConfig(h.home, {}), statePath = dataPaths(config).state;
         const hub = new HubStore(statePath); cleanup.resources.push(() => hub.close());
-        const owner = hub.createIdentity('delegator'), other = hub.createIdentity('machine owner');
+        const owner = createTestIdentity(hub, 'delegator'), other = createTestIdentity(hub, 'machine owner');
         hub.acceptInvitation(other.identity.id, hub.invite(owner.identity.id, owner.personalSpace.id, 'admin').token);
         let gateway = await createDelegationGateway({ host: '127.0.0.1', port: 0, target: h.nativeUrl, rootToken: 'test-', key: h.key, statePath: statePath, pollMs });
         cleanup.resources.push(() => gateway.close());

@@ -182,7 +182,7 @@ test('consumer committed before task association is reused after coordinator rep
     const h = await fixture(), input = h.payload();
     await h.gateway.delegation.coordinator.close();
     const store = h.gateway.delegation.coordinator.store, baselines = h.gateway.delegation.preparations.baselines;
-    const hub = (await new HubAgentClient({ url: h.url, space: h.space, env: { RUNWEFT_IDENTITY_TOKEN: h.owner.token } }).resolve({ agentId: h.agent.id })).resolution;
+    const hub = (await new HubAgentClient({ url: h.url, space: h.space, credential: { token: h.owner.token }, env: {} }).resolve({ agentId: h.agent.id })).resolution;
     const agent = agentSnapshot(h.namespace, hub), origin = h.source(h.cwd, 'HEAD');
     const accepted = store.accept(h.namespace, h.parent, input.requestId, taskIntent(input.intent as any), agent, hub.target, origin);
     const consumer = await baselines.forTask(h.namespace, origin, h.targetMachineId, accepted.agent_id);

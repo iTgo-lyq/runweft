@@ -14,7 +14,7 @@ checkout 必须来自当前用户拥有的机器，且用户仍为所选空间�
 
 接口 `/api/runweft/repositories` 提供创建/目录、`/requests/:requestId`、详情/改名/登记与 `/aliases`；`/api/runweft/checkouts` GET 本人记录、POST 只读匹配、PUT 绑定、DELETE 解除。均使用明确空间的用户 JWT，拒绝自报 owner/space 和未知字段。
 
-CLI 位于 `hub repository`：create/list/show/rename/register/unregister/alias/un-alias/request/inspect/match/bind/unbind/checkouts。创建要求 --request-id；本机观察用 --cwd，中心匹配和绑定要求 --machine。inspect 无需身份 token；match 非 matched 时退出 1，并返回歧义、漂移或未关联的可操作提示。
+CLI 位于 `hub repository`：create/list/show/rename/register/unregister/alias/un-alias/request/inspect/match/bind/unbind/checkouts。创建要求 --request-id；本机观察用 --cwd，中心匹配和绑定要求 --machine。inspect 无需账号登录；match 非 matched 时退出 1，并返回歧义、漂移或未关联的可操作提示。
 
 数据存同一 state.sqlite；成员退出同事务删除其 checkout，重新加入不恢复旧关联。Hub Repository UUID 用于配置上下文 hubRepositoryId；HAPI 原生 repositoryId 继续表示 machine/commonDir/objectFormat 对应的 Git 对象，不替换基线、bundle 或原生工作区清单。
 

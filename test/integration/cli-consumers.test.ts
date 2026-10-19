@@ -1,3 +1,4 @@
+import { saveTestConnection } from '../identity-fixture';
 import { compiledCli } from './compiled-cli';
 import { fixtureCleanup } from '../fixture-cleanup';
 import { afterEach, beforeAll, expect, test } from 'bun:test';
@@ -26,8 +27,7 @@ async function setup(flavor: 'codex' | 'claude' = 'codex') {
     const h = await hubDelegationFixture(cleanups, flavor), home = join(h.home, 'consumer');
     const options = { url: h.url, home, env: environment() }, paths = hubConnectionPaths(home, h.url);
     const credential = h.machineConnections.get(h.machineId)!;
-    atomicWrite(paths.identityConnection, JSON.stringify({ schemaVersion: 1, hub: h.url, ownerId: h.owner.identity.id, spaceId: h.space,
-        token: h.owner.token, requestId: randomUUID(), createdAt: Date.now() }));
+    await saveTestConnection(home, h.url, h.owner.token, h.space);
     atomicWrite(paths.machineConnection, JSON.stringify({ schemaVersion: 1, hub: h.url, ownerId: h.owner.identity.id, requestId: credential.requestId,
         machineId: h.machineId, active: { token: credential.token, credentialId: credential.credentialId }, createdAt: Date.now() }));
     h.gateway.selections.set(h.actor, { agentId: h.agent.id, repositoryId: null, runtimeId: null });
@@ -101,7 +101,7 @@ test('compiled Hub CLI uses the saved central selection, deduplicates and reads/
     await h.client.interrupt(next.agent_id, next.round_id);
     await until(() => h.client.read(next.agent_id), value => value.status === 'interrupted');
     const unrelated = await h.cli(['task', 'show', next.agent_id], { RUNWEFT_IDENTITY_TOKEN: h.other.token, RUNWEFT_UNUSED: '' });
-    expect(unrelated.exit).toBe(1); expect(unrelated.error.code).toBe('hub_space_required');
+    expect(unrelated.exit).toBe(1); expect(unrelated.error.code).toBe('hub_identity_input_removed');
     const malformed = await h.cli(['task', 'spawn', 'old-yaml-name', '--message', 'No fallback']);
     expect(malformed.exit).toBe(1); expect(h.calls.spawn).toBe(1);
     expect((await h.cli(['workspace', 'prepare', '--base', 'HEAD'])).error.code).toBe('workspace_git_required');
@@ -136,7 +136,7 @@ test('Hub transport forbids foreign origins and missing space, preserves cancell
     const h = await setup();
     expect(() => hubOptions(loadConfig(join(h.home, 'unconnected'), {}))).toThrow('显式连接 Hub');
     expect(() => new HubTaskClient({ url: h.url, home: join(h.home, 'empty'), env: {} }, h.cwd)).toThrow('尚未连接');
-    expect(() => new HubTaskClient({ url: h.url, home: join(h.home, 'empty'), space: h.space, env: { RUNWEFT_IDENTITY_TOKEN: h.owner.token } }, h.cwd)).toThrow('尚未登记本机');
+    expect(() => new HubTaskClient({ url: h.url, home: join(h.home, 'empty'), space: h.space, credential: { token: h.owner.token }, env: {} }, h.cwd)).toThrow('尚未登记本机');
     const consumer = new HubTaskClient(h.options, h.cwd);
     const transport = new HubClient(h.options, 'hubDelegation', 'unavailable').http;
     await expect(transport.request('https://different.invalid')).rejects.toMatchObject({ code: 'hub_request_path_invalid' });
