@@ -27,7 +27,11 @@ export function addHubCommands(program: Command, output: (value: unknown, human:
     addAgentCommands(hub, output);
     const client = () => new HubResourceClient(hub.opts());
     const home = () => dirname(configPath(program.opts().home));
-    hub.hook('preAction', () => { hub.setOptionValue('home', home()); if (!hub.opts().url) hub.setOptionValue('url', loadConfig(home()).config.hub.url); });
+    hub.hook('preAction', () => {
+        hub.setOptionValue('home', home());
+        if (!hub.opts().url) hub.setOptionValue('url', loadConfig(home()).config.hub.url);
+        if (hub.opts().space === undefined && program.opts().space !== undefined) hub.setOptionValue('space', program.opts().space);
+    });
     const context = () => loadConfig(home());
     addSpaceCommands(hub, () => hub.opts(), home, output);
     // Explicit Hub consumers are available before the default service is switched in T5.

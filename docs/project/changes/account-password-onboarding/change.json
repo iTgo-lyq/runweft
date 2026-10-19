@@ -76,6 +76,12 @@
       "status": "done",
       "verification": "typecheck/build；Web/CLI 邀请双向实测及空间/真实 Runner 配置共 3 pass、0 fail；check-docs、diff --check",
       "commitTitle": "account-password-onboarding T10: unify Web and CLI invitation files"
+    },
+    "T11": {
+      "title": "修复空间覆盖与公开账号入口约束",
+      "status": "done",
+      "verification": "typecheck/build；空间/服务/Web 8 pass、0 fail；MCP 定向 7 pass；check-docs、diff --check",
+      "commitTitle": "account-password-onboarding T11: honor global space and require secure account entrances"
     }
   },
   "closure": {},

@@ -1,3 +1,4 @@
+import { saveTestConnection } from '../identity-fixture';
 import { fixtureCredential } from '../identity-fixture';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
@@ -139,4 +140,3 @@ export async function taskResultsProbe(p: { root: string; center: string; source
         p.note('compiled CLI and MCP tool fetch both fixed rounds from restarted center with executor and target Git directories offline; no branch refs required, parent index/config/dirty files preserved, explicit merge restores code and LFS');
     } finally { baselines.close(); }
 }
-import { saveTestConnection } from '../identity-fixture';

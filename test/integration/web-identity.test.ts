@@ -5,6 +5,16 @@ import type { Page } from 'playwright';
 import { accountWebFixture } from './account-web-fixture';
 import { fixtureCleanup } from '../fixture-cleanup';
 const owner=fixtureCleanup([]);afterEach(()=>owner.close());
+test('remote plaintext Web login refuses to transmit account passwords',async()=>{
+    const h=await accountWebFixture(owner.resources),page=await h.browser.newPage(),origin='http://runweft-account.invalid';let writes=0;
+    await page.route(origin+'/**',async route=>{
+        const request=route.request(),url=new URL(request.url());
+        if(request.method()!=='GET'){writes++;await route.fulfill({status:500,body:'Unexpected write'});return;}
+        const response=await fetch(h.url+url.pathname+url.search);await route.fulfill({status:response.status,headers:Object.fromEntries(response.headers),body:Buffer.from(await response.arrayBuffer())});
+    });
+    await page.goto(origin+'/hub');await page.locator('#account-username').fill('plaintext-user');await page.locator('#account-password').fill('a synthetic plaintext test passphrase');await page.locator('#auth-submit').click();
+    await page.locator('#notice[data-error=true]').waitFor();expect(await page.locator('#notice').innerText()).toContain('HTTPS');expect(writes).toBe(0);
+},30_000);
 async function login(page:Page,username:string,password:string){
     await page.locator('#account-username').fill(username);await page.locator('#account-password').fill(password);await page.locator('#auth-submit').click();await page.waitForFunction(()=>!document.getElementById('workspace')?.hidden||document.getElementById('notice')?.dataset.error==='true');if(!await page.locator('#workspace').isVisible())throw Error(await page.locator('#notice').innerText());
 }

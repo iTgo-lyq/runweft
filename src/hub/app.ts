@@ -28,6 +28,9 @@ function persist() {
     catch { throw new Error('浏览器无法保存当前身份。请允许此站点使用会话存储，再用账号密码登录。'); }
 }
 async function api(path: string, body?: unknown, method = body === undefined ? 'GET' : 'POST', token = saved.token, base = '/api/runweft/hub'): Promise<any> {
+    if (location.protocol !== 'https:' && !['localhost', '[::1]'].includes(location.hostname) && !/^127\.\d+\.\d+\.\d+$/.test(location.hostname)) {
+        throw new ApiError(0, '请通过 HTTPS 打开此 Hub，再登录或授权账号。仅本机开发地址允许 HTTP。', 'account_https_required');
+    }
     let response: Response;
     try { response = await fetch(`${base}${path}`, { method, credentials: 'omit', redirect: 'error', headers: {
         ...(token ? { authorization: `Bearer ${token}` } : {}), ...(body !== undefined ? { 'content-type': 'application/json' } : {}),

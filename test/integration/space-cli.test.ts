@@ -30,6 +30,12 @@ test('compiled space CLI manages membership and file invitations and repairs a r
     const record = (home: string) => JSON.parse(readFileSync(new IdentityConnection(home, h.url).paths.identityConnection, 'utf8'));
     const created = (await cli(aHome, ['space', 'create', 'CLI collaboration'])).value.space;
     expect(record(aHome).spaceId).toBe(h.a.personalSpace.id);
+    expect((await cli(aHome, ['--space', created.id, 'hub', '--url', h.url, 'space', 'show'])).value.space.id).toBe(created.id);
+    expect((await cli(aHome, ['--space', created.id, 'hub', '--url', h.url, '--space', h.a.personalSpace.id, 'space', 'show'])).value.space.id).toBe(h.a.personalSpace.id);
+    const crossSpaceFile = join(h.home, 'root-space.txt');
+    const rootSpaceInvite = (await cli(aHome, ['--space', created.id, 'hub', '--url', h.url, 'space', 'invitation', 'create', '--output', crossSpaceFile])).value.invitation;
+    expect(rootSpaceInvite.spaceId).toBe(created.id); expect(record(aHome).spaceId).toBe(h.a.personalSpace.id);
+    await cli(aHome, ['--space', created.id, 'hub', '--url', h.url, 'space', 'invitation', 'revoke', rootSpaceInvite.id]);
     await cli(aHome, ['space', 'rename', created.id, 'Shared team']);
     await cli(aHome, ['space', 'use', created.id]);
     expect(record(aHome).spaceId).toBe(created.id);

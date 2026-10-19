@@ -91,3 +91,9 @@ Runweft Kit、官网与使用说明切换账号和 CLI 主流程：指定 Hub→
 独立评审复现当前 Web 下载带头说明而 CLI 拒绝。统一 Web 与 CLI 当前邀请文件为单行秘密，只交付文件引用；不解析旧备份或新增状态格式。Playwright 实际下载 Web 邀请后由编译 CLI 加入，反向 CLI 创建受限文件后由 Web 表单加入，核对两次 CLI 默认空间均未改变。
 
 typecheck/build 通过；web-invitations、space-cli、hub-configuration 共 3 pass、0 fail、51 断言。后一项同时完成 T8 负例夹具修正的定向复验（损坏当前合成 CLI 凭据后正确返回登录失效）；此前的重复局部变量由 typecheck 发现并修正，未误记构建成功。check-docs、diff --check 通过。
+
+## T11 空间覆盖与公开账号入口
+
+hub 公共 preAction 统一补入根级 --space，仅在 hub 未显式提供时生效；空间、任务与其他 hub 消费者继续使用统一选项，不修改保存默认。Web API 在发送密码/凭据前拒绝远端明文页面；公开服务配置在 token/子服务创建前拒绝远端 HTTP publicUrl，继续允许真实 loopback 开发和 HTTPS 反向代理。这落实既定账号传输约束，不新增代理信任层。
+
+typecheck/build 通过；空间、服务、账号、连接和邀请共 8 pass、0 fail、95 断言，包含根级/局部选项优先级、邀请写入空间、远端页面无密码写请求与启动前无服务状态。另将 T8 关闭端口的诊断测试改为当前合成 CLI 记录，去掉已删除环境变量注入，7 项 MCP 定向检查通过；恢复真实网络失败断言而非输入拒绝。check-docs、diff --check 通过。独立 Codex 正在定向复核修复，T8 仍未记整体通过。

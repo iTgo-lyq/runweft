@@ -1,3 +1,4 @@
+import { connectionOrigin } from './hub/connect/types';
 import { validateState } from './state';
 import { randomUUID } from 'node:crypto';
 import { closeSync, existsSync, openSync, readFileSync, readdirSync, statSync, unlinkSync } from 'node:fs';
@@ -105,6 +106,7 @@ export async function serve(c: ResolvedConfig, publicly = false): Promise<void> 
     const host = publicly && configuredHost === '127.0.0.1' ? '0.0.0.0' : configuredHost;
     const publicUrl = c.config.server.publicUrl ?? localUrl(c.config);
     if (publicly && !c.config.server.publicUrl) throw new RunweftError('public_url_missing', '对外部署需要设置 server.publicUrl。', '填写用户访问的完整根地址，如 https://runweft.example.com。');
+    if (c.config.server.publicUrl && !connectionOrigin.safeParse(publicUrl).success) throw new RunweftError('public_url_https_required', '公开账号入口需要 HTTPS；仅真实 loopback 开发地址允许 HTTP。', '配置 server.publicUrl 为 HTTPS，并通过反向代理访问。');
     const token = serverToken(c, true)!;
     const hapiPort = c.config.server.hapiPort ?? await freePort();
     const privateUrl = `http://127.0.0.1:${hapiPort}`;
