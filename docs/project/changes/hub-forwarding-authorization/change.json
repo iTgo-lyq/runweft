@@ -20,6 +20,6 @@
   "followUpTitle": "账号登录与首次接入",
   "waitingFor": {
     "kind": "confirmation",
-    "summary": "本地包与全局 Skill 已安装，等待用户转发体验；Claude 包装器探测问题已反馈，相关检查暂停。"
+    "summary": "旧试用服务及数据已清空，保留全局包与 Skill，等待用户从默认目录重新体验；Claude 检查保持暂停。"
   }
 }

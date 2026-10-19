@@ -37,4 +37,12 @@
 
 旧 `http://127.0.0.1:3210` Hub 保持 1.1.8，旧数据保留。修复版试用 Hub 已通过全局程序启动在 `http://127.0.0.1:3211`，数据根为 `/home/tiger/.local/share/runweft/local-trials/forwarding-beta4-3cpXrb`；健康检查确认版本、hubConnect=2 和 hubAccounts=1。试用尚未创建用户账号、连接机器或运行模型，后续由用户在自己的浏览器授权。
 
-全局安装证据为 `/tmp/runweft-forwarding-global-install.json`。用户体验时应显式使用上述新 home 和 3211 Hub，并由宿主转发到浏览器；现有转发到 3210 的入口仍指向旧版本。当前等待用户本机体验及 Claude 环境问题的反馈，不提前归档、合入 main 或发布包。
+全局安装时的临时证据为 `/tmp/runweft-forwarding-global-install.json`，上述两个 Hub 和试用路径是清理前的交付情况。后续按用户要求清理，当前机器状态见下。
+
+### 重新体验前清理
+
+用户明确要求“之前的测试数据什么的，全部删除干净”，并补充“包括服务也关闭。我再重新体验整个流程”。通过对应版本 CLI 的 `stop` 先正常停止 3210、3211 Hub，再确认其 Runweft 进程与两个配套 HAPI 子进程均退出，3210、3211、43885、39281 四个端口关闭；没有运行中的 Runweft 进程。另一个来自独立 codex-delegation-lab 的 HAPI 实例不属于本次试用，保留。
+
+删除默认 `/home/tiger/.runweft`、上述隔离试用目录和旧安装备份，以及 297 项已核对归属的 Runweft 测试临时文件/目录（包括前述 `/tmp` 原始日志、失败 fixture 和安装证据）。无备份保留测试账户、空间、连接、任务或日志；源码与已提交验证结论保留。复查相关数据根及临时项均不存在。
+
+全局 Runweft/HAPI 程序和六文件 Skill 在清理前后摘要一致，`runweft --version` 仍为 `1.2.0-beta.4`。未修改或探测 Claude 环境，未重启服务。后续直接按全局 Skill 使用默认 home 重新初始化、启动和接入，无需沿用已删除的隔离路径；当前等待用户重新体验及 Claude 环境问题反馈，不提前归档、合入 main 或发布包。
