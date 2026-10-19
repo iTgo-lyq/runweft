@@ -69,7 +69,7 @@ main 中途失败后未运行的案例需分别执行并把报告传给校验器
 
 真实模型组合和失败处置见[原生主链验收](project/archive/2026-10-03-test-backbone-slimming/acceptance.md)，长路径与退出修复见[HAPI 专项验收](project/archive/2026-10-10-hapi-session-and-shutdown/acceptance.md)，四平台公共安装/完整卸载和匿名安装见[1.1.4 发行验收](project/archive/2026-10-12-npm-uninstall-release/acceptance.md)。证据只属于对应候选，后续安装或文档验收不增加模型覆盖。
 
-四平台托管安装不代替用户 Mac 实机、Mac/arm64 模型、物理跨机/WAN 或生产 TLS 实测；同机多 Runner 不等于物理远端。规范 `X.Y.Z-beta.N` 的发布/不晋级与官网 Beta 跳过只有[本地夹具证据](project/archive/2026-10-02-npm-beta-publishing/acceptance.md)，稳定版本上传 beta 再晋级不等于已经实际发布该类预发行版本。
+四平台托管安装不代替用户 Mac 实机、Mac/arm64 模型、物理跨机/WAN 或生产 TLS 实测；同机多 Runner 不等于物理远端。规范 `X.Y.Z-beta.N` 的发布/不晋级与官网 Beta 跳过规则有[本地夹具证据](project/archive/2026-10-02-npm-beta-publishing/acceptance.md)；实际预发行结果与四平台门禁按对应 tag 查询 [GitHub Actions](https://github.com/iTgo-lyq/runweft/actions/workflows/npm-publish.yml)，不能从稳定版本上传 beta 再晋级推断预发行验证成功。
 
 [发布提速验收](project/archive/2026-10-13-release-throughput/acceptance.md)和[验收优化记录](project/archive/2026-10-13-release-validation-efficiency/execution.md)保留专项开发证据。各次正式发布的实际结果、耗时和失败恢复从 [GitHub Actions](https://github.com/iTgo-lyq/runweft/actions/workflows/npm-publish.yml) 查询，见[发布证据与排查](#发布证据与排查)。
 

@@ -129,6 +129,10 @@ test('other-home live MCP blocks uninstall and corrupted process records are not
 test('standalone package with unknown extra files and raw development binaries are refused', async () => {
     const f=await setup();atomicWrite(join(f.pkg,'user-project.txt'),'KEEP');
     expect(f.error(f.run(['uninstall','--yes']))).toBe('uninstall_installation_unknown');
-    const raw=await compiledCli(), result=spawnSync(raw,['--home',f.home,'--json','uninstall','--yes'],{env:f.env,encoding:'utf8'});
-    expect(result.status).toBe(1);expect(JSON.parse(result.stderr).error.code).toBe('uninstall_installation_unknown');expect(existsSync(raw)).toBe(true);
+    // The supplied CLI may be a valid installed package; isolate the metadata-free case from that shared candidate.
+    const source=await compiledCli(), raw=join(f.root,'runweft');
+    copyFileSync(source,raw);
+    const result=spawnSync(raw,['--home',f.home,'--json','uninstall','--yes'],{env:f.env,encoding:'utf8'});
+    expect(result.status).toBe(1);expect(JSON.parse(result.stderr).error.code).toBe('uninstall_installation_unknown');
+    expect(existsSync(raw)).toBe(true);expect(existsSync(source)).toBe(true);
 });
