@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "id": "account-password-onboarding",
+  "title": "账号密码登录与 Agent 主导的首次接入",
+  "size": "large",
+  "status": "active",
+  "stage": "requirement",
+  "branch": "develop",
+  "confirmations": {},
+  "tasks": {},
+  "closure": {},
+  "clarifications": {
+    "Q1": {
+      "round": 1,
+      "question": "Q1（技术）：升级现有 Hub 时是否保留已有身份、空间、机器、Agent 和任务历史？",
+      "recommendation": "若已有部署，停服后显式执行一次性升级以保留数据；不自动迁移。",
+      "answer": "完全不需要兼容，目前服务没有在任何地方部署；直接采用新格式，旧格式拒绝并保留原文件。",
+      "source": "用户：完全不需要兼容，目前服务没有在任何地方部署"
+    },
+    "Q2": {
+      "round": 1,
+      "question": "Q2（需求）：首版忘记密码如何处理？",
+      "recommendation": "部署者通过服务器管理命令协助重置，避免用户保管恢复 token，也无需邮件服务。",
+      "answer": "部署者通过服务器管理命令协助重置。",
+      "source": "用户选择：部署者通过服务器管理命令协助重置（推荐）"
+    }
+  },
+  "waitingFor": {
+    "kind": "confirmation",
+    "summary": "账号密码与首次接入方案已整理，待审阅需求和技术取舍；尚未进入实现。"
+  }
+}
