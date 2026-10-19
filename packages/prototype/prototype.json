@@ -266,7 +266,14 @@
       "devices": [
         "pc-web",
         "mobile"
-      ]
+      ],
+      "artifact": {
+        "type": "hosted",
+        "version": "a3b8d01ec793b8bba24b8b685af2c4a528c01dbc63de592237ad8443362780ff",
+        "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/a3b8d01ec793b8bba24b8b685af2c4a528c01dbc63de592237ad8443362780ff/index.html",
+        "sourceCommit": "add4fc691c370d95ca28e1d5f3d4a97bc1fd79cc",
+        "digest": "sha256:8b68e9671a3b9e03252da8ebbd3698bd1a61ab0526e4fa5032764bd5548964cd"
+      }
     }
   ]
 }

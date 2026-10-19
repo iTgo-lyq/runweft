@@ -85,5 +85,27 @@
     "at": "2026-10-19T04:02:08.172Z",
     "reason": "用户要求以 CLI 为核心补齐必要能力，并确认账号操作支持 CLI 与 Web",
     "approach": "保留确认即激活，补齐账户和空间管理、任务只读查询与诊断、可定位的 Web 交接；复用现有领域接口"
+  },
+  "previews": [
+    {
+      "id": "account-onboarding",
+      "title": "账号与首次连接",
+      "kind": "page",
+      "devices": [
+        "pc-web",
+        "mobile"
+      ],
+      "artifact": {
+        "type": "hosted",
+        "version": "a3b8d01ec793b8bba24b8b685af2c4a528c01dbc63de592237ad8443362780ff",
+        "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/a3b8d01ec793b8bba24b8b685af2c4a528c01dbc63de592237ad8443362780ff/index.html",
+        "sourceCommit": "add4fc691c370d95ca28e1d5f3d4a97bc1fd79cc",
+        "digest": "sha256:8b68e9671a3b9e03252da8ebbd3698bd1a61ab0526e4fa5032764bd5548964cd"
+      }
+    }
+  ],
+  "waitingFor": {
+    "kind": "confirmation",
+    "summary": "账号原型已发布，待验收后实现对应 Web；T2 账户后端基础已开始，保持进行中。"
   }
 }
