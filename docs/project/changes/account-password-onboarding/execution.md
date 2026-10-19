@@ -85,3 +85,9 @@ Runweft Kit、官网与使用说明切换账号和 CLI 主流程：指定 Hub→
 首次全组集成为 212 pass、35 fail、4 errors，主要是旧测试仍注入 token、匿名创建身份和 schema 1 身份记录。迁移夹具后定向续验：CLI/MCP/任务/Web Console 39 pass；仓库/Agent/任务/文件领域另 42 pass；账号/CLI MCP 12 pass。真实 Hub/HAPI/Runner 大文件与工作区组 12 pass、1 fail，失败是负例夹具在命令前提前触发身份检查，已修正为损坏当前合成凭据，待定向复验。尚未记整体验证通过。全仓 workflow 仍有其他 hub-glass-prototype 的继承标题问题，本 Change 以独立状态检查为准。
 
 评审另发现 Web 下载的邀请文件与新增 CLI --file 格式不同，将追加 T10 修复并核对跨入口行为；T8 保持 doing，完成修复和最终检查后再记录结果。未调用 iclaude，未运行真实模型。
+
+## T10 邀请文件跨入口修复
+
+独立评审复现当前 Web 下载带头说明而 CLI 拒绝。统一 Web 与 CLI 当前邀请文件为单行秘密，只交付文件引用；不解析旧备份或新增状态格式。Playwright 实际下载 Web 邀请后由编译 CLI 加入，反向 CLI 创建受限文件后由 Web 表单加入，核对两次 CLI 默认空间均未改变。
+
+typecheck/build 通过；web-invitations、space-cli、hub-configuration 共 3 pass、0 fail、51 断言。后一项同时完成 T8 负例夹具修正的定向复验（损坏当前合成 CLI 凭据后正确返回登录失效）；此前的重复局部变量由 typecheck 发现并修正，未误记构建成功。check-docs、diff --check 通过。

@@ -85,8 +85,8 @@ test('CLI resolves a saved Agent through the gateway and real Runner; revoked ru
     await cli(['runtime', 'unregister', runtime.id]);
     assert.equal((await cli(['agent', 'resolve', '--repository', repository.id], 1)).error.code, 'runtime_unregistered');
     const saved = hubConnectionPaths(join(root, 'client'), base).identityConnection;
-    const record = JSON.parse(readFileSync(saved, 'utf8')); record.token = 'rw_cli_' + 'x'.repeat(43);
-    atomicWrite(saved, JSON.stringify(record));
+    const invalidRecord = JSON.parse(readFileSync(saved, 'utf8')); invalidRecord.token = 'rw_cli_' + 'x'.repeat(43);
+    atomicWrite(saved, JSON.stringify(invalidRecord));
     assert.equal((await cli(['agent', 'list'], 1)).error.code, 'user_session_invalid');
     assert.equal((gateway.store.db.query('SELECT COUNT(*) AS n FROM delegation_tasks').get() as { n: number }).n, 0);
     await closeSmoke(resources);
