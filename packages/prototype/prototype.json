@@ -13,11 +13,9 @@
         "mobile"
       ],
       "artifact": {
-        "type": "hosted",
-        "version": "a3b8d01ec793b8bba24b8b685af2c4a528c01dbc63de592237ad8443362780ff",
-        "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/a3b8d01ec793b8bba24b8b685af2c4a528c01dbc63de592237ad8443362780ff/index.html",
-        "sourceCommit": "add4fc691c370d95ca28e1d5f3d4a97bc1fd79cc",
-        "digest": "sha256:8b68e9671a3b9e03252da8ebbd3698bd1a61ab0526e4fa5032764bd5548964cd"
+        "type": "git",
+        "path": "packages/prototype/preview/account-onboarding",
+        "sourceCommit": "476b85892fe42c674b51c0db4910ef9a890a3aa2"
       }
     },
     {
@@ -31,25 +29,9 @@
         "mobile"
       ],
       "artifact": {
-        "type": "hosted",
-        "version": "2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06",
-        "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06/tasks/index.html",
-        "sourceCommit": "58882d25872fe1779982b4b629cba1cd8120f835",
-        "digest": "sha256:167353c25a15f8d77d4bff846bc1e95746959596b7c561524177d5c1953b6332",
-        "thumbnails": [
-          {
-            "device": "pc-web",
-            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06/tasks/pc-web.png"
-          },
-          {
-            "device": "ipad",
-            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06/tasks/ipad.png"
-          },
-          {
-            "device": "mobile",
-            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06/tasks/mobile.png"
-          }
-        ]
+        "type": "git",
+        "path": "packages/prototype/preview/tasks",
+        "sourceCommit": "476b85892fe42c674b51c0db4910ef9a890a3aa2"
       },
       "description": "任务列表与检查器：轮次、报告阅读、交付与继续处理"
     },
@@ -64,25 +46,9 @@
         "mobile"
       ],
       "artifact": {
-        "type": "hosted",
-        "version": "2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06",
-        "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06/machines/index.html",
-        "sourceCommit": "58882d25872fe1779982b4b629cba1cd8120f835",
-        "digest": "sha256:167353c25a15f8d77d4bff846bc1e95746959596b7c561524177d5c1953b6332",
-        "thumbnails": [
-          {
-            "device": "pc-web",
-            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06/machines/pc-web.png"
-          },
-          {
-            "device": "ipad",
-            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06/machines/ipad.png"
-          },
-          {
-            "device": "mobile",
-            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06/machines/mobile.png"
-          }
-        ]
+        "type": "git",
+        "path": "packages/prototype/preview/machines",
+        "sourceCommit": "476b85892fe42c674b51c0db4910ef9a890a3aa2"
       },
       "description": "机器列表、空间关联、凭据与治理"
     },
@@ -97,25 +63,9 @@
         "mobile"
       ],
       "artifact": {
-        "type": "hosted",
-        "version": "2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06",
-        "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06/runtimes/index.html",
-        "sourceCommit": "58882d25872fe1779982b4b629cba1cd8120f835",
-        "digest": "sha256:167353c25a15f8d77d4bff846bc1e95746959596b7c561524177d5c1953b6332",
-        "thumbnails": [
-          {
-            "device": "pc-web",
-            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06/runtimes/pc-web.png"
-          },
-          {
-            "device": "ipad",
-            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06/runtimes/ipad.png"
-          },
-          {
-            "device": "mobile",
-            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06/runtimes/mobile.png"
-          }
-        ]
+        "type": "git",
+        "path": "packages/prototype/preview/runtimes",
+        "sourceCommit": "476b85892fe42c674b51c0db4910ef9a890a3aa2"
       },
       "description": "Runtime 登记、共享、可用性与检查"
     },
@@ -130,25 +80,9 @@
         "mobile"
       ],
       "artifact": {
-        "type": "hosted",
-        "version": "2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06",
-        "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06/agents/index.html",
-        "sourceCommit": "58882d25872fe1779982b4b629cba1cd8120f835",
-        "digest": "sha256:167353c25a15f8d77d4bff846bc1e95746959596b7c561524177d5c1953b6332",
-        "thumbnails": [
-          {
-            "device": "pc-web",
-            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06/agents/pc-web.png"
-          },
-          {
-            "device": "ipad",
-            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06/agents/ipad.png"
-          },
-          {
-            "device": "mobile",
-            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06/agents/mobile.png"
-          }
-        ]
+        "type": "git",
+        "path": "packages/prototype/preview/agents",
+        "sourceCommit": "476b85892fe42c674b51c0db4910ef9a890a3aa2"
       },
       "description": "Agent 定义的阅读与就地编辑、版本历史、分享与治理"
     },
@@ -163,25 +97,9 @@
         "mobile"
       ],
       "artifact": {
-        "type": "hosted",
-        "version": "2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06",
-        "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06/repositories/index.html",
-        "sourceCommit": "58882d25872fe1779982b4b629cba1cd8120f835",
-        "digest": "sha256:167353c25a15f8d77d4bff846bc1e95746959596b7c561524177d5c1953b6332",
-        "thumbnails": [
-          {
-            "device": "pc-web",
-            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06/repositories/pc-web.png"
-          },
-          {
-            "device": "ipad",
-            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06/repositories/ipad.png"
-          },
-          {
-            "device": "mobile",
-            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06/repositories/mobile.png"
-          }
-        ]
+        "type": "git",
+        "path": "packages/prototype/preview/repositories",
+        "sourceCommit": "476b85892fe42c674b51c0db4910ef9a890a3aa2"
       },
       "description": "仓库目录、Git 别名与本人 checkout"
     },
@@ -196,25 +114,9 @@
         "mobile"
       ],
       "artifact": {
-        "type": "hosted",
-        "version": "2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06",
-        "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06/selections/index.html",
-        "sourceCommit": "58882d25872fe1779982b4b629cba1cd8120f835",
-        "digest": "sha256:167353c25a15f8d77d4bff846bc1e95746959596b7c561524177d5c1953b6332",
-        "thumbnails": [
-          {
-            "device": "pc-web",
-            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06/selections/pc-web.png"
-          },
-          {
-            "device": "ipad",
-            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06/selections/ipad.png"
-          },
-          {
-            "device": "mobile",
-            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06/selections/mobile.png"
-          }
-        ]
+        "type": "git",
+        "path": "packages/prototype/preview/selections",
+        "sourceCommit": "476b85892fe42c674b51c0db4910ef9a890a3aa2"
       },
       "description": "个人选择、解析顺序与解析预览"
     },
@@ -229,25 +131,9 @@
         "mobile"
       ],
       "artifact": {
-        "type": "hosted",
-        "version": "2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06",
-        "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06/members/index.html",
-        "sourceCommit": "58882d25872fe1779982b4b629cba1cd8120f835",
-        "digest": "sha256:167353c25a15f8d77d4bff846bc1e95746959596b7c561524177d5c1953b6332",
-        "thumbnails": [
-          {
-            "device": "pc-web",
-            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06/members/pc-web.png"
-          },
-          {
-            "device": "ipad",
-            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06/members/ipad.png"
-          },
-          {
-            "device": "mobile",
-            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06/members/mobile.png"
-          }
-        ]
+        "type": "git",
+        "path": "packages/prototype/preview/members",
+        "sourceCommit": "476b85892fe42c674b51c0db4910ef9a890a3aa2"
       },
       "description": "成员角色、邀请、空间名称与退出"
     }
