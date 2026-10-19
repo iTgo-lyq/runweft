@@ -15,7 +15,7 @@ import { recovery } from './recovery';
 
 export const mainCases = ['N1', 'N4', 'N5', 'C-codex', 'C-claude'];
 const cases = [...mainCases, 'R-codex', 'R-claude', 'L-claude'];
-const testInputs = ['test/acceptance', 'test/integration/console-history.ts', 'test/integration/native-files.ts', 'test/integration/fixture-round.ts', 'test/preflight.ts', 'test/lifecycle.ts', 'test/deadline.ts', 'scripts/candidate.mjs', 'scripts/installed-binaries.mjs', 'scripts/release-inputs.mjs', 'package.json', 'bun.lock'];
+const testInputs = ['test/acceptance', 'test/integration/console-history.ts', 'test/integration/native-files.ts', 'test/integration/fixture-round.ts', 'test/preflight.ts', 'test/identity-fixture.ts', 'test/lifecycle.ts', 'test/deadline.ts', 'scripts/candidate.mjs', 'scripts/installed-binaries.mjs', 'scripts/release-inputs.mjs', 'package.json', 'bun.lock'];
 const sha = (value: string | Buffer) => createHash('sha256').update(value).digest('hex');
 function git(...args: string[]) { const r = spawnSync('git', args, { encoding: 'utf8' }); assert.equal(r.status, 0, 'Cannot read frozen Git inputs'); return r.stdout.trim(); }
 function tree(source: string, paths: string[]) { return sha(git('ls-tree', '-r', source, '--', ...paths)); }

@@ -2,11 +2,22 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import { z } from 'zod';
 import { jsonResponse } from '../proxy';
 import { HubStore } from './store';
-import { HubError, HubName, HubRole, IdentityToken, InvitationToken, hubInput, hubNotFound, hubUnauthorized } from './types';
+import { HubError, HubName, HubRole, InvitationToken, hubInput, hubNotFound, hubUnauthorized } from './types';
+import { checkBrowserOrigin } from './access/transport';
 
 const prefix = '/api/runweft/hub';
 const named = z.object({ name: HubName }).strict();
 const roleInput = z.object({ role: HubRole }).strict();
+const attempts = new Map<string,{at: number; count: number}>();
+export function limitPassword(request: IncomingMessage, body: unknown) {
+    const now = Date.now(), name = body && typeof body === 'object' && 'username' in body ? String(body.username).trim().toLowerCase().slice(0,80) : '';
+    for (const [key,value] of attempts) if (now-value.at>=60_000) attempts.delete(key);
+    if (attempts.size>4096) throw new HubError(429,'account_rate_limited','登录请求过多，请稍后重试。');
+    for (const key of ['ip:'+request.socket.remoteAddress,...(name ? ['username:'+name] : [])]) {
+        const value = attempts.get(key) ?? {at:now,count:0}; value.count++; attempts.set(key,value);
+        if(value.count>(key.startsWith('ip:') ? 120 : 10)) throw new HubError(429,'account_rate_limited','登录请求过多，请稍后重试。');
+    }
+}
 const inviteInput = z.object({ role: z.enum(['admin', 'member']) }).strict();
 
 async function readBody(request: IncomingMessage): Promise<unknown> {
@@ -46,15 +57,26 @@ export async function handleHubRequest(request: IncomingMessage, response: Serve
     if (path !== prefix && !path.startsWith(`${prefix}/`)) return false;
     try {
         if (!store) throw new HubError(503, 'hub_identity_unavailable', '当前服务尚未启用 Hub 身份入口。');
-        const method = request.method, creating = path === `${prefix}/identities` && method === 'POST';
+        const method = request.method;
+        const publicAction = method === 'POST' && ['/accounts','/sessions','/account/password-reset'].some(route => path === prefix+route);
         const authorization = request.headers.authorization;
         const token = authorization?.startsWith('Bearer ') ? authorization.slice(7) : '';
-        if (!creating && !IdentityToken.safeParse(token).success) throw hubUnauthorized();
         const body = method === 'POST' || method === 'PATCH' ? await readBody(request) : undefined;
-        if (creating) {
-            const { name } = hubInput(named, body);
-            jsonResponse(response, 201, store.createIdentity(name));
-            return true;
+        checkBrowserOrigin(request);
+        if (publicAction) {
+            limitPassword(request,body);
+            const input = hubInput(z.object({ username: z.unknown(), password: z.unknown(), code: z.unknown().optional() }).strict(), body);
+            const result = path.endsWith('/accounts') ? await store.accounts.register(input.username,input.password)
+                : path.endsWith('/sessions') ? await store.accounts.login(input.username,input.password)
+                : await store.accounts.recover(input.username,input.code,input.password);
+            jsonResponse(response,path.endsWith('/accounts') ? 201 : 200,result); return true;
+        }
+        if (method === 'POST' && [prefix+'/account/password',prefix+'/credentials/revoke-all'].includes(path)) {
+            limitPassword(request,body);
+            const input = hubInput(z.object({ password: z.unknown(), newPassword: z.unknown().optional() }).strict(),body);
+            const result = path.endsWith('/account/password') ? await store.accounts.changePassword(token,input.password,input.newPassword)
+                : await store.accounts.logoutAll(token,input.password);
+            jsonResponse(response,200,result); return true;
         }
         const result = store.authorized(token, !['GET', 'HEAD'].includes(method ?? ''), identity => {
             let parts: string[];
@@ -64,9 +86,11 @@ export async function handleHubRequest(request: IncomingMessage, response: Serve
                 if (method === 'GET') return { identity };
                 if (method === 'PATCH') return { identity: store.renameIdentity(identity.id, hubInput(named, body).name) };
             }
-            if (parts.join('/') === 'identity/rotate' && method === 'POST') {
-                const next = hubInput(z.object({ token: IdentityToken }).strict(), body).token;
-                return { identity: store.rotate(identity, token, next) };
+            if (parts.join('/') === 'account' && method === 'GET') return { identity, username: (store.accounts.db.query('SELECT username FROM hub_accounts WHERE userId=?').get(identity.id) as {username:string}).username };
+            if (parts.join('/') === 'sessions/logout' && method === 'POST') return store.accounts.revoke(identity.id,store.accounts.authenticate(token).credential.id);
+            if (parts[0] === 'credentials') {
+                if (parts.length === 1 && method === 'GET') return { credentials: store.accounts.list(identity.id), currentCredentialId: store.accounts.authenticate(token).credential.id };
+                if (parts.length === 2 && method === 'DELETE') return store.accounts.revoke(identity.id,hubInput(z.uuid(),parts[1]));
             }
             if (parts.join('/') === 'invitations/accept' && method === 'POST') {
                 const invitation = hubInput(z.object({ token: InvitationToken }).strict(), body).token;

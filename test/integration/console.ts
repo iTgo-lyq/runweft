@@ -44,13 +44,16 @@ async function domain(token: string, spaceId: string) {
 async function navigate(page: Page, name: string) {
     await page.locator('#console-navigation').getByRole('button', { name, exact: true }).click(); await ready(page);
 }
-async function importIdentity(page: Page, token: string, spaceId: string) {
+async function loginAccount(page: Page, username: string, password: string, spaceId: string) {
     page.on('pageerror', error => pageErrors.push(error.message));
-    await page.goto(origin + '/hub'); await ready(page);
-    await page.locator('#import-token').fill(token); await page.locator('#import-identity button').click(); await ready(page);
-    await page.locator('#spaces button').filter({ hasText: '后台验收' }).click(); await ready(page);
+    await page.goto(origin + '/hub');
+    await page.locator('#account-username').fill(username); await page.locator('#account-password').fill(password); await page.locator('#auth-submit').click();
+    await page.locator('#workspace').waitFor(); await ready(page);
+    const button = page.locator('#spaces button').filter({ hasText: 'console-owner' });
+    await button.click(); await ready(page);
     assert.equal(await page.locator('#space-id').innerText(), spaceId);
 }
+
 let browser: Awaited<ReturnType<typeof chromium.launch>> | undefined;
 let closing: Promise<void> | undefined;
 const close = () => closing ??= (async () => {
@@ -76,13 +79,13 @@ try {
     const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } }), page = await context.newPage();
     page.on('pageerror', error => pageErrors.push(error.message));
     page.on('console', message => { if (message.type() !== 'error') output.push(message.text()); });
-    await page.goto(connection.confirmationUrl); await ready(page);
-    await page.locator('#new-name').fill('后台验收'); await page.locator('#create-identity button').click();
-    await page.locator('#secret-dialog[open]').waitFor(); await ready(page);
-    const identityToken = await page.locator('#secret-value').innerText(); secrets.push(identityToken);
-    await page.locator('#close-secret').click();
+    const accountPassword = 'a synthetic console passphrase';
+    await page.goto(connection.confirmationUrl);
+    await page.locator('#account-username').fill('console-owner'); await page.locator('#account-password').fill(accountPassword); await page.locator('#auth-submit').click();
+    await page.locator('#connection-success').waitFor();
+    const identityToken = await page.evaluate(() => JSON.parse(sessionStorage.getItem('runweft.hub.session')!).token as string); secrets.push(identityToken);
+    await page.locator('#view-workspace').click(); await page.locator('#workspace').waitFor(); await ready(page);
     const spaceId = await page.locator('#space-id').innerText();
-    await page.locator('#confirm-connection').click(); await ready(page);
     assert.equal((await cli(['hub', '--url', origin, 'connect', 'complete'])).status, 'connected');
     const machine = await cli(['machine', 'enroll', '--name', '验收机器']);
     await cli(['machine', 'associate', machine.machineId, spaceId]); await cli(['runner', 'start']);
@@ -90,7 +93,7 @@ try {
     await navigate(page, '机器');
     let card = page.locator(`[data-resource-id="${machine.machineId}"]`);
     await card.waitFor(); assert.match(await card.innerText(), /在线/);
-    check('encrypted Web/CLI onboarding, independent enrollment and online Runner');
+    check('account Web/CLI authorization, independent enrollment and online Runner');
     await page.locator('#console-navigation').getByRole('button', { name: 'Runtime', exact: true }).click(); await ready(page);
     await page.getByText('登记 Runtime', { exact: true }).first().click();
     await page.getByLabel('Runtime 名称（可选）').fill('浏览器 Codex');
@@ -105,13 +108,13 @@ try {
     check('browser registers actual Codex runtime, shares explicitly without claiming model readiness');
     await screenshot(page, 'runtimes-desktop');
     const ownerToken = await domain(identityToken, spaceId);
-    const member = (await request('/api/runweft/hub/identities', '', { name: '独立成员' })).body; secrets.push(member.token);
+    const member = (await request('/api/runweft/hub/accounts', '', { username: 'console-member', password: accountPassword })).body; secrets.push(member.token);
     const invitation = (await request(`/api/runweft/hub/spaces/${spaceId}/invitations`, identityToken, { role: 'member' })).body;
     secrets.push(invitation.token);
     assert.equal((await request('/api/runweft/hub/invitations/accept', member.token, { token: invitation.token })).status, 200);
     const memberToken = await domain(member.token, spaceId);
     const memberPage = await context.newPage();
-    await importIdentity(memberPage, member.token, spaceId);
+    await loginAccount(memberPage, 'console-member', accountPassword, spaceId);
     await page.locator('#refresh').click(); await ready(page);
     await navigate(page, 'Agent'); await page.getByText('创建 Agent', { exact: true }).first().click();
     await page.getByLabel('Agent 名称', { exact: true }).fill('审查 Agent');
@@ -141,7 +144,7 @@ try {
     await page.getByRole('button', { name: '解析当前配置' }).click(); await ready(page);
     assert.match(await page.locator('.resolution-result').innerText(), new RegExp(machine.machineId));
     check('browser saves a personal Agent selection and resolves the actual registered Runtime');
-    await consoleTasks({ origin, home, root, page, memberPage, context, identityToken, memberToken, memberIdentity: member.token,
+    await consoleTasks({ origin, home, root, page, memberPage, context, identityToken, memberToken, memberIdentity: member.token, memberUsername: 'console-member', memberPassword: accountPassword,
         ownerToken, spaceId, machineId: machine.machineId, agentId: agent.id, memberAgentId: personalAgent.id, ready, navigate, check });
     await memberPage.close();
     await page.setViewportSize({ width: 390, height: 844 });

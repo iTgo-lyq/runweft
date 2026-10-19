@@ -1,3 +1,5 @@
+import { saveTestConnection, fixtureCredential } from '../identity-fixture';
+import { createTestIdentity } from '../identity-fixture';
 import assert from 'node:assert/strict';
 import { randomBytes } from 'node:crypto';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync, symlinkSync, readdirSync } from 'node:fs';
@@ -48,12 +50,13 @@ test('hub-resources-live real integration', async () => {
         while (Date.now() < end) { if (await fn()) return; await Bun.sleep(250); }
         throw new Error(message);
     }
-    function backup(user: ReturnType<HubStore['createIdentity']>, name: string) {
+    function backup(user: ReturnType<typeof createTestIdentity>, name: string) {
         const file = join(root, name + '.txt');
         atomicWrite(file, `Runweft Hub: ${base}\n身份 ID: ${user.identity.id}\n${user.token}\n`); secrets.push(user.token); secretFiles.add(file); return file;
     }
     async function cli(file: string, args: string[], space?: string, expected = 0) {
-        const child = Bun.spawn([cliBinary, '--home', home, '--json', 'hub', '--url', base, '--identity-file', file,
+        await saveTestConnection(home, base, fixtureCredential(file).token, space);
+        const child = Bun.spawn([cliBinary, '--home', home, '--json', 'hub', '--url', base,
             ...(space ? ['--space', space] : []), ...args], { env, stdout: 'pipe', stderr: 'pipe' });
         const [exit, stdout, stderr] = await Promise.all([child.exited, new Response(child.stdout).text(), new Response(child.stderr).text()]);
         for (const secret of secrets) assert(!(stdout + stderr).includes(secret), 'Credential appeared in CLI output');
@@ -92,7 +95,7 @@ test('hub-resources-live real integration', async () => {
         resources.push(() => hub?.close(), () => gateway?.close(), () => stopRunner());
         resources.push(() => { socket?.disconnect(); });
         await startGateway(); hub = new HubStore(statePath);
-        const a = hub.createIdentity('machine owner'), b = hub.createIdentity('shared user'), c = hub.createIdentity('space admin');
+        const a = createTestIdentity(hub, 'machine owner'), b = createTestIdentity(hub, 'shared user'), c = createTestIdentity(hub, 'space admin');
         const sid = a.personalSpace.id, tid = c.personalSpace.id;
         for (const [issuer, user, space, role] of [[a, b, sid, 'member'], [a, c, sid, 'admin'], [c, a, tid, 'member'], [c, b, tid, 'member']] as const) {
             hub.acceptInvitation(user.identity.id, hub.invite(issuer.identity.id, space, role).token);
@@ -105,7 +108,7 @@ test('hub-resources-live real integration', async () => {
         assert.equal((await cli(af, ['machine', 'show', machineId])).machine.connection, 'pending');
         assert.equal((await cli(af, ['machine', 'enroll'])).machineId, machineId);
         for (const space of [sid, tid]) await cli(af, ['machine', 'associate', machineId, space]);
-        const owner = new HubResourceClient({ url: base, identityFile: af, space: sid });
+        const owner = new HubResourceClient({ url: base, credential: fixtureCredential(af), space: sid });
         await startRunner(recordPath);
         await until(async () => {
             assert.equal(runner!.exitCode, null, 'Runner exited unexpectedly');

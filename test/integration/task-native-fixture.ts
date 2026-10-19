@@ -116,7 +116,9 @@ export async function taskNativeFixture(cleanups: (() => Promise<void> | void)[]
                 if (faults.historyAfterStop && !native.session.active) return new Response('', { status: 502 });
                 const head = native.messages.at(-1), after = Number(url.searchParams.get('afterSeq') ?? 0), afterAt = Number(url.searchParams.get('afterAt') ?? 0);
                 const limit = Number(url.searchParams.get('limit'));
-                const messages = url.searchParams.has('afterSeq') ? native.messages.filter(m => m.createdAt > afterAt || (m.createdAt === afterAt && m.seq! > after)) : native.messages.slice(-limit);
+                const before = Number(url.searchParams.get('beforeSeq')), beforeAt = Number(url.searchParams.get('beforeAt'));
+                const messages = url.searchParams.has('afterSeq') ? native.messages.filter(m => m.createdAt > afterAt || (m.createdAt === afterAt && m.seq! > after)).slice(0, limit)
+                    : (url.searchParams.has('beforeSeq') ? native.messages.filter(m => m.createdAt < beforeAt || m.createdAt === beforeAt && m.seq! < before) : native.messages).slice(-limit);
                 return Response.json({ messages, page: { hasMore: false, epoch: 0, reset: false, direction: url.searchParams.has('afterSeq') ? 'after' : 'latest', limit,
                     snapshotHeadAt: head?.createdAt ?? null, snapshotHeadSeq: head?.seq ?? null, nextAfterAt: head?.createdAt ?? null, nextAfterSeq: head?.seq ?? null,
                     nextBeforeAt: messages[0]?.createdAt ?? null, nextBeforeSeq: messages[0]?.seq ?? null } });

@@ -93,18 +93,22 @@ async function start() {
         const url = `http://127.0.0.1:${await freePort()}`;
         run(['config', 'set', 'server.port', new URL(url).port]); run(['config', 'set', 'hub.url', url]);
         assert(run(['start']).service.running);
-        const response = await fetch(url + '/api/runweft/hub/identities', { method: 'POST', headers: { 'content-type': 'application/json' },
-            body: JSON.stringify({ name: 'Development' }), signal: AbortSignal.timeout(10000) });
+        const account = { username: 'development', password: randomUUID() + randomUUID() };
+        const response = await fetch(url + '/api/runweft/hub/accounts', { method: 'POST', headers: { 'content-type': 'application/json' },
+            body: JSON.stringify(account), signal: AbortSignal.timeout(10000) });
         assert(response.ok, 'Identity setup failed'); const identity: any = await response.json();
-        const paths = run(['paths']); mkdirSync(dirname(paths.identityConnection), { recursive: true });
-        writeFileSync(paths.identityConnection, JSON.stringify({ schemaVersion: 1, hub: url, ownerId: identity.identity.id,
-            spaceId: identity.personalSpace.id, token: identity.token, requestId: randomUUID(), createdAt: Date.now() }), { mode: 0o600 });
+        const accountFile = join(root, 'account.json');
+        writeFileSync(accountFile, JSON.stringify(account), { mode: 0o600 });
+        const pending = run(['hub', '--url', url, 'connect', 'begin']);
+        const confirmed = await fetch(url + `/api/runweft/connect/${pending.requestId}/confirm`, { method: 'POST',
+            headers: { authorization: `Bearer ${identity.token}`, 'content-type': 'application/json' }, body: JSON.stringify({ spaceId: identity.personalSpace.id }) });
+        assert.equal(confirmed.status, 200); run(['hub', '--url', url, 'connect', 'complete']);
         if (values.runner) {
             const machine = run(['machine', 'enroll']); run(['machine', 'associate', machine.machineId, identity.personalSpace.id]);
             assert(run(['runner', 'start']).online);
         }
         return { directory: root, url: url + '/hub', cli, home: join(root, 'data'),
-            identityFile: paths.identityConnection, nativeHome: env.HOME, runner: Boolean(values.runner),
+            accountFile, nativeHome: env.HOME, runner: Boolean(values.runner),
             stop: ['bun', 'run', 'dev:env', 'stop', '--dir', root] };
     } catch (error) {
         try { if (registered) await stop(root); else rmSync(root, { recursive: true, force: true }); }

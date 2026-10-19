@@ -16,7 +16,7 @@ node website/serve.mjs
 | 位置 | 用途 |
 | --- | --- |
 | `website/index.html` | 产品首页与统一 npm 安装命令 |
-| `website/guide.html` | npm/Skill 接入、安全身份交接、中心配置、委派和维护 |
+| `website/guide.html` | npm/Skill 接入、账号连接授权、中心配置、委派和维护 |
 | `website/manual.html` | 当前使用说明的转义 UTF-8 参考模板 |
 | `website/assets/` | 样式、图标与少量原生 JavaScript |
 | `dist/website/` | HTML、资源和 npm 安装元数据，无归档或下载目录 |

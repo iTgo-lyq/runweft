@@ -80,12 +80,14 @@ export function checkManifest(entry, manifest) {
 }
 
 // Persist before starting an upload so an interrupted request is never blindly repeated.
-export async function publishCandidate(index, entries, { metadata, tags, upload, save, receipt = {}, channel = releaseChannel(index.version), pause = () => new Promise(r => setTimeout(r, 5000)), timeoutMs = 20 * 60_000 }) {
+export async function publishCandidate(index, entries, { metadata, tags, upload, save, receipt = {}, channel = releaseChannel(index.version), pause = () => new Promise(r => setTimeout(r, 5000)), timeoutMs = 45 * 60_000 }) {
     if (receipt.version) {
         assert.equal(receipt.version, index.version, 'Receipt version differs from candidate');
         assert.equal(receipt.sourceRevision, index.source.revision, 'Restore the original candidate for partial publication');
         assert.equal(receipt.channel, channel, 'Receipt channel differs from candidate');
     }
+    // Metadata and dist-tags share one budget, so phase changes cannot extend the job indefinitely.
+    const deadline = Date.now() + timeoutMs;
     const state = { ...receipt, channel, version: index.version, sourceRevision: index.source.revision, packages: receipt.packages ?? [], success: false };
     for (const record of state.packages) {
         const entry = entries.find(p => p.name === record.name);
@@ -105,7 +107,6 @@ export async function publishCandidate(index, entries, { metadata, tags, upload,
         return true;
     }
     async function waitFor(entriesToWait) {
-        const deadline = Date.now() + timeoutMs;
         while (true) {
             const pending = (await Promise.all(entriesToWait.map(async entry => {
                 if (recordFor(entry)?.status === 'confirmed') return null;
@@ -150,7 +151,6 @@ export async function publishCandidate(index, entries, { metadata, tags, upload,
         }
         await waitFor(entries);
         // Version visibility and dist-tags can propagate independently. Never upload again while waiting.
-        const deadline = Date.now() + timeoutMs;
         while (true) {
             const after = {};
             state.distTags = after;

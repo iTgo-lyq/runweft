@@ -1,3 +1,5 @@
+import { saveTestConnection } from '../identity-fixture';
+import { fixtureCredential } from '../identity-fixture';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
@@ -25,7 +27,8 @@ export async function taskResultsProbe(p: { root: string; center: string; source
     const { hapi, source, targetSource, repo } = p;
     const credentials = [p.fixture.user.token, ...[p.sourceRunner, p.targetRunner].map(runner => JSON.parse(readFileSync(runner.credentialFile, 'utf8')).active.token)];
     const cli = async (home: string, args: string[], cwd = p.root) => {
-        const child = Bun.spawn([p.binary, '--home', home, '--json', 'hub', '--url', p.fixture.url, '--identity-file', p.fixture.identityFile, '--space', p.fixture.space, ...args], { cwd, env: p.env, stdout: 'pipe', stderr: 'pipe' });
+        await saveTestConnection(home, p.fixture.url, p.fixture.user.token, p.fixture.space);
+        const child = Bun.spawn([p.binary, '--home', home, '--json', 'hub', '--url', p.fixture.url, '--space', p.fixture.space, ...args], { cwd, env: p.env, stdout: 'pipe', stderr: 'pipe' });
         const [status, stdout, stderr] = await Promise.all([child.exited, new Response(child.stdout).text(), new Response(child.stderr).text()]);
         for (const credential of credentials) assert(!(stdout + stderr).includes(credential), 'Credential leaked in compiled CLI output');
         assert.equal(status, 0, stderr); return JSON.parse(stdout);
@@ -118,7 +121,7 @@ export async function taskResultsProbe(p: { root: string; center: string; source
         writeFileSync(join(repo, 'app/note'), 'parent dirty stays'); writeFileSync(join(repo, 'untracked'), 'parent untracked');
         const protectedBefore = [readFileSync(join(repo, '.git/index')), readFileSync(join(repo, '.git/config')), readFileSync(join(repo, 'app/note'))];
         const config = loadConfig(p.sourceHome, p.env), identity = { host: 'codex' as const, nativeSessionId: parent.nativeSessionId, cwd: repo, callId: 'actual-fetch' };
-        const options = { url: p.fixture.url, identityFile: p.fixture.identityFile, space: p.fixture.space, home: p.sourceRunner.home, env: p.env };
+        const options = { url: p.fixture.url, credential: fixtureCredential(p.fixture.identityFile), space: p.fixture.space, home: p.sourceRunner.home, env: p.env };
         const client = new HubTaskClient(options, repo, identity), requestId = randomUUID();
         const pending = await cli(p.sourceHome, ['task', 'result', 'fetch', bundle.task.id, '--round', rounds[0]!, '--request-id', requestId], repo);
         assert.equal(pending.round_id, rounds[0]);

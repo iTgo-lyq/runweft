@@ -1,3 +1,4 @@
+import { saveTestConnection } from '../identity-fixture';
 import { tmpdir } from 'node:os';
 import { fixtureCleanup } from '../fixture-cleanup';
 import { randomUUID } from 'node:crypto';
@@ -50,7 +51,7 @@ async function fixture(host: 'codex' | 'claude') {
         });
         const home = h.home;
         await writeFile(join(home, 'config.yaml'), `mode: hub\nhub:\n  url: ${h.url}\n`);
-        atomicWrite(hubConnectionPaths(home, h.url).identityConnection, JSON.stringify({ schemaVersion: 1, hub: h.url, ownerId: h.owner.identity.id, spaceId: h.space, token: h.owner.token, requestId: randomUUID(), createdAt: Date.now() }));
+        await saveTestConnection(home, h.url, h.owner.token, h.space);
         const config = loadConfig(home, {});
         const server = createMcpServer({ client: host, cwd, config: () => config, hub: () => ({ url: h.url, home, env: {} }) }), client = new Client({ name: 'file-test', version: '1' });
         owned.resources.push(() => server.close(), () => client.close());

@@ -1,3 +1,4 @@
+import { saveTestConnection } from '../identity-fixture';
 import { afterEach, expect, test } from 'bun:test';
 import { existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
@@ -80,7 +81,7 @@ test('unconfirmed input and cancelled waits do not replay or stop execution', as
     const accepted = await h.post('spawn', h.payload());
     const unknown = await until(() => h.post('read', { id: accepted.agent_id }), value => value.status === 'unknown');
     const abort = new AbortController();
-    const client = new HubClient({ url: h.url, space: h.space, env: { RUNWEFT_IDENTITY_TOKEN: h.owner.token } }, 'hubDelegation', 'hub_delegation_unavailable');
+    const client = new HubClient({ url: h.url, space: h.space, credential: { token: h.owner.token }, env: {} }, 'hubDelegation', 'hub_delegation_unavailable');
     const wait = client.http.request('/api/runweft/tasks/wait', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ parent: h.parent, ids: [accepted.agent_id], timeoutMs: 2000, afterRevision: { [accepted.agent_id]: unknown.revision } }), signal: abort.signal });
     await Bun.sleep(30); abort.abort(); await expect(wait).rejects.toBeDefined();
     await Bun.sleep(100); expect(h.calls.send).toBe(1); expect(h.calls.stop).toBe(0);
@@ -119,8 +120,7 @@ test('lost client acceptance resolves before withdrawn central Agent configurati
     }});
     cleanups.push(() => proxy.stop(true));
     const paths = hubConnectionPaths(home, proxy.url.origin), credential = h.machineConnections.get(h.machineId)!;
-    atomicWrite(paths.identityConnection, JSON.stringify({ schemaVersion: 1, hub: proxy.url.origin, ownerId: h.owner.identity.id, spaceId: h.space,
-        token: h.owner.token, requestId: crypto.randomUUID(), createdAt: Date.now() }));
+    await saveTestConnection(home, proxy.url.origin, h.owner.token, h.space);
     atomicWrite(paths.machineConnection, JSON.stringify({ schemaVersion: 1, hub: proxy.url.origin, ownerId: h.owner.identity.id, requestId: credential.requestId,
         machineId: h.machineId, active: { token: credential.token, credentialId: credential.credentialId }, createdAt: Date.now() }));
     const options = { url: proxy.url.origin, home, env: { ...process.env, GIT_CEILING_DIRECTORIES: h.home } };

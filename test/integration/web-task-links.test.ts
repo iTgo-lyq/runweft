@@ -1,0 +1,36 @@
+import { afterEach, expect, test } from 'bun:test';
+import { join } from 'node:path';
+import { chromium } from 'playwright';
+import { hubDelegationFixture } from './hub-delegation-fixture';
+import { fixtureCleanup } from '../fixture-cleanup';
+import { IdentityConnection } from '../../src/hub/connect/client';
+import { integrationBinaries } from './binaries';
+import { until } from '../helpers';
+import { forwardedHub } from './forwarded-hub';
+const owner=fixtureCleanup([]);afterEach(()=>owner.close());
+
+for(const forwarded of [false,true])test(`CLI task links restore task and round after browser login (${forwarded?'TCP forwarding':'direct'}) and native handoff strips account storage`,async()=>{
+    const h=await hubDelegationFixture(owner.resources),accepted=await h.post('spawn',h.payload());
+    const entry=forwarded?await forwardedHub(h.url,owner.resources):{url:h.url,link:(value:string)=>value};
+    const active=await until(()=>h.post('read',{id:accepted.agent_id}),value=>value.inputs[0]?.observation?.phase==='accepted');
+    h.complete(active.session_id,'A private task report for the link');await until(()=>h.post('read',{id:accepted.agent_id}),value=>value.status==='completed');
+    const username=(h.hub.db.query('SELECT username FROM hub_accounts WHERE userId=?').get(h.owner.identity.id) as {username:string}).username;
+    const home=join(h.home,'query-only-client'),session=new IdentityConnection(home,h.url);
+    await session.password(username,'synthetic unknown-account comparison');await session.complete();
+    const child=Bun.spawn([integrationBinaries().runweft.path,'--home',home,'--json','task','open',accepted.agent_id,'--round',accepted.round_id,'--print'],{stdout:'pipe',stderr:'pipe'});
+    const [exit,stdout,stderr]=await Promise.all([child.exited,new Response(child.stdout).text(),new Response(child.stderr).text()]);expect(exit).toBe(0);expect(stderr).toBe('');
+    const original=JSON.parse(stdout).url as string,link=entry.link(original);expect(new URL(original).origin).toBe(h.url);
+    expect(new URL(link).hash).toBe(new URL(original).hash);expect(link).toContain('/hub#space=');expect(link).toContain(accepted.agent_id);expect(link).not.toContain(h.owner.token);
+    const browser=await chromium.launch({headless:true});owner.resources.push(()=>browser.close());const page=await browser.newPage();
+    await page.goto(link);await page.locator('#account-username').fill(username);await page.locator('#account-password').fill('synthetic unknown-account comparison');await page.locator('#auth-submit').click();
+    await page.locator('.task-report').getByText('A private task report for the link',{exact:true}).waitFor();
+    expect(await page.locator('.task-detail code').first().innerText()).toBe(accepted.agent_id);
+    await page.context().route(entry.url+'/sessions/**',route=>route.fulfill({contentType:'text/html',body:'<p>Native handoff fixture</p>'}));
+    const popup=page.waitForEvent('popup');await page.getByRole('button',{name:'打开原生详情 / 审批',exact:true}).click();const native=await popup;await native.waitForURL(entry.url+'/sessions/'+active.session_id);
+    expect(await native.evaluate(()=>sessionStorage.getItem('runweft.hub.session'))).toBeNull();expect(await native.evaluate(()=>window.opener)).toBeNull();
+    const token=await native.evaluate(()=>sessionStorage.getItem('runweft.native.access'));expect(token).toContain('.');
+    const rejected=await native.evaluate(async access=>(await fetch('/api/runweft/hub/credentials',{headers:{authorization:`Bearer ${access}`}})).status,token);expect(rejected).toBe(401);
+    const other=(h.hub.db.query('SELECT username FROM hub_accounts WHERE userId=?').get(h.other.identity.id) as {username:string}).username;
+    const outsider=await browser.newPage();await outsider.goto(link);await outsider.locator('#account-username').fill(other);await outsider.locator('#account-password').fill('synthetic unknown-account comparison');await outsider.locator('#auth-submit').click();await outsider.locator('#notice[data-error=true]').waitFor();
+    expect(await outsider.locator('body').innerText()).not.toContain('A private task report for the link');
+},30_000);

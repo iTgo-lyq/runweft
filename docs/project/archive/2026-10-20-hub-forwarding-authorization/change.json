@@ -1,0 +1,70 @@
+{
+  "schemaVersion": 1,
+  "id": "hub-forwarding-authorization",
+  "title": "支持端口转发下的账号连接授权与本机试用",
+  "size": "small",
+  "status": "completed",
+  "stage": "close",
+  "branch": "codex/hub-forwarding-authorization",
+  "confirmations": {},
+  "tasks": {
+    "T1": {
+      "title": "修复转发授权并交付测试与全局本地安装",
+      "status": "done",
+      "verification": "修复及全局本地安装完成；CI 同提交262项集成全通过，核心22/工具53及两布局安装通过；全局入口转发回归1项24断言通过；本机全量261通过1项Claude包装器探测失败已报告并暂停续验，等待用户本机体验。",
+      "commitTitle": "hub-forwarding-authorization T1: record local installation and forwarded trial evidence"
+    },
+    "T2": {
+      "title": "按试用反馈统一放宽用户名与密码规则并更新本地包",
+      "status": "done",
+      "verification": "共享校验及 Web 表单仅保留必填，重名拒绝；核心22/165断言、工具53通过；六文件初验20通过1手机换行失败，修复后定向复验通过；全局beta.5再验CLI/Web/转发3项54断言通过，3210 Hub生效且业务数据及独立Runner保留，临时数据已清理。",
+      "commitTitle": "hub-forwarding-authorization T2: record installed account input validation"
+    },
+    "T3": {
+      "title": "准备正式版本和说明并完成发行前验收",
+      "status": "done",
+      "verification": "正式1.2.0候选及说明已冻结；类型/核心22/工具53/双布局安装/官网浏览器通过；新输入N1和C-codex真实模型及报告校验通过；本机261通过1项Claude包装器失败依用户指示跳过相关本地Claude项，GitHub39292614591全项及四平台安装通过。",
+      "commitTitle": "hub-forwarding-authorization T3: record stable release verification"
+    }
+  },
+  "closure": {
+    "verification": {
+      "result": "passed",
+      "at": "2026-10-19T17:25:50.044Z",
+      "summary": "Agent自查完整差异及验收对应；CI全部通过，安装/官网及N1、C-codex通过，本地Claude项按用户明确指示跳过。"
+    },
+    "acceptance": {
+      "result": "accepted",
+      "at": "2026-10-19T17:25:51.937Z",
+      "summary": "用户本机体验通过并明确要求正式发布。",
+      "source": "用户：基本算是通了吧，正式发布一下；补充：本地先跳过 Claude 校验吧。"
+    },
+    "specs": {
+      "result": "synced",
+      "at": "2026-10-19T17:25:53.435Z",
+      "summary": "同步identity中的必填/重名输入规则与转发来源、原请求及完整链接映射契约。"
+    },
+    "archive": {
+      "result": "done",
+      "at": "2026-10-19T17:25:54.865Z",
+      "summary": "用户本机验收并授权正式发行，验证与明确跳过边界已记录，identity Specs已同步。",
+      "path": "docs/project/archive/2026-10-20-hub-forwarding-authorization"
+    }
+  },
+  "followUpOf": "account-password-onboarding",
+  "followUpTitle": "账号登录与首次接入",
+  "rework": {
+    "at": "2026-10-19T16:33:13.411Z",
+    "reason": "本机体验反馈要求取消用户名和密码的长度、字符限制，仅保留必填及用户名重名检查。",
+    "approach": "统一放宽共享账号校验及 Web 表单，覆盖注册登录、改密恢复、CLI 接入并更新本地构建。"
+  },
+  "clarifications": {
+    "Q1": {
+      "round": 1,
+      "question": "不设限制是否也包括空用户名和空密码？",
+      "recommendation": "保留必填和用户名重名检查，取消所有长度、字符和复杂度限制。",
+      "answer": "保留必填，取消其他限制。",
+      "source": "用户对异步澄清问题的回复：保留必填，取消其他限制（推荐）。"
+    }
+  }
+}

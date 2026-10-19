@@ -1,43 +1,47 @@
-# Hub 身份 token
+# Hub 账号与身份
 
-Hub 的 `/hub` 页面支持主动创建独立身份或导入已有 token，无需注册、邮箱和外部登录。身份以稳定 UUID 表示，显示名称可修改，权限不依赖名称。创建身份同时建立一个初始空间；领取新 token 不取得其他身份的资源或已有空间成员资格。
+Hub 以用户名和密码注册、登录，账户与稳定身份 UUID 一对一关联。显示名称可修改，用户名固定；权限和资源归属继续依赖身份及空间成员关系。注册在一个事务内建立账号、身份、初始空间与当前入口的独立凭据，不自动认领其他身份或历史数据。普通用户无需复制、下载或保管 token。
 
-## 凭据生命周期
+## 账号与凭据生命周期
 
-- token 格式为 `rw_id_` 加 32 字节随机值的 base64url 编码；服务器只保存 SHA-256 摘要。创建响应返回明文，普通身份查询不返回 token/摘要。
-- 同一 token 在该 Hub 使用同一身份。浏览器保存在本站 sessionStorage；刷新保留身份，退出清除当前浏览器凭据，不删除 Hub 数据或撤销其他客户端。
-- 用户通过复制或下载保存副本。没有副本时没有邮箱找回路径；重新创建得到不同身份，不能自动认领旧数据。
-- 更换 token 时客户端先生成、保存并提供备份，再用旧 token 提交替换。事务内重新校验旧凭据，一次替换成功后旧 token 立即失效，身份 ID 和成员关系保留。
-- 轮换响应丢失后用预存的新 token 查询核实；不能盲目重试或创建替代身份。创建响应丢失明确报告结果未知，不自动重复创建。
-- token 不通过 URL/cookie 登录，不进入普通日志、DOM 属性或其他站点请求。显式备份可显示正文；无 Clipboard API 时可选中文本或下载。
+用户名和密码仅要求必填，不设置长度、字符或复杂度策略。用户名去除首尾空格并统一大小写后检查重名，支持中文、内部空格、符号和单字符；去除首尾空格后为空则拒绝。密码允许空格与粘贴，按原值处理，不 trim、不截断、不强制字符组合。Web、人工 CLI 的注册、登录、改密和恢复共用此规则；通用 HTTP 请求容量限制仍适用。密码使用异步 Argon2id（19 MiB、2 次迭代）保存哈希，登录失败统一提示；哈希前限制请求速率和并发，哈希在数据库事务外运行，提交前重查账户状态。
 
-## 接口与存储
+每次浏览器登录和每个 CLI 环境各有一条可独立撤销的 UserCredential，服务端只保存随机秘密的 SHA-256 摘要。浏览器凭据为 rw_web_ 前缀，最长 12 小时、闲置 2 小时失效，写入当前标签的 sessionStorage，刷新保留；退出撤销当前凭据，关闭标签后用密码重新登录。CLI 凭据为 rw_cli_ 前缀，有效期 90 天，保存在本机 0600 连接文件中。秘密不进入 URL、模型输出或普通日志，不提供身份 token 备份或环境变量登录。
 
-前缀 `/api/runweft/hub`。仅 `POST /identities {name}` 允许无凭据，返回 201 和 identity/token/personalSpace；其他接口要求 `Authorization: Bearer <identity-token>`。
+本人可查看并撤销各登录环境；修改密码和全端退出需当前密码，并撤销全部用户凭据。这些操作保留身份、空间、资源和已接受任务；机器及任务凭据保持独立。原生短 JWT 引用具体用户凭据及空间，每次请求重查其有效性，不能用于账户管理或授权另一 CLI。
+
+## 接口与恢复
+
+前缀 /api/runweft/hub；公开注册、登录和密码恢复仅允许 HTTPS 或真正的 loopback HTTP，严格 JSON、不开放跨域。账户接口使用原始 browser 或 CLI 凭据，拒绝派生短 JWT。
+
+带 Origin 的浏览器请求在 HTTP 入口验证其为合法 HTTP(S) origin，且 host 与本次请求的实际 Host 一致；不使用可伪造的转发头代替核对。CLI 没有 Origin 时继续使用相同身份与请求秘密校验。CLI 通信地址与浏览器端口转发入口可以不同：浏览器在当前页面同源提交，确认不再比较 CLI 登记 origin 与浏览器 origin；仍须本 Hub 的原有效请求、browser 凭据、明确确认及空间权限。
 
 | 路径 | 方法与行为 |
 | --- | --- |
-| `/identity` | GET 本人；PATCH `{name}` 修改显示名称 |
-| `/identity/rotate` | POST `{token}`，应用已保存的新 token，返回同一 identity |
+| /accounts | POST 用户名与密码注册，返回身份、初始空间和 browser 凭据 |
+| /sessions | POST 用户名与密码登录，返回新的独立 browser 凭据 |
+| /identity | GET 本人；PATCH 修改显示名称 |
+| /account | GET 本人账号与身份 |
+| /sessions/logout | POST 撤销当前用户凭据 |
+| /credentials、/credentials/:id | GET 本人登录环境；DELETE 单项撤销，均不返回秘密或摘要 |
+| /credentials/revoke-all | POST 验证当前密码并撤销全部用户凭据 |
+| /account/password | POST 当前密码与新密码，成功后全部用户环境重新登录 |
+| /account/password-reset | POST 用户名、一次性重置码和新密码 |
 
-姓名 1–80 字符，写请求严格 JSON、上限 16 KiB；不支持跨域 CORS。错误返回明确 code/message/hint，未知异常不回显底层消息或输入。无效 token 返回 401，不静默创建身份。存储在 `<home>/server/runweft/state.sqlite` 的 `hub_users` 表。
+忘记密码由部署者在服务器执行 account reset-password <username> --output <新文件>，向明确的 0600 文件写入有效期 15 分钟的一次性重置码；不创建缺失数据库、不把秘密输出到终端。用户通过 Web 或 account recover 的人工隐藏输入消费；成功后撤销全部用户凭据并重新登录。没有邮件、邮箱验证或用户长期保管的恢复 token。
 
-`/hub` 页面和静态资源内嵌编译程序，设置 CSP/no-store；未知 `/hub/*` 返回 404。健康响应的 `capabilities.hubIdentity=1` 表示此入口可用。
+人工 CLI 支持 auth register/login --interactive、auth logout，以及 account show/rename/password/recover、account credentials list/revoke、account logout-all。密码及恢复码仅从人工终端隐藏读取，不接收秘密 argv/env；无 TTY 明确报错并给出 Web 路径。auth login 默认走浏览器授权，Agent 不代开伪终端收集密码。
 
-## 执行入口与凭据
+## 确认即激活的本机连接
 
-默认服务将独立 token 接入身份、空间、配置与委派；[执行授权网关](../execution/access/spec.md) 交换受限 JWT，Runner 使用独立机器凭据。HAPI root/JWT 不能作为公开身份登录，旧 identity 与 /runweft 入口不开放。秘密经 Web 交接 保存到本机，不作为模型工具输出。
+hub connect begin 先在 0600 connect.json 保存客户端生成的 CLI 随机秘密、原 requestId、Hub 和旧连接指纹，再向 Hub 登记摘要。输出无秘密的 /hub#connect=<请求 UUID>、设备名和核对码，请求有效期十分钟。浏览器注册或登录后选择空间并明确确认；已有本标签登录时只确认，不自动批准。
 
-## Web 与本机身份交接
+确认事务核对有效 browser 凭据、请求、期限与成员关系，直接激活唯一 CLI 凭据并绑定身份/默认空间。CLI 自始持有最终秘密，不需要 RSA、密文、消费状态或第二次 ACK。相同身份和空间重复确认只返回原状态，不创建第二条凭据、不恢复已撤销凭据或改绑。
 
-hub connect begin 为所选 Hub 创建十分钟的确认请求，输出无秘密的 /hub#connect=<请求 UUID>、机器名称和核对码。浏览器必须具备当前身份，明确选择空间并确认；核对 origin、请求与机器，不自动批准。交接仅允许 HTTPS 或真正的 loopback 安全上下文。
+complete 使用同一待连接秘密查询，confirmed 后验证身份、空间资格与已有机器归属，原子保存 schema 2 identity.json 和 Hub 配置，保留部署 mode，完成后删除本地待连接记录。保存失败继续使用原记录恢复；并发连接变更或机器归属冲突拒绝覆盖，网络请求不持本地写锁。人工密码分支复用同一激活事务，不另建 browser 会话；单空间自动选择，多空间且无有效默认时人工选择一次。
 
-客户端生成 RSA-2048 密钥，WebCrypto 用 RSA-OAEP SHA-256 加密身份 token。Hub 只持久公钥、密文、轮询秘密摘要、身份/空间及期限，不保存明文用户 token。读取、确认和消费重新核对 token 与成员资格；取消、过期、身份轮换或成员撤销使请求失效。
+cancel 撤销本次待连接或已激活但未保存的 CLI 授权，不撤销原有连接；已激活凭据在确认期限后不会仅因未 complete 失效，仍遵循自身期限、成员关系和撤销状态。auth status 校验远端身份/空间，connect status 显示本地摘要。连接按 origin 分区，不跨 Hub 复用凭据；未选 Hub 提示明确地址，不自动创建身份。
 
-complete 解密后先验证身份和成员资格，再原子保存 0600 identity.json，并确认消费。该操作把 origin 保存为 config.yaml 的 hub.url，保留部署 mode；不将 token 写入 YAML 或模型输出。私钥和轮询秘密暂存同连接目录的 0600 connect.json，完成后移除。确认响应丢失可用已保存身份重试，不能覆盖后来变更的身份；并发写入采用短事务，不为网络请求持锁。
+转发场景中，CLI 配置、待连接记录与凭据继续使用执行机可达的原 Hub 地址；给用户的授权、后台及任务链接按宿主已有转发入口转换，完整保留路径、查询参数与 fragment。浏览器入口端口变化不要求重新 begin 或注册；转发须到达同一 Hub 并保留正确 Host，连接恢复继续使用原请求和秘密。
 
-cancel 只取消待确认请求，保留已有身份。connect status 是本机摘要，auth status 才验证远端当前授权。hub paths/root paths 分别显示显式目标和当前连接位置。地址不自动跨 origin 复用 token；机器记录归属另一身份时拒绝覆盖。
-
-CLI/MCP 默认使用保存的身份和空间，也可显式使用身份备份或 RUNWEFT_IDENTITY_TOKEN；指定另一个身份不会继承旧身份的已选空间。业务连接必须具有 hub.url、身份及空间，不回退 HAPI root 或本地 Agent 文件。身份备份由用户自行保管，丢失不由服务端找回。
-
-未选择 Hub 时 begin 报 `hub_connection_required`，提示用 `hub --url … connect begin/complete`，不误报 HTTPS 错误。`/hub` 将身份/空间与资源后台统一呈现，并提供当前 origin 的 Agent 接入说明；刷新、401 或连接错误均不自动领取新身份。原生页面只获得独立标签页短凭据，不继承长期身份，见[执行授权](../execution/access/spec.md)。
+/hub 页面及静态资源内嵌程序，CSP/no-store，未知 /hub/* 返回 404；健康能力 hubAccounts=1 标记当前账户协议。页面统一账号、空间与资源管理，401 或刷新失败不创建替代身份。原生页面只获得当前空间的独立标签短 JWT，见[执行授权](../execution/access/spec.md)。

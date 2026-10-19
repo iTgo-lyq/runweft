@@ -10,7 +10,7 @@ export async function openTaskHistory(page: Page, taskId: string, sessionId: str
     const tab = await popup;
     await tab.waitForURL(url => url.pathname === `/sessions/${sessionId}`);
     await tab.getByRole('link', { name: /返回 Runweft Hub/ }).waitFor();
-    assert.equal(await tab.evaluate(() => sessionStorage.getItem('runweft.hub.identity')), null);
+    assert.equal(await tab.evaluate(() => sessionStorage.getItem('runweft.hub.session')), null);
     assert.equal(await tab.evaluate(() => opener), null);
     return tab;
 }

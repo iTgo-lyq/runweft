@@ -3,11 +3,11 @@ import { z } from 'zod';
 import { jsonResponse } from '../../proxy';
 import { ListSchema, ReadSchema, WaitSchema } from '../../tasks/types';
 import { ParentSchema, InterruptSchema, parseTask, TaskError } from '../../tasks/types';
-import { OverviewQuerySchema, taskOverview } from '../../tasks/query';
+import { OverviewQuerySchema } from '../../tasks/query';
 import { detail } from '../../tasks/views';
 import { readJson, type RequestLease } from '../access/transport';
 import { HubDelegationService } from './service';
-import type { TaskInventory } from '../../tasks/query';
+import { taskList, taskQuery } from './read-api';
 
 const Inspect = z.object({ parent: ParentSchema, id: z.uuid() }).strict();
 const Release = Inspect.extend({ discardIgnored: z.boolean().default(false) });
@@ -21,11 +21,7 @@ export async function handleDelegationRequest(request: IncomingMessage, response
         if (request.method !== 'GET') throw new TaskError(405, 'method_not_allowed', '总览接口只接受 GET。');
         if (new Set(url.searchParams.keys()).size !== [...url.searchParams].length) throw new TaskError(400, 'invalid_task_request', '总览筛选参数不能重复。');
         const query = parseTask(OverviewQuerySchema, Object.fromEntries(url.searchParams));
-        // History remains readable when an Agent is no longer shared. Inventory never widens task scope.
-        let inventory: TaskInventory;
-        try { inventory = { machines: await service.config.resources.machines(lease, AbortSignal.any([lease.signal, AbortSignal.timeout(3000)])), error: null }; }
-        catch { lease.check(); inventory = { machines: [], error: { code: 'inventory_unavailable', message: '机器状态暂不可用，以下保留已记录的任务事实。' } }; }
-        result = taskOverview(coordinator.store.listNamespace(namespace), service.config.resources.store.runtimes(lease.actor), inventory, query);
+        result = await taskList(service, lease, coordinator.store.listNamespace(namespace), query);
     } else if (domain === 'tasks' && action.startsWith('details/')) {
         if (request.method !== 'GET') throw new TaskError(405, 'method_not_allowed', '任务详情只接受 GET。');
         if (new Set(url.searchParams.keys()).size !== [...url.searchParams].length) throw new TaskError(400, 'invalid_task_request', '详情参数不能重复。');
@@ -42,6 +38,11 @@ export async function handleDelegationRequest(request: IncomingMessage, response
     } else {
         if (request.method !== 'POST') throw new TaskError(405, 'method_not_allowed', '此接口需要 POST。');
         const value = await readJson(request, 1_048_576, lease.signal); lease.check();
+        if (domain === 'tasks' && action.startsWith('query/')) {
+            result = await taskQuery(action.slice('query/'.length), value, namespace, service, lease);
+            lease.check(); if (!response.destroyed) jsonResponse(response, 200, { namespace, ...result as object });
+            return true;
+        }
         const parent = parseTask(ParentSchema, value.parent);
         coordinator.store.assertCanDelegate(namespace, parent);
         if (domain === 'workspaces') {

@@ -1,3 +1,4 @@
+import { createTestIdentity, createIdentityToken, replaceTestCredential } from '../identity-fixture';
 import assert from 'node:assert/strict';
 import { randomBytes, randomUUID } from 'node:crypto';
 import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
@@ -5,7 +6,7 @@ import { join, resolve } from 'node:path';
 import { get as httpGet, type IncomingMessage } from 'node:http';
 import { io, type Socket } from 'socket.io-client';
 import { createAccessGateway } from '../../src/hub/access/http';
-import { HubStore, createIdentityToken } from '../../src/hub/store';
+import { HubStore } from '../../src/hub/store';
 import { freePort } from '../../src/services';
 import { closeSmoke, removeSmokeSecrets, startSmokeHapi, stopSmokeProcess } from '../lifecycle';
 import { afterEach, test } from 'bun:test';
@@ -91,7 +92,7 @@ test('hub-realtime-live real integration', async () => {
         hapi = await startSmokeHapi(integrationBinaries().hapi.path, root, process.env, port, nativeToken, processes);
         gateway = await createAccessGateway({ host: '127.0.0.1', port: 0, target, rootToken: nativeToken, key: randomBytes(32), statePath });
         base = `http://127.0.0.1:${(gateway.server.address() as any).port}`; hub = new HubStore(statePath);
-        const a = hub.createIdentity('machine owner'), b = hub.createIdentity('task owner'), c = hub.createIdentity('unrelated'), sid = a.personalSpace.id;
+        const a = createTestIdentity(hub, 'machine owner'), b = createTestIdentity(hub, 'task owner'), c = createTestIdentity(hub, 'unrelated'), sid = a.personalSpace.id;
         hub.acceptInvitation(b.identity.id, hub.invite(a.identity.id, sid, 'member').token);
         const aj = (await api('/api/auth', '', { accessToken: a.token, spaceId: sid })).token;
         const bj = (await api('/api/auth', '', { accessToken: b.token, spaceId: sid })).token;
@@ -254,7 +255,7 @@ test('hub-realtime-live real integration', async () => {
         const bulk = 'x'.repeat(128 * 1024), count = 100;
         for (let i = 0; i < count; i++) childC.emit('message', { sid: sc, message: { role: 'agent', content: { type: 'text', text: bulk } } });
         await ping(childC);
-        hub.rotate(c.identity, c.token, createIdentityToken());
+        replaceTestCredential(hub, c.identity, c.token, createIdentityToken());
         await Bun.sleep(1200); slow.resume(); await timeout(closedSlow);
         assert(slowBytes < bulk.length * count, 'backpressured SSE must not deliver remaining private payload after revocation');
         check('revoking identity terminates backpressured SSE while native messages remain stored for the owner');
@@ -269,7 +270,7 @@ test('hub-realtime-live real integration', async () => {
         check('unmodified compiled Runner registers with an opaque machine token, heartbeats and handles native directory RPC');
 
         const replacementB = createIdentityToken();
-        const disconnect = event(memberViewer, 'disconnect'); hub.rotate(b.identity, b.token, replacementB);
+        const disconnect = event(memberViewer, 'disconnect'); replaceTestCredential(hub, b.identity, b.token, replacementB);
         await disconnect; await until(async () => replay.isClosed(), 'rotated JWT stops idle SSE');
         const machineDisconnect = event(childC, 'disconnect'); gateway.store.revoke(mc.id); await machineDisconnect;
         check('identity rotation closes idle terminal/SSE and machine revocation closes already-connected sessions');

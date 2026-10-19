@@ -63,7 +63,7 @@ async function harness(worktree = false) {
             }
             return Response.json({ operation: faults.wrongReceipt ? { ...operation, request: { ...operation!.request, operationId: randomUUID() } } : operation });
         });
-        const http = () => new HubClient({ url: h.url, space: h.space, env: { RUNWEFT_IDENTITY_TOKEN: h.owner.token } }, 'hubAccess', 'hub_access_unavailable').http;
+        const http = () => new HubClient({ url: h.url, space: h.space, credential: { token: h.owner.token }, env: {} }, 'hubAccess', 'hub_access_unavailable').http;
         const artifacts = new ArtifactClient({ request: (path, options) => http().request(path, options), response: (path, options) => http().response(path, options) });
         async function upload(name = '设计 说明.txt') {
             const path = join(root, name); writeFileSync(path, randomUUID()); return artifacts.upload(path, randomUUID());

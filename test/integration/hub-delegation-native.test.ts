@@ -1,9 +1,10 @@
+import { createIdentityToken, replaceTestCredential } from '../identity-fixture';
 import { afterEach, expect, test } from 'bun:test';
 import { randomBytes, randomUUID } from 'node:crypto';
 import { decodeJwt, SignJWT } from 'jose';
 import { DelegationNativeClient } from '../../src/hub/delegation/native';
 import { NativeTransport, fileNamespace } from '../../src/hub/access/transport';
-import { createIdentityToken } from '../../src/hub/store';
+
 import { setupHubResources } from './hub-resources-fixture';
 import { resourceInspection } from './native-fixture';
 
@@ -96,7 +97,7 @@ test('private bridge scopes machines, fixes target/runtime and allocates one own
 
 test('background identity follows stable owner across rotation; only exact task observation/stop survives lost membership', async () => {
     const h = await fixture(), receipt = await h.client.request(`/api/machines/${h.target.machineId}/spawn`, write({ directory: h.home, agent: 'codex', requestId: randomUUID() }));
-    h.hub.rotate(h.identityB.identity, h.identityB.token, createIdentityToken());
+    replaceTestCredential(h.hub, h.identityB.identity, h.identityB.token, createIdentityToken());
     await h.client.request(`/api/machines/${h.source.machineId}/workspaces`, write({ action: 'resolve', cwd: h.home }));
     h.hub.changeMember(h.a.ownerId, h.sid, h.b.ownerId, null);
     await expect(h.client.request(`/api/sessions/${receipt.sessionId}/messages`, write({ text: 'new work' }))).rejects.toThrow();

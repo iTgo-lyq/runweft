@@ -2,14 +2,14 @@
 
 Runweft 为 Codex 和 Claude Code 提供 Hub 集中配置、任务委派、本地共享/独立 worktree、远端独立 worktree，以及附件和 Git 成果回收。执行基于配套 HAPI 内置适配。用户通过对话交给 Agent 安装和操作，在 Web 维护有权使用的资源、查看本人任务。
 
-本文配套 Runweft 1.1.8。通过公共 npm 主包选择四个平台依赖；官网安装版本见 `release.json`，程序来源与验证范围以对应 [GitHub Actions 发布运行](https://github.com/iTgo-lyq/runweft/actions/workflows/npm-publish.yml)为准。
+本文配套 Runweft 1.2.0。通过公共 npm 主包选择四个平台依赖；官网安装版本见 `release.json`，程序来源与验证范围以对应 [GitHub Actions 发布运行](https://github.com/iTgo-lyq/runweft/actions/workflows/npm-publish.yml)为准。
 
 ## 通过 npm 安装
 
 支持 macOS arm64/x64、glibc Linux arm64/x64。安装需要 Node.js 20+ 和 npm；运行任务需要已登录的 Codex 或 Claude Code，Git 操作需要 Git 2.31+。LFS/子模块需在相关机器具备工具与对象访问条件。
 
 ```sh
-npm install -g runweft@1.1.8 --registry=https://registry.npmjs.org/ --include=optional &&
+npm install -g runweft@1.2.0 --registry=https://registry.npmjs.org/ --include=optional &&
 runweft --version
 ```
 
@@ -29,7 +29,7 @@ Claude Code 使用 `--agent claude-code`。先核对已有同名 Skill，不同�
 
 把下面这段话交给正在使用的 Agent：
 
-> 通过 npm 安装 runweft@1.1.8，从 https://github.com/iTgo-lyq/runweft-kit 安装名为 runweft-kit 的 Skill 并按其说明接入。程序安装和升级用 npm，完整卸载按 Skill 的维护说明执行。帮我连接指定 Hub；没有 Hub 时先询问是否在本机启动。保留其他 MCP 和模型配置，身份通过浏览器确认，不向我索要 token。分别登记机器和执行工具，创建代码评审 Agent，再在当前项目完成一次只读委派。
+> 通过 npm 安装 runweft@1.2.0，从 https://github.com/iTgo-lyq/runweft-kit 安装名为 runweft-kit 的 Skill 并按其说明接入。程序安装和升级用 npm，完整卸载按 Skill 的维护说明执行。连接我指定的 Hub，否则复用既有连接；都没有时就在本机启动。保留其他 MCP 和模型配置，身份通过浏览器确认，不向我索要 token。分别登记机器和执行工具，复用或创建私有代码评审 Agent，在当前项目直接用 CLI 完成一次只读委派并读回完整报告，不等待第二段提示。
 
 安装后 Skill 名为 `runweft-kit`；使用 `$runweft-kit` 可显式调用。工程内已有 `.agents/skills/runweft-kit/` 时直接复用。发现用途相同的其他名称副本时，先备份已有修改到扫描目录之外，经确认替换后仅保留新入口，避免重复加载。Skill 与 MCP 分别安装。下面是 Agent 使用的工程参考，不要求用户逐条手工执行。
 
@@ -45,22 +45,30 @@ runweft open --print
 
 本机默认入口 `http://127.0.0.1:3210/hub`，首次只启动 Hub，不自动登记身份或启动 Runner。已有 Hub 使用 `runweft init --url https://你的Hub域名`；`init` 保留已有配置。`mode local` 表示可托管本机 Hub，`mode hub` 不托管；业务连接由独立 `hub.url` 选择。
 
-在 `/hub` 主动创建身份并保存 token 副本，或导入已有 token。不需要邮箱/OAuth/注册。浏览器只在当前标签会话保存身份，刷新和报错不新建身份；退出、关闭标签或换设备后须导入副本。丢失所有副本无法找回，重新领取不会继承原身份。Token 轮换须先保存新副本，再应用；成功后旧 token 失效。
+在 `/hub` 注册用户名和密码，系统为账号保留稳定身份 UUID 并创建默认空间。用户名和密码只要求必填，不限制长度、字符或复杂度；用户名去除首尾空格并统一大小写后检查重名，密码按原值处理，保留空格。浏览器在当前标签会话保存登录；退出或换设备后用同一账号登录，空间、配置和历史仍在，不需手动保管 token。
+
+浏览器通过端口转发访问时，CLI 继续使用执行机可达的原 Hub 地址；给用户的确认、后台和任务链接按转发工具返回的浏览器入口转换，保留原路径、查询参数和 fragment。两侧地址或端口不必相同，但转发须到达同一 Hub 并保留 HTTP Host；不要仅因浏览器端口变化重新发起连接或注册账号。
+
+账号设置可查看和撤销独立浏览器/CLI 环境。普通退出只撤销当前环境；改密码、密码恢复和全端退出撤销全部用户环境，Runner 和已接受任务独立。忘记密码联系部署者在服务器运行 `account reset-password <username> --output <新文件>`，重置码 15 分钟有效，用户在自己的 Web 或 CLI 隐藏输入中使用。
 
 每个新身份有初始空间，也可创建协作空间。空间所有者邀请成员/管理员、调整角色；管理员只治理允许的普通成员。邀请 24 小时内供一人使用。最后 owner 不能直接退出或降级，须先指定另一位 owner。
 
-### Web 到 CLI 加密交接
+### 浏览器登录并授权 CLI
 
 ```sh
 runweft hub --url <Hub根地址> connect begin --name <本机名称>
-runweft hub --url <Hub根地址> connect complete
+runweft hub --url <Hub根地址> connect complete --wait 60
 runweft hub connect status
 runweft hub identity
 ```
 
-Agent 展示 begin 返回的无秘密确认链接、名称和核对码。用户在浏览器选择身份/空间、核对并确认，CLI complete 才把凭据加密领取到受限本地文件并保存 `hub.url`。不要将 token 发给模型、复制到 URL 或使用 HAPI 内部 root token。complete 返回 pending 时继续等待；响应丢失可重跑同一 complete，不重新领取身份。cancel 只取消待确认请求，保留已保存连接。
+Agent 展示 begin 返回的无秘密链接、名称和核对码。用户一张表单注册或登录并授权；确认即激活独立 CLI 凭据，complete 校验原授权并保存受限本地记录和 hub.url。confirmed 仅表示已授权，connected 才表示本机保存完成。响应丢失、网络中断或保存失败继续原 complete，不创建第二份授权；确认前过期先 cancel 再 begin，确认后的恢复按 CLI 凭据有效期判断。cancel 撤销本请求已确认的凭据，保留其他已保存连接。
 
-status 仅显示本机摘要，identity 才核对远端授权。CLI 全局 `--home <目录>`、`--space <UUID>`、`--identity-file <文件>`、`--json` 在子命令前。身份文件是用户主动提供的备用输入，不打印其内容。临时 `--space` 不改保存的默认空间。
+status 仅显示本机摘要，identity 核对远端授权。全局 --home、--space、--json 在子命令前；移除身份 token 的文件、环境变量及参数导入。临时 --space 不改默认。人工可用 `auth register/login --interactive --url <Hub>` 隐藏输入密码；Agent 默认仍用浏览器链接。auth logout 撤销当前 CLI；account show/rename、credentials list/revoke、password/logout-all/recover 对应账号管理，密码留在用户界面。
+
+空间 CLI 提供 space list/show/create/rename/permissions/use/leave、space member list/set-role/remove、space invitation list/create/revoke/accept。create/accept 不切换默认，use 校验成员后保存；失效默认仍能 list/use，既有任务和运行中的 MCP 保留原空间。邀请 create --output 写入新建 0600 文件，accept --file 读取，不通过 argv 或对话抄秘密。
+
+首次接入由 Kit 接着复用资源、inspect/match 当前仓库，必要时 create/bind，创建或复用私有评审 Agent，直接 CLI spawn/wait/show 读回完整报告。不把 MCP 重载当作首份报告前提，不要求第二段体验提示；CLI 报告和 MCP 实际调用分别验证。
 
 ## 机器与执行工具
 
@@ -180,11 +188,13 @@ runweft mcp restore <备份ID>
 | respond_to_permission | id、round_id、原生 request_id、decision、可选 answers |
 | retry_finish | 修复 Git 收尾后重试固定轮次，不重发模型 |
 
-CLI 提供同样维护入口，可在原主宿主退出后按用户/空间查看本人任务；MCP 不自动恢复旧父身份：
+仅登录终端无需机器/Runner 即可 list --all、show、wait、result show、artifacts show、messages。默认 list 精确限定本机 machineId+cwd；未登记时提示 --all。筛选、排序、分页与 Web 一致，JSON 为 items/total/page/limit/pages/scope；精确范围先于分页。messages limit≤200，前翻须成对 before-at/before-seq，原生会话可能跨轮；不触发恢复。控制/执行与 MCP 仍保留机器和父上下文规则：
 
 ```sh
 runweft task spawn <agentId> --message "只读检查当前改动"
-runweft task list --all
+runweft task list --all --status completed --page 1 --limit 50
+runweft task messages <taskId> --limit 50
+runweft task open <taskId> --print
 runweft task wait <taskId> --timeout 65000
 runweft task show <taskId> --round <roundId>
 runweft task send <taskId> --message "继续处理"
@@ -301,7 +311,7 @@ runweft serve --public
 
 paths 显示准确目录：`server/` 是本机托管 Hub 数据；`connections/<Hub标识>/` 是该 Hub 的身份/机器接入和 HAPI 工作区/缓存；`client.sqlite` 保存当前 Claude MCP 调用身份并协调连接文件写入；`logs/`、`backups/` 独立。原生 Codex/Claude home 不受 Runweft 接管。备份须先结束任务、停止相关服务，保存同一时点数据库/文件、连接候选、原生会话及 worktree 依赖源仓库/缓存；只回滚数据库不安全。
 
-中心业务库只支持当前 schema19，本机 client.sqlite 只支持当前 schema1：全新目录创建当前格式，完整同格式库可正常重开。已有旧版本、不匹配或损坏格式明确拒绝，不迁移、改写或清理原目录。需要另建环境时使用独立的新 `--home <目录>`，自行保管原目录；新环境不接续原目录中的任务。配置文件省略 schemaVersion 仍使用当前默认值1，显式非当前版本会拒绝。
+中心业务库只支持当前 schema20，本机 client.sqlite 只支持当前 schema1：全新目录创建当前格式，完整同格式库可正常重开。已有旧版本、不匹配或损坏格式明确拒绝，不迁移、改写或清理原目录。需要另建环境时使用独立的新 `--home <目录>`，自行保管原目录；新环境不接续原目录中的任务。配置文件省略 schemaVersion 仍使用当前默认值1，显式非当前版本会拒绝。
 
 ## 诊断、升级与卸载
 
@@ -317,7 +327,7 @@ paths 显示准确目录：`server/` 是本机托管 Hub 数据；`connections/<
 | HAPI 标签过期 | 从 Hub 任务详情重开，不传 URL token |
 | 数据格式不匹配/损坏 | 按 state_format_unsupported/state_format_invalid 诊断，使用独立新 --home，自行保管原目录 |
 
-升级没有自升级命令：用 `npm install -g runweft@<目标版本> --registry=https://registry.npmjs.org/ --include=optional` 安装目标版本，确认成功后检查 `--version` 并显式 mcp install 更新入口。Skill 从更新后的 npm 包中读取，比对后备份旧目录再替换。先安全结束任务，按原角色重启 Hub 或 Runner，再核对版本/status/doctor/握手和低风险真实调用，只有完整当前 schema19 库可重开；遇到不匹配格式按上面的独立目录方式处理，不执行数据迁移。
+升级没有自升级命令：用 `npm install -g runweft@<目标版本> --registry=https://registry.npmjs.org/ --include=optional` 安装目标版本，确认成功后检查 `--version` 并显式 mcp install 更新入口。Skill 从更新后的 npm 包中读取，比对后备份旧目录再替换。先安全结束任务，按原角色重启 Hub 或 Runner，再核对版本/status/doctor/握手和低风险真实调用，只有完整当前 schema20 库可重开；遇到不匹配格式按上面的独立目录方式处理，不执行数据迁移。
 
 1.1.4 起支持完整卸载。默认数据根可直接使用 `runweft uninstall` 预览、`runweft uninstall --yes` 执行；指定数据根时，`--home` 必须写在子命令前：
 

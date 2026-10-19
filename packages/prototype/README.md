@@ -1,8 +1,10 @@
 # Hub 交互原型
 
-八个入口覆盖身份与空间、任务详情、机器、Runtime、Agent、仓库、个人选择和成员。现有页面最初从 `src/hub` 在提交 `23ca1d4` 抽取，旧页面主体保留在 `src/ui` 便于追溯。当前蓝色轻玻璃设计由 `src/app.js`、`src/glass-data.js` 和 `src/style.css` 实现，以内存交互探索新的导航、任务详情与资源管理体验，不引入后端。原型不是产品或真实 HAPI 执行验证。
+九个入口覆盖账号与首次连接、身份与空间、任务详情、机器、Runtime、Agent、仓库、个人选择和成员。工作台页面主体从 `src/hub` 在提交 `23ca1d4` 抽取，独立维护在 `src/ui`；身份壳与请求替换为本包内存演示，不引入后端。新增账号入口独立位于 `src/account-onboarding.html`，只表达本 Change 的账号/连接流程，不改变其他原型入口。原型不是产品或真实 HAPI 执行验证。
 
-使用 package.json 固定的 Bun 1.4.2，在本目录运行：
+账号入口提供场景切换：首次注册、已有账号（含多空间）、过期请求、忘记密码、账号设置和首次工作台。表单仅演示，不输入真实密码；可用任意不少于 15 个字符的示例密码，重置码输入 demo。环境撤销、改密码及全端退出只改变内存演示。
+
+在本目录运行：
 
 ```sh
 bun install --frozen-lockfile
@@ -10,10 +12,9 @@ bunx playwright install chromium
 bun run build
 bun run test
 bun run screenshots
-bun run dev
 ```
 
-手机默认收起侧栏，直接显示页面内容；通过顶部菜单切换入口。构建将 HTML/CSS/JavaScript 合成 `dist/<id>/index.html`。本机预览默认 http://127.0.0.1:4175/，也可用 `bun run dev 4176` 指定端口；`preview/tasks/index.html` 为可离线打开的固定快照。可使用任意静态 HTTP 服务预览；CI 的临时 Ubuntu runner 关闭 Chromium 进程沙箱（其 user namespace 被宿主限制）；iframe 权限仍仅为 allow-scripts，本地默认启用进程沙箱。受限 iframe 的 24 组桌面/平板/手机入口检查由 `verify.mjs` 自动执行：加载、隔离、无外部请求、主导航，以及身份和任务详情的代表性交互；覆盖任务检索、筛选、轮次/报告/附件、资源编辑与创建、成员邀请、身份和空间编辑、默认选择，以及空态/离线/错误恢复。场景切换、空间切换和资源编辑使用内存；刷新或“重置演示”恢复初始值。添加演示身份使用 `demo`，不输入真实凭据。
+手机截图滚动到空间内容，便于从缩略图区分各入口；页面仍保留完整侧栏。构建将 HTML/CSS/JavaScript 合成 `dist/<id>/index.html`。可使用任意静态 HTTP 服务预览；CI 的临时 Ubuntu runner 关闭 Chromium 进程沙箱（其 user namespace 被宿主限制）；iframe 权限仍仅为 allow-scripts，本地默认启用进程沙箱。受限 iframe 的 16 组桌面/手机入口检查由 `verify.mjs` 自动执行：加载、隔离、无外部请求、主导航，以及身份和任务详情的代表性交互；不逐页复演演示 CRUD。场景切换、空间切换和资源编辑使用内存；刷新或“重置演示”恢复初始值。导入身份/接受邀请使用 `demo`，不输入真实凭据。
 
 清单在 `prototype.json`，上传入口在 `publish-entries.json`。每次发布必须从干净、已推送的源码提交构建，再登记固定版本；后续更新不会覆盖历史地址。
 

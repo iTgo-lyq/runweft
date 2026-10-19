@@ -5,33 +5,39 @@ type Role = 'owner' | 'admin' | 'member';
 type Space = { id: string; name: string; role: Role };
 type Member = { userId: string; name: string; role: Role };
 type Invitation = { id: string; role: 'admin' | 'member'; expiresAt: number };
-type Saved = { token: string; pendingToken?: string; spaceId?: string };
-const storageKey = 'runweft.hub.identity', labels = { owner: '所有者', admin: '管理员', member: '成员' };
+type Saved = { token: string; spaceId?: string };
+const storageKey = 'runweft.hub.session', labels = { owner: '所有者', admin: '管理员', member: '成员' };
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
 const input = (id: string) => $<HTMLInputElement>(id);
 const secretDialog = $<HTMLDialogElement>('secret-dialog'), confirmDialog = $<HTMLDialogElement>('confirm-dialog');
 let saved: Saved = { token: '' }, identity: Identity | undefined, spaces: Space[] = [], selected: Space | undefined;
-let busy = false, secret = '', secretKind: 'identity' | 'invitation' | 'rotation' = 'identity';
-type ConnectionRequest = { id: string; origin: string; label: string; publicKey: string; code: string; expiresAt: number; status: string };
+let busy = false, secret = '';
+let authMode: 'register'|'login' = new URLSearchParams(location.hash.slice(1)).has('connect') ? 'register' : 'login';
+let connectionError = '';
+let pendingLocation = false;
+type ConnectionRequest = { id: string; origin: string; label: string; code: string; expiresAt: number; status: string };
 let connectionRequest: ConnectionRequest | undefined;
 const domainTokens = new Map<string, { token: string; expiresAt: number }>();
-class ApiError extends Error { constructor(readonly status: number, message: string) { super(message); } }
+class ApiError extends Error { constructor(readonly status: number, message: string, readonly code?:string) { super(message); } }
 
 function notice(message: string, error = false) {
     $('notice').textContent = message; $('notice').hidden = !message; $('notice').dataset.error = String(error);
 }
 function persist() {
     try { sessionStorage.setItem(storageKey, JSON.stringify(saved)); }
-    catch { throw new Error('浏览器无法保存当前身份。请允许此站点使用会话存储，并保留 token 副本。'); }
+    catch { throw new Error('浏览器无法保存当前身份。请允许此站点使用会话存储，再用账号密码登录。'); }
 }
 async function api(path: string, body?: unknown, method = body === undefined ? 'GET' : 'POST', token = saved.token, base = '/api/runweft/hub'): Promise<any> {
+    if (location.protocol !== 'https:' && !['localhost', '[::1]'].includes(location.hostname) && !/^127\.\d+\.\d+\.\d+$/.test(location.hostname)) {
+        throw new ApiError(0, '请通过 HTTPS 打开此 Hub，再登录或授权账号。仅本机开发地址允许 HTTP。', 'account_https_required');
+    }
     let response: Response;
     try { response = await fetch(`${base}${path}`, { method, credentials: 'omit', redirect: 'error', headers: {
         ...(token ? { authorization: `Bearer ${token}` } : {}), ...(body !== undefined ? { 'content-type': 'application/json' } : {}),
     }, body: body === undefined ? undefined : JSON.stringify(body), signal: AbortSignal.timeout(15_000) }); }
     catch { throw new ApiError(0, '无法连接 Hub。写操作的结果可能尚未确认，请先刷新核对，不要重复提交。'); }
     const data = await response.json().catch(() => ({}));
-    if (!response.ok) throw new ApiError(response.status, [data.error?.message ?? '请求未能完成。', data.error?.hint].filter(Boolean).join(' '));
+    if (!response.ok) throw new ApiError(response.status, [data.error?.message ?? '请求未能完成。', data.error?.hint].filter(Boolean).join(' '),data.error?.code);
     return data;
 }
 async function action(fn: () => Promise<void>) {
@@ -42,12 +48,13 @@ async function action(fn: () => Promise<void>) {
     controls.forEach(node => { node.disabled = true; });
     try { await fn(); }
     catch (error) {
-        if (error instanceof ApiError && error.status === 401) showEntry();
+        if (error instanceof ApiError && error.status === 401 && error.code==='user_session_invalid') {authMode='login';showEntry();}
         const message = error instanceof Error ? error.message : '操作未能完成，请刷新核对。';
         notice(message, true);
         if (secretDialog.open) $('secret-status').textContent = message;
     } finally {
         controls.forEach((node, i) => { if (node.isConnected) node.disabled = disabled[i]; }); busy = false;
+        if(pendingLocation)void refreshLocation();
     }
 }
 function form(id: string, fn: () => Promise<void>) { $(id).addEventListener('submit', event => { event.preventDefault(); void action(fn); }); }
@@ -63,7 +70,10 @@ function showEntry() {
     domainTokens.clear(); clearConsole();
     identity = undefined; selected = undefined; spaces = [];
     $('entry').hidden = false; $('workspace').hidden = true; $('logout').hidden = true;
-    $('headline').textContent = '从你的身份开始'; $('intro').textContent = '无需注册。保存你的身份 token，下次凭它回到自己的空间。';
+    $('connection-success').hidden = true; $('account-settings').hidden = true;
+    $('auth-form').hidden=false;$('reset-form').hidden=true;$('toggle-auth').hidden=false;$('forgot-password').hidden=false;document.querySelector<HTMLElement>('.account-panel')!.hidden=false;
+    $('headline').textContent = '连接你的工作环境'; $('intro').textContent = '用账号登录，让 Agent 继续准备你的第一次体验。';
+    renderAuth();
     for (const id of ['identity-name', 'identity-id', 'space-name', 'space-id', 'members', 'invitations', 'spaces']) $(id).replaceChildren();
     renderConnection();
 }
@@ -73,16 +83,19 @@ async function refresh() {
     domainTokens.clear();
     identity = (await api('/identity')).identity;
     spaces = (await api('/spaces')).spaces;
-    $('entry').hidden = true; $('workspace').hidden = false; $('logout').hidden = false;
+    $('entry').hidden = true; $('workspace').hidden = false; $('logout').hidden = false; $('connection-success').hidden = true; $('account-settings').hidden = true;
     $('headline').textContent = '资源与协作'; $('intro').textContent = '机器 → Runtime → Agent → 任务。配置属于 Hub，执行留在你选择的机器。';
     $('identity-name').textContent = identity!.name; $('identity-id').textContent = identity!.id; input('identity-name-input').value = identity!.name;
     const previousSpaceId = selected?.id;
-    selected = spaces.find(space => space.id === saved.spaceId) ?? spaces[0];
+    const targetSpace=new URLSearchParams(location.hash.slice(1)).get('space');
+    selected = targetSpace ? spaces.find(space=>space.id===targetSpace) : spaces.find(space => space.id === saved.spaceId) ?? spaces[0];
+    if(targetSpace&&!selected){clearConsole();$('workspace').hidden=true;throw new Error('此链接的空间不可访问，请返回 /hub 选择有权访问的空间。');}
     if (previousSpaceId !== selected?.id) clearConsole();
     saved.spaceId = selected?.id; persist();
     await refreshConnection();
+    if(connectionRequest?.status==='pending'||connectionError){ $('entry').hidden=false; document.querySelector<HTMLElement>('.account-panel')!.hidden=true; $('workspace').hidden=true; return; }
     $('spaces').replaceChildren(...spaces.map(space => {
-        const node = button('', async () => { saved.spaceId = space.id; persist(); await refresh(); });
+        const node = button('', async () => { const query=new URLSearchParams(location.hash.slice(1));for(const key of ['task','round','space'])query.delete(key);history.replaceState(null,'','/hub'+(query.size?'#'+query:''));saved.spaceId = space.id; persist(); await refresh(); });
         node.append(text('span', space.name), text('span', labels[space.role]));
         if (space.id === selected?.id) node.setAttribute('aria-current', 'page'); return node;
     }));
@@ -169,80 +182,97 @@ function confirm(message: string): Promise<boolean> {
     confirmDialog.showModal();
     return new Promise(resolve => confirmDialog.addEventListener('close', () => resolve(confirmDialog.returnValue === 'yes'), { once: true }));
 }
-function showSecret(value: string, kind: typeof secretKind) {
-    secret = value; secretKind = kind; $('secret-value').textContent = value; $('secret-status').textContent = '';
-    $('secret-title').textContent = kind === 'invitation' ? '分享这个空间邀请' : kind === 'rotation' ? '先保存新的身份 token' : '保存你的身份 token';
-    $('secret-description').textContent = kind === 'invitation' ? '把邀请交给希望加入的成员。24 小时内仅能由一人使用。'
-        : kind === 'rotation' ? '保存副本后再应用。应用成功后旧 token 将立即失效，其他设备需要导入新 token。'
-        : '这个 token 是回到原身份的凭据。请下载或复制留存；没有副本时无法找回。';
-    $('apply-rotation').hidden = kind !== 'rotation';
-    if (!secretDialog.open) secretDialog.showModal();
+function showSecret(value: string, _kind: 'invitation') {
+    secret=value;$('secret-value').textContent=value;$('secret-status').textContent='';
+    $('secret-title').textContent='分享这个空间邀请';$('secret-description').textContent='把邀请交给希望加入的成员，24 小时内仅能由一人使用。';
+    if(!secretDialog.open)secretDialog.showModal();
 }
-function newToken() {
-    const bytes = crypto.getRandomValues(new Uint8Array(32));
-    return 'rw_id_' + btoa(String.fromCharCode(...bytes)).replaceAll('+', '-').replaceAll('/', '_').replaceAll('=', '');
+function renderAuth() {
+    const connecting=connectionRequest?.status==='pending';
+    $('auth-title').textContent=authMode==='register'?'第一次使用 Runweft':'欢迎回来';
+    $('auth-description').textContent=authMode==='register'?'创建账号，自动准备你的默认空间。':'用账号密码回到你的空间。';
+    $('auth-submit').textContent=(authMode==='register'?'注册':'登录')+(connecting?'并连接':'');
+    input('account-password').autocomplete=authMode==='register'?'new-password':'current-password';
+    $('toggle-auth').textContent=authMode==='register'?'已有账号？登录':'没有账号？注册';
 }
-async function recover() {
-    if (saved.pendingToken) {
-        try {
-            await api('/identity', undefined, 'GET', saved.pendingToken);
-            saved.token = saved.pendingToken; delete saved.pendingToken; persist(); return;
-        } catch (error) { if (!(error instanceof ApiError && error.status === 401)) throw error; }
+function showAuthorized(){
+    $('entry').hidden=true;$('workspace').hidden=true;$('account-settings').hidden=true;$('connection-success').hidden=false;
+}
+function renderConnection(){
+    const request=connectionRequest,id=new URLSearchParams(location.hash.slice(1)).get('connect');
+    $('entry').dataset.connect=String(!!id);$('entry').dataset.authenticated=String(!!identity);$('connect-request').hidden=!id;$('confirm-connection').hidden=true;$('connect-space-label').hidden=true;
+    if(!id){renderAuth();return;}
+    $('connect-details').textContent=request?`Hub：${request.origin} · 工作环境：${request.label}`:'';
+    $('connect-code').textContent=request?.code??'';
+    $('connect-identity').textContent=identity?`当前账号：${identity.name}`:'';
+    $('connect-status').textContent=connectionError||(request?.status==='confirmed'?'已授权。CLI 会继续校验并保存连接。':request?'核对设备和代码后连接。':'正在读取连接信息…');
+    if(request?.status==='pending'&&identity&&selected){
+        $('confirm-connection').hidden=false;
+        const chooser=$<HTMLSelectElement>('connect-space');chooser.replaceChildren(...spaces.map(space=>new Option(space.name,space.id)));chooser.value=selected.id;
+        $('connect-space-label').hidden=spaces.length<2;
     }
-    await api('/identity'); delete saved.pendingToken; persist();
+    $('leave-connection').hidden=!connectionError;
+    if(connectionError)document.querySelector<HTMLElement>('.account-panel')!.hidden=true;
+    renderAuth();
 }
-
-function renderConnection() {
-    const request = connectionRequest;
-    $('connect-request').hidden = !request;
-    $('confirm-connection').hidden = true;
-    if (!request) return;
-    $('connect-details').textContent = `Hub：${request.origin} · 机器：${request.label} · ${new Date(request.expiresAt).toLocaleString('zh-CN')} 到期`;
-    $('connect-code').textContent = request.code;
-    $('connect-identity').textContent = request.status === 'pending' && identity && selected
-        ? `将连接身份「${identity.name}」与空间「${selected.name}」。可在下方切换空间。` : '';
-    let status: string;
-    if (request.origin !== location.origin) status = '请求的 Hub 地址与当前页面不一致，无法确认。请重新发起正确地址的请求。';
-    else if (!isSecureContext || !crypto.subtle) status = '浏览器需要 HTTPS 或 localhost 才能加密身份凭据。';
-    else if (request.expiresAt <= Date.now()) status = '此请求已过期，请让 Agent 重新发起。';
-    else if (request.status === 'confirmed' || request.status === 'consumed') status = '连接已确认。请让 Agent 执行 hub connect complete 完成本机保存。';
-    else if (request.status !== 'pending') status = '此请求已取消，请重新发起。';
-    else if (!identity || !selected) status = '先进入你的身份并选择空间，再确认连接。';
-    else { status = '确认前请与 Agent 提供的代码核对。'; $('confirm-connection').hidden = false; }
-    $('connect-status').textContent = status;
+async function refreshConnection(){
+    const id=new URLSearchParams(location.hash.slice(1)).get('connect');connectionError='';
+    if(!id){connectionRequest=undefined;renderConnection();return;}
+    try{connectionRequest=await api(`/${id}`,undefined,'GET','','/api/runweft/connect');}
+    catch(error){connectionRequest=undefined;connectionError=error instanceof Error?error.message:'连接信息不可用，请回到原对话核对。';}
+    renderConnection();
 }
-async function refreshConnection() {
-    const id = new URLSearchParams(location.hash.slice(1)).get('connect');
-    if (!id) { connectionRequest = undefined; renderConnection(); return; }
-    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) throw new Error('连接请求 ID 无效。请打开 Agent 提供的完整链接。');
-    connectionRequest = undefined; renderConnection();
-    connectionRequest = await api(`/${id}`, undefined, 'GET', '', '/api/runweft/connect'); renderConnection();
+async function confirmConnection(){
+    if(!connectionRequest||connectionRequest.status!=='pending'||!identity||!selected)return;
+    const spaceId=$<HTMLSelectElement>('connect-space').value||selected.id;
+    const requestId=connectionRequest.id;
+    try{connectionRequest=await api(`/${requestId}/confirm`,{spaceId},'POST',saved.token,'/api/runweft/connect');}
+    catch(error){await refreshConnection();if(connectionRequest?.id!==requestId||connectionRequest?.status!=='confirmed')throw error;}
+    renderConnection();showAuthorized();
 }
-click('confirm-connection', async () => {
-    await refreshConnection();
-    const request = connectionRequest;
-    if (!request || $('confirm-connection').hidden || !identity || !selected) return;
-    const publicKey = Uint8Array.from(atob(request.publicKey.replaceAll('-', '+').replaceAll('_', '/')), c => c.charCodeAt(0));
-    const key = await crypto.subtle.importKey('spki', publicKey, { name: 'RSA-OAEP', hash: 'SHA-256' }, false, ['encrypt']);
-    const encrypted = new Uint8Array(await crypto.subtle.encrypt({ name: 'RSA-OAEP' }, key, new TextEncoder().encode(saved.token)));
-    const ciphertext = btoa(String.fromCharCode(...encrypted)).replaceAll('+', '-').replaceAll('/', '_').replaceAll('=', '');
-    connectionRequest = await api(`/${request.id}/confirm`, { spaceId: selected.id, ciphertext }, 'POST', saved.token, '/api/runweft/connect');
-    renderConnection(); notice('已确认连接，凭据已加密交给该环境。让 Agent 完成本机保存即可。');
+click('confirm-connection',confirmConnection);
+click('leave-connection',async()=>{history.replaceState(null,'','/hub');authMode='login';connectionRequest=undefined;connectionError='';if(saved.token)await refresh();else{showEntry();await refreshConnection();}});
+click('view-workspace',async()=>{if(saved.token)await refresh();else showEntry();});
+$('toggle-auth').addEventListener('click',()=>{authMode=authMode==='register'?'login':'register';renderAuth();});
+$('forgot-password').addEventListener('click',()=>{$('auth-form').hidden=true;$('reset-form').hidden=false;$('toggle-auth').hidden=true;$('forgot-password').hidden=true;input('reset-username').value=input('account-username').value;input('reset-username').focus();});
+$('back-login').addEventListener('click',()=>{$('auth-form').hidden=false;$('reset-form').hidden=true;$('toggle-auth').hidden=false;$('forgot-password').hidden=false;authMode='login';renderAuth();});
+for(const toggle of document.querySelectorAll<HTMLButtonElement>('[data-password]'))toggle.addEventListener('click',()=>{
+    const field=input(toggle.dataset.password!);field.type=field.type==='password'?'text':'password';toggle.textContent=field.type==='password'?'显示':'隐藏';toggle.setAttribute('aria-label',(field.type==='password'?'显示':'隐藏')+(toggle.dataset.passwordLabel??'密码'));
 });
-window.addEventListener('hashchange', () => { void action(refreshConnection); });
-
-form('create-identity', async () => {
-    // Probe storage before allocating an identity. Never replay a failed create automatically.
-    persist();
-    const result = await api('/identities', { name: input('new-name').value }, 'POST', '');
-    saved = { token: result.token, spaceId: result.personalSpace.id };
-    showSecret(result.token, 'identity'); persist(); await refresh();
+form('auth-form',async()=>{
+    sessionStorage.setItem(storageKey,JSON.stringify(saved));const preferred=saved.spaceId;
+    const value=await api(authMode==='register'?'/accounts':'/sessions',{username:input('account-username').value,password:input('account-password').value},'POST','');
+    saved={token:value.token};persist();input('account-password').value='';await refresh();
+    if(connectionRequest?.status==='pending'&&(spaces.length===1||spaces.some(space=>space.id===preferred))){
+        if(preferred&&spaces.some(space=>space.id===preferred))$<HTMLSelectElement>('connect-space').value=preferred;
+        await confirmConnection();
+    }else if(connectionRequest?.status==='pending'){$('entry').hidden=false;$('auth-form').hidden=true;$('toggle-auth').hidden=true;$('forgot-password').hidden=true;$('workspace').hidden=true;renderConnection();}
 });
-form('import-identity', async () => {
-    const token = input('import-token').value.trim();
-    if (!/^rw_id_[A-Za-z0-9_-]{43}$/.test(token)) throw new Error('请输入这个 Hub 的 Runweft 身份 token（rw_id_ 开头）。');
-    await api('/identity', undefined, 'GET', token);
-    saved = { token }; persist(); input('import-token').value = ''; await refresh(); notice('已进入原身份。');
+form('reset-form',async()=>{
+    await api('/account/password-reset',{username:input('reset-username').value,code:input('reset-code').value,password:input('reset-password').value},'POST','');
+    input('reset-code').value='';input('reset-password').value='';saved={token:''};persist();authMode='login';showEntry();notice('密码已更新，请使用新密码登录。');
+});
+async function settings(){
+    const [account,value]=await Promise.all([api('/account'),api('/credentials')]);
+    $('entry').hidden=true;$('workspace').hidden=true;$('connection-success').hidden=true;$('account-settings').hidden=false;
+    $('settings-username').textContent=`用户名：${account.username}`;
+    $('credentials-list').replaceChildren(...value.credentials.map((credential:any)=>{
+        const row=document.createElement('div');row.className='credential-row';row.dataset.credentialId=credential.id;
+        row.append(text('strong',credential.label+(credential.id===value.currentCredentialId?'（当前环境）':'')),text('span',`${credential.kind==='cli'?'命令行':'浏览器'} · ${credential.active?'可用':'已撤销或到期'} · 最近使用：${new Date(credential.lastUsedAt).toLocaleString('zh-CN')}`));
+        if(credential.active)row.append(button('断开环境',async()=>{
+            if(!await confirm('断开这个登录环境？已接受的任务会继续执行。'))return;
+            await api('/credentials/'+credential.id,undefined,'DELETE');
+            if(credential.id===value.currentCredentialId){saved={token:''};persist();authMode='login';showEntry();}else await settings();
+        }));return row;
+    }));
+}
+click('show-settings',settings);click('close-settings',refresh);
+form('change-password',async()=>{
+    await api('/account/password',{password:input('current-password').value,newPassword:input('next-password').value});
+    input('current-password').value='';input('next-password').value='';saved={token:''};persist();authMode='login';showEntry();notice('密码已更新，请重新登录。');
+});
+form('logout-all-form',async()=>{
+    await api('/credentials/revoke-all',{password:input('all-password').value});input('all-password').value='';saved={token:''};persist();authMode='login';showEntry();notice('所有用户登录环境已退出。');
 });
 form('rename-identity', async () => { await api('/identity', { name: input('identity-name-input').value }, 'PATCH'); await refresh(); notice('显示名称已更新。'); });
 form('create-space', async () => { const result = await api('/spaces', { name: input('new-space-name').value }); saved.spaceId = result.space.id; input('new-space-name').value = ''; persist(); await refresh(); });
@@ -250,25 +280,13 @@ form('rename-space', async () => { await api(`/spaces/${selected!.id}`, { name: 
 form('accept-invitation', async () => { const result = await api('/invitations/accept', { token: input('invitation-token').value.trim() }); saved.spaceId = result.space.id; persist(); input('invitation-token').value = ''; await refresh(); notice('已加入空间。'); });
 form('create-invitation', async () => { const result = await api(`/spaces/${selected!.id}/invitations`, { role: $<HTMLSelectElement>('invitation-role').value }); showSecret(result.token, 'invitation'); await refresh(); });
 click('refresh', refresh);
-click('backup-token', async () => { showSecret(saved.token, 'identity'); });
-click('rotate-token', async () => { saved.pendingToken = newToken(); persist(); showSecret(saved.pendingToken, 'rotation'); });
-click('apply-rotation', async () => {
-    if (secretKind !== 'rotation' || !saved.pendingToken) return;
-    const next = saved.pendingToken;
-    try { await api('/identity/rotate', { token: next }); saved.token = next; delete saved.pendingToken; persist(); }
-    catch {
-        await recover();
-        if (saved.token !== next) throw new Error('轮换未生效，原 token 仍可使用。需要更换时请重新生成并保存。');
-    }
-    showSecret(saved.token, 'identity'); await refresh(); notice('token 已更换。其他设备请导入新 token。');
-});
 click('leave-space', async () => {
     if (!await confirm(`退出 ${selected!.name}？之后需要新的邀请才能加入。`)) return;
     await api(`/spaces/${selected!.id}/members/${identity!.id}`, undefined, 'DELETE'); delete saved.spaceId; persist(); await refresh(); notice('已退出空间。');
 });
-click('logout', async () => {
-    sessionStorage.removeItem(storageKey); saved = { token: '' }; secret = ''; $('secret-value').textContent = '';
-    if (secretDialog.open) secretDialog.close(); showEntry(); notice('已退出此浏览器。服务器上的身份和空间仍保留。');
+click('logout',async()=>{
+    try{await api('/sessions/logout',{});}catch(error){if(!(error instanceof ApiError)||error.status!==401)throw error;}
+    saved={token:''};sessionStorage.removeItem(storageKey);secret='';if(secretDialog.open)secretDialog.close();authMode='login';showEntry();notice('已退出当前浏览器，可用账号密码重新登录。');
 });
 // Dialog controls remain usable without joining a pending network action.
 $('close-secret').addEventListener('click', () => secretDialog.close());
@@ -282,16 +300,23 @@ $('copy-secret').addEventListener('click', () => {
 });
 $('download-secret').addEventListener('click', () => {
     if (!secret) return;
-    const content = `Runweft Hub: ${location.origin}\n${secretKind === 'invitation' ? '空间邀请' : `身份 ID: ${identity?.id ?? ''}`}\n${secret}\n`;
+    const content = `${secret}\n`;
     const url = URL.createObjectURL(new Blob([content], { type: 'text/plain;charset=utf-8' }));
-    const link = document.createElement('a'); link.href = url; link.download = secretKind === 'invitation' ? 'runweft-invitation.txt' : 'runweft-identity.txt'; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+    const link = document.createElement('a'); link.href = url; link.download = 'runweft-invitation.txt'; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
     $('secret-status').textContent = '已发起下载，请保留备份文件。';
 });
 $('host').textContent = location.host;
-void action(async () => {
-    const raw = sessionStorage.getItem(storageKey);
-    if (raw) { try { saved = JSON.parse(raw); } catch { throw new Error('此浏览器保存的身份信息损坏，请重新导入 token。'); } }
-    if (!saved || typeof saved.token !== 'string') { saved = { token: '' }; throw new Error('请重新导入已保存的身份 token。'); }
-    if (saved.token) { await recover(); await refresh(); } else await refreshConnection();
-    if (location.hash === '#native-expired') notice('原生页面的限时身份已到期或失效。回到仍登录的 Hub 标签重新打开；此标签可导入已保存的身份 token，不会自动创建身份。', true);
+void action(async()=>{
+    const raw=sessionStorage.getItem(storageKey);
+    if(raw){try{saved=JSON.parse(raw);}catch{throw new Error('当前会话记录无效，请重新登录。');}}
+    if(!saved||typeof saved.token!=='string'){saved={token:''};throw new Error('请使用账号密码重新登录。');}
+    renderAuth();await locationView();
+    if(location.hash==='#native-expired')notice('原生页面的限时访问已失效。请在已登录的 Hub 中重新打开，或使用账号密码登录。',true);
 });
+
+async function locationView(){
+    if(saved.token)await refresh();else{showEntry();await refreshConnection();}
+    if(connectionRequest?.status==='confirmed')showAuthorized();
+}
+async function refreshLocation(){await action(async()=>{pendingLocation=false;await locationView();});}
+window.addEventListener('hashchange',()=>{pendingLocation=true;if(!busy)void refreshLocation();});
