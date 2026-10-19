@@ -32,54 +32,25 @@
         "mobile"
       ],
       "artifact": {
-        "type": "git",
-        "path": "docs/project/changes/hub-glass-prototype/previews/account-onboarding",
-        "sourceCommit": "476b85892fe42c674b51c0db4910ef9a890a3aa2"
-      }
-    },
-    {
-      "id": "tasks",
-      "title": "任务与轮次详情",
-      "kind": "page",
-      "devices": [
-        "pc-web",
-        "ipad",
-        "mobile"
-      ],
-      "artifact": {
-        "type": "git",
-        "path": "docs/project/changes/hub-glass-prototype/previews/tasks",
-        "sourceCommit": "476b85892fe42c674b51c0db4910ef9a890a3aa2"
-      }
-    },
-    {
-      "id": "machines",
-      "title": "机器管理",
-      "kind": "page",
-      "devices": [
-        "pc-web",
-        "ipad",
-        "mobile"
-      ],
-      "artifact": {
-        "type": "git",
-        "path": "docs/project/changes/hub-glass-prototype/previews/machines",
-        "sourceCommit": "476b85892fe42c674b51c0db4910ef9a890a3aa2"
-      }
-    },
-    {
-      "id": "runtimes",
-      "title": "Runtime 管理",
-      "kind": "page",
-      "devices": [
-        "pc-web",
-        "ipad",
-        "mobile"
-      ],
-      "artifact": {
-        "type": "git",
-        "path": "docs/project/changes/hub-glass-prototype/previews/runtimes",
-        "sourceCommit": "476b85892fe42c674b51c0db4910ef9a890a3aa2"
+        "type": "hosted",
+        "version": "fa003ed956300de6ff25d85fb398501cf3d33a9c05f7ad8fac27a8d5c8f92630",
+        "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/fa003ed956300de6ff25d85fb398501cf3d33a9c05f7ad8fac27a8d5c8f92630/account-onboarding/index.html",
+        "sourceCommit": "fc9cd7fbb469847438d2991d7a8f083c577ec03f",
+        "digest": "sha256:bfb87b4fd8e68a2aa9af52fa905cdbdf422ead9206537afaafe310f4af9561c9",
+        "thumbnails": [
+          {
+            "device": "pc-web",
+            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/fa003ed956300de6ff25d85fb398501cf3d33a9c05f7ad8fac27a8d5c8f92630/account-onboarding/pc-web.png"
+          },
+          {
+            "device": "ipad",
+            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/fa003ed956300de6ff25d85fb398501cf3d33a9c05f7ad8fac27a8d5c8f92630/account-onboarding/ipad.png"
+          },
+          {
+            "device": "mobile",
+            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/fa003ed956300de6ff25d85fb398501cf3d33a9c05f7ad8fac27a8d5c8f92630/account-onboarding/mobile.png"
+          }
+        ]
       }
     },
     {
@@ -92,14 +63,30 @@
         "mobile"
       ],
       "artifact": {
-        "type": "git",
-        "path": "docs/project/changes/hub-glass-prototype/previews/agents",
-        "sourceCommit": "476b85892fe42c674b51c0db4910ef9a890a3aa2"
+        "type": "hosted",
+        "version": "fa003ed956300de6ff25d85fb398501cf3d33a9c05f7ad8fac27a8d5c8f92630",
+        "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/fa003ed956300de6ff25d85fb398501cf3d33a9c05f7ad8fac27a8d5c8f92630/agents/index.html",
+        "sourceCommit": "fc9cd7fbb469847438d2991d7a8f083c577ec03f",
+        "digest": "sha256:bfb87b4fd8e68a2aa9af52fa905cdbdf422ead9206537afaafe310f4af9561c9",
+        "thumbnails": [
+          {
+            "device": "pc-web",
+            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/fa003ed956300de6ff25d85fb398501cf3d33a9c05f7ad8fac27a8d5c8f92630/agents/pc-web.png"
+          },
+          {
+            "device": "ipad",
+            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/fa003ed956300de6ff25d85fb398501cf3d33a9c05f7ad8fac27a8d5c8f92630/agents/ipad.png"
+          },
+          {
+            "device": "mobile",
+            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/fa003ed956300de6ff25d85fb398501cf3d33a9c05f7ad8fac27a8d5c8f92630/agents/mobile.png"
+          }
+        ]
       }
     },
     {
-      "id": "repositories",
-      "title": "仓库与 checkout",
+      "id": "machines",
+      "title": "机器管理",
       "kind": "page",
       "devices": [
         "pc-web",
@@ -107,24 +94,25 @@
         "mobile"
       ],
       "artifact": {
-        "type": "git",
-        "path": "docs/project/changes/hub-glass-prototype/previews/repositories",
-        "sourceCommit": "476b85892fe42c674b51c0db4910ef9a890a3aa2"
-      }
-    },
-    {
-      "id": "selections",
-      "title": "我的选择与配置解析",
-      "kind": "page",
-      "devices": [
-        "pc-web",
-        "ipad",
-        "mobile"
-      ],
-      "artifact": {
-        "type": "git",
-        "path": "docs/project/changes/hub-glass-prototype/previews/selections",
-        "sourceCommit": "476b85892fe42c674b51c0db4910ef9a890a3aa2"
+        "type": "hosted",
+        "version": "fa003ed956300de6ff25d85fb398501cf3d33a9c05f7ad8fac27a8d5c8f92630",
+        "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/fa003ed956300de6ff25d85fb398501cf3d33a9c05f7ad8fac27a8d5c8f92630/machines/index.html",
+        "sourceCommit": "fc9cd7fbb469847438d2991d7a8f083c577ec03f",
+        "digest": "sha256:bfb87b4fd8e68a2aa9af52fa905cdbdf422ead9206537afaafe310f4af9561c9",
+        "thumbnails": [
+          {
+            "device": "pc-web",
+            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/fa003ed956300de6ff25d85fb398501cf3d33a9c05f7ad8fac27a8d5c8f92630/machines/pc-web.png"
+          },
+          {
+            "device": "ipad",
+            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/fa003ed956300de6ff25d85fb398501cf3d33a9c05f7ad8fac27a8d5c8f92630/machines/ipad.png"
+          },
+          {
+            "device": "mobile",
+            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/fa003ed956300de6ff25d85fb398501cf3d33a9c05f7ad8fac27a8d5c8f92630/machines/mobile.png"
+          }
+        ]
       }
     },
     {
@@ -137,9 +125,149 @@
         "mobile"
       ],
       "artifact": {
-        "type": "git",
-        "path": "docs/project/changes/hub-glass-prototype/previews/members",
-        "sourceCommit": "476b85892fe42c674b51c0db4910ef9a890a3aa2"
+        "type": "hosted",
+        "version": "fa003ed956300de6ff25d85fb398501cf3d33a9c05f7ad8fac27a8d5c8f92630",
+        "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/fa003ed956300de6ff25d85fb398501cf3d33a9c05f7ad8fac27a8d5c8f92630/members/index.html",
+        "sourceCommit": "fc9cd7fbb469847438d2991d7a8f083c577ec03f",
+        "digest": "sha256:bfb87b4fd8e68a2aa9af52fa905cdbdf422ead9206537afaafe310f4af9561c9",
+        "thumbnails": [
+          {
+            "device": "pc-web",
+            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/fa003ed956300de6ff25d85fb398501cf3d33a9c05f7ad8fac27a8d5c8f92630/members/pc-web.png"
+          },
+          {
+            "device": "ipad",
+            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/fa003ed956300de6ff25d85fb398501cf3d33a9c05f7ad8fac27a8d5c8f92630/members/ipad.png"
+          },
+          {
+            "device": "mobile",
+            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/fa003ed956300de6ff25d85fb398501cf3d33a9c05f7ad8fac27a8d5c8f92630/members/mobile.png"
+          }
+        ]
+      }
+    },
+    {
+      "id": "repositories",
+      "title": "仓库与 checkout",
+      "kind": "page",
+      "devices": [
+        "pc-web",
+        "ipad",
+        "mobile"
+      ],
+      "artifact": {
+        "type": "hosted",
+        "version": "fa003ed956300de6ff25d85fb398501cf3d33a9c05f7ad8fac27a8d5c8f92630",
+        "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/fa003ed956300de6ff25d85fb398501cf3d33a9c05f7ad8fac27a8d5c8f92630/repositories/index.html",
+        "sourceCommit": "fc9cd7fbb469847438d2991d7a8f083c577ec03f",
+        "digest": "sha256:bfb87b4fd8e68a2aa9af52fa905cdbdf422ead9206537afaafe310f4af9561c9",
+        "thumbnails": [
+          {
+            "device": "pc-web",
+            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/fa003ed956300de6ff25d85fb398501cf3d33a9c05f7ad8fac27a8d5c8f92630/repositories/pc-web.png"
+          },
+          {
+            "device": "ipad",
+            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/fa003ed956300de6ff25d85fb398501cf3d33a9c05f7ad8fac27a8d5c8f92630/repositories/ipad.png"
+          },
+          {
+            "device": "mobile",
+            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/fa003ed956300de6ff25d85fb398501cf3d33a9c05f7ad8fac27a8d5c8f92630/repositories/mobile.png"
+          }
+        ]
+      }
+    },
+    {
+      "id": "runtimes",
+      "title": "Runtime 管理",
+      "kind": "page",
+      "devices": [
+        "pc-web",
+        "ipad",
+        "mobile"
+      ],
+      "artifact": {
+        "type": "hosted",
+        "version": "fa003ed956300de6ff25d85fb398501cf3d33a9c05f7ad8fac27a8d5c8f92630",
+        "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/fa003ed956300de6ff25d85fb398501cf3d33a9c05f7ad8fac27a8d5c8f92630/runtimes/index.html",
+        "sourceCommit": "fc9cd7fbb469847438d2991d7a8f083c577ec03f",
+        "digest": "sha256:bfb87b4fd8e68a2aa9af52fa905cdbdf422ead9206537afaafe310f4af9561c9",
+        "thumbnails": [
+          {
+            "device": "pc-web",
+            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/fa003ed956300de6ff25d85fb398501cf3d33a9c05f7ad8fac27a8d5c8f92630/runtimes/pc-web.png"
+          },
+          {
+            "device": "ipad",
+            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/fa003ed956300de6ff25d85fb398501cf3d33a9c05f7ad8fac27a8d5c8f92630/runtimes/ipad.png"
+          },
+          {
+            "device": "mobile",
+            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/fa003ed956300de6ff25d85fb398501cf3d33a9c05f7ad8fac27a8d5c8f92630/runtimes/mobile.png"
+          }
+        ]
+      }
+    },
+    {
+      "id": "selections",
+      "title": "我的选择与配置解析",
+      "kind": "page",
+      "devices": [
+        "pc-web",
+        "ipad",
+        "mobile"
+      ],
+      "artifact": {
+        "type": "hosted",
+        "version": "fa003ed956300de6ff25d85fb398501cf3d33a9c05f7ad8fac27a8d5c8f92630",
+        "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/fa003ed956300de6ff25d85fb398501cf3d33a9c05f7ad8fac27a8d5c8f92630/selections/index.html",
+        "sourceCommit": "fc9cd7fbb469847438d2991d7a8f083c577ec03f",
+        "digest": "sha256:bfb87b4fd8e68a2aa9af52fa905cdbdf422ead9206537afaafe310f4af9561c9",
+        "thumbnails": [
+          {
+            "device": "pc-web",
+            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/fa003ed956300de6ff25d85fb398501cf3d33a9c05f7ad8fac27a8d5c8f92630/selections/pc-web.png"
+          },
+          {
+            "device": "ipad",
+            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/fa003ed956300de6ff25d85fb398501cf3d33a9c05f7ad8fac27a8d5c8f92630/selections/ipad.png"
+          },
+          {
+            "device": "mobile",
+            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/fa003ed956300de6ff25d85fb398501cf3d33a9c05f7ad8fac27a8d5c8f92630/selections/mobile.png"
+          }
+        ]
+      }
+    },
+    {
+      "id": "tasks",
+      "title": "任务与轮次详情",
+      "kind": "page",
+      "devices": [
+        "pc-web",
+        "ipad",
+        "mobile"
+      ],
+      "artifact": {
+        "type": "hosted",
+        "version": "fa003ed956300de6ff25d85fb398501cf3d33a9c05f7ad8fac27a8d5c8f92630",
+        "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/fa003ed956300de6ff25d85fb398501cf3d33a9c05f7ad8fac27a8d5c8f92630/tasks/index.html",
+        "sourceCommit": "fc9cd7fbb469847438d2991d7a8f083c577ec03f",
+        "digest": "sha256:bfb87b4fd8e68a2aa9af52fa905cdbdf422ead9206537afaafe310f4af9561c9",
+        "thumbnails": [
+          {
+            "device": "pc-web",
+            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/fa003ed956300de6ff25d85fb398501cf3d33a9c05f7ad8fac27a8d5c8f92630/tasks/pc-web.png"
+          },
+          {
+            "device": "ipad",
+            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/fa003ed956300de6ff25d85fb398501cf3d33a9c05f7ad8fac27a8d5c8f92630/tasks/ipad.png"
+          },
+          {
+            "device": "mobile",
+            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/fa003ed956300de6ff25d85fb398501cf3d33a9c05f7ad8fac27a8d5c8f92630/tasks/mobile.png"
+          }
+        ]
       }
     }
   ],
