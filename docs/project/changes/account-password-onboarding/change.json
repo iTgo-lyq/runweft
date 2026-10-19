@@ -4,7 +4,7 @@
   "title": "账号密码登录与 Agent 主导的首次接入",
   "size": "large",
   "status": "active",
-  "stage": "execution",
+  "stage": "close",
   "branch": "codex/account-password-onboarding",
   "confirmations": {
     "requirement": {
@@ -86,7 +86,13 @@
       "commitTitle": "account-password-onboarding T11: honor global space and require secure account entrances"
     }
   },
-  "closure": {},
+  "closure": {
+    "verification": {
+      "result": "passed",
+      "at": "2026-10-19T05:34:45.610Z",
+      "summary": "独立 Codex 完整评审及自动化验证通过；集成260、core22、工具52；真实模型未运行"
+    }
+  },
   "clarifications": {
     "Q1": {
       "round": 1,
@@ -132,5 +138,9 @@
         "digest": "sha256:8b68e9671a3b9e03252da8ebbd3698bd1a61ab0526e4fa5032764bd5548964cd"
       }
     }
-  ]
+  ],
+  "waitingFor": {
+    "kind": "confirmation",
+    "summary": "账号与 CLI 核心能力已实现，等待用户验收后同步 Specs 并集成 develop"
+  }
 }
