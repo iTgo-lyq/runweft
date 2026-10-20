@@ -67,7 +67,9 @@
     },
     "T15": {
       "title": "原型包改用 UI 库",
-      "status": "todo"
+      "status": "done",
+      "verification": "typecheck；原型 publish-r2 测试 12 项；CI=true verify --screenshots 24 个入口流程与场景通过、48 张截图；与已验收版本逐像素对照 48 对无可见差异（21 对完全相同，其余通道差 ≤1）；R2 版本 b9a3c437 发布、登记并在浏览器校验，公开字节与本地一致；test:ui 18 项与全部 web- 测试通过",
+      "commitTitle": "hub-glass-prototype T15: record prototype task state"
     },
     "T16": {
       "title": "收尾",
