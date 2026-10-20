@@ -4,13 +4,15 @@
   "title": "冻结前端发布输入并准备新版发行",
   "size": "small",
   "status": "active",
-  "stage": "requirement",
+  "stage": "execution",
   "branch": "codex/ui-release-inputs",
   "confirmations": {},
   "tasks": {
     "T1": {
       "title": "补齐 UI 发布输入校验并准备 1.2.1 候选",
-      "status": "todo"
+      "status": "done",
+      "verification": "工具61项、core33项、定向集成1项及类型构建文档流程通过，独立评审P2修复后复验无遗留",
+      "commitTitle": "ui-release-inputs T1: freeze UI build inputs for 1.2.1"
     }
   },
   "closure": {},
