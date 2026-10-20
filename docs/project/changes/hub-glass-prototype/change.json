@@ -79,7 +79,9 @@
     },
     "T17": {
       "title": "修复独立评审问题并完成 CI 验证",
-      "status": "doing"
+      "status": "done",
+      "verification": "上下文隔离独立评审及补充透明度评审通过；最终 CI 39415204567 全绿：33 core、60 tools、18 UI、272 integration、31 HAPI manager、12 原型工具与24入口流程，四平台安装通过；类型、构建、文档、工作流与 diff 检查通过。",
+      "commitTitle": "hub-glass-prototype T17: record independent review and final CI completion"
     }
   },
   "closure": {},
