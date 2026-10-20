@@ -307,16 +307,20 @@
     "Q6": {
       "round": 3,
       "question": "UI 库与 Hub 前端采用什么技术基础：React 加自有组件（交互基于原生 dialog/popover，样式用 CSS 变量）、原生 TypeScript 组件库，还是 React 加 Radix/shadcn 与 Tailwind？",
-      "recommendation": "React 加自有组件：声明式更新便于刷新时保留已读内容与输入，现有严格 CSP 已实验通过；代价是约 58KB gzip 运行时和 React 升级维护"
+      "recommendation": "React 加自有组件：声明式更新便于刷新时保留已读内容与输入，现有严格 CSP 已实验通过；代价是约 58KB gzip 运行时和 React 升级维护",
+      "answer": "React 加 Radix/shadcn 与 Tailwind",
+      "source": "用户：Q6 我希望是C，CSP是什么，它有保留的必要吗？ 会不会过度设计了。"
     },
     "Q7": {
       "round": 3,
       "question": "原型包是直接运行 Hub 前端页面并接内存接口与演示控制，还是独立实现页面、只共用 UI 库？",
-      "recommendation": "直接运行产品页面：界面只有一份实现，原型与产品不走样；纯探索性草图仍可在原型包单独写页面"
+      "recommendation": "直接运行产品页面：界面只有一份实现，原型与产品不走样；纯探索性草图仍可在原型包单独写页面",
+      "answer": "原型独立实现页面，只共用 UI 库",
+      "source": "用户：Q7 如果合并的话，协作分支的原型改动是不是会影响正式前端，我觉得还是保持独立比较好"
     }
   },
   "waitingFor": {
     "kind": "confirmation",
-    "summary": "等待回答技术 Q6、Q7，并确认补充后的需求与技术方案"
+    "summary": "等待确认补充后的需求与技术方案，含放开内联样式与去掉邀请下载"
   }
 }
