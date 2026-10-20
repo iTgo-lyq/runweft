@@ -73,7 +73,9 @@
     },
     "T16": {
       "title": "收尾",
-      "status": "todo"
+      "status": "done",
+      "verification": "typecheck；bun run test 31 项；test:tools 60 项；test:ui 18 项；build；check-docs/check-workflow/diff-check；原型 build 与 test 通过；全部 web- 与 hub-console 18 项通过；web-members 修复后连续 8 次通过；全量集成 262 通过，6 项因本环境 ps 不可用失败",
+      "commitTitle": "hub-glass-prototype T16: tell a lost space from an expired login"
     }
   },
   "closure": {},

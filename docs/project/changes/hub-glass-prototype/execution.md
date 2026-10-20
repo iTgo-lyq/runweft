@@ -281,3 +281,27 @@ T1 仅交付独立原型，未修改 src/hub、HAPI、产品配置或模型凭�
 - `bun run typecheck` 通过；原型 `node --test publish-r2.test.mjs` 12 项通过。
 - `CI=true node verify.mjs --screenshots`：24 个入口流程与场景流程通过，48 张截图，无外部请求、存储或浏览器错误。场景流程单独连续 3 次通过。
 - UI 库改动后：`bun run test:ui` 18 项通过；`bun run build` 后全部 `web-` 浏览器测试与 `hub-console` 共 18 项通过。
+
+## T16 收尾
+
+**范围**：
+- 旧前端模块、旧样式与依赖旧 DOM 的页面测试已在 T10–T15 中删除或改写。本任务核对仓库中不再引用 `src/hub/app.ts`、`console.ts`、各页面脚本、`style.css` 与 `web-console`；历史归档文档保留原样。
+- `scripts/ci-scope.mjs`：
+  - `packages/ui/**` 选择新的 `ui` 检查（`bun run test:ui`）、原型验收、类型检查与全部 Hub 浏览器测试；
+  - `src/hub/web/**`、`src/hub/page.*`、`src/hub/csp.ts`、`src/hub/native-page.ts` 选择类型检查、`web-` 与 `hub-console`；`csp.ts` 另选 `ui`；
+  - 未知或共享路径同时选择 `ui`；去掉已不存在的 `web-console`。
+- `checks.yml`：选中 `ui` 时安装 Chromium 并运行 `bun run test:ui`。
+- `docs/testing.md`：按新页面测试与 UI 库检查改写，删除迁移期说明。
+
+**CI 发现的问题**：T14 推送后的 CI 中 `web-members` 失败（本地 4 次中失败 1 次）。访客退出空间后，任务页先在原空间上下文下挂载，向原空间换取短 JWT。Hub 对非成员与登录失效都返回 401 `user_session_invalid`，页面把它当作登录失效而退出到登录页；只有上下文切换赶在响应之前时才不会发生。修复两处：
+- 空间相关请求（含原生会话打开）收到 401 时先用账号凭据读取 `/identity`：账号仍有效时报告“无法访问这个空间”，账号也失效时才按登录失效处理。
+- 退出空间先切换到下一个空间，再导航到任务页。
+
+新增单元测试覆盖这两种 401。修复后 `web-members` 连续 8 次通过。
+
+**验证**：
+- `bun run typecheck` 通过；`bun run test` 31 项通过；`bun run test:tools` 60 项通过（`ci-scope` 测试新增 Hub 页面、UI 库与 CSP 的选择断言）；`bun run test:ui` 18 项通过；`bun run build` 通过。
+- `check-docs`、`check-workflow`、`git diff --check` 通过。
+- 原型 `bun run build` 与 `CI=true bun run test`：发布工具 12 项通过，24 个入口流程与场景流程通过。
+- 全部 `web-` 浏览器测试与 `hub-console` 共 18 项通过。
+- 修复前的全量集成：262 项通过，6 项失败，均为本环境 `ps` 不可用导致的 `cli-uninstall` 与 `workspace-preparation`，与 T10 记录相同。

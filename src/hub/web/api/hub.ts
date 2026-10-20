@@ -93,9 +93,21 @@ export function spaceApi(scope: Scope, isCurrent: () => boolean) {
         tokens.set(key, { token: auth.token, expiresAt: Date.now() + 14 * 60_000 });
         return auth.token;
     }
+    /**
+     * The Hub answers 401 both when the account session ended and when the account is no longer a member of the space.
+     * Only the account route tells them apart, so a space-scoped 401 signs out only if that route also refuses.
+     */
+    async function explain(error: unknown, key: string): Promise<never> {
+        if (!(error instanceof HubApiError) || error.kind !== 'expired') throw error;
+        tokens.delete(key);
+        await hubFetch('/identity', { token: scope.token });
+        throw new HubApiError('error', '无法访问这个空间', '你可能已不是这个空间的成员。刷新后选择有权访问的空间。', 403, 'hub_space_access_lost');
+    }
     async function request<T = any>(path: string, body?: unknown, method?: string, global = false): Promise<T> {
         if (!isCurrent()) throw stale();
-        const result = await hubFetch<T>(path, { body, method, token: await jwt(global), base: '/api/runweft' });
+        let result: T;
+        try { result = await hubFetch<T>(path, { body, method, token: await jwt(global), base: '/api/runweft' }); }
+        catch (error) { return explain(error, global ? 'global' : scope.spaceId); }
         if (!isCurrent()) throw stale();
         return result;
     }
@@ -148,8 +160,9 @@ export function spaceApi(scope: Scope, isCurrent: () => boolean) {
             tab.sessionStorage.removeItem(storageKey); tab.sessionStorage.removeItem('runweft.native.access'); tab.opener = null;
             tab.document.title = '正在打开受限会话';
             tab.document.body.textContent = '正在核对当前空间的会话访问权限…';
-            const auth = await hubFetch<{ token: string }>('/auth', { body: { accessToken: scope.token, spaceId: scope.spaceId }, base: '/api' });
-            await hubFetch(`/sessions/${sessionId}`, { token: auth.token, base: '/api' });
+            const auth = await hubFetch<{ token: string }>('/auth', { body: { accessToken: scope.token, spaceId: scope.spaceId }, base: '/api' })
+                .catch(error => explain(error, scope.spaceId));
+            await hubFetch(`/sessions/${sessionId}`, { token: auth.token, base: '/api' }).catch(error => explain(error, scope.spaceId));
             if (!isCurrent()) throw new HubApiError('error', '身份或空间已变化，请重新打开。');
             tab.sessionStorage.setItem('runweft.native.access', auth.token);
             tab.location.replace(`/sessions/${sessionId}${files ? '/files' : ''}`);

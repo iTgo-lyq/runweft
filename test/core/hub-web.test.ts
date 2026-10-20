@@ -86,6 +86,20 @@ describe('Hub page space context', () => {
         expect(resources.map(call => call.authorization)).toEqual(['Bearer jwt-1-s1', 'Bearer jwt-1-s1', 'Bearer jwt-2-global']);
     });
 
+    test('a space-scoped 401 signs out only when the account itself is no longer signed in', async () => {
+        browser();
+        let account = 200;
+        answer = call => {
+            if (call.url === '/api/auth') return json(401, { error: { code: 'user_session_invalid', message: '登录已失效' } });
+            if (call.url === '/api/runweft/hub/identity') return account === 200 ? json(200, { identity: { id: 'u1' } }) : json(401, { error: { code: 'user_session_invalid', message: '登录已失效' } });
+            return json(200, {});
+        };
+        const api = spaceApi({ token: 'rw_web_account', userId: 'u1', spaceId: 'left-space' }, () => true);
+        expect(await api.request('/tasks/overview').catch(error => error)).toMatchObject({ kind: 'error', code: 'hub_space_access_lost' });
+        account = 401;
+        expect((await api.request('/tasks/overview').catch(error => error)).kind).toBe('expired');
+    });
+
     test('answers that arrive after the identity or space changed are dropped', async () => {
         browser();
         let current = true;

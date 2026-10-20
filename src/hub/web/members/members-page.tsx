@@ -106,9 +106,10 @@ export function MembersPage() {
                                 const left = await ws.run(() => ws.identityApi.removeMember(ws.space.id, ws.identity.id), { success: `已退出“${ws.space.name}”` });
                                 if (!left) return;
                                 // A link may still name the space just left; drop it so the next space opens instead of an error.
+                                // Switch first, so no page asks for the space just left.
                                 patchHash({ space: null, task: null, round: null });
-                                ws.navigate('tasks', { focus: false });
                                 await ws.reloadIdentity({ spaceId: ws.spaces.find(space => space.id !== ws.space.id)?.id });
+                                ws.navigate('tasks', { focus: false });
                             }}>退出空间</Button></div>
                         </Block>
                         <InviteDialog open={inviting} onOpenChange={setInviting} roles={permissions.inviteRoles as Role[]} onCreated={roster.reload} />
