@@ -126,3 +126,32 @@ T1 仅交付独立原型，未修改 src/hub、HAPI、产品配置或模型凭�
 - `CI=true bun run test:ui`：组件目录在 Hub CSP（样式允许内联）下 18 项检查通过，覆盖可见焦点、分段与筛选方向键、标签页、开关、菜单键盘与焦点归还、菜单单选、弹出层、对话框首字段焦点与归还、确认框默认焦点、轻提示播报、列表方向键与检查器、就地编辑、`/` 聚焦查找、深色、减少动态效果、减少透明度、手机工作台壳与抽屉、手机无横向溢出，浏览器无错误与 CSP 违规。
 - `--screenshots` 的桌面与手机、浅色与深色截图已人工查看，与原型视觉一致。
 - 原型包 `bun run build` 不受影响；`check-docs`、`check-workflow`、`git diff --check` 通过。
+- CI（push 594a909）：`checks`、`prototype` 与 Linux、macOS x64 安装通过；macOS arm64 安装的卸载步骤报 `uninstall_process_unknown`。只重跑该 job 后，同一错误出现在 npm 布局的另一步。`develop` 的 39253526163 运行在同一 job 出现相同错误码，判定为既有问题：`src/uninstall/processes.ts` 分三次调用 `ps`，进程在两次调用之间退出时 `lstart` 为空，被当作无法核对。它不属于本 Change 范围，不在此修复，另行报告。
+
+## T10 Hub 前端骨架、账号与连接
+
+**范围**：`src/hub/web` 新建浏览器端：`api/http.ts`（HTTPS 要求、15 秒超时、写操作失联归为“结果未确认”、`user_session_invalid` 归为登录失效）、`api/hub.ts`（账号与身份路由、空间短 JWT 按空间缓存、创建回执、原生会话打开）、`route.ts`（保留 `connect`、`space`、`task`、`round`、`native-expired`，新增 `view`）、`app.tsx`（会话、连接请求、空间上下文与页面切换）、账号与连接页、工作台壳（空间菜单、创建空间、接受邀请、账号菜单、接入新环境说明）、账号设置。其余入口在各自任务完成前显示迁移占位。`page.ts` 改为提供打包后的 `/hub/app.js`、`/hub/app.css` 与原有 `/hub/native.js`，CSP 使用 `HUB_CSP`；旧的 `app.ts`、`console.ts`、各页面脚本与 `style.css` 删除。
+
+**构建**：`src/hub/web/assets.ts` 是 Bun 宏，打包时用独立进程运行 `build-assets.ts` 调 `packages/ui/build.ts`，把 JS 与 CSS 内联进 CLI；`bun run dev`、`scripts/build.ts` 与集成测试的 `bun build --compile` 走同一路径，二进制内不含构建脚本。产物 JS 390 KB（gzip 126 KB），CSS 55 KB（gzip 12 KB）。
+
+**实现取舍**：
+- 页面数据都绑定在 `用户:凭据:空间` 上下文键上：切换账号或空间时重挂页面，空间请求在发出前和返回后都核对上下文，旧上下文的响应不会落到新页面。身份与空间 API 实例按凭据与空间缓存，短 JWT 缓存随之保留。
+- 外部 hash 变化（CLI 链接在同一标签打开）重新读取会话与连接请求，不先清空当前画面；应用内导航用 `replaceState`，不触发重读。跳到主内容的链接改为直接移焦点，不改 hash。
+- 登录后若链接指向本账号无权访问的空间，显示“此链接的空间不可访问”并提供返回 Hub，不再表现为登录错误。登录失效后回到原入口：页面内失效记住当前入口，启动时失效沿用 hash 中的入口。
+- 账号设置按验收原型不为当前浏览器提供“断开”，当前浏览器通过账号菜单“退出此浏览器”离开。
+- 账号没有任何空间时，提供创建空间、接受邀请和退出此浏览器。
+
+**测试替换**：
+- `web-identity`、`web-connect` 改用角色与标签定位并保留原有服务端断言；`web-connect` 新增多空间选择默认空间与“不连接，前往工作台”。新增 `web-workspace`：显示名称、创建与切换空间、接受邀请（含无效邀请）、空间链接与无权空间、接入说明对话框焦点归还、手机导航。`test/integration/hub-web.ts` 统一记录页面错误与 CSP 违规，并检查三档尺寸无横向溢出。
+- `web-invitations` 保留 CLI 邀请文件、文件权限、默认空间不变与网页接受；网页生成邀请改由所有者 CLI 生成，网页生成并复制邀请在 T14 补回，下载备份按技术方案移除。
+- `web-task-links` 保留 CLI 链接、转发入口、登录后恢复空间与入口、其他成员看不到私有报告；报告、轮次与原生详情交接在 T11 补回。
+- `web-console`、`console.ts`、`console-tasks.ts` 依赖已删除的页面，删除；任务与配置页面的浏览器测试在 T11–T13 重建。`console-history.ts` 仅被原生验收引用，T11 随任务页改写。
+- `hub-console` 资源测试改查 `/hub/app.css`、`/hub/native.js` 与完整 CSP，并确认旧资源路径返回 404。
+- 新增 `test/core/hub-web.test.ts`：hash 读取与就地修改、明文远程地址不发送密码、错误归类、空间短 JWT 缓存与账号凭据不进入资源请求、上下文变化后丢弃响应、创建回执保留与表单变化不重复创建。
+
+**验证**：
+- `bun run typecheck` 通过；`bun run test` 29 项通过；`bun run test:tools` 60 项通过；`bun run test:ui` 18 项通过。
+- `bun run build` 后 `bun run test:integration --bin dist/runweft --` 运行 `web-identity`、`web-connect`、`web-workspace`、`web-invitations`、`web-task-links`、`hub-console`、`cli-connect` 共 21 项通过。
+- 全量 `bun run test:integration --bin dist/runweft --`：258 项通过，6 项失败。5 项 `cli-uninstall` 报 `uninstall_process_unknown`，`workspace-preparation` 的 Runner 停止超时；本环境的 `ps` 本身报 `fatal library error, lookup self`，卸载核对与 HAPI Runner 控制都依赖它确认进程。单独重跑 `workspace-preparation` 仍失败，同一组测试在 T9 的 Linux CI 全量运行中通过，以本次推送的 CI 为准。
+- 连接、已授权、工作台、账号设置、空间菜单与手机导航在桌面与手机、浅色与深色下截图，人工查看与原型一致。
+- `check-docs`、`check-workflow`、`git diff --check` 通过。

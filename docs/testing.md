@@ -111,11 +111,12 @@ node test/acceptance/install.mjs --candidate dist/packages --case all --report /
 
 ## 浏览器与原型
 
-Hub 页面变化选择 `web-identity`、`web-connect`、`web-console` 集成：真实账号/连接授权、配置选择、任务到原生详情，保留跨 owner 隔离、撤权失效和秘密扫描。普通任务历史是当前格式样本；真实模型历史在原生 case 内验证，不能用普通浏览器样本代替。
+Hub 页面变化选择 `web-` 集成：真实账号/连接授权、工作台壳与空间链接、任务链接与邀请，保留跨 owner 隔离、撤权失效和凭据不进入页面；每个页面同时记录浏览器错误与 CSP 违规。界面重构期间，配置与任务页面的浏览器测试随各入口迁移补回。普通任务历史是当前格式样本；真实模型历史在原生 case 内验证，不能用普通浏览器样本代替。UI 库改动另跑 `bun run test:ui`，在 Hub CSP 下检查组件目录。
 
 ```sh
 bunx playwright install chromium
-bun run test:integration --bin dist/runweft -- ./test/integration/web-console.test.ts
+bun run test:integration --bin dist/runweft -- ./test/integration/web-identity.test.ts ./test/integration/web-connect.test.ts ./test/integration/web-workspace.test.ts
+bun run test:ui
 node website/build.mjs
 node website/verify.mjs --browser-only --report /tmp/runweft-website.json
 (cd packages/prototype && bun run build && bun run test)

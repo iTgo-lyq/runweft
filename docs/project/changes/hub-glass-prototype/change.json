@@ -37,7 +37,9 @@
     },
     "T10": {
       "title": "Hub 前端骨架、账号与连接",
-      "status": "todo"
+      "status": "done",
+      "verification": "typecheck；bun run test 29 项；test:tools 60 项；test:ui 18 项；web-identity/web-connect/web-workspace/web-invitations/web-task-links/hub-console/cli-connect 21 项通过；全量集成 258 通过，6 项因本环境 ps 不可用失败（见执行记录）；三档尺寸与深浅色截图人工核对",
+      "commitTitle": "hub-glass-prototype T10: move the Hub account, connect and workspace shell to React"
     },
     "T11": {
       "title": "任务",

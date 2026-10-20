@@ -8,8 +8,9 @@ import { Button } from './button';
 const SCRIM = 'runweft:scrim';
 const onScrim = (listener: () => void) => { window.addEventListener(SCRIM, listener); return () => window.removeEventListener(SCRIM, listener); };
 
+/** Moves focus to the page without touching the hash, which the app may use for routing. */
 export function SkipLink() {
-  return <a className="skip" href="#page">跳到主内容</a>;
+  return <a className="skip" href="#page" onClick={event => { event.preventDefault(); document.getElementById('page')?.focus(); }}>跳到主内容</a>;
 }
 
 /** Sidebar on the window canvas, content as one surface with a floating glass toolbar. */
