@@ -4,15 +4,9 @@
   "title": "Hub 前端交互与样式重构",
   "size": "large",
   "status": "active",
-  "stage": "technical",
+  "stage": "requirement",
   "branch": "codex/hub-glass-prototype",
-  "confirmations": {
-    "requirement": {
-      "at": "2026-10-19T18:17:38.224Z",
-      "summary": "先交付8入口浅深双主题Hub原型，验收后再定重构方案",
-      "source": "用户：继续吧，接下来完全靠你自己推进了，不要再问我问题了，直到原型交付。（此前已答：深浅一起做；8个入口全做）"
-    }
-  },
+  "confirmations": {},
   "tasks": {
     "T1": {
       "title": "完成蓝色轻玻璃八入口原型与交互验证",
@@ -272,9 +266,9 @@
     }
   ],
   "rework": {
-    "at": "2026-10-19T18:11:19.609Z",
-    "reason": "用户回滚预定的产品实施计划，要求先完成原型设计并经其验收，再梳理前端重构技术方案",
-    "approach": "以当前 develop 的 Hub 为基线重写需求与原型覆盖，删除技术与计划草案；保留 T1 与固定引用，产品任务待原型验收后重新规划"
+    "at": "2026-10-20T04:13:00.193Z",
+    "reason": "原型已验收；用户要求产品阶段同时调整长期前端架构并维护自有 UI 库，功能尽量一致即可、可按需改后端、旧测试不必沿用",
+    "approach": "补充产品重构阶段的范围与验收，并与技术方案一起请用户确认"
   },
   "clarifications": {
     "Q1": {
@@ -294,7 +288,8 @@
     "Q3": {
       "round": 1,
       "question": "产品前端沿用原生栈只借鉴 shadcnuikit 设计，还是迁移到 React + Tailwind + shadcn？",
-      "recommendation": "沿用原生栈：保持 CSP、单二进制与零外部依赖；迁移代价需在技术方案中单独评估"
+      "recommendation": "沿用原生栈：保持 CSP、单二进制与零外部依赖；迁移代价需在技术方案中单独评估",
+      "withdrawn": "用户已决定维护自有 UI 库，选型改为在自有库的实现基础之间选择，见 Q6"
     },
     "Q4": {
       "round": 2,
@@ -308,10 +303,20 @@
       "question": "原 identity 入口是否并入工作台壳？",
       "recommendation": "并入：账号模式下身份只剩显示名称和空间管理",
       "withdrawn": "核对产品后确认身份与空间位于工作台侧栏，不是独立页面；按事实并入工作台壳，无需取舍"
+    },
+    "Q6": {
+      "round": 3,
+      "question": "UI 库与 Hub 前端采用什么技术基础：React 加自有组件（交互基于原生 dialog/popover，样式用 CSS 变量）、原生 TypeScript 组件库，还是 React 加 Radix/shadcn 与 Tailwind？",
+      "recommendation": "React 加自有组件：声明式更新便于刷新时保留已读内容与输入，现有严格 CSP 已实验通过；代价是约 58KB gzip 运行时和 React 升级维护"
+    },
+    "Q7": {
+      "round": 3,
+      "question": "原型包是直接运行 Hub 前端页面并接内存接口与演示控制，还是独立实现页面、只共用 UI 库？",
+      "recommendation": "直接运行产品页面：界面只有一份实现，原型与产品不走样；纯探索性草图仍可在原型包单独写页面"
     }
   },
   "waitingFor": {
     "kind": "confirmation",
-    "summary": "等待用户验收 Hub 原型，通过后再编写产品重构技术方案"
+    "summary": "等待回答技术 Q6、Q7，并确认补充后的需求与技术方案"
   }
 }
