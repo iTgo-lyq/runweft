@@ -247,6 +247,8 @@ active Change 可用 `follow-up --target none` 移除关联，同时清除自身
 
 规模随证据按上述标准校准；变化时在会话中说明具体契约变化或实现范围，更新 `size`、补齐文档并对齐阶段。small 升级为 medium 时，可一次补齐需求、技术与计划确认后继续受影响实施。规模降低不撤销仍有效的确认，已完成任务保留。
 
+需求变化并在 small / medium / large 之间调整规模时，使用 `rework --stage requirement --size <规模> --reason ... --approach ...`，保留任务和原型引用，清除旧需求及下游确认；不涉及需求返工的规模调整，以及 xlarge 父子拆分，不通过该参数隐式推进。
+
 执行中才发现需要拆为子 Change 时，收窄当前范围作为其中一个子 Change，另建父 Change 规划其余部分，按新范围重新核对确认与验证。
 
 ## 阶段推进

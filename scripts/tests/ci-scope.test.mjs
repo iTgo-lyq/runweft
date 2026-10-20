@@ -21,6 +21,15 @@ test('scope separates docs and subprojects, selects changed tests, and fails clo
     assert.equal(selectChecks(['test/integration/workspace-preparation.test.ts']).clients, true);
     assert.equal(selectChecks(['scripts/tests/npm-publish.test.mjs']).tools, true);
     assert(selectChecks(['src/hub/native-page.ts']).integration.every(file => /web-|hub-console/.test(file)));
+    for (const file of ['src/hub/web/app.tsx', 'src/hub/page.ts', 'packages/ui/src/components/button.tsx']) {
+        const scope = selectChecks([file]);
+        assert(scope.typecheck && scope.checks && scope.integration.length > 0); assert(scope.integration.every(test => /web-|hub-console/.test(test)), file);
+        assert.equal(scope.install, false); assert.deepEqual(scope.native, []);
+    }
+    const library = selectChecks(['packages/ui/src/styles/components.css']);
+    for (const file of ['src/hub/web/api/hub.ts', 'src/hub/web/api/http.ts', 'src/hub/web/route.ts']) assert.equal(selectChecks([file]).core, true, file);
+    assert(library.ui && library.prototype); assert.equal(selectChecks(['src/hub/web/app.tsx']).ui, false);
+    assert.equal(selectChecks(['src/hub/csp.ts']).ui, true);
     assert.deepEqual(selectChecks(['src/hub/native-page.ts']).native, ['N1', 'N5']);
     const recovery = selectChecks(['test/acceptance/recovery.ts']);
     assert.deepEqual(recovery.integration, ['test/integration/acceptance-fixtures.test.ts']);
@@ -29,7 +38,7 @@ test('scope separates docs and subprojects, selects changed tests, and fails clo
     const install = selectChecks(['test/acceptance/install.mjs']);
     assert(install.install); assert.deepEqual(install.native, []); assert(!install.prototype && !install.website);
     for (const file of ['hapi', 'bun.lock', 'src/unknown.ts', '.github/workflows/checks.yml', 'scripts/ci-scope.mjs']) {
-        const scope = selectChecks([file]); assert.equal(scope.install, true); assert.equal(scope.prototype, true);
+        const scope = selectChecks([file]); assert.equal(scope.install, true); assert.equal(scope.prototype, true); assert.equal(scope.ui, true);
         assert(scope.integration.length > 20); assert(scope.native.includes('R-codex'));
     }
 });

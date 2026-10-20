@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 1,
+  "id": "ui-release-inputs",
+  "title": "冻结前端发布输入并准备新版发行",
+  "size": "small",
+  "status": "completed",
+  "stage": "close",
+  "branch": "codex/ui-release-inputs",
+  "confirmations": {},
+  "tasks": {
+    "T1": {
+      "title": "补齐 UI 发布输入校验并准备 1.2.1 候选",
+      "status": "done",
+      "verification": "工具61项、core33项、定向集成1项及类型构建文档流程通过，独立评审P2修复后复验无遗留",
+      "commitTitle": "ui-release-inputs T1: freeze UI build inputs for 1.2.1"
+    }
+  },
+  "closure": {
+    "verification": {
+      "result": "passed",
+      "at": "2026-10-20T12:57:45.419Z",
+      "summary": "自动验证通过，独立Agent评审发现并修复忽略规则遗漏后复验通过"
+    },
+    "acceptance": {
+      "result": "accepted",
+      "at": "2026-10-20T12:57:46.781Z",
+      "summary": "Agent自验收：前端输入变化拒绝旧候选且无关说明可复用",
+      "source": "small Change 的回归测试、构建与独立评审证据见 execution.md"
+    },
+    "specs": {
+      "result": "synced",
+      "at": "2026-10-20T12:57:48.194Z",
+      "summary": "发行规格已同步共享UI和扫描配置的冻结边界"
+    },
+    "archive": {
+      "result": "done",
+      "at": "2026-10-20T12:57:49.508Z",
+      "summary": "发布输入修补验证完成并归档",
+      "path": "docs/project/archive/2026-10-20-ui-release-inputs"
+    }
+  },
+  "followUpOf": "hub-glass-prototype",
+  "followUpTitle": "Runweft 前端重构与发布"
+}

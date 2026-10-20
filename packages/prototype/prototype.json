@@ -2,9 +2,10 @@
   "schemaVersion": 1,
   "entries": [
     {
-      "id": "identity",
-      "title": "身份与空间",
-      "sourcePath": "packages/prototype/src/app.js",
+      "id": "account-onboarding",
+      "title": "账号与首次连接",
+      "description": "注册登录、CLI 连接核对与授权结果、过期请求和密码重置",
+      "sourcePath": "packages/prototype/src/pages/account.tsx",
       "kind": "page",
       "devices": [
         "pc-web",
@@ -13,22 +14,22 @@
       ],
       "artifact": {
         "type": "hosted",
-        "version": "2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06",
-        "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06/identity/index.html",
-        "sourceCommit": "58882d25872fe1779982b4b629cba1cd8120f835",
-        "digest": "sha256:167353c25a15f8d77d4bff846bc1e95746959596b7c561524177d5c1953b6332",
+        "version": "b9a3c437c8fa064e83c6b16405286646320ee82ded22dfe5c76fd05067bfb7de",
+        "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/b9a3c437c8fa064e83c6b16405286646320ee82ded22dfe5c76fd05067bfb7de/account-onboarding/index.html",
+        "sourceCommit": "7d39c4b9b9a932f12f6a5031c4f78a1c78346ddc",
+        "digest": "sha256:99c7d9ce21adad1d4f56c2b15022248dc1e11274df2622a875f51faf1bd1de6c",
         "thumbnails": [
           {
             "device": "pc-web",
-            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06/identity/pc-web.png"
+            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/b9a3c437c8fa064e83c6b16405286646320ee82ded22dfe5c76fd05067bfb7de/account-onboarding/pc-web.png"
           },
           {
             "device": "ipad",
-            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06/identity/ipad.png"
+            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/b9a3c437c8fa064e83c6b16405286646320ee82ded22dfe5c76fd05067bfb7de/account-onboarding/ipad.png"
           },
           {
             "device": "mobile",
-            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06/identity/mobile.png"
+            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/b9a3c437c8fa064e83c6b16405286646320ee82ded22dfe5c76fd05067bfb7de/account-onboarding/mobile.png"
           }
         ]
       }
@@ -36,7 +37,7 @@
     {
       "id": "tasks",
       "title": "任务与轮次详情",
-      "sourcePath": "packages/prototype/src/ui/tasks-page.js",
+      "sourcePath": "packages/prototype/src/pages/tasks.tsx",
       "kind": "page",
       "devices": [
         "pc-web",
@@ -45,30 +46,31 @@
       ],
       "artifact": {
         "type": "hosted",
-        "version": "2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06",
-        "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06/tasks/index.html",
-        "sourceCommit": "58882d25872fe1779982b4b629cba1cd8120f835",
-        "digest": "sha256:167353c25a15f8d77d4bff846bc1e95746959596b7c561524177d5c1953b6332",
+        "version": "b9a3c437c8fa064e83c6b16405286646320ee82ded22dfe5c76fd05067bfb7de",
+        "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/b9a3c437c8fa064e83c6b16405286646320ee82ded22dfe5c76fd05067bfb7de/tasks/index.html",
+        "sourceCommit": "7d39c4b9b9a932f12f6a5031c4f78a1c78346ddc",
+        "digest": "sha256:99c7d9ce21adad1d4f56c2b15022248dc1e11274df2622a875f51faf1bd1de6c",
         "thumbnails": [
           {
             "device": "pc-web",
-            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06/tasks/pc-web.png"
+            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/b9a3c437c8fa064e83c6b16405286646320ee82ded22dfe5c76fd05067bfb7de/tasks/pc-web.png"
           },
           {
             "device": "ipad",
-            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06/tasks/ipad.png"
+            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/b9a3c437c8fa064e83c6b16405286646320ee82ded22dfe5c76fd05067bfb7de/tasks/ipad.png"
           },
           {
             "device": "mobile",
-            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06/tasks/mobile.png"
+            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/b9a3c437c8fa064e83c6b16405286646320ee82ded22dfe5c76fd05067bfb7de/tasks/mobile.png"
           }
         ]
-      }
+      },
+      "description": "任务列表与检查器：轮次、报告阅读、交付与继续处理"
     },
     {
       "id": "machines",
       "title": "机器管理",
-      "sourcePath": "packages/prototype/src/ui/resources-page.js",
+      "sourcePath": "packages/prototype/src/pages/resources.tsx",
       "kind": "page",
       "devices": [
         "pc-web",
@@ -77,30 +79,31 @@
       ],
       "artifact": {
         "type": "hosted",
-        "version": "2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06",
-        "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06/machines/index.html",
-        "sourceCommit": "58882d25872fe1779982b4b629cba1cd8120f835",
-        "digest": "sha256:167353c25a15f8d77d4bff846bc1e95746959596b7c561524177d5c1953b6332",
+        "version": "b9a3c437c8fa064e83c6b16405286646320ee82ded22dfe5c76fd05067bfb7de",
+        "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/b9a3c437c8fa064e83c6b16405286646320ee82ded22dfe5c76fd05067bfb7de/machines/index.html",
+        "sourceCommit": "7d39c4b9b9a932f12f6a5031c4f78a1c78346ddc",
+        "digest": "sha256:99c7d9ce21adad1d4f56c2b15022248dc1e11274df2622a875f51faf1bd1de6c",
         "thumbnails": [
           {
             "device": "pc-web",
-            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06/machines/pc-web.png"
+            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/b9a3c437c8fa064e83c6b16405286646320ee82ded22dfe5c76fd05067bfb7de/machines/pc-web.png"
           },
           {
             "device": "ipad",
-            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06/machines/ipad.png"
+            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/b9a3c437c8fa064e83c6b16405286646320ee82ded22dfe5c76fd05067bfb7de/machines/ipad.png"
           },
           {
             "device": "mobile",
-            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06/machines/mobile.png"
+            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/b9a3c437c8fa064e83c6b16405286646320ee82ded22dfe5c76fd05067bfb7de/machines/mobile.png"
           }
         ]
-      }
+      },
+      "description": "机器列表、空间关联、凭据与治理"
     },
     {
       "id": "runtimes",
       "title": "Runtime 管理",
-      "sourcePath": "packages/prototype/src/ui/resources-page.js",
+      "sourcePath": "packages/prototype/src/pages/resources.tsx",
       "kind": "page",
       "devices": [
         "pc-web",
@@ -109,30 +112,31 @@
       ],
       "artifact": {
         "type": "hosted",
-        "version": "2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06",
-        "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06/runtimes/index.html",
-        "sourceCommit": "58882d25872fe1779982b4b629cba1cd8120f835",
-        "digest": "sha256:167353c25a15f8d77d4bff846bc1e95746959596b7c561524177d5c1953b6332",
+        "version": "b9a3c437c8fa064e83c6b16405286646320ee82ded22dfe5c76fd05067bfb7de",
+        "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/b9a3c437c8fa064e83c6b16405286646320ee82ded22dfe5c76fd05067bfb7de/runtimes/index.html",
+        "sourceCommit": "7d39c4b9b9a932f12f6a5031c4f78a1c78346ddc",
+        "digest": "sha256:99c7d9ce21adad1d4f56c2b15022248dc1e11274df2622a875f51faf1bd1de6c",
         "thumbnails": [
           {
             "device": "pc-web",
-            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06/runtimes/pc-web.png"
+            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/b9a3c437c8fa064e83c6b16405286646320ee82ded22dfe5c76fd05067bfb7de/runtimes/pc-web.png"
           },
           {
             "device": "ipad",
-            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06/runtimes/ipad.png"
+            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/b9a3c437c8fa064e83c6b16405286646320ee82ded22dfe5c76fd05067bfb7de/runtimes/ipad.png"
           },
           {
             "device": "mobile",
-            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06/runtimes/mobile.png"
+            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/b9a3c437c8fa064e83c6b16405286646320ee82ded22dfe5c76fd05067bfb7de/runtimes/mobile.png"
           }
         ]
-      }
+      },
+      "description": "Runtime 登记、共享、可用性与检查"
     },
     {
       "id": "agents",
       "title": "Agent 定义与分享",
-      "sourcePath": "packages/prototype/src/ui/agents-page.js",
+      "sourcePath": "packages/prototype/src/pages/agents.tsx",
       "kind": "page",
       "devices": [
         "pc-web",
@@ -141,30 +145,31 @@
       ],
       "artifact": {
         "type": "hosted",
-        "version": "2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06",
-        "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06/agents/index.html",
-        "sourceCommit": "58882d25872fe1779982b4b629cba1cd8120f835",
-        "digest": "sha256:167353c25a15f8d77d4bff846bc1e95746959596b7c561524177d5c1953b6332",
+        "version": "b9a3c437c8fa064e83c6b16405286646320ee82ded22dfe5c76fd05067bfb7de",
+        "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/b9a3c437c8fa064e83c6b16405286646320ee82ded22dfe5c76fd05067bfb7de/agents/index.html",
+        "sourceCommit": "7d39c4b9b9a932f12f6a5031c4f78a1c78346ddc",
+        "digest": "sha256:99c7d9ce21adad1d4f56c2b15022248dc1e11274df2622a875f51faf1bd1de6c",
         "thumbnails": [
           {
             "device": "pc-web",
-            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06/agents/pc-web.png"
+            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/b9a3c437c8fa064e83c6b16405286646320ee82ded22dfe5c76fd05067bfb7de/agents/pc-web.png"
           },
           {
             "device": "ipad",
-            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06/agents/ipad.png"
+            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/b9a3c437c8fa064e83c6b16405286646320ee82ded22dfe5c76fd05067bfb7de/agents/ipad.png"
           },
           {
             "device": "mobile",
-            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06/agents/mobile.png"
+            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/b9a3c437c8fa064e83c6b16405286646320ee82ded22dfe5c76fd05067bfb7de/agents/mobile.png"
           }
         ]
-      }
+      },
+      "description": "Agent 定义的阅读与就地编辑、版本历史、分享与治理"
     },
     {
       "id": "repositories",
       "title": "仓库与 checkout",
-      "sourcePath": "packages/prototype/src/ui/repositories-page.js",
+      "sourcePath": "packages/prototype/src/pages/repositories.tsx",
       "kind": "page",
       "devices": [
         "pc-web",
@@ -173,30 +178,31 @@
       ],
       "artifact": {
         "type": "hosted",
-        "version": "2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06",
-        "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06/repositories/index.html",
-        "sourceCommit": "58882d25872fe1779982b4b629cba1cd8120f835",
-        "digest": "sha256:167353c25a15f8d77d4bff846bc1e95746959596b7c561524177d5c1953b6332",
+        "version": "b9a3c437c8fa064e83c6b16405286646320ee82ded22dfe5c76fd05067bfb7de",
+        "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/b9a3c437c8fa064e83c6b16405286646320ee82ded22dfe5c76fd05067bfb7de/repositories/index.html",
+        "sourceCommit": "7d39c4b9b9a932f12f6a5031c4f78a1c78346ddc",
+        "digest": "sha256:99c7d9ce21adad1d4f56c2b15022248dc1e11274df2622a875f51faf1bd1de6c",
         "thumbnails": [
           {
             "device": "pc-web",
-            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06/repositories/pc-web.png"
+            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/b9a3c437c8fa064e83c6b16405286646320ee82ded22dfe5c76fd05067bfb7de/repositories/pc-web.png"
           },
           {
             "device": "ipad",
-            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06/repositories/ipad.png"
+            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/b9a3c437c8fa064e83c6b16405286646320ee82ded22dfe5c76fd05067bfb7de/repositories/ipad.png"
           },
           {
             "device": "mobile",
-            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06/repositories/mobile.png"
+            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/b9a3c437c8fa064e83c6b16405286646320ee82ded22dfe5c76fd05067bfb7de/repositories/mobile.png"
           }
         ]
-      }
+      },
+      "description": "仓库目录、Git 别名与本人 checkout"
     },
     {
       "id": "selections",
       "title": "我的选择与配置解析",
-      "sourcePath": "packages/prototype/src/ui/selections-page.js",
+      "sourcePath": "packages/prototype/src/pages/selections.tsx",
       "kind": "page",
       "devices": [
         "pc-web",
@@ -205,30 +211,31 @@
       ],
       "artifact": {
         "type": "hosted",
-        "version": "2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06",
-        "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06/selections/index.html",
-        "sourceCommit": "58882d25872fe1779982b4b629cba1cd8120f835",
-        "digest": "sha256:167353c25a15f8d77d4bff846bc1e95746959596b7c561524177d5c1953b6332",
+        "version": "b9a3c437c8fa064e83c6b16405286646320ee82ded22dfe5c76fd05067bfb7de",
+        "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/b9a3c437c8fa064e83c6b16405286646320ee82ded22dfe5c76fd05067bfb7de/selections/index.html",
+        "sourceCommit": "7d39c4b9b9a932f12f6a5031c4f78a1c78346ddc",
+        "digest": "sha256:99c7d9ce21adad1d4f56c2b15022248dc1e11274df2622a875f51faf1bd1de6c",
         "thumbnails": [
           {
             "device": "pc-web",
-            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06/selections/pc-web.png"
+            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/b9a3c437c8fa064e83c6b16405286646320ee82ded22dfe5c76fd05067bfb7de/selections/pc-web.png"
           },
           {
             "device": "ipad",
-            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06/selections/ipad.png"
+            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/b9a3c437c8fa064e83c6b16405286646320ee82ded22dfe5c76fd05067bfb7de/selections/ipad.png"
           },
           {
             "device": "mobile",
-            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06/selections/mobile.png"
+            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/b9a3c437c8fa064e83c6b16405286646320ee82ded22dfe5c76fd05067bfb7de/selections/mobile.png"
           }
         ]
-      }
+      },
+      "description": "个人选择、解析顺序与解析预览"
     },
     {
       "id": "members",
       "title": "成员与邀请",
-      "sourcePath": "packages/prototype/src/app.js",
+      "sourcePath": "packages/prototype/src/pages/members.tsx",
       "kind": "page",
       "devices": [
         "pc-web",
@@ -237,43 +244,26 @@
       ],
       "artifact": {
         "type": "hosted",
-        "version": "2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06",
-        "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06/members/index.html",
-        "sourceCommit": "58882d25872fe1779982b4b629cba1cd8120f835",
-        "digest": "sha256:167353c25a15f8d77d4bff846bc1e95746959596b7c561524177d5c1953b6332",
+        "version": "b9a3c437c8fa064e83c6b16405286646320ee82ded22dfe5c76fd05067bfb7de",
+        "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/b9a3c437c8fa064e83c6b16405286646320ee82ded22dfe5c76fd05067bfb7de/members/index.html",
+        "sourceCommit": "7d39c4b9b9a932f12f6a5031c4f78a1c78346ddc",
+        "digest": "sha256:99c7d9ce21adad1d4f56c2b15022248dc1e11274df2622a875f51faf1bd1de6c",
         "thumbnails": [
           {
             "device": "pc-web",
-            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06/members/pc-web.png"
+            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/b9a3c437c8fa064e83c6b16405286646320ee82ded22dfe5c76fd05067bfb7de/members/pc-web.png"
           },
           {
             "device": "ipad",
-            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06/members/ipad.png"
+            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/b9a3c437c8fa064e83c6b16405286646320ee82ded22dfe5c76fd05067bfb7de/members/ipad.png"
           },
           {
             "device": "mobile",
-            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/2e1650078f77d5a57e7e3132b240fddea280bab95f96c54c172353ae96d85f06/members/mobile.png"
+            "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/b9a3c437c8fa064e83c6b16405286646320ee82ded22dfe5c76fd05067bfb7de/members/mobile.png"
           }
         ]
-      }
-    },
-    {
-      "id": "account-onboarding",
-      "title": "账号与首次连接",
-      "description": "注册登录、一页授权、恢复密码、登录环境和首次空态；仅内存演示",
-      "sourcePath": "packages/prototype/src/account-onboarding.html",
-      "kind": "page",
-      "devices": [
-        "pc-web",
-        "mobile"
-      ],
-      "artifact": {
-        "type": "hosted",
-        "version": "a3b8d01ec793b8bba24b8b685af2c4a528c01dbc63de592237ad8443362780ff",
-        "url": "https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/a3b8d01ec793b8bba24b8b685af2c4a528c01dbc63de592237ad8443362780ff/index.html",
-        "sourceCommit": "add4fc691c370d95ca28e1d5f3d4a97bc1fd79cc",
-        "digest": "sha256:8b68e9671a3b9e03252da8ebbd3698bd1a61ab0526e4fa5032764bd5548964cd"
-      }
+      },
+      "description": "成员角色、邀请、空间名称与退出"
     }
   ]
 }

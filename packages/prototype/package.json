@@ -6,7 +6,8 @@
   "scripts": {
     "build": "bun build.mjs",
     "test": "node --test publish-r2.test.mjs && node verify.mjs",
-    "screenshots": "node verify.mjs --screenshots"
+    "screenshots": "node verify.mjs --screenshots",
+    "dev": "node serve.mjs"
   },
   "devDependencies": {
     "playwright": "1.61.0",

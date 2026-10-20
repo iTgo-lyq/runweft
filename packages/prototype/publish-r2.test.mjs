@@ -244,7 +244,7 @@ test("CLI replaces stale success with a failed result and exits unsuccessfully",
   const run = spawnSync(
     process.execPath,
     [script, "--request", input, "--result", output],
-    { env: {}, encoding: "utf8" },
+    { env: { R2_ACCOUNT_ID: "" }, encoding: "utf8" },
   );
   assert.equal(run.status, 1);
   const result = JSON.parse(await readFile(output, "utf8"));
@@ -253,4 +253,26 @@ test("CLI replaces stale success with a failed result and exits unsuccessfully",
     () => validateResult(request, result),
     /Host publication failed/,
   );
+});
+
+test("R2 env files respect precedence, literal secrets and isolate unrelated settings", async (t) => {
+  const { loadR2Environment } = await import('./r2-environment.mjs');
+  const { dir } = await fixture(t);
+  await writeFile(join(dir, '.env'), 'R2_BUCKET=base-bucket\nR2_ACCOUNT_ID=base-account\nR2_SECRET_ACCESS_KEY="literal$VALUE#secret"\nUNRELATED=private\n');
+  await writeFile(join(dir, '.env.local'), 'R2_BUCKET=local-bucket\nR2_ACCOUNT_ID=local-account\n');
+  const injected = { R2_ACCOUNT_ID: 'process-account', R2_ACCESS_KEY_ID: '' };
+  const result = await loadR2Environment({ root: dir, env: injected });
+  assert.deepEqual(result, {
+    R2_ACCOUNT_ID: 'process-account', R2_ACCESS_KEY_ID: '',
+    R2_BUCKET: 'local-bucket', R2_SECRET_ACCESS_KEY: 'literal$VALUE#secret',
+  });
+  assert.deepEqual(injected, { R2_ACCOUNT_ID: 'process-account', R2_ACCESS_KEY_ID: '' });
+});
+
+test("R2 env tolerates missing files but rejects unreadable files", async (t) => {
+  const { loadR2Environment } = await import('./r2-environment.mjs');
+  const { dir } = await fixture(t);
+  assert.deepEqual(await loadR2Environment({ root: dir, env: {} }), {});
+  await mkdir(join(dir, '.env'));
+  await assert.rejects(loadR2Environment({ root: dir, env: {} }), /Unable to read R2 environment configuration/);
 });

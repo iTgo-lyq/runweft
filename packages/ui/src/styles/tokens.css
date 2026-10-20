@@ -1,0 +1,118 @@
+/* Runweft design tokens: quiet, content-first, blue accent, glass only on the floating control layer. See DESIGN.md. */
+:root {
+  color-scheme: light;
+  --canvas: #edf0f5;
+  --surface: #ffffff;
+  --surface-2: #f5f7fa;
+  --surface-3: #eceff4;
+  --ink: #141b26;
+  --ink-2: #4b5768;
+  --ink-3: #697486;
+  --line: rgba(20, 27, 38, .08);
+  --line-2: rgba(20, 27, 38, .15);
+  --fill: rgba(20, 27, 38, .055);
+  --fill-2: rgba(20, 27, 38, .09);
+  --hover: rgba(20, 27, 38, .045);
+  --menu-hover: rgba(20, 27, 38, .065);
+  --field: #f6f7fa;
+  --field-line: rgba(20, 27, 38, .14);
+  --switch-off: #d3d9e2;
+  --accent: #2b5fe3;
+  --accent-fill: #2b5fe3;
+  --accent-hover: #2452cc;
+  --accent-ink: #1f4fc4;
+  --accent-soft: rgba(43, 95, 227, .085);
+  --accent-soft-2: rgba(43, 95, 227, .16);
+  --ok: #157a4f; --ok-soft: rgba(21, 122, 79, .1);
+  --warn: #975800; --warn-soft: rgba(219, 141, 0, .14);
+  --danger: #bf3530; --danger-soft: rgba(191, 53, 48, .09);
+  --unknown: #6a4cb5; --unknown-soft: rgba(106, 76, 181, .1);
+  --neutral: #566173; --neutral-soft: rgba(86, 97, 115, .1);
+  --thread: rgba(43, 95, 227, .45);
+  --thread-quiet: rgba(20, 27, 38, .2);
+  --wash-1: rgba(43, 95, 227, .11);
+  --wash-2: rgba(110, 150, 255, .12);
+  --scrim: rgba(14, 20, 32, .3);
+  --focus: 0 0 0 2px var(--surface), 0 0 0 4px rgba(43, 95, 227, .6);
+  --shadow-surface: 0 0 0 1px var(--line), 0 1px 2px rgba(20, 27, 38, .04), 0 10px 30px -18px rgba(20, 27, 38, .14);
+  --shadow-panel: 0 0 0 1px var(--line), 0 10px 32px -18px rgba(20, 27, 38, .22);
+  --shadow-card: 0 0 0 1px var(--line), 0 1px 2px rgba(20, 27, 38, .05), 0 18px 44px -20px rgba(20, 27, 38, .22);
+  --shadow-sheet: 0 0 0 1px var(--line), 0 28px 70px -20px rgba(14, 20, 32, .4);
+  --glass-bg: rgba(255, 255, 255, .64);
+  --glass-tint: linear-gradient(180deg, rgba(255, 255, 255, .62), rgba(255, 255, 255, .32));
+  --glass-edge: rgba(255, 255, 255, .78);
+  --glass-highlight: rgba(255, 255, 255, .95);
+  --glass-lowlight: rgba(20, 27, 38, .05);
+  --glass-shadow: 0 1px 1px rgba(20, 27, 38, .04), 0 10px 28px -12px rgba(20, 27, 38, .22);
+  --glass-blur: blur(22px) saturate(175%);
+  /* Toolbar glass after Craft's navigation: clearer at the top, milkier at the bottom, light blur keeps outlines. */
+  --bar-bg: transparent;
+  --bar-tint: linear-gradient(180deg, rgba(255, 255, 255, .4) 10%, rgba(255, 255, 255, .8) 100%);
+  --bar-blur: blur(4px);
+  --bar-stroke: linear-gradient(180deg, rgba(255, 255, 255, .64) 40%, rgba(255, 255, 255, 0) 75%, rgba(255, 255, 255, 0) 95%, rgba(255, 255, 255, .64) 100%);
+  --bar-shadow: 0 12px 12px 2px rgba(0, 0, 0, .1), 0 2px 4px -1px rgba(0, 0, 0, .06);
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", "Source Han Sans SC", system-ui, sans-serif;
+  --font-display: ui-rounded, "SF Pro Rounded", -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", system-ui, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  --ease: cubic-bezier(.2, .8, .2, 1);
+  --toolbar: 52px;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme=light]) { --dark: 1; } }
+:root[data-theme=dark] { --dark: 1; }
+
+/* Dark: surfaces are re-layered rather than inverted. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme=light]) {
+    color-scheme: dark;
+    --canvas: #0d1015; --surface: #161a21; --surface-2: #1c2129; --surface-3: #242a34;
+    --ink: #e8ecf2; --ink-2: #a9b2c0; --ink-3: #848fa1;
+    --line: rgba(255, 255, 255, .075); --line-2: rgba(255, 255, 255, .14);
+    --fill: rgba(255, 255, 255, .065); --fill-2: rgba(255, 255, 255, .11); --hover: rgba(255, 255, 255, .05); --menu-hover: rgba(255, 255, 255, .08);
+    --field: #1d222b; --field-line: rgba(255, 255, 255, .12); --switch-off: #3a414d;
+    --accent: #6b97ff; --accent-fill: #3d6ff0; --accent-hover: #4f7ef5; --accent-ink: #94b4ff; --accent-soft: rgba(91, 140, 255, .14); --accent-soft-2: rgba(91, 140, 255, .24);
+    --ok: #4cc38a; --ok-soft: rgba(76, 195, 138, .14); --warn: #f0b443; --warn-soft: rgba(240, 180, 67, .14);
+    --danger: #ff746a; --danger-soft: rgba(255, 116, 106, .13); --unknown: #b9a3ff; --unknown-soft: rgba(185, 163, 255, .14); --neutral: #a9b2c0; --neutral-soft: rgba(169, 178, 192, .12);
+    --thread: rgba(107, 151, 255, .55); --thread-quiet: rgba(255, 255, 255, .22);
+    --wash-1: rgba(80, 125, 255, .14); --wash-2: rgba(60, 90, 210, .12); --scrim: rgba(0, 0, 0, .55);
+    --focus: 0 0 0 2px var(--surface), 0 0 0 4px rgba(107, 151, 255, .75);
+    --shadow-surface: 0 0 0 1px var(--line), 0 1px 2px rgba(0, 0, 0, .35);
+    --shadow-panel: 0 0 0 1px var(--line-2), 0 16px 40px -18px rgba(0, 0, 0, .7);
+    --shadow-card: 0 0 0 1px var(--line), 0 20px 50px -22px rgba(0, 0, 0, .8);
+    --shadow-sheet: 0 0 0 1px var(--line-2), 0 28px 70px -18px rgba(0, 0, 0, .85);
+    --glass-bg: rgba(30, 35, 44, .58); --glass-tint: linear-gradient(180deg, rgba(255, 255, 255, .07), rgba(255, 255, 255, .015));
+    --glass-edge: rgba(255, 255, 255, .11); --glass-highlight: rgba(255, 255, 255, .1); --glass-lowlight: rgba(0, 0, 0, .35);
+    --glass-shadow: 0 1px 1px rgba(0, 0, 0, .3), 0 12px 30px -12px rgba(0, 0, 0, .7);
+    --bar-bg: transparent; --bar-tint: linear-gradient(180deg, rgba(40, 46, 57, .42) 10%, rgba(30, 35, 44, .82) 100%);
+    --bar-blur: blur(4px);
+    --bar-stroke: linear-gradient(180deg, rgba(255, 255, 255, .22) 40%, rgba(255, 255, 255, 0) 75%, rgba(255, 255, 255, 0) 95%, rgba(255, 255, 255, .12) 100%);
+    --bar-shadow: 0 12px 16px 2px rgba(0, 0, 0, .35), 0 2px 4px -1px rgba(0, 0, 0, .4);
+  }
+}
+:root[data-theme=dark] {
+  color-scheme: dark;
+  --canvas: #0d1015; --surface: #161a21; --surface-2: #1c2129; --surface-3: #242a34;
+  --ink: #e8ecf2; --ink-2: #a9b2c0; --ink-3: #848fa1;
+  --line: rgba(255, 255, 255, .075); --line-2: rgba(255, 255, 255, .14);
+  --fill: rgba(255, 255, 255, .065); --fill-2: rgba(255, 255, 255, .11); --hover: rgba(255, 255, 255, .05); --menu-hover: rgba(255, 255, 255, .08);
+  --field: #1d222b; --field-line: rgba(255, 255, 255, .12); --switch-off: #3a414d;
+  --accent: #6b97ff; --accent-fill: #3d6ff0; --accent-hover: #4f7ef5; --accent-ink: #94b4ff; --accent-soft: rgba(91, 140, 255, .14); --accent-soft-2: rgba(91, 140, 255, .24);
+  --ok: #4cc38a; --ok-soft: rgba(76, 195, 138, .14); --warn: #f0b443; --warn-soft: rgba(240, 180, 67, .14);
+  --danger: #ff746a; --danger-soft: rgba(255, 116, 106, .13); --unknown: #b9a3ff; --unknown-soft: rgba(185, 163, 255, .14); --neutral: #a9b2c0; --neutral-soft: rgba(169, 178, 192, .12);
+  --thread: rgba(107, 151, 255, .55); --thread-quiet: rgba(255, 255, 255, .22);
+  --wash-1: rgba(80, 125, 255, .14); --wash-2: rgba(60, 90, 210, .12); --scrim: rgba(0, 0, 0, .55);
+  --focus: 0 0 0 2px var(--surface), 0 0 0 4px rgba(107, 151, 255, .75);
+  --shadow-surface: 0 0 0 1px var(--line), 0 1px 2px rgba(0, 0, 0, .35);
+  --shadow-panel: 0 0 0 1px var(--line-2), 0 16px 40px -18px rgba(0, 0, 0, .7);
+  --shadow-card: 0 0 0 1px var(--line), 0 20px 50px -22px rgba(0, 0, 0, .8);
+  --shadow-sheet: 0 0 0 1px var(--line-2), 0 28px 70px -18px rgba(0, 0, 0, .85);
+  --glass-bg: rgba(30, 35, 44, .58); --glass-tint: linear-gradient(180deg, rgba(255, 255, 255, .07), rgba(255, 255, 255, .015));
+  --glass-edge: rgba(255, 255, 255, .11); --glass-highlight: rgba(255, 255, 255, .1); --glass-lowlight: rgba(0, 0, 0, .35);
+  --glass-shadow: 0 1px 1px rgba(0, 0, 0, .3), 0 12px 30px -12px rgba(0, 0, 0, .7);
+  --bar-bg: transparent; --bar-tint: linear-gradient(180deg, rgba(40, 46, 57, .42) 10%, rgba(30, 35, 44, .82) 100%);
+  --bar-blur: blur(4px);
+  --bar-stroke: linear-gradient(180deg, rgba(255, 255, 255, .22) 40%, rgba(255, 255, 255, 0) 75%, rgba(255, 255, 255, 0) 95%, rgba(255, 255, 255, .12) 100%);
+  --bar-shadow: 0 12px 16px 2px rgba(0, 0, 0, .35), 0 2px 4px -1px rgba(0, 0, 0, .4);
+}
+/* Phones in dark mode use a true black canvas. */
+@media (max-width: 760px) and (prefers-color-scheme: dark) { :root:not([data-theme=light]) { --canvas: #000; --surface: #000; --surface-2: #121419; --surface-3: #1b1e25; --field: #15181e; } }
+@media (max-width: 760px) { :root[data-theme=dark] { --canvas: #000; --surface: #000; --surface-2: #121419; --surface-3: #1b1e25; --field: #15181e; } }

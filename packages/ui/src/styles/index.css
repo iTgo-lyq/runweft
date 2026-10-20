@@ -1,0 +1,64 @@
+/* Runweft UI entry: Tailwind 4 plus the Runweft design system. Apps import this file and add their own @source. */
+@import "tailwindcss";
+@import "./tokens.css" layer(base);
+@import "./base.css" layer(base);
+@import "./components.css" layer(components);
+
+@source "../";
+
+/* shadcn's standard token names map onto Runweft tokens, so copied components pick up the palette unchanged. */
+@theme inline {
+  --color-background: var(--surface);
+  --color-foreground: var(--ink);
+  --color-card: var(--surface);
+  --color-card-foreground: var(--ink);
+  --color-popover: var(--surface);
+  --color-popover-foreground: var(--ink);
+  --color-primary: var(--accent-fill);
+  --color-primary-foreground: #fff;
+  --color-secondary: var(--fill);
+  --color-secondary-foreground: var(--ink);
+  --color-muted: var(--surface-2);
+  --color-muted-foreground: var(--ink-3);
+  --color-accent: var(--hover);
+  --color-accent-foreground: var(--ink);
+  --color-destructive: var(--danger);
+  --color-border: var(--line);
+  --color-input: var(--field-line);
+  --color-ring: var(--accent);
+
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-line: var(--line);
+  --color-line-2: var(--line-2);
+  --color-fill: var(--fill);
+  --color-fill-2: var(--fill-2);
+  --color-brand: var(--accent);
+  --color-brand-ink: var(--accent-ink);
+  --color-brand-soft: var(--accent-soft);
+  --color-ok: var(--ok);
+  --color-warn: var(--warn);
+  --color-danger: var(--danger);
+  --color-unknown: var(--unknown);
+  --color-neutral: var(--neutral);
+
+  --radius-sm: 9px;
+  --radius-md: 10px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-2xl: 18px;
+  --radius-3xl: 22px;
+
+  --font-display: var(--font-display);
+  --ease-out: var(--ease);
+}
+
+@theme {
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", "Source Han Sans SC", system-ui, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+}

@@ -1,0 +1,16 @@
+@import "../../ui/src/styles/index.css";
+@source "./";
+
+/* Demo controls (bottom right): review only, not part of the product interface. */
+.demo-pill { position: fixed; right: 16px; bottom: 16px; z-index: 70; display: inline-flex; align-items: center; gap: 6px; height: 38px; padding: 0 14px; border-radius: 999px; color: var(--ink); font-size: 13px; font-weight: 600; cursor: pointer; }
+.demo-pill .icon { width: 16px; height: 16px; color: var(--accent); }
+.demo-pill[data-changed=true]::after { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--warn); }
+.demo-pill:focus-visible { outline: none; box-shadow: var(--focus); }
+.demo-panel { width: min(300px, calc(100vw - 16px)); max-height: calc(100vh - 80px); overflow: auto; padding: 14px; display: flex; flex-direction: column; gap: 14px; }
+.demo-head strong { display: block; font-size: 14px; }
+.demo-head span { font-size: 12px; color: var(--ink-3); }
+.demo-title { margin: 0 0 6px; font-size: 12px; font-weight: 600; color: var(--ink-3); }
+.demo-group .segmented:not(.stacked) { display: flex; }
+.demo-group .segmented:not(.stacked) button { flex: 1; padding: 0 8px; }
+.demo-reset { width: 100%; }
+@media (max-width: 760px) { .demo-pill { right: 12px; bottom: 12px; } }

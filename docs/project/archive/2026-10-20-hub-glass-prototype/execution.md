@@ -1,0 +1,344 @@
+# 原型交付记录
+
+T1 仅交付独立原型，未修改 src/hub、HAPI、产品配置或模型凭据。保留八个入口，重新设计应用壳、任务列表与抽屉详情、资源卡片、默认选择、成员与身份管理。所有更改仅保存在内存。新的视觉规范与源码对应关系已同步到包内 DESIGN.md 和 README。
+
+使用 Bun 1.4.2 与固定 lockfile；独立包不加入根 workspace。新增本机预览入口 `bun run dev`，仅监听 127.0.0.1，提供自包含 HTML 与隔离 CSP。shadcnuikit 的候选与适配范围见 Requirement 和 DESIGN；没有引入 React 框架或伪称安装其组件。
+
+## 实际验证
+
+- `bun run --cwd packages/prototype build`：八个自包含入口构建成功。
+- `CI=true bun run --cwd packages/prototype test`：10 项不可变发布工具测试、24 组桌面/平板/手机入口交互通过。
+- `CI=true bun run --cwd packages/prototype screenshots`：最终 24 组截图与交互通过，额外提供三尺寸任务详情截图。手机启用真实触摸与移动设备模拟，并断言 iframe 内的实际宽度等于声明尺寸。
+- 浏览器覆盖：任务搜索/无结果/筛选、详情/轮次/记录/附件、全局搜索、资源编辑与 Agent 创建、邀请/撤销、身份改名、创建空间、空间切换、默认 Agent 与配置预览、空态/离线/错误恢复。所有页面均无外部请求、存储访问、横向溢出或浏览器错误，并通过 opaque iframe 与 ready 握手检查。
+- 已查看三尺寸八入口截图总览，以及桌面任务页、详情抽屉的原始截图。阅读区保持实底；侧栏、切换器、选中控件与浮层使用克制的蓝色玻璃效果。
+- `node scripts/check-docs.mjs`、`node scripts/check-workflow.mjs`、`git diff --check`：检查通过。HAPI 未初始化的外部源码链接按现有检查器说明延后，原型不依赖其构建。
+
+首次检查发现测试查询“文档”同时匹配了任务与 Agent 名称，已使用明确关键词验证搜索；受限 iframe 不允许 autofocus，改为用户操作后的显式 focus。触摸模拟进一步发现测试宿主页缺少 viewport meta，已补齐并断言实际尺寸后重新验证。手机隐藏导航采用 visibility 隔离键盘焦点。
+
+## 交付与边界
+
+当前机器没有配置 R2 发布凭据，未尝试上传或覆盖原有托管版本。本次明确采用 Git 中的自包含 HTML 固定快照作为原型交付，登记本 Change 的八个固定引用；不改变项目既有 custom/R2 托管策略。另提供本机预览与可独立打开的单文件，所有八个页面可通过导航切换。
+
+本次验收仅证明原型交互与视觉实现，不代表真实 Hub 接入、真实模型执行或产品功能验证。等待用户评审后再决定后续产品改造；没有记录用户已验收，也不自动合入 develop 或 main。
+
+## 2026-10-19 R2 在线发布
+
+用户明确要求将本版原型发布到现有 R2，并指定已有 OpenFolio 发布环境。使用该环境注入凭据，没有复制、输出或提交密钥。以干净且已推送的源码提交 `092296356840ef5ed7ff4cda4109226864df7bc8` 重新构建，24 组三尺寸原型交互与截图检查通过。
+
+发布版本：`b149b044b09411002b131c5b1f80eca821e0d8980ae4d6366f28c8b5bc137dc3`；产物摘要：`sha256:2d2c434bd2be7bce0a995e8b83445e250f047830533a8f239e54a53c417cb4fd`。已有 R2 适配器以条件写入上传 36 个对象，逐一通过匿名读取、完整内容与 MIME 校验；旧版本未覆盖。保存的同一 request/result 完成清单与 Change 固定引用登记。
+
+[在线原型：任务入口](https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/b149b044b09411002b131c5b1f80eca821e0d8980ae4d6366f28c8b5bc137dc3/tasks/index.html)。八个独立入口均通过 Chromium 沙箱加载验证；在线桌面 1440×1000、平板 834×1112、手机 390×844 的搜索、任务详情、轮次切换、附件预览与 Agent 导航通过，无溢出或浏览器错误。受限 iframe 的 ready 握手返回该固定版本。此次为原型托管发布，不代表用户已完成视觉验收或已部署产品功能。
+
+## 2026-10-19 升级为大型前端重构
+
+用户指令：“现在要升级这个 change 为前端交互样式重构的大型 change”。沿用原 ID、分支与 worktree，标题调整为“Hub 前端交互与样式重构”。通过语义命令返回 requirement 并设为 large，清除仅原型范围的需求/技术/计划确认、整体验证结论和等待；T1 的完成内容及八个 R2 固定引用与升级前完全相同。
+
+重写 Requirement、Technical 和 Plan，补充 Review；新增 T2–T8，覆盖真实应用壳、身份/空间、任务、机器/Runtime、Agent、仓库/选择及成员。当前只完成范围与流程升级，新产品任务均未开始；真实接口、产品视觉和后续 large 全量验收没有执行。本轮没有将用户的规模升级指令补记为新版详细需求或原型验收。
+
+现有 SpecTrail 缺少规模修改命令，依其约定为 rework 增加受限的 `--size`：仅非 xlarge 返回 requirement 时可选 small/medium/large，保留已交付任务与原型，并沿既有返工规则清除失效确认。不新增任意字段修改入口，不隐式转换父子结构。使用该命令完成本次升级。
+
+实际检查：新增状态命令测试 7/7，hook/setup 回归 12/12，Skill 结构校验及文档/工作流/diff 检查通过。完整工具测试首轮因本 worktree 缺少锁定的 yaml 依赖失败；以 Bun 1.4.2 执行 frozen install 后，仅对失败的 npm-release、release-finish、skill-sync 三个文件定向续验，31 项通过，其他首轮通过项未无故重跑。
+
+上下文隔离的独立 Agent 已只读核对本轮升级差异、命令测试与状态保留，未发现需修复问题，范围与局限见 Review。该评审不替代未来产品实现结束后的独立评审。
+
+## 2026-10-19 回滚实施计划，改为原型先行
+
+用户指令：继续使用本 Change，当前分支上的修改仅供参考；结合 shadcnuikit 的布局思路，保持蓝色主题并克制地采用液态玻璃，风格参考 Craft；回滚预定的实施计划，先完成原型设计并等待验收，再梳理前端重构技术方案。
+
+已按当前 develop 的 Hub 重写 Requirement，用 rework 记录本次调整，并删除 Technical 与 Plan 草案（Git 历史保留）。T1 及其固定引用不变。SpecTrail 现有命令不能删除未开始的任务，经用户授权（“允许你直接改 json”）直接编辑 change.json，删除未开始的 T2–T8；编号不复用，后续任务从 T9 起。本分支落后 develop 50 个提交，绘制原型前先同步。
+
+本轮只修改文档与流程状态，未改动原型或产品代码。
+
+## 2026-10-19 原型设计交付
+
+需求确认后，把最新 develop 合入本分支，原型包以 develop 为基线。分支上此前的蓝色轻玻璃实现只作参考，保留在 Git 历史和固定 R2 版本中。按需求重新设计 8 个入口：账号与首次连接、任务、机器、Runtime、Agent、仓库、我的选择、成员；原 `identity` 入口并入工作台侧栏。没有修改 `src/hub`、HAPI 或官网。
+
+视觉与交互规范写入[原型 DESIGN](../../../../packages/prototype/DESIGN.md)：冷调中性框架与蓝色强调、只在浮动控制层使用的玻璃、浅色与深色两套令牌、列表与检查器、就地编辑、轮次“纬线”。shadcnuikit 读取了 `dashboard-shell8`、`tables19` 源码与 `apps/mail`、`project-detail` 页面结构，空态、账号与成员只按目录说明对照；没有安装或复制其 React 源码。界面按当前 Specs 表达产品事实：账号不出现 token 流程，用户名和密码不设长度规则；任务筛选只用现有服务端参数，“在本页查找”写明范围；不显示全量状态统计；“执行未确认”有独立颜色和图标，不提示重发；权限差异通过演示角色切换展示。
+
+### 实际验证
+
+- `bun run build`：8 个自包含入口构建成功。
+- `node --test publish-r2.test.mjs`：10 项通过。
+- `CI=true bun run test`、`CI=true bun run screenshots`：24 组入口流程（8 个入口 × 桌面 1440×1000、平板 834×1112、手机 390×844，平板和手机使用触摸）全部通过，另存 48 张浅色与深色截图。每组都检查不透明 iframe、ready 握手、无外部请求或存储访问、无横向溢出和浏览器错误，并覆盖各入口的主要操作和失败路径。另一组桌面检查覆盖空数据、首次加载失败、刷新失败保留内容、离线时写入结果未确认、登录过期后回到原页面、对话框和检查器关闭后焦点回归、方向键在列表中移动、外观切换，以及减少动态效果和减少透明度（本机 Chromium 支持这两项模拟）。
+- 本机 Chromium 无法启用进程沙箱，按包内说明使用 `CI=true` 运行；iframe 权限仍仅为 allow-scripts。
+- 人工查看了桌面、平板、手机的浅色与深色截图，以及任务、Agent、机器、Runtime 检查器的展开状态。发现并修复了：空值被渲染成文字、本页查找框样式被通用输入样式覆盖、平板检查器遮住列表时的操作路径、关系线在行尾断开、轮次间距过大、窄屏标签缺少底色。
+
+### 与当前 develop 原型对照
+
+左侧为合入前 develop 的原型，右侧为本次原型，均为同一入口打开后的首屏。
+
+| 入口 | 主要变化 | 桌面 | 手机 |
+| --- | --- | --- | --- |
+| 账号与首次连接 | 与工作台使用同一套视觉；核对码单独突出，手机上先显示；按当前 Spec 去掉用户名和密码长度规则；账号设置移入工作台 | [对照](assets/compare/account-onboarding-pc-web.jpg) | [对照](assets/compare/account-onboarding-mobile.jpg) |
+| 任务 | 状态分段筛选，其余筛选收进弹出层；列表与检查器并排，不再替换列表；轮次用纬线切换；报告分段阅读；交付、详情与继续处理分标签 | [对照](assets/compare/tasks-pc-web.jpg) | [对照](assets/compare/tasks-mobile.jpg) |
+| 机器 | 表格式列表加检查器；空间关联改为带确认的开关；凭据和取消登记收进菜单；非本人机器只显示概要 | [对照](assets/compare/machines-pc-web.jpg) | [对照](assets/compare/machines-mobile.jpg) |
+| Runtime | 可用性和不可用原因直接显示；共享按空间开关，未关联机器的空间不可开启；检查结果写明未检查模型认证 | [对照](assets/compare/runtimes-pc-web.jpg) | [对照](assets/compare/runtimes-mobile.jpg) |
+| Agent | 定义以阅读形式呈现，在检查器内就地编辑并提示将生成的版本；版本历史和分享独立成标签；他人私有 Agent 只显示治理概要 | [对照](assets/compare/agents-pc-web.jpg) | [对照](assets/compare/agents-mobile.jpg) |
+| 仓库 | 别名可添加和移除并校验地址；本人 checkout 只读展示；登记改为对话框 | [对照](assets/compare/repositories-pc-web.jpg) | [对照](assets/compare/repositories-mobile.jpg) |
+| 我的选择 | 解析顺序用纬线展示；每条选择显示有效或需要处理及原因；解析预览给出来源层和失败原因 | [对照](assets/compare/selections-pc-web.jpg) | [对照](assets/compare/selections-mobile.jpg) |
+| 成员 | 空间名称就地编辑；角色操作按权限收进菜单；邀请只显示一次；最后一位所有者的限制提前说明 | [对照](assets/compare/members-pc-web.jpg) | [对照](assets/compare/members-mobile.jpg) |
+
+### 交付方式与边界
+
+本机没有配置 R2 发布凭据，本次没有上传 R2，也没有改变项目的 custom/R2 托管策略。按 SpecTrail Git 兜底，从已推送的源码提交 `476b858` 用 `bun build.mjs --git-preview` 生成 8 个自包含 HTML 快照，逐个 `publish.mjs register --git-entry <id> --change hub-glass-prototype` 登记到原型清单和本 Change 的 previews；旧的 `identity` 预览已从本 Change 移除。快照与通过验证的构建输出逐字节相同。SpecTrail 的 `validate.mjs` 静态检查通过；其浏览器检查固定启用 Chromium 进程沙箱，本机无法运行，等价的受限 iframe 检查已由 `verify.mjs` 在同一输出上完成。`bun run dev` 可在本机预览全部入口。另把同一份 `tasks` 构建（`476b858`）发布为私有的 claude.ai 预览页 [Runweft Hub 原型](https://claude.ai/artifact/WV5mxRngneQbETJNrPUvRR)，供用户验收时直接打开；它只是便于查看的副本，不随源码自动更新，所有入口都可从页内导航和“演示”进入。原型只证明界面与交互设计，不代表真实接口、权限执行或模型执行；示例版本、哈希和路径都是虚构的。需要用户验收原型后，才开始编写产品重构的技术方案。
+
+### R2 发布与本地配置补充
+
+按用户要求，将源码 `fc9cd7f` 的八入口原型和 48 张浅深色截图发布到 R2，上传后逐文件匿名读取校验字节及 MIME，固定引用已登记并推送（`6ca4b41`）。24 组入口交互和 hosted 浏览器检查通过。
+
+用户随后要求在本 Change 工作区补充 `.env` 与 `.env.example`。根目录 `.env` 仅保存从 open-folio 复用的五项 R2 配置，权限为 0600，Git 忽略；公开模板不含凭据。发布 CLI 按脚本位置读取根目录 `.env.local` 和 `.env`，进程环境优先，显式空值不回退；只读取 R2 字段，不修改进程环境，不增加依赖。发布说明改为直接运行 CLI，无需额外注入配置。
+
+`node --test packages/prototype/publish-r2.test.mjs` 的 12 项测试通过，覆盖配置优先级、字面密钥、缺失及不可读配置文件、不可变上传、失败回执与凭据脱敏。本次仅调整上传配置，不改原型页面；无需重新发布已验证产物。
+
+## 2026-10-19 原型验收
+
+验收期间按用户反馈调整了玻璃效果，每轮都从已推送提交构建、发布 R2 并登记：
+
+| 反馈 | 处理 | 提交 |
+| --- | --- | --- |
+| 顶部玻璃不够透，确认是否为 Apple 最新做法 | 对照 [Meet Liquid Glass（WWDC25）](https://developer.apple.com/videos/play/wwdc2025/219/)：小控件更薄、不着色；工具栏改薄玻璃 | `38ac957` |
+| 空间切换与用户选项没有玻璃效果 | 两个按钮改薄玻璃、菜单加厚；用户看后认为更丑，整体回滚 | `f5abb27`，回滚 `058ff80` |
+| 顶部导航参考 Craft 实测样式 | 工具栏改为 40%→80% 白渐变、4px 模糊、遮罩高光描边、双层阴影、52px 胶囊 | `9c8daa7` |
+| 深色没有优化 | 深色用同一结构，底色取略亮的深灰 | `9e32488` |
+
+`f5abb27` 同时把截图改为 SwiftShader GPU 合成：无头 Chromium 的软件渲染不会对带圆角的元素做背景模糊，缩略图会比真实浏览器更不透明（在侧栏同一位置叠加带圆角与不带圆角的模糊层对照：软件渲染下只有后者生效，GPU 合成下两者都生效），这项保留。
+
+最终版本：源码 `9e32488`，R2 版本 `6585f1b8…`，登记提交 `7e88b95`，[任务入口](https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/6585f1b84a54da747a6b72ae5cfb53540520834b6c1d76eaa6d2112662e4302f/tasks/index.html)。发布前 `CI=true node verify.mjs` 的 24 组入口流程和场景检查通过，`node --test publish-r2.test.mjs` 12 项通过；发布后 8 个入口从公网读回与本地构建逐字节一致。
+
+用户验收原话：“行了，原型验收结束了。接下来准备正式的前端样式和交互重构方案。”
+
+## T9 UI 库基础与前端构建链
+
+**范围**：新增 `packages/ui`：token 与 Tailwind 4 主题映射、自绘图标、基础组件、工作台壳、列表与检查器、共用构建函数、组件目录与浏览器检查；DESIGN.md 移入 UI 库，原型包保留只记录例外的 DESIGN.md；根目录加入依赖、`jsx` 配置、`@runweft/ui` 路径别名与 `test:ui` 脚本；Hub CSP 抽到 `src/hub/csp.ts`，样式允许内联（`page.ts` 在 T10 切换）。
+
+**依赖**（精确固定）：`react`/`react-dom` 19.3.0、`radix-ui` 1.6.7、`clsx` 2.1.1、`tailwind-merge` 3.7.0；构建与类型：`tailwindcss`、`@tailwindcss/node`、`@tailwindcss/oxide` 4.3.3，`@types/react`/`@types/react-dom` 19.3.0。React 10 月 14 日的补丁（19.3.1 等）只改 React Server Components 传输协议，与纯浏览器端用法无关，因此选用发布满五周的 19.3.0；`radix-ui` 1.7.0 发布刚满两周，选用 1.6.7。轻提示沿用原型的实现，未引入 sonner。
+
+**实现取舍**：
+- 样式从已验收原型的 `style.css` 拆为 `tokens`、`base`、`components` 三层，菜单、弹出层与对话框按 Radix 的结构调整，演示控制的样式留在原型包。复杂组件沿用原型类名而不改写为工具类，以保证与验收版本一致；shadcn 标准 token 名已映射，复制来的组件可直接使用。
+- 侧边抽屉由检查器在平板与手机上的浮层、手机导航抽屉承担，未单独引入 Radix Sheet。
+- 菜单与弹出层为非模态，页面继续可滚动。Radix 只把焦点还给自己的 Trigger，受控对话框与确认框在打开时记录打开它的元素，关闭后归还。
+- Radix 的 RadioGroup 在定时器里移动焦点，只有按键仍按下时才选中；真实按键不受影响，测试用按下、等待、松开模拟。
+
+**环境准备**：本 worktree 首次初始化 `hapi` 子模块并在其中 `bun install --frozen-lockfile`（AGENTS 首次准备步骤），否则类型检查会因引用 HAPI 源码失败。
+
+**验证**：
+- `bun run typecheck` 通过；`bun run test` 22 项通过。
+- `CI=true bun run test:ui`：组件目录在 Hub CSP（样式允许内联）下 18 项检查通过，覆盖可见焦点、分段与筛选方向键、标签页、开关、菜单键盘与焦点归还、菜单单选、弹出层、对话框首字段焦点与归还、确认框默认焦点、轻提示播报、列表方向键与检查器、就地编辑、`/` 聚焦查找、深色、减少动态效果、减少透明度、手机工作台壳与抽屉、手机无横向溢出，浏览器无错误与 CSP 违规。
+- `--screenshots` 的桌面与手机、浅色与深色截图已人工查看，与原型视觉一致。
+- 原型包 `bun run build` 不受影响；`check-docs`、`check-workflow`、`git diff --check` 通过。
+- CI（push 594a909）：`checks`、`prototype` 与 Linux、macOS x64 安装通过；macOS arm64 安装的卸载步骤报 `uninstall_process_unknown`。只重跑该 job 后，同一错误出现在 npm 布局的另一步。`develop` 的 39253526163 运行在同一 job 出现相同错误码，判定为既有问题：`src/uninstall/processes.ts` 分三次调用 `ps`，进程在两次调用之间退出时 `lstart` 为空，被当作无法核对。它不属于本 Change 范围，不在此修复，另行报告。
+
+## T10 Hub 前端骨架、账号与连接
+
+**范围**：`src/hub/web` 新建浏览器端：`api/http.ts`（HTTPS 要求、15 秒超时、写操作失联归为“结果未确认”、`user_session_invalid` 归为登录失效）、`api/hub.ts`（账号与身份路由、空间短 JWT 按空间缓存、创建回执、原生会话打开）、`route.ts`（保留 `connect`、`space`、`task`、`round`、`native-expired`，新增 `view`）、`app.tsx`（会话、连接请求、空间上下文与页面切换）、账号与连接页、工作台壳（空间菜单、创建空间、接受邀请、账号菜单、接入新环境说明）、账号设置。其余入口在各自任务完成前显示迁移占位。`page.ts` 改为提供打包后的 `/hub/app.js`、`/hub/app.css` 与原有 `/hub/native.js`，CSP 使用 `HUB_CSP`；旧的 `app.ts`、`console.ts`、各页面脚本与 `style.css` 删除。
+
+**构建**：`src/hub/web/assets.ts` 是 Bun 宏，打包时用独立进程运行 `build-assets.ts` 调 `packages/ui/build.ts`，把 JS 与 CSS 内联进 CLI；`bun run dev`、`scripts/build.ts` 与集成测试的 `bun build --compile` 走同一路径，二进制内不含构建脚本。产物 JS 390 KB（gzip 126 KB），CSS 55 KB（gzip 12 KB）。
+
+**实现取舍**：
+- 页面数据都绑定在 `用户:凭据:空间` 上下文键上：切换账号或空间时重挂页面，空间请求在发出前和返回后都核对上下文，旧上下文的响应不会落到新页面。身份与空间 API 实例按凭据与空间缓存，短 JWT 缓存随之保留。
+- 外部 hash 变化（CLI 链接在同一标签打开）重新读取会话与连接请求，不先清空当前画面；应用内导航用 `replaceState`，不触发重读。跳到主内容的链接改为直接移焦点，不改 hash。
+- 登录后若链接指向本账号无权访问的空间，显示“此链接的空间不可访问”并提供返回 Hub，不再表现为登录错误。登录失效后回到原入口：页面内失效记住当前入口，启动时失效沿用 hash 中的入口。
+- 账号设置按验收原型不为当前浏览器提供“断开”，当前浏览器通过账号菜单“退出此浏览器”离开。
+- 账号没有任何空间时，提供创建空间、接受邀请和退出此浏览器。
+
+**测试替换**：
+- `web-identity`、`web-connect` 改用角色与标签定位并保留原有服务端断言；`web-connect` 新增多空间选择默认空间与“不连接，前往工作台”。新增 `web-workspace`：显示名称、创建与切换空间、接受邀请（含无效邀请）、空间链接与无权空间、接入说明对话框焦点归还、手机导航。`test/integration/hub-web.ts` 统一记录页面错误与 CSP 违规，并检查三档尺寸无横向溢出。
+- `web-invitations` 保留 CLI 邀请文件、文件权限、默认空间不变与网页接受；网页生成邀请改由所有者 CLI 生成，网页生成并复制邀请在 T14 补回，下载备份按技术方案移除。
+- `web-task-links` 保留 CLI 链接、转发入口、登录后恢复空间与入口、其他成员看不到私有报告；报告、轮次与原生详情交接在 T11 补回。
+- `web-console`、`console.ts`、`console-tasks.ts` 依赖已删除的页面，删除；任务与配置页面的浏览器测试在 T11–T13 重建。`console-history.ts` 仅被原生验收引用，T11 随任务页改写。
+- `hub-console` 资源测试改查 `/hub/app.css`、`/hub/native.js` 与完整 CSP，并确认旧资源路径返回 404。
+- 新增 `test/core/hub-web.test.ts`：hash 读取与就地修改、明文远程地址不发送密码、错误归类、空间短 JWT 缓存与账号凭据不进入资源请求、上下文变化后丢弃响应、创建回执保留与表单变化不重复创建。
+
+**验证**：
+- `bun run typecheck` 通过；`bun run test` 29 项通过；`bun run test:tools` 60 项通过；`bun run test:ui` 18 项通过。
+- `bun run build` 后 `bun run test:integration --bin dist/runweft --` 运行 `web-identity`、`web-connect`、`web-workspace`、`web-invitations`、`web-task-links`、`hub-console`、`cli-connect` 共 21 项通过。
+- 全量 `bun run test:integration --bin dist/runweft --`：258 项通过，6 项失败。5 项 `cli-uninstall` 报 `uninstall_process_unknown`，`workspace-preparation` 的 Runner 停止超时；本环境的 `ps` 本身报 `fatal library error, lookup self`，卸载核对与 HAPI Runner 控制都依赖它确认进程。单独重跑 `workspace-preparation` 仍失败，同一组测试在 T9 的 Linux CI 全量运行中通过，以本次推送的 CI 为准。
+- 连接、已授权、工作台、账号设置、空间菜单与手机导航在桌面与手机、浅色与深色下截图，人工查看与原型一致。
+- `check-docs`、`check-workflow`、`git diff --check` 通过。
+
+## T11 任务
+
+**范围**：`src/hub/web/tasks`：任务列表（状态筛选、来源工作目录与主宿主筛选、每页数量、分页、本页查找、机器状态不可读提示、“可能滞后”与交付标记）和检查器（轮次纬线、报告与结构化摘要、16000 字分段阅读、交付中的附件、代码与进程、详情事实与诊断原始记录、交给 Agent 继续处理的说明、原生会话与原生文件入口）。打开、切换轮次和关闭会同步 hash 中的 `task` 与 `round`；同一标签再次打开 CLI 链接时页面重挂并读取新的任务与轮次。
+
+**实现取舍**：
+- 检查器只显示当前任务的数据，切换任务时先显示读取中，不沿用上一个任务的内容；切换轮次或分段时保留当前内容直到新内容返回。详情读取失败时，404 说明任务记录只对发起人可见，其他错误可重试。
+- 任务和轮次 ID 移到“详情”；机器与 Runtime 名称来自列表，深链接打开的任务不在当前页时显示 ID。旧界面的四组 JSON 展开保留为“诊断”中的折叠原始记录。
+- 原生入口仍由 `openNative` 先开空白标签、核对会话后再写入限时凭据，地址中不含凭据。
+- UI 库的 Tabs 根节点改为 `display: contents`，标签与面板沿用检查器的间距，与原型一致。
+
+**测试**：
+- `web-task-links` 补回报告、轮次、任务 ID、原生会话交接（新标签不带账号存储、无 opener、限时凭据不能读账号接口）与关闭后清除 hash；同空间其他成员打开链接时检查器显示“无法打开这个任务”，页面不含报告。
+- 新增 `web-tasks`：两轮任务与进行中任务；状态筛选、`/` 聚焦本页查找、检查器读取两轮报告、报告中的 HTML 按文本显示、分段阅读与焦点、交付与详情、诊断展开、继续处理说明、Escape 关闭并归还焦点、筛选弹层与筛选标记、同标签深链接打开指定轮次、手机检查器与三档尺寸无横向溢出，浏览器无错误与 CSP 违规。
+- `console-history.ts` 与原生验收 `native-history.ts` 改用新界面的登录、空间链接和任务检查器；原生验收需要真实模型授权，本任务只做类型检查，未运行。
+
+**验证**：
+- `bun run typecheck` 通过；`bun run test` 29 项通过；`bun run test:ui` 18 项通过。
+- `bun run build` 后 `web-tasks`、`web-task-links`、`web-workspace`、`web-identity`、`web-connect`、`web-invitations`、`hub-console` 共 15 项通过。
+- 任务列表、检查器（报告、交付、详情）在桌面与手机、浅色与深色下截图，人工查看与原型一致；手机深色的纯黑背景来自原型 token。
+
+## T12 机器与 Runtime
+
+**范围**：`src/hub/web/resources`：机器列表与检查器（所有者：凭据状态与撤销、取消与恢复登记、改名、空间关联、探测原生工具、首次连接与凭据撤销提示；他人机器只显示概要；空间治理按权限显示），Runtime 列表与检查器（选用资格、检查工具与版本、改名、取消与恢复登记、共享到空间、空间治理；他人共享的 Runtime 只能检查），以及登记 Runtime 对话框。资源所有者名称取自当前空间成员，已离开的所有者写作“已离开此空间的成员”。
+
+**实现取舍**：
+- 共享到某个空间前，机器必须已关联到该空间；未关联时开关不可用并说明原因，已共享的仍可撤回。
+- 撤回关联、撤回共享、停用、撤销凭据和取消登记都先确认；共享会说明消耗对方机器的模型额度、不提供系统隔离。
+- 菜单与弹出层关闭时不再保留入场动画。测试中发现，入场动画未结束时选择菜单项，Radix 会让菜单保持挂载到动画结束，此时再次点击触发器不会打开菜单。
+- 工作区中出现两处非本人会话所做的修改：`packages/ui/src/components/overlay.tsx` 让从菜单项打开的对话框关闭后把焦点还给菜单触发器，`web-resources` 测试在撤销凭据后等待焦点回到“机器操作”。两处都合理，予以保留，并在第二次确认后补上同样的等待。
+
+**测试**：新增 `web-resources`，使用资源 fixture 的两台本人机器（一台未首次连接）与一台成员机器：改名、凭据有效、探测到两种工具、关联与撤回关联第二个空间、未连接机器不能探测、他人机器只有概要、停用与解除停用、登记并检查 Runtime、未关联空间的共享开关不可用、共享后成员看到只读的共享 Runtime、撤回共享与取消登记、撤销机器凭据、取消与恢复机器登记、三档尺寸无横向溢出，浏览器无错误与 CSP 违规。连续运行 5 次均通过。
+
+**验证**：
+- `bun run typecheck` 通过；`bun run test:ui` 18 项通过。
+- `bun run build` 后 `web-identity`、`web-connect`、`web-workspace`、`web-invitations`、`web-task-links`、`web-tasks`、`web-resources`、`hub-console`、`cli-resources` 共 21 项通过。
+- 机器、Runtime 列表与检查器在桌面与手机、浅色与深色下截图，人工查看与原型一致。
+
+## T13 Agent、仓库与我的选择
+
+**范围**：
+- `src/hub/web/agents`：Agent 列表与检查器。所有者可以创建、编辑（保存生成新版本）、取消与恢复登记、查看版本历史、设置分享范围与成员；被分享者看到当前定义与“由谁分享”；管理员对他人私有定义只看到治理概要，不含定义、模型参数或指令；空间治理开关按权限显示。
+- `src/hub/web/repositories`：仓库登记（含别名）、改名、别名增删、取消与恢复登记、本人 checkout 只读列表；非管理者只能查看。
+- `src/hub/web/selections`：解析顺序说明、空间与仓库选择卡片、添加与修改（Runtime 只列与 Agent 类型相同且可用的）、清除、解析预览。失效的选择保留原 Agent 或 Runtime 的名称或 ID，并说明原因，不自动换成别的层。
+
+**实现取舍**：
+- Agent 与仓库的创建都走 `spaceApi.create`：请求 ID 与表单摘要保存在会话存储中，结果未知时再次提交先查原回执，表单改变时不自动新建。
+- 填写模型或推理等级而未选原生类型时，表单先提示，服务端的拒绝在表单内显示。
+- 解析预览是只读请求，网络失败显示“无法连接 Hub”，不沿用写操作的“结果未确认”说法。
+- 本任务新增的三个由页面打开的对话框改为在打开时重置表单。Radix 只在对话框内部关闭时调用 `onOpenChange`，原写法从不重置，登记 Runtime 甚至可能提交空机器。
+- UI 库的 `Form` 新增 `stickyActions`，长编辑器的按钮固定在面板底部，与原型一致。
+
+**测试**：
+- 新增 `web-configuration`：
+  - 仓库登记时丢失创建响应与第一次回执查询，界面提示“创建结果未确认，已保留请求”，再次提交后按原回执完成，Hub 上只有一个仓库；
+  - 别名增删、空 checkout；
+  - Agent 缺原生类型时被拒、创建、编辑为 v2、版本历史、分享给空间成员；
+  - 仓库选择保存与解析预览（来源与 Runtime 名称）；
+  - Agent 取消登记后选择卡片显示失效原因并保留原名称，解析失败不给结果；
+  - 成员只看到他人私有 Agent 的治理概要（页面不含指令文本），可在空间停用，分享来的 Agent 没有编辑入口；
+  - 三档尺寸无横向溢出，浏览器无错误与 CSP 违规。
+- `test/core/hub-web.test.ts` 新增：Hub 拒绝的创建会清除回执，修正后的表单是新请求。
+
+**验证**：
+- `bun run typecheck` 通过；`bun run test` 30 项通过；`bun run test:ui` 18 项通过。
+- `bun run build` 后共 33 项通过，覆盖：
+  - 全部 `web-` 浏览器测试；
+  - `hub-console`；
+  - `hub-agents`、`hub-repositories`、`hub-agent-resolution`。
+- Agent 详情与编辑、仓库详情、我的选择在桌面与手机、浅色与深色下截图，人工查看与原型一致。
+
+## T14 成员与空间
+
+**范围**：
+- `src/hub/web/members`：空间名称就地修改（按权限）、成员列表（角色、加入日期）。
+- 按 Hub 返回的权限显示每位成员可设的角色与能否移出：管理员只能管理普通成员，最后一位所有者不可降级或移出。
+- 邀请成员：所有者可选成员或管理员，管理员只能邀请成员。邀请只在生成后的对话框中显示一次、可复制，不提供下载；关闭后从页面状态中丢弃。
+- 待使用邀请列表与撤销；退出空间（最后一位所有者禁用并说明原因）。
+- 退出后清除链接中的空间并打开下一个空间，没有空间时进入“你还没有空间”。
+- 至此八个入口都已迁移，迁移占位页删除，页面分派改为按入口查表。
+
+**实现取舍**：角色变更沿用旧界面的二次确认；邀请文本里的到期时间直接用相对时间，如“24 小时后过期”。
+
+**测试**：
+- 新增 `web-members`，依次覆盖：
+  - 唯一所有者不能退出；修改空间名称并同步到面包屑；
+  - 生成管理员邀请：只显示一次、焦点落在邀请上、没有下载按钮、关闭后页面不含邀请；撤销后该邀请无法使用；
+  - 访客经“接受邀请”加入后被设为管理员；作为管理员看不到对所有者的操作，可以退出空间；退出后切到自己的空间；
+  - 三档尺寸无横向溢出，浏览器无错误与 CSP 违规。
+- `web-invitations` 的网页邀请改为在成员页生成并复制，再由访客保存为文件交给 CLI `accept --file`，补回 T10 暂时移出的网页部分。
+
+**验证**：
+- `bun run typecheck` 通过；`bun run test` 30 项通过。
+- `bun run build` 后共 19 项通过：
+  - 全部 `web-` 浏览器测试；
+  - `hub-console`、`space-cli`。
+- 成员页与邀请对话框在桌面与手机、浅色与深色下截图，人工查看与原型一致。
+
+## T15 原型包改用 UI 库
+
+**范围**：原型包的八个入口、账号场景、数据场景、角色与外观演示控制改为 React 页面，组件、样式、图标与交互全部取自 UI 库。原型包只保留：
+- 页面（`src/pages/*.tsx`）、壳与演示控制（`src/app.tsx`）、页面共用的读取与写操作入口（`src/proto.tsx`）；
+- 内存数据（`src/mock.js`，固定时钟移到 `src/time.js`）；
+- 受限 iframe 的表单补丁（`src/forms.js`）、预览握手转接（`src/bridge.js`）；
+- 演示控制样式（`src/app.css`）。
+
+旧的 `app.js`、`ui/`、各页面 JS 与 `style.css` 删除。构建改用 UI 库的 `buildFrontend`，新增 `format: 'iife'`，仍合成自包含 HTML。页面与 Hub 各自实现（技术 Q7）。原型 TSX 纳入根目录类型检查，内存数据用声明文件给出宽松类型。
+
+**实现取舍**：
+- 页面读取沿用已验收原型的语义：首次读取失败显示“无法读取…”与重试；刷新失败保留已读内容并在页面提示区显示“刷新失败”；“刷新失败”场景在页面读完后再触发一次刷新；导航后的标题聚焦等页面读完再进行。
+- `verify.mjs` 的对话框定位改为 UI 库的 `.dialog[data-state=open]`。焦点归还检查改为等待：Radix 在对话框卸载后的下一个任务里归还焦点，仍归还到“接入新环境”，但在卸载的同一时刻焦点短暂在 body 上。
+- CI 的原型任务先在仓库根目录安装依赖（React、Radix 与 Tailwind 来自根目录），再安装原型包自身依赖。
+- 与已验收截图对照时发现并修复两处 UI 库问题，Hub 同样受影响：
+  - Tailwind 会为类名 `block` 生成 `display: block` 工具类，覆盖了区块的纵向间距。区块改用 `content-block`，标题统一放在 `block-head` 中，危险区标题恢复为红色，与原型一致。
+  - 侧栏导航分组的包裹元素让条目失去 1px 间距，改为 `display: contents`，保留分组语义。
+- 用 Tailwind 编译器逐个核对 UI 库样式中的类名：除 `sr-only`、`sticky` 外，没有与工具类重名的；这两个与工具类设置的是同一属性同一取值，不冲突。
+- `Row` 新增 `className` 与 `tone`，原型的任务行用它保留 `task-row`，不再自写行结构。
+
+**截图对照**：在临时 worktree 中用已验收提交构建原型并截图，作为基线；新版本截图后逐像素比较。8 个入口 × 桌面、平板、手机 × 浅色、深色共 48 对，21 对像素完全相同，其余每个像素各通道差值不超过 1，属于抗锯齿差异，没有可见差异。
+
+**发布**：从已推送的干净提交 `7d39c4b` 构建、截图并准备请求，发布到 R2 版本 `b9a3c437…7bfb7de`，登记到原型清单与本 Change。浏览器校验通过，任务、成员、账号三个入口的公开字节与本地构建的 sha256 一致。入口的 `sourcePath` 已改指新的 TSX 页面。
+
+**验证**：
+- `bun run typecheck` 通过；原型 `node --test publish-r2.test.mjs` 12 项通过。
+- `CI=true node verify.mjs --screenshots`：24 个入口流程与场景流程通过，48 张截图，无外部请求、存储或浏览器错误。场景流程单独连续 3 次通过。
+- UI 库改动后：`bun run test:ui` 18 项通过；`bun run build` 后全部 `web-` 浏览器测试与 `hub-console` 共 18 项通过。
+
+## T16 收尾
+
+**范围**：
+- 旧前端模块、旧样式与依赖旧 DOM 的页面测试已在 T10–T15 中删除或改写。本任务核对仓库中不再引用 `src/hub/app.ts`、`console.ts`、各页面脚本、`style.css` 与 `web-console`；历史归档文档保留原样。
+- `scripts/ci-scope.mjs`：
+  - `packages/ui/**` 选择新的 `ui` 检查（`bun run test:ui`）、原型验收、类型检查与全部 Hub 浏览器测试；
+  - `src/hub/web/**`、`src/hub/page.*`、`src/hub/csp.ts`、`src/hub/native-page.ts` 选择类型检查、`web-` 与 `hub-console`；`csp.ts` 另选 `ui`；
+  - 未知或共享路径同时选择 `ui`；去掉已不存在的 `web-console`。
+- `checks.yml`：选中 `ui` 时安装 Chromium 并运行 `bun run test:ui`。
+- `docs/testing.md`：按新页面测试与 UI 库检查改写，删除迁移期说明。
+
+**CI 发现的问题**：T14 推送后的 CI 中 `web-members` 失败（本地 4 次中失败 1 次）。访客退出空间后，任务页先在原空间上下文下挂载，向原空间换取短 JWT。Hub 对非成员与登录失效都返回 401 `user_session_invalid`，页面把它当作登录失效而退出到登录页；只有上下文切换赶在响应之前时才不会发生。修复两处：
+- 空间相关请求（含原生会话打开）收到 401 时先用账号凭据读取 `/identity`：账号仍有效时报告“无法访问这个空间”，账号也失效时才按登录失效处理。
+- 退出空间先切换到下一个空间，再导航到任务页。
+
+新增单元测试覆盖这两种 401。修复后 `web-members` 连续 8 次通过。
+
+**验证**：
+- `bun run typecheck` 通过；`bun run test` 31 项通过；`bun run test:tools` 60 项通过（`ci-scope` 测试新增 Hub 页面、UI 库与 CSP 的选择断言）；`bun run test:ui` 18 项通过；`bun run build` 通过。
+- `check-docs`、`check-workflow`、`git diff --check` 通过。
+- 原型 `bun run build` 与 `CI=true bun run test`：发布工具 12 项通过，24 个入口流程与场景流程通过。
+- 全部 `web-` 浏览器测试与 `hub-console` 共 18 项通过。
+- 修复前的全量集成：262 项通过，6 项失败，均为本环境 `ps` 不可用导致的 `cli-uninstall` 与 `workspace-preparation`，与 T10 记录相同。
+
+## T17 独立评审与 CI 返修
+
+2026-10-20 用户授权由 Codex 接手 Claude Code 的剩余独立评审、CI 问题与收尾，并合入 develop。Claude 的产品实现独立评审因会话额度中断，没有形成评审结论；本次使用不继承实现对话的独立 Agent 重新评审整个差异。
+
+macOS ARM64 的 CI `39407468911` 在 npm 卸载失败保留测试中返回 `uninstall_process_unknown`，尚未进入预期的 npm 失败分支。进程检查先后调用 `ps` 读取命令、状态、启动时间；退出发生在状态与启动时间之间时，空启动时间被直接认作未知。新回归在独立子进程中回放 macOS 探测顺序，使用真实已退出 PID，修复前确定失败；修复后仅在 ESRCH 或僵尸态证明退出时允许继续，仍存活且启动标记未知时仍拒绝。
+
+安装验收的断言同时保留无凭据错误对象，CI 再失败时可以区分具体核对阶段，不以整组重试掩盖原因。
+
+进程修正的本地复验：`bun run typecheck`、构建、文档/工作流/diff 检查通过；`uninstall-processes`、`cli-uninstall`、`workspace-preparation` 共 10 项通过。当前执行环境的 `ps` 可用，已覆盖并解除 T10/T16 记录的 6 项本地环境失败。
+
+修复提交 `713a43a` 的 [CI 39411681029](https://github.com/iTgo-lyq/runweft/actions/runs/39411681029) 全部通过：269 项集成测试、HAPI 三个 manager 测试文件、原型检查以及 Linux/macOS 的 x64/ARM64 四个平台安装检查。macOS ARM64 原失败已解除。
+
+独立评审发现并返修：
+
+- 根会话刷新、深链接与空间切换按最新有效代次应用结果，旧成功、错误及退出后的迟到响应不再修改账号/空间。空间 API 在 JWT 等待结束后再次核对上下文，避免继续发送旧写操作。
+- 连续空间选择允许最新明确选择覆盖在途选择；切换开始时重建页面回调。明确退出、修改密码与退出全部环境按账号而非空间核对结果，开始时立即失效此前根读取，两种响应顺序都覆盖。
+- 有另一位所有者时恢复本人降权入口，成功后同步工作台身份与权限。
+- 手机导航关闭时归还触发按钮焦点；前端 API 与路由路径加入 CI core 选择。
+
+新增单元测试与真实 Hub 浏览器回归，独立评审详情见 [review.md](review.md)。未改持久化格式、HAPI pin 或用户原生客户端配置。
+
+本轮本地验证：核心 33 项、工具 60 项、UI 18 项通过，typecheck/build、产品 Skill 结构检查及 docs/workflow/diff 检查通过。原型构建、12 项发布工具测试、24 个三尺寸入口流程与场景流程通过，无外部请求、存储或浏览器错误。固定 R2 原型引用继续保留 T15 的源码提交、摘要和发布版本，不覆盖历史验收产物；本轮共享 UI 修正由当前源码与自动验证交付。
+
+双响应回归的夹具曾在重叠注册路由时报告 `Route is already handled`；改为单一延迟分派器。随后第二次登录选中了已经激活的空间，未产生被等待的切换请求；改为选择不同于当前的空间，不增加等待时长掩盖问题。独立评审同时复验两种响应顺序及跨账号隔离，未发现剩余产品问题。
+
+最终账号修改经重新 typecheck/build 后，`web-workspace` 与 `web-identity` 的 6 项真实 Hub 浏览器测试通过，覆盖正常账号生命周期、最新空间选择、退出两种响应顺序，以及已过期改密/全端退出不误报成功。评审结论已完成，最终提交 CI 尚待完成再登记 T17 与关闭状态。
+
+`3885d44` 的本地全部 `web-*` 与 `hub-console` 共 21 项通过。其 CI `39414036611` 的四个平台安装检查通过，但原型在 24 个入口流程通过后，减少透明度场景读到了工具栏的中间样式 `blur(4px)`，未达到 `none`。原检查用两个动画帧推断媒体偏好与过渡已经完成。独立诊断中，单独开启减少透明度时 15/15 次双帧仍处于 100ms 过渡，115–150ms 内全部到达 `none`；同时开启减少动态效果的本地 15 次未复现 CI 中间值。因此改为等待媒体偏好及实际最终样式，2 秒有界，保留原断言。定向场景通过；注入持续 `blur(4px) !important` 的负向诊断仍按预期失败，未把真实样式错误放过。
+
+扩展检查又发现实际 CSS 层级问题：components 层的手机侧栏和遮罩覆盖了 base 层退回，手机侧栏保留半透明背景，详情标题也保留模糊。现在将组件退回写在 components 层的响应式规则之后，侧栏/详情标题变为实底，三者取消模糊。新 UI 回归在修复前明确报遮罩 `blur(6px) != none`；样式修复后的原型 12 项工具、24 个入口与场景检查全部通过。
+
+最后的 typecheck、UI 18 项及 docs/workflow/diff 检查通过。独立 Agent 使用当前源码另建 bundle，在手机深浅色下复验减少透明度的所有表面及关闭偏好后的恢复，未发现剩余问题。`3885d44` 的 CI checks 与四平台安装均已通过；原型时序修正和组件退回修正另行提交后等待最终 CI。
+
+最终实现 `fe85fb7` 的 [CI 39415204567](https://github.com/iTgo-lyq/runweft/actions/runs/39415204567) 全绿：核心 33 项、工具 60 项、UI 18 项、集成 272 项、HAPI manager 31 项（3 文件），原型工具 12 项及 24 个三尺寸入口/场景流程，以及 Linux/macOS x64/ARM64 四个平台安装检查全部通过。类型、构建、产品 Skill、文档与工作流等所选检查通过。没有执行需要真实模型凭据的人工模型验收，浏览器自动验收使用 Chromium。
+
+已同步最新 `origin/develop`，确认其为本分支祖先，无需解决合并冲突。8 个固定托管预览的匿名 HEAD 均为 HTTP 200、HTML 类型，原型元数据检查通过。用户本轮明确要求“完成收尾并合入 develop”，作为人工验收与协作分支合入依据；长期规格同步到 dashboard，涵盖八入口布局、UI 库与独立原型、CSP、上下文隔离、成员权限和减少透明度退回。源码 worktree 有主工作区不存在的独立 `.env`，收尾保留该配置及来源 worktree。

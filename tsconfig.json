@@ -8,7 +8,28 @@
     "esModuleInterop": true,
     "resolveJsonModule": true,
     "skipLibCheck": true,
-    "types": ["bun-types", "node"]
+    "types": [
+      "bun-types",
+      "node"
+    ],
+    "jsx": "react-jsx",
+    "paths": {
+      "@runweft/ui": [
+        "./packages/ui/src/index.ts"
+      ],
+      "@runweft/ui/*": [
+        "./packages/ui/src/*"
+      ]
+    }
   },
-  "include": ["src/**/*.ts", "test/**/*.ts", "scripts/**/*.ts"]
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "test/**/*.ts",
+    "scripts/**/*.ts",
+    "packages/ui/**/*.ts",
+    "packages/ui/**/*.tsx",
+    "packages/prototype/src/**/*.ts",
+    "packages/prototype/src/**/*.tsx"
+  ]
 }
