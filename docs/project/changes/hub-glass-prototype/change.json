@@ -55,7 +55,9 @@
     },
     "T13": {
       "title": "Agent、仓库与我的选择",
-      "status": "todo"
+      "status": "done",
+      "verification": "typecheck；bun run test 30 项；test:ui 18 项；全部 web- 浏览器测试与 hub-console、hub-agents、hub-repositories、hub-agent-resolution 共 33 项通过；创建回执恢复与选择失效有浏览器覆盖；深浅色、桌面与手机截图人工核对",
+      "commitTitle": "hub-glass-prototype T13: move the Hub Agent, repository and selection pages to React"
     },
     "T14": {
       "title": "成员与空间",

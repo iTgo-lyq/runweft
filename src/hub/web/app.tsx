@@ -10,6 +10,9 @@ import { SettingsPage } from './workspace/settings-page';
 import { TasksPage } from './tasks/tasks-page';
 import { MachinesPage } from './resources/machines-page';
 import { RuntimesPage } from './resources/runtimes-page';
+import { AgentsPage } from './agents/agents-page';
+import { RepositoriesPage } from './repositories/repositories-page';
+import { SelectionsPage } from './selections/selections-page';
 import { pages, WorkspaceShell } from './workspace/shell';
 
 type Session = { token: string; identity: Identity; username: string; spaces: Space[]; space?: Space };
@@ -37,6 +40,9 @@ function Page({ view }: { view: View }) {
     if (view === 'tasks') return <TasksPage />;
     if (view === 'machines') return <MachinesPage />;
     if (view === 'runtimes') return <RuntimesPage />;
+    if (view === 'agents') return <AgentsPage />;
+    if (view === 'repositories') return <RepositoriesPage />;
+    if (view === 'selections') return <SelectionsPage />;
     return view === 'settings' ? <SettingsPage /> : <PendingPage view={view} />;
 }
 

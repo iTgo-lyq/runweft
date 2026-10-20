@@ -130,4 +130,19 @@ describe('Hub page space context', () => {
         expect(await api.create<{ agent: { id: string } }>('/agents', { name: 'reviewer' }, async () => true)).toEqual({ agent: { id: 'a1' } });
         expect(store.has(key)).toBe(false);
     });
+
+    test('a creation the Hub refuses drops its receipt, so the corrected form is a new request', async () => {
+        const { store } = browser();
+        const key = 'runweft.create:u1:s1:/repositories', sent: string[] = [];
+        answer = call => {
+            if (call.url === '/api/auth') return json(200, { token: 'jwt' });
+            sent.push(call.body.requestId);
+            return sent.length === 1 ? json(409, { error: { code: 'repository_name_taken', message: '仓库名称已被使用' } }) : json(200, { repository: { id: 'r1' } });
+        };
+        const api = spaceApi({ token: 'rw_web_account', userId: 'u1', spaceId: 's1' }, () => true);
+        expect((await api.create('/repositories', { name: 'taken' }, async () => true).catch(error => error)).status).toBe(409);
+        expect(store.has(key)).toBe(false);
+        expect(await api.create<{ repository: { id: string } }>('/repositories', { name: 'free' }, async () => true)).toEqual({ repository: { id: 'r1' } });
+        expect(sent[0]).not.toBe(sent[1]);
+    });
 });

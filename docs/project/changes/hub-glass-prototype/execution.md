@@ -192,3 +192,36 @@ T1 仅交付独立原型，未修改 src/hub、HAPI、产品配置或模型凭�
 - `bun run typecheck` 通过；`bun run test:ui` 18 项通过。
 - `bun run build` 后 `web-identity`、`web-connect`、`web-workspace`、`web-invitations`、`web-task-links`、`web-tasks`、`web-resources`、`hub-console`、`cli-resources` 共 21 项通过。
 - 机器、Runtime 列表与检查器在桌面与手机、浅色与深色下截图，人工查看与原型一致。
+
+## T13 Agent、仓库与我的选择
+
+**范围**：
+- `src/hub/web/agents`：Agent 列表与检查器。所有者可以创建、编辑（保存生成新版本）、取消与恢复登记、查看版本历史、设置分享范围与成员；被分享者看到当前定义与“由谁分享”；管理员对他人私有定义只看到治理概要，不含定义、模型参数或指令；空间治理开关按权限显示。
+- `src/hub/web/repositories`：仓库登记（含别名）、改名、别名增删、取消与恢复登记、本人 checkout 只读列表；非管理者只能查看。
+- `src/hub/web/selections`：解析顺序说明、空间与仓库选择卡片、添加与修改（Runtime 只列与 Agent 类型相同且可用的）、清除、解析预览。失效的选择保留原 Agent 或 Runtime 的名称或 ID，并说明原因，不自动换成别的层。
+
+**实现取舍**：
+- Agent 与仓库的创建都走 `spaceApi.create`：请求 ID 与表单摘要保存在会话存储中，结果未知时再次提交先查原回执，表单改变时不自动新建。
+- 填写模型或推理等级而未选原生类型时，表单先提示，服务端的拒绝在表单内显示。
+- 解析预览是只读请求，网络失败显示“无法连接 Hub”，不沿用写操作的“结果未确认”说法。
+- 本任务新增的三个由页面打开的对话框改为在打开时重置表单。Radix 只在对话框内部关闭时调用 `onOpenChange`，原写法从不重置，登记 Runtime 甚至可能提交空机器。
+- UI 库的 `Form` 新增 `stickyActions`，长编辑器的按钮固定在面板底部，与原型一致。
+
+**测试**：
+- 新增 `web-configuration`：
+  - 仓库登记时丢失创建响应与第一次回执查询，界面提示“创建结果未确认，已保留请求”，再次提交后按原回执完成，Hub 上只有一个仓库；
+  - 别名增删、空 checkout；
+  - Agent 缺原生类型时被拒、创建、编辑为 v2、版本历史、分享给空间成员；
+  - 仓库选择保存与解析预览（来源与 Runtime 名称）；
+  - Agent 取消登记后选择卡片显示失效原因并保留原名称，解析失败不给结果；
+  - 成员只看到他人私有 Agent 的治理概要（页面不含指令文本），可在空间停用，分享来的 Agent 没有编辑入口；
+  - 三档尺寸无横向溢出，浏览器无错误与 CSP 违规。
+- `test/core/hub-web.test.ts` 新增：Hub 拒绝的创建会清除回执，修正后的表单是新请求。
+
+**验证**：
+- `bun run typecheck` 通过；`bun run test` 30 项通过；`bun run test:ui` 18 项通过。
+- `bun run build` 后共 33 项通过，覆盖：
+  - 全部 `web-` 浏览器测试；
+  - `hub-console`；
+  - `hub-agents`、`hub-repositories`、`hub-agent-resolution`。
+- Agent 详情与编辑、仓库详情、我的选择在桌面与手机、浅色与深色下截图，人工查看与原型一致。

@@ -101,11 +101,14 @@ export function Find({ value, onChange, label = '在本页查找', placeholder =
 }
 
 /** A form whose submit handler always receives control; native validation runs first. */
-export function Form({ onSubmit, children, actions, className, ...props }: Omit<ComponentProps<'form'>, 'onSubmit'> & { onSubmit: (event: FormEvent<HTMLFormElement>) => void; actions?: ReactNode }) {
+/** `stickyActions` keeps the buttons at the bottom of a scrolling panel, for long editors. */
+export function Form({ onSubmit, children, actions, stickyActions = false, className, ...props }: Omit<ComponentProps<'form'>, 'onSubmit'> & {
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void; actions?: ReactNode; stickyActions?: boolean;
+}) {
   return (
     <form className={cn('form', className)} onSubmit={event => { event.preventDefault(); onSubmit(event); }} {...props}>
       {children}
-      {actions && <div className="form-actions">{actions}</div>}
+      {actions && <div className={cn('form-actions', stickyActions && 'sticky')}>{actions}</div>}
     </form>
   );
 }

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
     Badge, Banner, Button, Chain, Dialog, EmptyState, Facts, Form, Icon, InlineEdit, Menu, MenuItem, Mono, PageHead, PanelHead, PanelInner, Row, RowList,
     Section, Segmented, SelectField, SplitView, SwitchRow, Tag, TextField, relativeTime, toast, useConfirm, useSplit,
@@ -155,8 +155,10 @@ function RegisterDialog({ open, onOpenChange, machines, onRegistered }: { open: 
     const [name, setName] = useState('');
     const [error, setError] = useState<HubApiError | null>(null);
     const [busy, setBusy] = useState(false);
+    // The parent opens the dialog, so each opening starts from the current machines rather than the last attempt.
+    useEffect(() => { if (open) { setMachineId(preferred); setFlavor('codex'); setName(''); setError(null); } }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
     return (
-        <Dialog open={open} onOpenChange={next => { if (next) { setMachineId(preferred); setFlavor('codex'); setName(''); setError(null); } onOpenChange(next); }}
+        <Dialog open={open} onOpenChange={onOpenChange}
             title="登记 Runtime" description="把一台你的机器上的 Codex 或 Claude Code 登记为可选的执行工具。"
             footer={<><Button onClick={() => onOpenChange(false)}>取消</Button><Button type="submit" form="register-runtime" variant="primary" disabled={busy}>登记 Runtime</Button></>}>
             <Form id="register-runtime" onSubmit={async () => {
