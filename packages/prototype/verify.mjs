@@ -312,7 +312,11 @@ async function scenarioFlow(t, f, page, client) {
   await t.demo('外观', '跟随系统');
   // Reduced transparency removes the blur; reduced motion removes the inspector animation.
   await client.send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-transparency', value: 'reduce' }, { name: 'prefers-reduced-motion', value: 'reduce' }] });
-  await t.frame().evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  // Media propagation and the toolbar's filter transition can outlive two animation frames.
+  await t.frame().waitForFunction(() => matchMedia('(prefers-reduced-motion: reduce)').matches, null, { timeout: 2000 });
+  if (await t.frame().evaluate(() => matchMedia('(prefers-reduced-transparency: reduce)').matches)) {
+    await t.frame().waitForFunction(() => getComputedStyle(document.querySelector('.toolbar')).backdropFilter === 'none', null, { timeout: 2000 });
+  }
   const style = await t.frame().evaluate(() => ({ blur: getComputedStyle(document.querySelector('.toolbar')).backdropFilter, supported: matchMedia('(prefers-reduced-transparency: reduce)').matches }));
   if (style.supported) assert.equal(style.blur, 'none', 'reduced transparency keeps the toolbar opaque');
   await t.press(t.row('machine-3f8a'));

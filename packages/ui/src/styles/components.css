@@ -511,3 +511,9 @@ input:disabled, select:disabled { opacity: .6; }
   .space-card { padding: 14px; }
   .dialog { width: calc(100vw - 16px); max-height: calc(100dvh - 16px); border-radius: 20px; }
 }
+
+/* Keep component overrides in this layer, after their responsive glass styles. */
+@media (prefers-reduced-transparency: reduce) {
+  .sidebar, .panel-head { background: var(--surface); }
+  .sidebar, .panel-head, .dialog-overlay { -webkit-backdrop-filter: none; backdrop-filter: none; }
+}

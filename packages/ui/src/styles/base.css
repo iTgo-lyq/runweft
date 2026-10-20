@@ -35,7 +35,6 @@ p { text-wrap: pretty; }
 @supports not ((backdrop-filter: blur(2px)) or (-webkit-backdrop-filter: blur(2px))) { .glass { background: var(--surface); } }
 @media (prefers-reduced-transparency: reduce) {
   .glass { background: var(--surface); -webkit-backdrop-filter: none; backdrop-filter: none; }
-  .dialog-overlay { -webkit-backdrop-filter: none; backdrop-filter: none; }
 }
 
 /* ---- motion ---------------------------------------------------------------------- */

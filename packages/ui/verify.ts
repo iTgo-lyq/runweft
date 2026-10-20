@@ -204,6 +204,19 @@ try {
     assert.deepEqual(style, { image: 'none', filter: 'none' });
     await page.keyboard.press('Escape');
     await page.getByRole('menu').waitFor({ state: 'detached' });
+    await page.getByRole('button', { name: '打开对话框' }).click();
+    await page.getByRole('dialog', { name: '登记仓库' }).waitFor();
+    assert.equal(await page.locator('.dialog-overlay').evaluate(node => getComputedStyle(node).backdropFilter), 'none');
+    await page.keyboard.press('Escape');
+    await page.getByRole('dialog', { name: '登记仓库' }).waitFor({ state: 'detached' });
+    await page.getByRole('button', { name: /林舟的 MacBook Pro/ }).first().click();
+    const head = page.locator('.panel-head');
+    await head.waitFor();
+    assert.equal(await head.evaluate(node => getComputedStyle(node).backdropFilter), 'none');
+    assert.match(await head.evaluate(node => getComputedStyle(node).backgroundColor), /^rgb\(/);
+    await waitFocus(head.getByRole('heading'));
+    await page.keyboard.press('Escape');
+    await head.waitFor({ state: 'hidden' });
     await session.send('Emulation.setEmulatedMedia', { features: [] });
   });
 
@@ -220,6 +233,16 @@ try {
     await shell.page.getByRole('button', { name: '打开导航' }).tap();
     await shell.page.getByRole('button', { name: '收起导航' }).tap();
     await shell.page.waitForFunction(() => document.activeElement?.getAttribute('aria-label') === '打开导航');
+    const session = await shell.page.context().newCDPSession(shell.page);
+    await session.send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-transparency', value: 'reduce' }] });
+    await shell.page.getByRole('button', { name: '打开导航' }).tap();
+    await shell.page.waitForFunction(() => getComputedStyle(document.querySelector('.sidebar')!).backdropFilter === 'none', null, { timeout: 2000 });
+    const sidebar = await shell.page.locator('.sidebar').evaluate(node => {
+      const style = getComputedStyle(node);
+      return { image: style.backgroundImage, color: style.backgroundColor };
+    });
+    assert.equal(sidebar.image, 'none');
+    assert.match(sidebar.color, /^rgb\(/);
     assert.deepEqual(shell.problems, []);
     await shell.page.close();
   });
