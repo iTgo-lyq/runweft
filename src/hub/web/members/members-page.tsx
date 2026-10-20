@@ -48,7 +48,7 @@ export function MembersPage() {
                                 {members.map(member => {
                                     const self = member.userId === ws.identity.id, allowed = permissions.members[member.userId] ?? { roles: [], remove: false };
                                     const roles = allowed.roles.filter(role => role !== member.role);
-                                    const canAct = !self && (roles.length > 0 || allowed.remove);
+                                    const canAct = roles.length > 0 || (!self && allowed.remove);
                                     return (
                                         <li className="person" key={member.userId} data-member-id={member.userId}>
                                             <Avatar name={member.name} />
@@ -60,15 +60,16 @@ export function MembersPage() {
                                                     {roles.map(role => (
                                                         <MenuItem key={role} icon="shield" description={role === 'owner' ? '与你拥有相同的管理权' : undefined} onSelect={async () => {
                                                             if (!await confirm(`${member.name} 的角色将从${roleLabels[member.role]}改为${roleLabels[role]}。`, { title: `设为${roleLabels[role]}？`, confirmLabel: '更改角色' })) return;
-                                                            await mutate(() => ws.identityApi.setRole(ws.space.id, member.userId, role), `${member.name} 已设为${roleLabels[role]}`);
+                                                            const changed = await mutate(() => ws.identityApi.setRole(ws.space.id, member.userId, role), `${member.name} 已设为${roleLabels[role]}`);
+                                                            if (changed && self) await ws.reloadIdentity();
                                                         }}>设为{roleLabels[role]}</MenuItem>
                                                     ))}
-                                                    {roles.length > 0 && <MenuSeparator />}
-                                                    <MenuItem icon="minus-circle" danger disabled={!allowed.remove} description={allowed.remove ? undefined : ws.role === 'admin' ? '管理员只能移出普通成员' : '空间至少保留一位所有者'}
+                                                    {!self && roles.length > 0 && <MenuSeparator />}
+                                                    {!self && <MenuItem icon="minus-circle" danger disabled={!allowed.remove} description={allowed.remove ? undefined : ws.role === 'admin' ? '管理员只能移出普通成员' : '空间至少保留一位所有者'}
                                                         onSelect={async () => {
                                                             if (!await confirm(`${member.name} 将失去这个空间的访问权。对其私有资源的授权会一并撤回，已接受的任务不受影响。`, { title: `把 ${member.name} 移出空间？`, confirmLabel: '移出', danger: true })) return;
                                                             await mutate(() => ws.identityApi.removeMember(ws.space.id, member.userId), `已把 ${member.name} 移出空间`);
-                                                        }}>移出空间</MenuItem>
+                                                        }}>移出空间</MenuItem>}
                                                 </Menu>
                                             ) : <span className="person-spacer" />}
                                         </li>
@@ -119,7 +120,6 @@ export function MembersPage() {
         </div>
     );
 }
-
 /** The invitation is shown once: it lives only in this dialog's state and is dropped when the dialog closes. */
 function InviteDialog({ open, onOpenChange, roles, onCreated }: { open: boolean; onOpenChange(open: boolean): void; roles: Role[]; onCreated(): void }) {
     const ws = useWorkspace();
@@ -155,4 +155,3 @@ function InviteDialog({ open, onOpenChange, roles, onCreated }: { open: boolean;
         </Dialog>
     );
 }
-

@@ -175,4 +175,3 @@ function SummaryPanel({ machine, ownerName, reload, onClose }: { machine: Machin
         </PanelInner>
     );
 }
-

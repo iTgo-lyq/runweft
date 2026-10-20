@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { HubApiError, hubFetch } from '../../src/hub/web/api/http';
-import { spaceApi } from '../../src/hub/web/api/hub';
+import { identityApi, spaceApi } from '../../src/hub/web/api/hub';
 import { patchHash, readHash } from '../../src/hub/web/route';
 
 // The Hub page runs in a browser; these tests give it the few globals it reads and record what it sends.
@@ -75,6 +75,32 @@ describe('Hub page requests', () => {
 });
 
 describe('Hub page space context', () => {
+    test('switching context during credential acquisition prevents the old write from being sent', async () => {
+        browser();
+        let current = true;
+        answer = () => { current = false; return json(200, { token: 'old-space-jwt' }); };
+        const api = spaceApi({ token: 'rw_web_account', userId: 'u1', spaceId: 's1' }, () => current);
+        expect((await api.request('/resources/machines/m/credential', undefined, 'DELETE').catch(error => error)).message).toContain('已变化');
+        expect(calls.map(call => call.url)).toEqual(['/api/auth']);
+    });
+
+    test('late account and resource failures cannot expire a newer context', async () => {
+        browser();
+        for (const kind of ['identity', 'resource']) {
+            let current = true;
+            answer = call => {
+                if (call.url === '/api/auth') return json(200, { token: 'jwt' });
+                current = false;
+                return json(401, { error: { code: 'user_session_invalid', message: '登录已失效' } });
+            };
+            const operation = kind === 'identity'
+                ? identityApi('old-account', () => current).rename('old name')
+                : spaceApi({ token: 'old-account', userId: 'u1', spaceId: 's1' }, () => current).request('/tasks/overview');
+            const failure = await operation.catch(error => error);
+            expect(failure.kind).not.toBe('expired');
+            expect(failure.message).toContain('已变化');
+        }
+    });
     test('caches one short credential per space and keeps the account token out of resource requests', async () => {
         browser();
         let issued = 0;

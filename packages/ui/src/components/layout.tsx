@@ -21,11 +21,16 @@ export function AppFrame({ sidebar, toolbar, children, navOpen, onNavOpenChange 
   useEffect(() => {
     document.body.dataset.nav = navOpen ? 'open' : 'closed';
     if (!navOpen) return;
+    const opener = document.querySelector<HTMLElement>('.nav-open');
     const onKey = (event: globalThis.KeyboardEvent) => { if (event.key === 'Escape') onNavOpenChange(false); };
     document.addEventListener('keydown', onKey);
     const off = onScrim(() => onNavOpenChange(false));
     document.querySelector<HTMLElement>('.sidebar .nav-item[aria-current=page]')?.focus();
-    return () => { document.removeEventListener('keydown', onKey); off(); };
+    return () => {
+      document.removeEventListener('keydown', onKey); off();
+      // Dismissal returns to the trigger; navigation may already have focused the new page.
+      if (opener?.isConnected && (document.activeElement === document.body || document.activeElement?.closest('.sidebar'))) opener.focus();
+    };
   }, [navOpen, onNavOpenChange]);
   return (
     <div className="app">

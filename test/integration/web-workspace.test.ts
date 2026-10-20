@@ -1,7 +1,7 @@
 import { afterEach, expect, test } from 'bun:test';
 import { accountWebFixture } from './account-web-fixture';
 import { fixtureCleanup } from '../fixture-cleanup';
-import { accountMenu, button, expectNoOverflow, field, fillAccount, hubTab, savedSession, signIn, viewports } from './hub-web';
+import { accountMenu, button, confirmDialog, expectNoOverflow, field, fillAccount, hubTab, savedSession, signIn, viewports } from './hub-web';
 const owner = fixtureCleanup([]); afterEach(() => owner.close());
 
 test('the workspace shell renames the identity, creates, switches and joins spaces, and follows space links', async () => {
@@ -57,4 +57,91 @@ test('the workspace shell renames the identity, creates, switches and joins spac
     expect(await page.evaluate(() => document.body.dataset.nav)).toBe('closed'); expect(page.url()).toContain('view=machines');
     await expectNoOverflow(page); await expectNoOverflow(other);
     expect([...problems, ...guest.problems, ...stranger.problems]).toEqual([]);
+}, 90_000);
+
+test('late identity refreshes cannot undo a newer space choice or sign-out', async () => {
+    const h = await accountWebFixture(owner.resources), { page, problems } = await hubTab(h.browser);
+    await page.goto(h.url + '/hub'); await button(page, '没有账号？注册').click();
+    await signIn(page, 'context-owner', 'a synthetic context passphrase', '注册');
+    const saved = (await savedSession(page))!;
+    const created = await h.api('/api/runweft/hub/spaces', saved.token, { name: '最新空间' });
+    const team = created.body.space.id;
+    const finalSpace = (await h.api('/api/runweft/hub/spaces', saved.token, { name: '最终空间' })).body.space.id;
+    await page.reload(); await page.getByRole('navigation', { name: '主导航' }).waitFor();
+    const settle = () => page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    const delays = new Map<string, { gate: Promise<void>; seen(): void; beforeFetch: boolean }>();
+    await page.route('**/api/runweft/hub/**', async route => {
+        const path = new URL(route.request().url()).pathname;
+        const delay = delays.get(path);
+        if (!delay) { await route.continue(); return; }
+        delays.delete(path);
+        if (delay.beforeFetch) { delay.seen(); await delay.gate; }
+        const response = await route.fetch();
+        if (!delay.beforeFetch) { delay.seen(); await delay.gate; }
+        await route.fulfill({ response });
+    });
+    async function holdResponse(path = '/identity', beforeFetch = false) {
+        let release!: () => void, seen!: () => void;
+        const gate = new Promise<void>(resolve => { release = resolve; });
+        const started = new Promise<void>(resolve => { seen = resolve; });
+        const url = `**/api/runweft/hub${path}`;
+        delays.set(`/api/runweft/hub${path}`, { gate, seen, beforeFetch });
+        return { started, async finish() {
+            const response = page.waitForResponse(url);
+            release(); await response; await settle();
+        } };
+    }
+    // A refresh of A completes after the explicit switch to B.
+    const refresh = await holdResponse();
+    await button(page, '刷新').click(); await refresh.started;
+    await page.getByRole('button', { name: /^当前空间：/ }).click();
+    await page.getByRole('menuitemradio', { name: /最新空间/ }).click();
+    await page.waitForFunction(id => JSON.parse(sessionStorage.getItem('runweft.hub.session')!).spaceId === id, team);
+    await refresh.finish();
+    expect((await savedSession(page))!.spaceId).toBe(team);
+    expect(await page.locator('.crumb-space').innerText()).toBe('最新空间');
+
+    // The same rule applies to an old external deep-link evaluation.
+    const linked = await holdResponse();
+    await page.evaluate(id => { location.hash = `space=${id}`; }, saved.spaceId!);
+    await linked.started;
+    await page.evaluate(id => { location.hash = `space=${id}&view=members`; }, team);
+    await page.getByRole('heading', { name: '成员', level: 1 }).waitFor();
+    await linked.finish();
+    expect((await savedSession(page))!.spaceId).toBe(team);
+    expect(await page.getByRole('heading', { name: '成员', level: 1 }).count()).toBe(1);
+
+    // A second explicit choice supersedes a switch that has not returned yet.
+    const firstChoice = await holdResponse();
+    await page.getByRole('button', { name: /^当前空间：/ }).click();
+    await page.getByRole('menuitemradio', { name: /context-owner/ }).click();
+    await firstChoice.started;
+    await page.getByRole('button', { name: /^当前空间：/ }).click();
+    await page.getByRole('menuitemradio', { name: /最终空间/ }).click();
+    await page.waitForFunction(id => JSON.parse(sessionStorage.getItem('runweft.hub.session')!).spaceId === id, finalSpace);
+    await firstChoice.finish();
+    expect((await savedSession(page))!.spaceId).toBe(finalSpace);
+    expect(await page.locator('.crumb-space').innerText()).toBe('最终空间');
+
+    // Explicit logout wins in both response orders, even before the server revokes the credential.
+    for (const switchFirst of [false, true]) {
+        if (switchFirst) await signIn(page, 'context-owner', 'a synthetic context passphrase', '登录');
+        const oldName = await page.locator('.crumb-space').innerText();
+        const switching = await holdResponse();
+        await page.getByRole('button', { name: /^当前空间：/ }).click();
+        await page.getByRole('menuitemradio', { name: oldName === '最新空间' ? /最终空间/ : /最新空间/ }).click();
+        await switching.started;
+        const logout = await holdResponse('/sessions/logout', true);
+        await accountMenu(page, '退出此浏览器'); await confirmDialog(page, '退出'); await logout.started;
+        if (switchFirst) {
+            await switching.finish();
+            expect(await page.locator('.crumb-space').innerText()).toBe(oldName);
+        }
+        await logout.finish();
+        await button(page, '登录').waitFor();
+        if (!switchFirst) await switching.finish();
+        expect((await savedSession(page))?.token).toBe('');
+        expect(await button(page, '登录').isVisible()).toBe(true);
+    }
+    expect(problems).toEqual([]);
 }, 90_000);

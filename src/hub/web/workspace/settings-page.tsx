@@ -56,8 +56,8 @@ export function SettingsPage() {
                 <p className="section-lead">修改后，所有浏览器和命令行都需要用新密码重新登录。</p>
                 <Form onSubmit={async () => {
                     setPasswordError(null);
-                    const done = await ws.run(() => ws.identityApi.changePassword(current, next), { onError: setPasswordError });
-                    if (done) ws.signOut({ tone: 'ok', title: '密码已更新', text: '所有浏览器和命令行都已退出，请使用新密码登录。' });
+                    await ws.endSession(api => api.changePassword(current, next),
+                        { tone: 'ok', title: '密码已更新', text: '所有浏览器和命令行都已退出，请使用新密码登录。' }, setPasswordError);
                 }} actions={<Button type="submit" variant="primary">修改密码并退出全部环境</Button>}>
                     <PasswordField label="当前密码" required autoComplete="current-password" value={current} onChange={event => setCurrent(event.target.value)} />
                     <PasswordField label="新密码" required autoComplete="new-password" value={next} onChange={event => setNext(event.target.value)} hint="支持粘贴和密码管理器。" />
@@ -72,10 +72,8 @@ export function SettingsPage() {
                 footer={<><Button onClick={() => setLogoutAll(false)}>取消</Button><Button type="submit" form="logout-all" variant="danger">确认退出全部环境</Button></>}>
                 <Form id="logout-all" onSubmit={async () => {
                     setLogoutError(null);
-                    const done = await ws.run(() => ws.identityApi.logoutAll(confirmPassword), { onError: setLogoutError });
-                    if (!done) return;
-                    setLogoutAll(false);
-                    ws.signOut({ tone: 'info', title: '已退出全部环境', text: '可以用账号密码重新登录。' });
+                    await ws.endSession(api => api.logoutAll(confirmPassword),
+                        { tone: 'info', title: '已退出全部环境', text: '可以用账号密码重新登录。' }, setLogoutError);
                 }}>
                     <PasswordField label="当前密码" required autoComplete="current-password" value={confirmPassword} onChange={event => setConfirmPassword(event.target.value)} />
                     {logoutError && <Banner tone="danger" title={logoutError.message}>{logoutError.hint || undefined}</Banner>}

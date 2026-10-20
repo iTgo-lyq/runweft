@@ -216,6 +216,10 @@ try {
     assert.equal(await shell.page.evaluate(() => document.body.dataset.nav), 'open');
     await shell.page.keyboard.press('Escape');
     assert.equal(await shell.page.evaluate(() => document.body.dataset.nav), 'closed');
+    await shell.page.waitForFunction(() => document.activeElement?.getAttribute('aria-label') === '打开导航');
+    await shell.page.getByRole('button', { name: '打开导航' }).tap();
+    await shell.page.getByRole('button', { name: '收起导航' }).tap();
+    await shell.page.waitForFunction(() => document.activeElement?.getAttribute('aria-label') === '打开导航');
     assert.deepEqual(shell.problems, []);
     await shell.page.close();
   });

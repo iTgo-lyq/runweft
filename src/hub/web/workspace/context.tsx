@@ -21,9 +21,10 @@ export type Workspace = {
     /** Runs a write. Success shows a toast; expiry signs out; other failures go to `onError` or the page banner. */
     run<T>(action: () => Promise<T>, options?: { success?: string; onError?: (error: HubApiError) => void }): Promise<T | undefined>;
     showAlert(error: HubApiError | null): void;
-    reloadIdentity(options?: { spaceId?: string }): Promise<void>;
+    reloadIdentity(options?: { spaceId?: string }): Promise<boolean>;
     switchSpace(spaceId: string): void;
-    signOut(notice: Notice): void;
+    /** Revokes the current account session; space changes cannot cancel an explicit sign-out. */
+    endSession(action: (api: IdentityApi) => Promise<unknown>, notice: Notice, onError?: (error: HubApiError) => void): Promise<void>;
     expire(): void;
     showOnboarding(kind?: 'hub' | 'machine'): void;
 };

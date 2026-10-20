@@ -118,8 +118,7 @@ function AccountMenu() {
             <MenuItem icon="account" description="显示名称、登录环境和密码" onSelect={() => ws.navigate('settings')}>账号设置</MenuItem>
             <MenuItem icon="logout" onSelect={async () => {
                 if (!await confirm('当前标签页会退出登录。已连接的命令行环境不受影响，已接受的任务会继续执行。', { title: '退出此浏览器？', confirmLabel: '退出' })) return;
-                try { await ws.identityApi.logout(); } catch (error) { if (!(error instanceof HubApiError && error.status === 401)) { ws.showAlert(error instanceof HubApiError ? error : null); return; } }
-                ws.signOut({ tone: 'info', title: '已退出当前浏览器', text: '可以用账号密码重新登录。' });
+                await ws.endSession(api => api.logout(), { tone: 'info', title: '已退出当前浏览器', text: '可以用账号密码重新登录。' });
             }}>退出此浏览器</MenuItem>
         </Menu>
     );

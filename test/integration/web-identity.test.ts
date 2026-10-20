@@ -72,6 +72,34 @@ test('Web account lifecycle keeps identity, isolates browser environments and su
     await expectNoOverflow(a); expect([...problems, ...other]).toEqual([]);
 }, 90_000);
 
+test('expired password changes and revoke-all requests never announce success', async () => {
+    const h = await accountWebFixture(owner.resources), { page, problems } = await hubTab(h.browser);
+    const username = 'stale-settings', password = 'a synthetic settings passphrase';
+    await page.goto(h.url + '/hub'); await button(page, '没有账号？注册').click(); await signIn(page, username, password, '注册');
+    for (const action of ['password', 'revoke-all']) {
+        if (action === 'revoke-all') await signIn(page, username, password);
+        await accountMenu(page, '账号设置'); await page.getByRole('heading', { name: '账号设置' }).waitFor();
+        await page.getByText('当前环境', { exact: true }).waitFor();
+        const token = (await savedSession(page))!.token;
+        await h.api('/api/runweft/hub/sessions/logout', token, {});
+        if (action === 'password') {
+            await field(page, '当前密码').fill(password); await field(page, '新密码').fill('an unapplied new passphrase');
+            await button(page, '修改密码并退出全部环境').click();
+        } else {
+            await button(page, '退出全部环境…').click();
+            const dialog = page.getByRole('dialog', { name: '退出全部环境？' });
+            await dialog.getByLabel('当前密码', { exact: true }).fill(password);
+            await dialog.getByRole('button', { name: '确认退出全部环境' }).click();
+        }
+        await page.getByRole('heading', { name: '欢迎回来' }).waitFor();
+        await page.getByText('登录已失效', { exact: true }).waitFor();
+        expect(await page.getByText('密码已更新', { exact: true }).count()).toBe(0);
+        expect(await page.getByText('已退出全部环境', { exact: true }).count()).toBe(0);
+        expect((await savedSession(page))?.token).toBe('');
+    }
+    expect(problems).toEqual([]);
+}, 60_000);
+
 test('an expired session returns to sign-in and comes back to the same entry', async () => {
     const h = await accountWebFixture(owner.resources), { page, problems } = await hubTab(h.browser);
     await page.goto(h.url + '/hub'); await button(page, '没有账号？注册').click(); await signIn(page, 'expiry-user', 'an expiry passphrase', '注册');

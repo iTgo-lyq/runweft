@@ -43,6 +43,7 @@ export function selectChecks(files) {
         if (file === 'src/tasks/store.ts') { select(/./); [...mainCases, 'R-codex', 'R-claude'].forEach(c => native.add(c)); continue; }
         if (/^src\/hub\/(web\/|page\.|csp\.ts$|native-page)/.test(file)) {
             scope.typecheck = true; select(/\/(web-|hub-console)/);
+            if (/^src\/hub\/web\/(api\/|route\.ts$)/.test(file)) scope.core = true;
             if (file === 'src/hub/csp.ts') scope.ui = true; // the catalog checks run under the Hub CSP
             continue;
         }

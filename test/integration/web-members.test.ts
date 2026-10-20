@@ -54,3 +54,25 @@ test('members page invites once, changes roles within limits, revokes invitation
     await page.reload(); await page.getByText('只有你一个人').waitFor();
     await expectNoOverflow(page); expect([...problems, ...guest.problems]).toEqual([]);
 }, 90_000);
+
+test('an owner can hand over ownership and lower their own role without stale owner controls', async () => {
+    const h = await accountWebFixture(owner.resources), { page, problems } = await hubTab(h.browser);
+    const ownerAccount = (await h.api('/api/runweft/hub/accounts', '', { username: 'handoff-owner', password })).body;
+    const nextAccount = (await h.api('/api/runweft/hub/accounts', '', { username: 'next-owner', password })).body;
+    const space = ownerAccount.personalSpace.id;
+    const invitation = (await h.api(`/api/runweft/hub/spaces/${space}/invitations`, ownerAccount.token, { role: 'member' })).body.token;
+    expect((await h.api('/api/runweft/hub/invitations/accept', nextAccount.token, { token: invitation })).status).toBe(200);
+    const nextId = (await h.api('/api/runweft/hub/identity', nextAccount.token)).body.identity.id;
+    expect((await h.api(`/api/runweft/hub/spaces/${space}/members/${nextId}`, ownerAccount.token, { role: 'owner' }, 'PATCH')).status).toBe(200);
+    await page.goto(h.url + '/hub'); await signIn(page, 'handoff-owner', password);
+    await page.getByRole('link', { name: '成员', exact: true }).click();
+    const self = page.locator('.person').filter({ hasText: 'handoff-owner' });
+    await self.getByRole('button', { name: 'handoff-owner 的操作' }).click();
+    expect(await page.getByRole('menuitem', { name: '移出空间' }).count()).toBe(0);
+    await page.getByRole('menuitem', { name: '设为管理员' }).click();
+    await confirmDialog(page, '更改角色');
+    await page.waitForFunction(() => document.querySelector('.space-switch')?.getAttribute('aria-label')?.includes('管理员'));
+    await self.getByText('管理员', { exact: true }).waitFor();
+    expect(await page.locator('.person').filter({ hasText: 'next-owner' }).getByRole('button').count()).toBe(0);
+    expect(problems).toEqual([]);
+}, 60_000);

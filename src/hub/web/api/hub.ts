@@ -45,8 +45,19 @@ export const accounts = {
 };
 
 /** Routes that act as the signed-in account. Each call carries the token it was created with. */
-export function identityApi(token: string) {
-    const call = <T = any>(path: string, body?: unknown, method?: string) => hubFetch<T>(path, { body, method, token });
+const staleContext = () => new HubApiError('error', '当前身份或空间已变化，请刷新。');
+export function identityApi(token: string, isCurrent = () => true) {
+    async function call<T = any>(path: string, body?: unknown, method?: string): Promise<T> {
+        if (!isCurrent()) throw staleContext();
+        try {
+            const result = await hubFetch<T>(path, { body, method, token });
+            if (!isCurrent()) throw staleContext();
+            return result;
+        } catch (error) {
+            if (!isCurrent()) throw staleContext();
+            throw error;
+        }
+    }
     return {
         identity: () => call<{ identity: Identity }>('/identity').then(value => value.identity),
         rename: (name: string) => call<{ identity: Identity }>('/identity', { name }, 'PATCH').then(value => value.identity),
@@ -84,7 +95,6 @@ type Credential14 = { token: string; expiresAt: number };
  */
 export function spaceApi(scope: Scope, isCurrent: () => boolean) {
     const tokens = new Map<string, Credential14>();
-    const stale = () => new HubApiError('error', '当前身份或空间已变化，请刷新。');
     async function jwt(global: boolean) {
         const key = global ? 'global' : scope.spaceId;
         const cached = tokens.get(key);
@@ -98,17 +108,24 @@ export function spaceApi(scope: Scope, isCurrent: () => boolean) {
      * Only the account route tells them apart, so a space-scoped 401 signs out only if that route also refuses.
      */
     async function explain(error: unknown, key: string): Promise<never> {
+        if (!isCurrent()) throw staleContext();
         if (!(error instanceof HubApiError) || error.kind !== 'expired') throw error;
         tokens.delete(key);
-        await hubFetch('/identity', { token: scope.token });
+        try { await hubFetch('/identity', { token: scope.token }); }
+        catch (failure) { if (!isCurrent()) throw staleContext(); throw failure; }
+        if (!isCurrent()) throw staleContext();
         throw new HubApiError('error', '无法访问这个空间', '你可能已不是这个空间的成员。刷新后选择有权访问的空间。', 403, 'hub_space_access_lost');
     }
     async function request<T = any>(path: string, body?: unknown, method?: string, global = false): Promise<T> {
-        if (!isCurrent()) throw stale();
+        if (!isCurrent()) throw staleContext();
         let result: T;
-        try { result = await hubFetch<T>(path, { body, method, token: await jwt(global), base: '/api/runweft' }); }
+        try {
+            const token = await jwt(global);
+            if (!isCurrent()) throw staleContext();
+            result = await hubFetch<T>(path, { body, method, token, base: '/api/runweft' });
+        }
         catch (error) { return explain(error, global ? 'global' : scope.spaceId); }
-        if (!isCurrent()) throw stale();
+        if (!isCurrent()) throw staleContext();
         return result;
     }
 

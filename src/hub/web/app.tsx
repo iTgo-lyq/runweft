@@ -59,17 +59,29 @@ export function HubApp() {
     const [refreshTick, setRefreshTick] = useState(0);
     const [focusTick, setFocusTick] = useState(0);
     const [onboarding, setOnboarding] = useState<'hub' | 'machine' | null>(null);
-    // Counts external hash changes; a link opened in this tab remounts the page so it reads the new task or round.
+    // New links and space choices remount the page and refresh its callbacks immediately.
     const [linkTick, setLinkTick] = useState(0);
     const preferred = useRef<string | undefined>(undefined);
+    const loadGeneration = useRef(0);
+    const contextGeneration = useRef(0);
+    const contextEpoch = contextGeneration.current;
+    const currentSession = useRef<Session | null>(null);
+    const commitSession = useCallback((next: Session | null) => {
+        currentSession.current = next;
+        setSession(next);
+    }, []);
 
     const signOut = useCallback((next: Notice) => {
+        ++loadGeneration.current; ++contextGeneration.current;
         try { writeSaved({ token: '' }); } catch { try { clearSaved(); } catch { /* storage unavailable: nothing left to clear */ } }
-        setSession(null); setAlert(null); setOnboarding(null); setScene('login'); setNotice(next);
-    }, []);
+        commitSession(null); setAlert(null); setOnboarding(null); setScene('login'); setNotice(next);
+    }, [commitSession]);
 
     // Boot and every external hash change (a CLI link opened in this tab) re-read the session and the link.
     const evaluate = useCallback(async () => {
+        const generation = ++loadGeneration.current;
+        ++contextGeneration.current;
+        const isCurrent = () => generation === loadGeneration.current;
         setBlocked(null); setLinkTick(value => value + 1);
         let saved: ReturnType<typeof readSaved> = { token: '' };
         let first: Notice | null = null;
@@ -85,23 +97,26 @@ export function HubApp() {
             try { next = { id: hash.connect, request: await accounts.connection(hash.connect) }; }
             catch (error) { next = { id: hash.connect, error: asError(error) }; }
         }
+        if (!isCurrent()) return;
         setLink(next); setAuthorized(next?.request?.status === 'confirmed');
         if (!saved.token) {
-            setSession(null); setScene(hash.connect ? 'register' : 'login'); setNotice(first); setReady(true);
+            commitSession(null); setScene(hash.connect ? 'register' : 'login'); setNotice(first); setReady(true);
             return;
         }
         try {
             const loaded = await loadSession(saved.token, saved.spaceId);
+            if (!isCurrent()) return;
             remember(loaded);
-            setSession(loaded); setView(hash.task ? 'tasks' : hash.view ?? 'tasks'); setNotice(null);
+            commitSession(loaded); setView(hash.task ? 'tasks' : hash.view ?? 'tasks'); setNotice(null);
             setAlert(first && new HubApiError('error', first.title, first.text ?? ''));
         } catch (error) {
+            if (!isCurrent()) return;
             const failure = asError(error);
             if (failure.kind === 'expired') signOut(first ?? expiredNotice);
-            else { setSession(null); setBlocked(failure); }
+            else { commitSession(null); setBlocked(failure); }
         }
         setReady(true);
-    }, [signOut]);
+    }, [signOut, commitSession]);
 
     useEffect(() => {
         void evaluate();
@@ -113,12 +128,18 @@ export function HubApp() {
     const confirmConnection = useCallback(async (spaceId: string, current: Session) => {
         const request = link?.request;
         if (!link || !request || request.status !== 'pending') return;
+        const generation = contextGeneration.current;
+        const isCurrent = () => generation === contextGeneration.current && currentSession.current?.token === current.token;
+        if (!isCurrent()) return;
         try {
             const confirmed = await identityApi(current.token).confirmConnection(request.id, spaceId);
+            if (!isCurrent()) return;
             setLink({ id: link.id, request: confirmed });
         } catch (error) {
+            if (!isCurrent()) return;
             // The answer may have been lost after the Hub accepted it; only a confirmed request counts as done.
             const latest = await accounts.connection(request.id).catch(() => undefined);
+            if (!isCurrent()) return;
             if (latest?.status !== 'confirmed') throw error;
             setLink({ id: link.id, request: latest });
         }
@@ -126,61 +147,104 @@ export function HubApp() {
     }, [link]);
 
     const onLogin = useCallback(async (username: string, password: string, register: boolean) => {
+        const generation = ++loadGeneration.current;
+        ++contextGeneration.current;
+        const isCurrent = () => generation === loadGeneration.current;
         const hint = preferred.current;
         const { token } = register ? await accounts.register(username, password) : await accounts.login(username, password);
+        if (!isCurrent()) return;
         writeSaved({ token });
         let loaded: Session;
         try { loaded = await loadSession(token, hint); }
         catch (error) {
+            if (!isCurrent()) return;
             // Signed in, but the link points at a space this account cannot open: say so instead of a login error.
             if (asError(error).code !== 'hub_space_link_unavailable') throw error;
             setBlocked(asError(error)); return;
         }
+        if (!isCurrent()) return;
         remember(loaded);
         const hash = readHash();
-        setSession(loaded); setNotice(null); setAlert(null); setView(returnTo ?? (hash.task ? 'tasks' : hash.view) ?? 'tasks'); setReturnTo(null);
+        commitSession(loaded); setNotice(null); setAlert(null); setView(returnTo ?? (hash.task ? 'tasks' : hash.view) ?? 'tasks'); setReturnTo(null);
         if (link?.request?.status !== 'pending') return;
         if (loaded.spaces.length === 1) await confirmConnection(loaded.spaces[0].id, loaded);
         else if (hint && loaded.spaces.some(space => space.id === hint)) await confirmConnection(hint, loaded);
-    }, [confirmConnection, link, returnTo]);
+    }, [confirmConnection, link, returnTo, commitSession]);
 
     const onReset = useCallback(async (username: string, code: string, password: string) => {
+        const generation = ++loadGeneration.current;
+        ++contextGeneration.current;
         await accounts.resetPassword(username, code, password);
+        if (generation !== loadGeneration.current) return;
         writeSaved({ token: '' });
         setScene('login'); setNotice({ tone: 'ok', title: '密码已更新', text: '请使用新密码登录。' });
     }, []);
 
     const leaveConnection = useCallback(() => {
+        ++loadGeneration.current; ++contextGeneration.current;
         patchHash({ connect: null });
         setLink(null); setAuthorized(false);
         if (!session) setScene('login');
     }, [session]);
 
-    const reloadIdentity = useCallback(async ({ spaceId }: { spaceId?: string } = {}) => {
-        if (!session) return;
+    const reloadIdentity = useCallback(async ({ spaceId }: { spaceId?: string } = {}, userChoice = false) => {
+        // Old completion callbacks cannot reload their context, but another explicit choice may supersede
+        // an in-flight switch before React has rendered a new workspace.
+        if (!session || (!userChoice && contextEpoch !== contextGeneration.current) || currentSession.current?.token !== session.token
+            || currentSession.current.space?.id !== session.space?.id) return false;
+        const generation = ++loadGeneration.current;
+        if (spaceId && spaceId !== session.space?.id) {
+            ++contextGeneration.current;
+            setLinkTick(value => value + 1);
+        }
         // An explicit choice wins over a space carried in the link.
         const linked = readHash().space;
         if (spaceId && linked && linked !== spaceId) patchHash({ space: null, task: null, round: null });
         try {
             const loaded = await loadSession(session.token, spaceId ?? session.space?.id);
+            if (generation !== loadGeneration.current) return false;
             remember(loaded);
-            setSession(loaded);
+            commitSession(loaded);
+            return true;
         } catch (error) {
+            if (generation !== loadGeneration.current) return false;
             const failure = asError(error);
             if (failure.kind === 'expired') signOut(expiredNotice);
             else setAlert(failure);
+            return false;
         }
-    }, [session, signOut]);
+    }, [session, signOut, commitSession, contextEpoch]);
 
     // ---- workspace context ---------------------------------------------------------------
     // Everything a page reads is tied to this key. Switching account or space remounts the page, and space
     // requests made under an older key are refused, so one context's answer never lands in another.
     const token = session?.token ?? '', userId = session?.identity.id ?? '', spaceId = session?.space?.id ?? '';
     const contextKey = spaceId ? `${userId}:${token}:${spaceId}` : '';
-    const currentKey = useRef(contextKey);
-    currentKey.current = contextKey;
-    const accountApi = useMemo(() => identityApi(token), [token]);
-    const resourceApi = useMemo(() => spaceApi({ token, userId, spaceId }, () => currentKey.current === `${userId}:${token}:${spaceId}`), [token, userId, spaceId]);
+    const isCurrent = useCallback(() => {
+        const current = currentSession.current;
+        return contextEpoch === contextGeneration.current && current?.token === token && current.identity.id === userId && current.space?.id === spaceId;
+    }, [contextEpoch, token, userId, spaceId]);
+    const accountApi = useMemo(() => identityApi(token, isCurrent), [token, isCurrent]);
+    const resourceApi = useMemo(() => spaceApi({ token, userId, spaceId }, isCurrent), [token, userId, spaceId, isCurrent]);
+
+    const endSession = useCallback<Workspace['endSession']>(async (action, next, onError) => {
+        const isAccountCurrent = () => currentSession.current?.token === token && currentSession.current.identity.id === userId;
+        if (!isAccountCurrent()) return;
+        // An explicit account exit supersedes any pending refresh or space choice immediately.
+        // Later space choices cannot discard its result; a different login still can.
+        ++loadGeneration.current;
+        try {
+            await action(identityApi(token, isAccountCurrent));
+        } catch (error) {
+            if (!isAccountCurrent()) return;
+            const failure = asError(error);
+            if (failure.kind === 'expired') signOut(expiredNotice);
+            else if (onError && isCurrent()) onError(failure);
+            else setAlert(failure);
+            return;
+        }
+        if (isAccountCurrent()) signOut(next);
+    }, [token, userId, signOut, isCurrent]);
 
     const expire = useCallback(() => {
         setReturnTo(view);
@@ -198,32 +262,36 @@ export function HubApp() {
     }, [reloadIdentity]);
 
     const run = useCallback<Workspace['run']>(async (action, { success, onError } = {}) => {
+        if (!isCurrent()) return undefined;
         try {
             const result = await action();
+            if (!isCurrent()) return undefined;
             if (success) toast(success);
             return (result ?? true) as Awaited<ReturnType<typeof action>>;
         } catch (error) {
+            if (!isCurrent()) return undefined;
             const failure = asError(error);
             if (failure.kind === 'expired') { expire(); return undefined; }
             if (onError) onError(failure); else setAlert(failure);
             return undefined;
         }
-    }, [expire]);
+    }, [expire, isCurrent]);
 
     const switchSpace = useCallback((id: string) => {
         if (!session) return;
         const target = session.spaces.find(item => item.id === id);
         patchHash({ space: null, task: null, round: null });
         setAlert(null);
-        void reloadIdentity({ spaceId: id }).then(() => { if (target) toast(`已切换到“${target.name}”`); });
+        void reloadIdentity({ spaceId: id }, true).then(switched => { if (switched && target) toast(`已切换到“${target.name}”`); });
     }, [reloadIdentity, session]);
 
     const workspace = useMemo<Workspace | null>(() => session?.space ? {
         identity: session.identity, username: session.username, spaces: session.spaces, space: session.space, role: session.space.role,
         identityApi: accountApi, spaceApi: resourceApi, view, refreshTick,
-        navigate, refresh, run, showAlert: setAlert, reloadIdentity, switchSpace, signOut, expire,
+        navigate, refresh, run, showAlert: error => { if (isCurrent()) setAlert(error); }, reloadIdentity, switchSpace,
+        endSession, expire: () => { if (isCurrent()) expire(); },
         showOnboarding: kind => setOnboarding(kind ?? 'hub'),
-    } : null, [session, accountApi, resourceApi, view, refreshTick, navigate, refresh, run, reloadIdentity, switchSpace, signOut, expire]);
+    } : null, [session, accountApi, resourceApi, view, refreshTick, navigate, refresh, run, reloadIdentity, switchSpace, endSession, expire, isCurrent]);
 
     useEffect(() => {
         if (!focusTick) return;

@@ -27,6 +27,7 @@ test('scope separates docs and subprojects, selects changed tests, and fails clo
         assert.equal(scope.install, false); assert.deepEqual(scope.native, []);
     }
     const library = selectChecks(['packages/ui/src/styles/components.css']);
+    for (const file of ['src/hub/web/api/hub.ts', 'src/hub/web/api/http.ts', 'src/hub/web/route.ts']) assert.equal(selectChecks([file]).core, true, file);
     assert(library.ui && library.prototype); assert.equal(selectChecks(['src/hub/web/app.tsx']).ui, false);
     assert.equal(selectChecks(['src/hub/csp.ts']).ui, true);
     assert.deepEqual(selectChecks(['src/hub/native-page.ts']).native, ['N1', 'N5']);
