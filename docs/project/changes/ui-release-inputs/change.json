@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "id": "ui-release-inputs",
+  "title": "冻结前端发布输入并准备新版发行",
+  "size": "small",
+  "status": "active",
+  "stage": "requirement",
+  "branch": "develop",
+  "confirmations": {},
+  "tasks": {
+    "T1": {
+      "title": "补齐 UI 发布输入校验并准备 1.2.1 候选",
+      "status": "todo"
+    }
+  },
+  "closure": {},
+  "followUpOf": "hub-glass-prototype",
+  "followUpTitle": "Runweft 前端重构与发布"
+}
