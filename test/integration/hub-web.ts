@@ -1,4 +1,4 @@
-import { expect } from 'bun:test';
+import assert from 'node:assert/strict';
 import type { Browser, Page } from 'playwright';
 
 export const viewports = { desktop: { width: 1365, height: 960 }, tablet: { width: 820, height: 1180 }, phone: { width: 390, height: 844 } };
@@ -45,7 +45,7 @@ export const savedSession = async (page: Page) => JSON.parse(await page.evaluate
 export async function expectNoOverflow(page: Page) {
     for (const viewport of Object.values(viewports)) {
         await page.setViewportSize(viewport);
-        expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+        assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), `horizontal overflow at ${viewport.width}px`);
     }
     await page.setViewportSize(viewports.desktop);
 }

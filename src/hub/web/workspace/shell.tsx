@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useState, type ReactNode, type RefObject } from 'react';
 import {
     AccountChip, AppFrame, Avatar, Banner, Button, Crumbs, Dialog, Form, Menu, MenuItem, MenuLabel, MenuRadioGroup, MenuRadioItem, MenuSeparator,
     NavButton, NavItem, NavLabel, Sidebar, SpaceSwitch, TextField, Toolbar, toast, useConfirm, useFindShortcut, type IconName,
@@ -33,8 +33,8 @@ export function OnboardingDialog({ kind, open, onOpenChange }: { kind: 'hub' | '
     );
 }
 
-/** Copies when the browser allows it; otherwise selects the text so it can be copied by hand. */
-export function CopyButton({ text, label = '复制说明', onDone }: { text: string; label?: string; onDone?: () => void }) {
+/** Copies when the browser allows it; otherwise selects the text (`source`, else the dialog's) so it can be copied by hand. */
+export function CopyButton({ text, label = '复制说明', onDone, source }: { text: string; label?: string; onDone?: () => void; source?: RefObject<HTMLElement | null> }) {
     const [state, setState] = useState<'idle' | 'copied' | 'manual'>('idle');
     const copy = async () => {
         try {
@@ -42,7 +42,7 @@ export function CopyButton({ text, label = '复制说明', onDone }: { text: str
             await navigator.clipboard.writeText(text);
             setState('copied'); toast('已复制');
         } catch {
-            const node = document.querySelector<HTMLElement>('.dialog .prompt, .dialog .secret-value');
+            const node = source?.current ?? document.querySelector<HTMLElement>('.dialog .prompt, .dialog .secret-value');
             if (node) { const range = document.createRange(); range.selectNodeContents(node); const selection = getSelection(); selection?.removeAllRanges(); selection?.addRange(range); }
             setState('manual');
         }

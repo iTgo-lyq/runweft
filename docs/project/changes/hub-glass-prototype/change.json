@@ -43,7 +43,9 @@
     },
     "T11": {
       "title": "任务",
-      "status": "todo"
+      "status": "done",
+      "verification": "typecheck；bun run test 29 项；test:ui 18 项；web-tasks/web-task-links/web-workspace/web-identity/web-connect/web-invitations/hub-console 15 项通过；任务列表与检查器深浅色、桌面与手机截图人工核对；原生验收未运行（需真实模型授权）",
+      "commitTitle": "hub-glass-prototype T11: move the Hub tasks page and inspector to React"
     },
     "T12": {
       "title": "机器与 Runtime",

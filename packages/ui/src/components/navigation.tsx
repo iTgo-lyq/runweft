@@ -34,7 +34,7 @@ export type TabItem<T extends string = string> = { id: T; label: ReactNode };
 /** Tabs that render only the active panel; arrow keys switch tabs. */
 export function Tabs<T extends string>({ label, items, value, onValueChange, children }: { label: string; items: TabItem<T>[]; value: T; onValueChange: (value: T) => void; children: ReactNode }) {
   return (
-    <TabsPrimitive.Root value={value} onValueChange={next => onValueChange(next as T)} activationMode="automatic">
+    <TabsPrimitive.Root className="tabs-root" value={value} onValueChange={next => onValueChange(next as T)} activationMode="automatic">
       <TabsPrimitive.List className="tabs" aria-label={label} loop>
         {items.map(item => <TabsPrimitive.Trigger key={item.id} value={item.id}>{item.label}</TabsPrimitive.Trigger>)}
       </TabsPrimitive.List>

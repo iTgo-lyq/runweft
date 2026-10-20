@@ -7,6 +7,7 @@ import { patchHash, readHash, type View } from './route';
 import { WorkspaceContext, type Notice, type Workspace } from './workspace/context';
 import { PendingPage } from './workspace/pending-page';
 import { SettingsPage } from './workspace/settings-page';
+import { TasksPage } from './tasks/tasks-page';
 import { pages, WorkspaceShell } from './workspace/shell';
 
 type Session = { token: string; identity: Identity; username: string; spaces: Space[]; space?: Space };
@@ -31,6 +32,7 @@ function remember(session: Session) {
 
 /** Pages that have moved to the new interface. The rest show a placeholder until their task lands. */
 function Page({ view }: { view: View }) {
+    if (view === 'tasks') return <TasksPage />;
     return view === 'settings' ? <SettingsPage /> : <PendingPage view={view} />;
 }
 
@@ -48,6 +50,8 @@ export function HubApp() {
     const [refreshTick, setRefreshTick] = useState(0);
     const [focusTick, setFocusTick] = useState(0);
     const [onboarding, setOnboarding] = useState<'hub' | 'machine' | null>(null);
+    // Counts external hash changes; a link opened in this tab remounts the page so it reads the new task or round.
+    const [linkTick, setLinkTick] = useState(0);
     const preferred = useRef<string | undefined>(undefined);
 
     const signOut = useCallback((next: Notice) => {
@@ -57,7 +61,7 @@ export function HubApp() {
 
     // Boot and every external hash change (a CLI link opened in this tab) re-read the session and the link.
     const evaluate = useCallback(async () => {
-        setBlocked(null);
+        setBlocked(null); setLinkTick(value => value + 1);
         let saved: ReturnType<typeof readSaved> = { token: '' };
         let first: Notice | null = null;
         try { saved = readSaved(); } catch (error) { first = { tone: 'danger', title: asError(error).message, text: asError(error).hint || undefined }; }
@@ -250,7 +254,7 @@ export function HubApp() {
                         <Button size="sm" icon="x" iconOnly label="关闭提示" variant="ghost" onClick={() => setAlert(null)} />
                     </>}>{alert.hint || undefined}</Banner>
                 )}>
-                    <Fragment key={contextKey}><Page view={view} /></Fragment>
+                    <Fragment key={`${contextKey}:${linkTick}`}><Page view={view} /></Fragment>
                 </WorkspaceShell>
             </WorkspaceContext.Provider>
         );

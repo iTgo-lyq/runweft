@@ -10,7 +10,7 @@ import { forwardedHub } from './forwarded-hub';
 import { hubTab, savedSession, signIn } from './hub-web';
 const owner=fixtureCleanup([]);afterEach(()=>owner.close());
 
-for(const forwarded of [false,true])test(`CLI task links restore the task space after browser login (${forwarded?'TCP forwarding':'direct'}) and keep the report from other members`,async()=>{
+for(const forwarded of [false,true])test(`CLI task links restore task and round after browser login (${forwarded?'TCP forwarding':'direct'}) and native handoff strips account storage`,async()=>{
     const h=await hubDelegationFixture(owner.resources),accepted=await h.post('spawn',h.payload());
     const entry=forwarded?await forwardedHub(h.url,owner.resources):{url:h.url,link:(value:string)=>value};
     const active=await until(()=>h.post('read',{id:accepted.agent_id}),value=>value.inputs[0]?.observation?.phase==='accepted');
@@ -22,13 +22,22 @@ for(const forwarded of [false,true])test(`CLI task links restore the task space 
     const [exit,stdout,stderr]=await Promise.all([child.exited,new Response(child.stdout).text(),new Response(child.stderr).text()]);expect(exit).toBe(0);expect(stderr).toBe('');
     const original=JSON.parse(stdout).url as string,link=entry.link(original);expect(new URL(original).origin).toBe(h.url);
     expect(new URL(link).hash).toBe(new URL(original).hash);expect(link).toContain('/hub#space=');expect(link).toContain(accepted.agent_id);expect(link).not.toContain(h.owner.token);
-    // The task inspector and native handoff return with the new tasks page (T11); the link already restores the space.
     const browser=await chromium.launch({headless:true});owner.resources.push(()=>browser.close());const {page,problems}=await hubTab(browser);
     await page.goto(link);await signIn(page,username,'synthetic unknown-account comparison');
-    expect(new URL(page.url()).hash).toBe(new URL(original).hash);expect(await page.getByRole('link',{name:'任务',exact:true}).getAttribute('aria-current')).toBe('page');
     expect((await savedSession(page))!.spaceId).toBe(new URLSearchParams(new URL(original).hash.slice(1)).get('space')!);
+    const inspector=page.getByRole('complementary',{name:'任务详情'});
+    await inspector.locator('.task-report').getByText('A private task report for the link',{exact:true}).waitFor();
+    expect(await inspector.locator('.weft [aria-current=step]').innerText()).toContain('第 1 轮');
+    await inspector.getByRole('tab',{name:'详情'}).click();expect(await inspector.getByText(accepted.agent_id,{exact:true}).count()).toBe(1);
+    await page.context().route(entry.url+'/sessions/**',route=>route.fulfill({contentType:'text/html',body:'<p>Native handoff fixture</p>'}));
+    const popup=page.waitForEvent('popup');await inspector.getByRole('button',{name:'打开原生会话',exact:true}).click();const native=await popup;await native.waitForURL(entry.url+'/sessions/'+active.session_id);
+    expect(await native.evaluate(()=>sessionStorage.getItem('runweft.hub.session'))).toBeNull();expect(await native.evaluate(()=>window.opener)).toBeNull();
+    const token=await native.evaluate(()=>sessionStorage.getItem('runweft.native.access'));expect(token).toContain('.');
+    const rejected=await native.evaluate(async access=>(await fetch('/api/runweft/hub/credentials',{headers:{authorization:`Bearer ${access}`}})).status,token);expect(rejected).toBe(401);
+    await inspector.getByRole('button',{name:'关闭详情'}).click();await inspector.waitFor({state:'hidden'});expect(new URL(page.url()).hash).not.toContain('task=');
     const other=(h.hub.db.query('SELECT username FROM hub_accounts WHERE userId=?').get(h.other.identity.id) as {username:string}).username;
-    // Another member of the space reaches it but never the private report; T11 checks the task itself is refused.
+    // Another member of the same space opens the link: the task is not theirs, so the inspector refuses it.
     const outsider=await hubTab(browser);await outsider.page.goto(link);await signIn(outsider.page,other,'synthetic unknown-account comparison');
+    await outsider.page.getByRole('complementary',{name:'任务详情'}).getByText('无法打开这个任务').waitFor();
     expect(await outsider.page.locator('body').innerText()).not.toContain('A private task report for the link');expect([...problems,...outsider.problems]).toEqual([]);
 },30_000);

@@ -155,3 +155,23 @@ T1 仅交付独立原型，未修改 src/hub、HAPI、产品配置或模型凭�
 - 全量 `bun run test:integration --bin dist/runweft --`：258 项通过，6 项失败。5 项 `cli-uninstall` 报 `uninstall_process_unknown`，`workspace-preparation` 的 Runner 停止超时；本环境的 `ps` 本身报 `fatal library error, lookup self`，卸载核对与 HAPI Runner 控制都依赖它确认进程。单独重跑 `workspace-preparation` 仍失败，同一组测试在 T9 的 Linux CI 全量运行中通过，以本次推送的 CI 为准。
 - 连接、已授权、工作台、账号设置、空间菜单与手机导航在桌面与手机、浅色与深色下截图，人工查看与原型一致。
 - `check-docs`、`check-workflow`、`git diff --check` 通过。
+
+## T11 任务
+
+**范围**：`src/hub/web/tasks`：任务列表（状态筛选、来源工作目录与主宿主筛选、每页数量、分页、本页查找、机器状态不可读提示、“可能滞后”与交付标记）和检查器（轮次纬线、报告与结构化摘要、16000 字分段阅读、交付中的附件、代码与进程、详情事实与诊断原始记录、交给 Agent 继续处理的说明、原生会话与原生文件入口）。打开、切换轮次和关闭会同步 hash 中的 `task` 与 `round`；同一标签再次打开 CLI 链接时页面重挂并读取新的任务与轮次。
+
+**实现取舍**：
+- 检查器只显示当前任务的数据，切换任务时先显示读取中，不沿用上一个任务的内容；切换轮次或分段时保留当前内容直到新内容返回。详情读取失败时，404 说明任务记录只对发起人可见，其他错误可重试。
+- 任务和轮次 ID 移到“详情”；机器与 Runtime 名称来自列表，深链接打开的任务不在当前页时显示 ID。旧界面的四组 JSON 展开保留为“诊断”中的折叠原始记录。
+- 原生入口仍由 `openNative` 先开空白标签、核对会话后再写入限时凭据，地址中不含凭据。
+- UI 库的 Tabs 根节点改为 `display: contents`，标签与面板沿用检查器的间距，与原型一致。
+
+**测试**：
+- `web-task-links` 补回报告、轮次、任务 ID、原生会话交接（新标签不带账号存储、无 opener、限时凭据不能读账号接口）与关闭后清除 hash；同空间其他成员打开链接时检查器显示“无法打开这个任务”，页面不含报告。
+- 新增 `web-tasks`：两轮任务与进行中任务；状态筛选、`/` 聚焦本页查找、检查器读取两轮报告、报告中的 HTML 按文本显示、分段阅读与焦点、交付与详情、诊断展开、继续处理说明、Escape 关闭并归还焦点、筛选弹层与筛选标记、同标签深链接打开指定轮次、手机检查器与三档尺寸无横向溢出，浏览器无错误与 CSP 违规。
+- `console-history.ts` 与原生验收 `native-history.ts` 改用新界面的登录、空间链接和任务检查器；原生验收需要真实模型授权，本任务只做类型检查，未运行。
+
+**验证**：
+- `bun run typecheck` 通过；`bun run test` 29 项通过；`bun run test:ui` 18 项通过。
+- `bun run build` 后 `web-tasks`、`web-task-links`、`web-workspace`、`web-identity`、`web-connect`、`web-invitations`、`hub-console` 共 15 项通过。
+- 任务列表、检查器（报告、交付、详情）在桌面与手机、浅色与深色下截图，人工查看与原型一致；手机深色的纯黑背景来自原型 token。

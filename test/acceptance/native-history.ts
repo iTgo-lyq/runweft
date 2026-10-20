@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { chromium } from 'playwright';
 import { openTaskHistory } from '../integration/console-history';
+import { signIn } from '../integration/hub-web';
 import { getSessionTitle } from '../../hapi/web/src/lib/sessionTitle';
 import type { NativeFixture } from './native-fixture';
 
@@ -17,11 +18,8 @@ export async function nativeHistory(f: NativeFixture, result: any) {
         const context = await browser.newContext(), page = await context.newPage();
         const responses: string[] = [];
         context.on('response', response => { if (response.status() === 200) responses.push(new URL(response.url()).pathname); });
-        const ready = () => page.waitForFunction(() => !document.querySelector<HTMLButtonElement>('#logout')?.disabled);
-        await page.goto(f.url + '/hub'); await ready();
-        await page.locator('#account-username').fill(f.account.username); await page.locator('#account-password').fill(f.account.password); await page.locator('#auth-submit').click(); await page.locator('#workspace').waitFor(); await ready();
-        await page.evaluate(spaceId => { const key = 'runweft.hub.session'; const value = JSON.parse(sessionStorage.getItem(key)!); value.spaceId = spaceId; sessionStorage.setItem(key, JSON.stringify(value)); }, f.space);
-        await page.reload(); await ready();
+        await page.goto(`${f.url}/hub#space=${f.space}`);
+        await signIn(page, f.account.username, f.account.password);
         const tab = await openTaskHistory(page, result.agent_id, result.session_id);
         await tab.getByText(getSessionTitle(native), { exact: true }).first().waitFor();
         assert(responses.includes(`/api/sessions/${result.session_id}/messages`));
