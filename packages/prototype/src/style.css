@@ -82,10 +82,10 @@
     --glass-bg: rgba(30, 35, 44, .58); --glass-tint: linear-gradient(180deg, rgba(255, 255, 255, .07), rgba(255, 255, 255, .015));
     --glass-edge: rgba(255, 255, 255, .11); --glass-highlight: rgba(255, 255, 255, .1); --glass-lowlight: rgba(0, 0, 0, .35);
     --glass-shadow: 0 1px 1px rgba(0, 0, 0, .3), 0 12px 30px -12px rgba(0, 0, 0, .7);
-    --bar-bg: rgba(30, 35, 44, .58); --bar-tint: linear-gradient(180deg, rgba(255, 255, 255, .07), rgba(255, 255, 255, .015));
-    --bar-blur: blur(22px) saturate(175%);
-    --bar-stroke: linear-gradient(180deg, rgba(255, 255, 255, .14) 40%, rgba(255, 255, 255, 0) 75%, rgba(255, 255, 255, 0) 95%, rgba(255, 255, 255, .08) 100%);
-    --bar-shadow: 0 1px 1px rgba(0, 0, 0, .3), 0 12px 30px -12px rgba(0, 0, 0, .7);
+    --bar-bg: transparent; --bar-tint: linear-gradient(180deg, rgba(40, 46, 57, .42) 10%, rgba(30, 35, 44, .82) 100%);
+    --bar-blur: blur(4px);
+    --bar-stroke: linear-gradient(180deg, rgba(255, 255, 255, .22) 40%, rgba(255, 255, 255, 0) 75%, rgba(255, 255, 255, 0) 95%, rgba(255, 255, 255, .12) 100%);
+    --bar-shadow: 0 12px 16px 2px rgba(0, 0, 0, .35), 0 2px 4px -1px rgba(0, 0, 0, .4);
   }
 }
 :root[data-theme=dark] {
@@ -108,10 +108,10 @@
   --glass-bg: rgba(30, 35, 44, .58); --glass-tint: linear-gradient(180deg, rgba(255, 255, 255, .07), rgba(255, 255, 255, .015));
   --glass-edge: rgba(255, 255, 255, .11); --glass-highlight: rgba(255, 255, 255, .1); --glass-lowlight: rgba(0, 0, 0, .35);
   --glass-shadow: 0 1px 1px rgba(0, 0, 0, .3), 0 12px 30px -12px rgba(0, 0, 0, .7);
-  --bar-bg: rgba(30, 35, 44, .58); --bar-tint: linear-gradient(180deg, rgba(255, 255, 255, .07), rgba(255, 255, 255, .015));
-  --bar-blur: blur(22px) saturate(175%);
-  --bar-stroke: linear-gradient(180deg, rgba(255, 255, 255, .14) 40%, rgba(255, 255, 255, 0) 75%, rgba(255, 255, 255, 0) 95%, rgba(255, 255, 255, .08) 100%);
-  --bar-shadow: 0 1px 1px rgba(0, 0, 0, .3), 0 12px 30px -12px rgba(0, 0, 0, .7);
+  --bar-bg: transparent; --bar-tint: linear-gradient(180deg, rgba(40, 46, 57, .42) 10%, rgba(30, 35, 44, .82) 100%);
+  --bar-blur: blur(4px);
+  --bar-stroke: linear-gradient(180deg, rgba(255, 255, 255, .22) 40%, rgba(255, 255, 255, 0) 75%, rgba(255, 255, 255, 0) 95%, rgba(255, 255, 255, .12) 100%);
+  --bar-shadow: 0 12px 16px 2px rgba(0, 0, 0, .35), 0 2px 4px -1px rgba(0, 0, 0, .4);
 }
 /* Phones in dark mode use a true black canvas. */
 @media (max-width: 760px) and (prefers-color-scheme: dark) { :root:not([data-theme=light]) { --canvas: #000; --surface: #000; --surface-2: #121419; --surface-3: #1b1e25; --field: #15181e; } }
