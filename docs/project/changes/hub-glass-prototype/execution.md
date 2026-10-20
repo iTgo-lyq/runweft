@@ -305,3 +305,13 @@ T1 仅交付独立原型，未修改 src/hub、HAPI、产品配置或模型凭�
 - 原型 `bun run build` 与 `CI=true bun run test`：发布工具 12 项通过，24 个入口流程与场景流程通过。
 - 全部 `web-` 浏览器测试与 `hub-console` 共 18 项通过。
 - 修复前的全量集成：262 项通过，6 项失败，均为本环境 `ps` 不可用导致的 `cli-uninstall` 与 `workspace-preparation`，与 T10 记录相同。
+
+## T17 独立评审与 CI 返修
+
+2026-10-20 用户授权由 Codex 接手 Claude Code 的剩余独立评审、CI 问题与收尾，并合入 develop。Claude 的产品实现独立评审因会话额度中断，没有形成评审结论；本次使用不继承实现对话的独立 Agent 重新评审整个差异。
+
+macOS ARM64 的 CI `39407468911` 在 npm 卸载失败保留测试中返回 `uninstall_process_unknown`，尚未进入预期的 npm 失败分支。进程检查先后调用 `ps` 读取命令、状态、启动时间；退出发生在状态与启动时间之间时，空启动时间被直接认作未知。新回归在独立子进程中回放 macOS 探测顺序，使用真实已退出 PID，修复前确定失败；修复后仅在 ESRCH 或僵尸态证明退出时允许继续，仍存活且启动标记未知时仍拒绝。
+
+安装验收的断言同时保留无凭据错误对象，CI 再失败时可以区分具体核对阶段，不以整组重试掩盖原因。
+
+进程修正的本地复验：`bun run typecheck`、构建、文档/工作流/diff 检查通过；`uninstall-processes`、`cli-uninstall`、`workspace-preparation` 共 10 项通过。当前执行环境的 `ps` 可用，已覆盖并解除 T10/T16 记录的 6 项本地环境失败。

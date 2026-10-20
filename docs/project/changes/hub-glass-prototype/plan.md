@@ -55,3 +55,9 @@
 - **交付**：删除旧前端模块、旧样式与剩余的旧页面测试；更新 `ci-scope.mjs`，让 `src/hub/web`、`packages/ui` 的改动触发类型检查与对应测试；更新 README、测试手册等受影响文档。
 - **验收**：仓库中不再保留旧前端代码；按 AGENTS 的检查全部通过。
 - **验证**：`bun run typecheck`、`bun run test`、`bun run build`、`bun run test:tools`、`node scripts/check-docs.mjs`、`node scripts/check-workflow.mjs`、`git diff --check`，以及全部新页面测试与受影响的集成测试。
+
+## T17 修复独立评审问题并完成 CI 验证
+
+- **交付**：完成整个产品差异的独立评审，修复发现的问题；定位并修复 macOS ARM64 安装验收的进程核对失败，保留未知进程时拒绝卸载的边界。
+- **验收**：评审问题有复现、修复与复验记录；最终提交的必需 CI 检查通过。用户已明确授权完成收尾并合入 develop，验证通过后记录验收、同步 Specs、归档并集成。
+- **验证**：确定性的竞态回归、受影响的浏览器与卸载测试、完整工程检查及四平台安装 CI。
