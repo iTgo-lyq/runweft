@@ -14,6 +14,7 @@ test/
   acceptance/              安装与原生模型 E2E，及其实际使用的 helper
   lifecycle.ts 等           集成/验收共用的少量普通函数
 website/                   官网构建、发布工具测试和浏览器验收
+packages/ui/               UI 库的组件目录与 Hub CSP 下的浏览器检查（verify.ts）
 packages/prototype/        原型自己的构建、发布工具测试和浏览器验收
 ```
 
@@ -111,11 +112,19 @@ node test/acceptance/install.mjs --candidate dist/packages --case all --report /
 
 ## 浏览器与原型
 
-Hub 页面变化选择 `web-` 集成：真实账号/连接授权、工作台壳与空间链接、任务链接与邀请，保留跨 owner 隔离、撤权失效和凭据不进入页面；每个页面同时记录浏览器错误与 CSP 违规。界面重构期间，配置与任务页面的浏览器测试随各入口迁移补回。普通任务历史是当前格式样本；真实模型历史在原生 case 内验证，不能用普通浏览器样本代替。UI 库改动另跑 `bun run test:ui`，在 Hub CSP 下检查组件目录。
+Hub 页面（`src/hub/web`、`src/hub/page.*`）变化选择全部 `web-` 集成与 `hub-console`：
+- 真实账号与连接授权、工作台壳与空间链接；
+- 任务列表、检查器与原生交接；
+- 机器、Runtime、Agent、仓库、我的选择与成员页；
+- 创建回执恢复与选择失效。
+
+这些测试保留跨 owner 隔离、撤权失效和凭据不进入页面，每个页面同时记录浏览器错误与 CSP 违规。普通任务历史是当前格式样本；真实模型历史在原生 case 内验证，不能用普通浏览器样本代替。
+
+UI 库（`packages/ui`）变化另选 `bun run test:ui`（在 Hub CSP 下检查组件目录）与原型验收，因为两边都使用它。Hub CSP 改变时也选 `test:ui`。
 
 ```sh
 bunx playwright install chromium
-bun run test:integration --bin dist/runweft -- ./test/integration/web-identity.test.ts ./test/integration/web-connect.test.ts ./test/integration/web-workspace.test.ts
+bun run test:integration --bin dist/runweft -- ./test/integration/web-tasks.test.ts ./test/integration/web-members.test.ts
 bun run test:ui
 node website/build.mjs
 node website/verify.mjs --browser-only --report /tmp/runweft-website.json

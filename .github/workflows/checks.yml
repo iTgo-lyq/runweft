@@ -84,8 +84,10 @@ jobs:
       - if: needs.scope.outputs.tools == 'true'
         run: bun run test:tools
       - run: go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.12
-      - if: fromJSON(needs.scope.outputs.selection).browser
+      - if: fromJSON(needs.scope.outputs.selection).browser || fromJSON(needs.scope.outputs.selection).ui
         run: bunx playwright install --with-deps chromium
+      - if: fromJSON(needs.scope.outputs.selection).ui
+        run: bun run test:ui
       - if: fromJSON(needs.scope.outputs.selection).build
         run: bun run build:hapi && bun run build
       - name: Run selected integration files in one Bun process

@@ -10,12 +10,14 @@ const integrationFiles = () => readdirSync(new URL('../test/integration/', impor
 export function selectChecks(files) {
     const all = integrationFiles(), selected = new Set(), native = new Set();
     const scope = { core: false, tools: false, kit: false, prototype: false, website: false, install: false,
-        typecheck: false, managers: false, integration: [] };
+        typecheck: false, managers: false, ui: false, integration: [] };
     const select = pattern => all.filter(file => pattern.test(file)).forEach(file => selected.add(file));
     for (const file of files) {
         if (/^(src|test|scripts)\/.*\.ts$/.test(file)) scope.typecheck = true;
         if (/^(website\/|docs\/usage\.md$)/.test(file)) { scope.website = true; continue; }
         if (file.startsWith('packages/prototype/')) { scope.prototype = true; continue; }
+        // The UI library is product code shared with the prototype: its catalog checks, the prototype and every Hub page.
+        if (file.startsWith('packages/ui/')) { scope.ui = scope.prototype = scope.typecheck = true; select(/\/(web-|hub-console)/); continue; }
         if (/^(\.agents\/skills\/runweft-kit\/|scripts\/(check-runweft-kit\.mjs|sync-runweft-kit\.sh)$)/.test(file)) { scope.kit = scope.tools = true; continue; }
         if (/^(docs\/|\.agents\/skills\/spec-trail\/|\.githooks\/)/.test(file) || /(^|\/)(README|AGENTS)\.md$/.test(file) || /^scripts\/check-(docs|workflow)\.mjs$/.test(file)) continue;
         if (file.startsWith('scripts/tests/') && !file.endsWith('/ci-scope.test.mjs')) { scope.tools = true; continue; }
@@ -39,12 +41,16 @@ export function selectChecks(files) {
         }
         if (file === 'src/hub/native-page.ts') ['N1', 'N5'].forEach(c => native.add(c));
         if (file === 'src/tasks/store.ts') { select(/./); [...mainCases, 'R-codex', 'R-claude'].forEach(c => native.add(c)); continue; }
-        if (/^src\/hub\/(app|console|tasks-page|native-page|style|onboarding-page)/.test(file)) { scope.typecheck = true; select(/\/(web-|hub-console)/); continue; }
+        if (/^src\/hub\/(web\/|page\.|csp\.ts$|native-page)/.test(file)) {
+            scope.typecheck = true; select(/\/(web-|hub-console)/);
+            if (file === 'src/hub/csp.ts') scope.ui = true; // the catalog checks run under the Hub CSP
+            continue;
+        }
         if (/^src\/(tasks|artifacts|repositories)\//.test(file)) { scope.typecheck = true; select(/\/(task|remote|execution|workspace|files|artifact|web-|hub-delegation)/); continue; }
         if (/^src\/mcp\//.test(file)) { scope.core = scope.typecheck = true; select(/mcp|cli-consumers|cli-uninstall|task-outputs|workspace-results/); mainCases.forEach(c => native.add(c)); continue; }
         if (file === 'hapi' || /protocol/.test(file) || ['src/hapi.ts', 'src/execution.ts', 'scripts/ci-scope.mjs', '.github/workflows/checks.yml'].includes(file)) scope.managers = true;
         // Shared inputs and unknown paths select every consumer rather than silently omit checks.
-        scope.core = scope.tools = scope.kit = scope.prototype = scope.website = scope.install = scope.typecheck = true;
+        scope.core = scope.tools = scope.kit = scope.prototype = scope.website = scope.install = scope.typecheck = scope.ui = true;
         select(/./);
         [...mainCases, 'R-codex', 'R-claude', 'L-claude'].forEach(c => native.add(c));
     }
@@ -52,9 +58,9 @@ export function selectChecks(files) {
     scope.native = [...native];
     scope.hapi = scope.typecheck || scope.managers || selected.size > 0;
     scope.build = scope.integration.some(file => /\/(files-(access|artifacts|inputs|outputs|prune)\.|hub-(configuration|lifecycle|.*-live)\.|web-|workspace-(export|import|results|preparation|delegation)\.)/.test(file));
-    scope.clients = scope.integration.some(file => /cli-mcp-install|hub-configuration|hub-resources-live|hub-delegation-live|workspace-|web-console/.test(file));
+    scope.clients = scope.integration.some(file => /cli-mcp-install|hub-configuration|hub-resources-live|hub-delegation-live|workspace-/.test(file));
     scope.browser = scope.integration.some(file => /\/web-/.test(file));
-    scope.checks = scope.core || scope.tools || scope.kit || scope.hapi || scope.install;
+    scope.checks = scope.core || scope.tools || scope.kit || scope.hapi || scope.install || scope.ui;
     return scope;
 }
 
