@@ -166,8 +166,8 @@ function buildShell() {
     if (spec.group !== group) { group = spec.group; nav.append(h('p', { class: 'nav-label', text: group })); }
     nav.append(h('a', { class: 'nav-item', href: `#${route}`, dataset: { route }, onClick: event => { event.preventDefault(); navigate(route); } }, icon(spec.icon), h('span', { text: spec.label })));
   }
-  const spaceButton = h('button', { type: 'button', class: 'space-switch', 'aria-haspopup': 'menu', 'aria-expanded': 'false', onClick: () => openSpaces(spaceButton) });
-  const accountButton = h('button', { type: 'button', class: 'account-chip', 'aria-haspopup': 'menu', 'aria-expanded': 'false', onClick: () => openAccountMenu(accountButton) });
+  const spaceButton = h('button', { type: 'button', class: 'space-switch glass', 'aria-haspopup': 'menu', 'aria-expanded': 'false', onClick: () => openSpaces(spaceButton) });
+  const accountButton = h('button', { type: 'button', class: 'account-chip glass', 'aria-haspopup': 'menu', 'aria-expanded': 'false', onClick: () => openAccountMenu(accountButton) });
   const sidebar = h('aside', { class: 'sidebar', 'aria-label': '工作台' },
     h('div', { class: 'brand' }, mark(), h('span', { class: 'brand-name', text: 'Runweft' }), h('span', { class: 'brand-tag', text: 'Hub' }),
       button('收起导航', { icon: 'x', iconOnly: true, variant: 'ghost', size: 'sm', className: 'nav-close', onClick: () => setNav(false) })),

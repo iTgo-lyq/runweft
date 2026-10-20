@@ -23,7 +23,7 @@ bun run test
 bun run screenshots
 ```
 
-构建将 HTML/CSS/JavaScript 合成自包含的 `dist/<id>/index.html`；`bun build.mjs --git-preview` 同时写出 Git 交付用的 `preview/<id>/index.html`。`verify.mjs` 在受限 iframe 中覆盖 8 个入口 × 桌面 1440×1000、平板 834×1112、手机 390×844：加载、隔离、无外部请求和存储、无横向溢出、各入口主要操作（平板和手机用触摸），以及数据场景、键盘焦点回归、外观切换、减少动态效果和减少透明度。`--screenshots` 另存每个入口与设备的浅色和深色截图。CI 的临时 Ubuntu runner 和不允许 user namespace 的机器上设置 `CI=true`，关闭 Chromium 进程沙箱；iframe 权限仍仅为 allow-scripts。
+构建将 HTML/CSS/JavaScript 合成自包含的 `dist/<id>/index.html`；`bun build.mjs --git-preview` 同时写出 Git 交付用的 `preview/<id>/index.html`。`verify.mjs` 在受限 iframe 中覆盖 8 个入口 × 桌面 1440×1000、平板 834×1112、手机 390×844：加载、隔离、无外部请求和存储、无横向溢出、各入口主要操作（平板和手机用触摸），以及数据场景、键盘焦点回归、外观切换、减少动态效果和减少透明度。`--screenshots` 另存每个入口与设备的浅色和深色截图，并改用 SwiftShader GPU 合成：无头 Chromium 的软件渲染不会对带圆角的玻璃做背景模糊，截图会比真实浏览器显得更不透明。CI 的临时 Ubuntu runner 和不允许 user namespace 的机器上设置 `CI=true`，关闭 Chromium 进程沙箱；iframe 权限仍仅为 allow-scripts。
 
 清单在 `prototype.json`，上传入口在 `publish-entries.json`。每次发布必须从干净、已推送的源码提交构建，再登记固定版本；后续更新不会覆盖历史地址。
 

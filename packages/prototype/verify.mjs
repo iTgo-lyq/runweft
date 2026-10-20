@@ -354,7 +354,9 @@ async function checkFrame(page, entry, device) {
 
 try {
   browser = await chromium.launch({ // GitHub's Ubuntu runner restricts unprivileged user namespaces.
-    chromiumSandbox: process.env.CI !== 'true', ...(process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE ? { executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE } : {}) });
+    chromiumSandbox: process.env.CI !== 'true', ...(process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE ? { executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE } : {}),
+    // Headless software compositing skips backdrop blur on rounded elements; screenshots use SwiftShader GPU compositing instead.
+    ...(screenshots ? { args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] } : {}) });
   for (const entry of manifest.entries) for (const device of entry.devices) {
     if (screenshots) for (const scheme of ['light', 'dark']) {
       const { page, errors } = await open(entry.id, device, scheme);
