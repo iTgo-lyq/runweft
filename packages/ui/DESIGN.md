@@ -1,6 +1,6 @@
 # Runweft 设计规范
 
-本规范是 Runweft 界面的唯一视觉依据。Hub 产品（`src/hub/web`）与原型包（`packages/prototype`）都通过本目录的 UI 库实现它，用法见 [README](README.md)；原型包只在自己的 DESIGN.md 记录原型特有的例外。设计来源见 Change [Hub 前端交互与样式重构](../../docs/project/changes/hub-glass-prototype/requirement.md)。
+本规范是 Runweft 界面的唯一视觉依据。Hub 产品（`src/hub/web`）与原型包（`packages/prototype`）都通过本目录的 UI 库实现它，用法见 [README](README.md)；原型包只在自己的 DESIGN.md 记录原型特有的例外。设计来源见 Change [Hub 前端交互与样式重构](../../docs/project/archive/2026-10-20-hub-glass-prototype/requirement.md)。
 
 ## 方向
 

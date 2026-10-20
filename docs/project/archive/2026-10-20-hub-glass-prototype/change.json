@@ -3,8 +3,8 @@
   "id": "hub-glass-prototype",
   "title": "Hub 前端交互与样式重构",
   "size": "large",
-  "status": "active",
-  "stage": "execution",
+  "status": "completed",
+  "stage": "close",
   "branch": "codex/hub-glass-prototype",
   "confirmations": {
     "requirement": {
@@ -84,7 +84,30 @@
       "commitTitle": "hub-glass-prototype T17: record independent review and final CI completion"
     }
   },
-  "closure": {},
+  "closure": {
+    "verification": {
+      "result": "passed",
+      "at": "2026-10-20T11:39:05.933Z",
+      "summary": "上下文隔离的独立 Agent 完整评审及返修复核通过，最终 CI 39415204567 全绿；272 项集成、UI、原型与四平台安装验证完成。"
+    },
+    "acceptance": {
+      "result": "accepted",
+      "at": "2026-10-20T11:39:07.276Z",
+      "summary": "用户明确要求完成剩余评审、CI 修复与收尾后合入 develop。",
+      "source": "用户：那你接手继续吧，参考它的会话历史，把剩下的独立评审和 CI 问题处理完，完成收尾并合入 develop。"
+    },
+    "specs": {
+      "result": "synced",
+      "at": "2026-10-20T11:39:08.600Z",
+      "summary": "已同步 dashboard：八入口、UI 库与独立原型、CSP、会话隔离、成员权限与透明度退回。"
+    },
+    "archive": {
+      "result": "done",
+      "at": "2026-10-20T11:39:10.006Z",
+      "summary": "Hub 重构、自有 UI 库与原型迁移完成，独立评审和最终 CI 全部通过。",
+      "path": "docs/project/archive/2026-10-20-hub-glass-prototype"
+    }
+  },
   "previews": [
     {
       "id": "account-onboarding",
