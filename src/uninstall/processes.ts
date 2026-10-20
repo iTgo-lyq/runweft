@@ -26,7 +26,13 @@ function info(pid: number): ProcessInfo | null {
     if (process.platform === 'linux') {
         try { marker = readFileSync(`/proc/${pid}/stat`, 'utf8').split(') ').at(-1)!.split(' ')[19]!; } catch { return null; }
     }
-    if (!marker) throw new RunweftError('uninstall_process_unknown', '无法核对服务进程。', `检查 PID ${pid}；未删除数据。`);
+    if (!marker) {
+        // The process can exit after command/state were read but before lstart.
+        // Only a confirmed exit is safe; a live or inaccessible PID still blocks removal.
+        if (ps(['-p', String(pid), '-o', 'state=']).startsWith('Z')) return null;
+        try { process.kill(pid, 0); } catch (error) { if ((error as NodeJS.ErrnoException).code === 'ESRCH') return null; }
+        throw new RunweftError('uninstall_process_unknown', '无法核对服务进程。', `检查 PID ${pid}；未删除数据。`);
+    }
     return { pid, command, marker };
 }
 function hapiHome(pid: number): string | undefined {

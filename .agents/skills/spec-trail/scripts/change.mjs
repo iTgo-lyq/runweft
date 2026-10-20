@@ -58,7 +58,7 @@ const commands = {
   execute: ["availability-note"],
   wait: ["kind", "summary"],
   resume: [],
-  rework: ["stage", "reason", "approach"],
+  rework: ["stage", "reason", "approach", "size"],
   verify: ["result", "summary", "availability-note"],
   accept: ["summary", "source", "mode", "availability-note"],
   specs: ["result", "summary"],
@@ -927,6 +927,18 @@ function main() {
             stages.indexOf(stage) <= stages.indexOf(state.stage),
           "Rework must return to an earlier/current non-close stage",
         );
+        if (opts.size !== undefined) {
+          assert(
+            stage === "requirement",
+            "Size changes require requirement rework so prior confirmations are invalidated",
+          );
+          assert(
+            ["small", "medium", "large"].includes(opts.size) &&
+              state.size !== "xlarge",
+            "Size rework supports small/medium/large; xlarge needs explicit parent/child planning",
+          );
+          state.size = opts.size;
+        }
         if (stage === "execution") {
           requireConfirmations();
           uniqueActive();

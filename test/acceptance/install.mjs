@@ -95,7 +95,9 @@ async function verify(layout) {
             writeFileSync(join(failing, 'npm'), '#!/bin/sh\nexit 7\n', { mode: 0o700 });
             const result = spawnSync(installed.cli, ['--home', home, '--json', 'uninstall', '--yes'], {
                 cwd: root, env: { ...installed.env, PATH: `${failing}:${installed.env.PATH}` }, encoding: 'utf8', timeout: 65000 });
-            assert.equal(result.status, 1); assert.equal(JSON.parse(result.stderr).error.code, 'uninstall_program_failed');
+            assert.equal(result.status, 1, result.stderr);
+            const failure = JSON.parse(result.stderr).error;
+            assert.equal(failure.code, 'uninstall_program_failed', JSON.stringify(failure));
             assert(existsSync(home) && existsSync(installed.cli));
             item.checks.push('failed npm removal retains program and data for explicit retry');
         }

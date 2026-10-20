@@ -1,0 +1,49 @@
+/* ---- base ---------------------------------------------------------------------- */
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; min-height: 100vh; background: var(--canvas); color: var(--ink); font: 14px/1.6 var(--font); -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+button, input, select, textarea { font: inherit; color: inherit; }
+h1, h2, h3, h4 { text-wrap: balance; }
+p { text-wrap: pretty; }
+[hidden] { display: none !important; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.sprite { position: absolute; width: 0; height: 0; overflow: hidden; }
+.icon { width: 18px; height: 18px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.mark { width: 26px; height: 26px; flex: none; color: var(--accent-fill); }
+.mono { font-family: var(--font-mono); font-size: .9em; overflow-wrap: anywhere; }
+.muted { color: var(--ink-3); }
+.hint { margin: 0; font-size: 12.5px; line-height: 1.6; color: var(--ink-3); }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.skip { position: fixed; left: 12px; top: -60px; z-index: 100; padding: 8px 14px; border-radius: 10px; background: var(--surface); color: var(--ink); box-shadow: var(--shadow-card); }
+.skip:focus { top: 12px; }
+
+[data-tone=ok] { --tone: var(--ok); --tone-soft: var(--ok-soft); }
+[data-tone=warn] { --tone: var(--warn); --tone-soft: var(--warn-soft); }
+[data-tone=danger] { --tone: var(--danger); --tone-soft: var(--danger-soft); }
+[data-tone=unknown] { --tone: var(--unknown); --tone-soft: var(--unknown-soft); }
+[data-tone=accent], [data-tone=info] { --tone: var(--accent-ink); --tone-soft: var(--accent-soft); }
+[data-tone=neutral], [data-tone=offline], [data-tone=lock] { --tone: var(--neutral); --tone-soft: var(--neutral-soft); }
+
+/* ---- glass: only for controls that float above content ------------------------- */
+.glass {
+  background: var(--glass-tint), var(--glass-bg);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-edge);
+  box-shadow: inset 0 1px 0 var(--glass-highlight), inset 0 -1px 0 var(--glass-lowlight), var(--glass-shadow);
+}
+@supports not ((backdrop-filter: blur(2px)) or (-webkit-backdrop-filter: blur(2px))) { .glass { background: var(--surface); } }
+@media (prefers-reduced-transparency: reduce) {
+  .glass { background: var(--surface); -webkit-backdrop-filter: none; backdrop-filter: none; }
+}
+
+/* ---- motion ---------------------------------------------------------------------- */
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes pop { from { opacity: 0; transform: translateY(-4px) scale(.98); } }
+@keyframes panel-in { from { opacity: 0; transform: translateX(10px); } }
+@keyframes sheet-in { from { opacity: 0; transform: translateX(28px); } }
+@keyframes dialog-in { from { opacity: 0; transform: translateY(8px) scale(.985); } }
+@keyframes toast-in { from { opacity: 0; transform: translateY(8px); } }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
+}

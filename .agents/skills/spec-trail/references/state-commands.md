@@ -20,7 +20,7 @@
 | `task-retry` | `--task Tn`；只恢复尚未提交的 done 为 doing，移除验证/提交线索，用于提交失败；若同一任务已暂存为 done，同时只修正该任务的暂存内容，保留其余部分暂存差异。HEAD 中已 done 的任务不可回退；推送失败保留提交并重试推送。 |
 | `execute` | 检查正文、任务执行安排、规模确认、前置归档与推送、单分支执行冲突，再进入 execution。 |
 | `wait` / `resume` | wait 要求 `--kind confirmation/dependency/pause --summary`；实际等待条件解除后 resume 清除等待。resume 本身不授予确认或撤销取消。 |
-| `rework` | `--stage requirement/technical/plan/execution --reason --approach`；返回最早受影响阶段，清除该阶段及之后的确认、merge 确认、关闭结果和等待；保留已完成任务。 |
+| `rework` | `--stage requirement/technical/plan/execution --reason --approach`；返回最早受影响阶段，清除该阶段及之后的确认、merge 确认、关闭结果和等待；保留已完成任务及原型引用。可选 `--size small/medium/large`，仅用于非 xlarge Change 返回 requirement 时同步调整规模，不自动转换父子结构。 |
 | `verify` | `--result passed/failed --summary`；任务完成、执行安排有效且实际验证完成后进入 close，记录整体验证。后续 accept/specs/archive 也复核安排。独立评审要求仍按主 skill。 |
 | `accept` | `--mode user/agent --summary --source`；验收方式按[主 skill](../SKILL.md#验收)，摘要与来源填写实际依据。 |
 | `specs` | `--result synced/not_needed --summary`；验收后实际同步 Specs，再记录结果。 |

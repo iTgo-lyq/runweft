@@ -1,7 +1,7 @@
 [
   {
-    "id": "identity",
-    "entryPath": "identity/index.html"
+    "id": "account-onboarding",
+    "entryPath": "account-onboarding/index.html"
   },
   {
     "id": "tasks",
@@ -30,9 +30,5 @@
   {
     "id": "members",
     "entryPath": "members/index.html"
-  },
-  {
-    "id": "account-onboarding",
-    "entryPath": "account-onboarding/index.html"
   }
 ]

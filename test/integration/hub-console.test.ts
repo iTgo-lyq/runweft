@@ -86,13 +86,13 @@ test('owned sessions on shared machines never grant terminal input, and own term
 
 test('current console publishes public assets with strict headers, MIME and method boundaries', async () => {
     const fixture = await hubResourceFixture(cleanups);
-    for (const [path, mime] of [['/hub', 'text/html'], ['/hub/', 'text/html'], ['/hub/style.css', 'text/css'], ['/hub/app.js', 'text/javascript']]) {
+    for (const [path, mime] of [['/hub', 'text/html'], ['/hub/', 'text/html'], ['/hub/app.css', 'text/css'], ['/hub/app.js', 'text/javascript'], ['/hub/native.js', 'text/javascript']]) {
         const response = await fetch(fixture.url + path);
         expect(response.status).toBe(200); expect(response.headers.get('content-type')).toContain(mime!);
         expect(response.headers.get('referrer-policy')).toBe('no-referrer'); expect(response.headers.get('cache-control')).toBe('no-store');
         expect(response.headers.get('x-content-type-options')).toBe('nosniff');
-        expect(response.headers.get('content-security-policy')).toContain("script-src 'self'");
-        expect(response.headers.get('content-security-policy')).toContain("frame-ancestors 'self'");
+        // Only styles may be inline; scripts, connections, other resources and framing stay on this origin.
+        expect(response.headers.get('content-security-policy')).toBe("default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'self'");
         expect((await response.text()).length).toBeGreaterThan(0);
         const head = await fetch(fixture.url + path, { method: 'HEAD' });
         expect(head.status).toBe(200); expect(head.headers.get('content-type')).toContain(mime!); expect(await head.text()).toBe('');
@@ -100,5 +100,6 @@ test('current console publishes public assets with strict headers, MIME and meth
         expect(post.status).toBe(405); expect(post.headers.get('allow')).toBe('GET, HEAD');
     }
     expect((await fetch(fixture.url + '/hub/not-a-file')).status).toBe(404);
+    for (const retired of ['/hub/style.css', '/hub/console.js', '/hub/tasks-page.js']) expect((await fetch(fixture.url + retired)).status).toBe(404);
     expect((await fetch(fixture.url + '/api/runweft/tasks/overview')).status).toBe(401);
 });
