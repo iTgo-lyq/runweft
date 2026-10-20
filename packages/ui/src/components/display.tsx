@@ -114,8 +114,8 @@ export function Section({ title, children, className }: { title?: ReactNode; chi
 /** A titled group on a full page, separated by a hairline. */
 export function Block({ title, aside, children, className }: { title?: ReactNode; aside?: ReactNode; children: ReactNode; className?: string }) {
   return (
-    <section className={cn('block', className)}>
-      {title && (aside ? <div className="block-head"><h2>{title}</h2>{aside}</div> : <h2>{title}</h2>)}
+    <section className={cn('content-block', className)}>
+      {title && <div className="block-head"><h2>{title}</h2>{aside}</div>}
       {children}
     </section>
   );

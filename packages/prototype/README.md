@@ -4,15 +4,18 @@
 
 | 位置 | 内容 |
 | --- | --- |
-| `src/app.js` | 工作台壳、路由、账号状态切换、演示控制 |
-| `src/mock.js` | 虚构数据与内存接口，字段沿用产品投影 |
-| `src/ui/` | DOM 工具与通用控件（按钮、检查器、菜单、对话框、纬线等） |
+| `src/app.tsx` | 工作台壳、路由、账号状态切换、演示控制 |
+| `src/proto.tsx` | 页面共用的演示实例、写操作入口、刷新与页面读取 |
 | `src/pages/` | 各页面：账号、任务、机器与 Runtime、Agent、仓库、我的选择、成员、账号设置 |
-| `src/style.css`、`src/shell.html` | 浅色/深色令牌与组件样式；页面骨架和内联图标 |
+| `src/mock.js`、`src/time.js` | 虚构数据与内存接口（字段沿用产品投影）；固定时钟 |
+| `src/forms.js`、`src/bridge.js` | 受限 iframe 的表单提交补丁；SpecTrail 预览握手 |
+| `src/app.css`、`src/shell.html` | 引入 UI 库样式并补充演示控制的样式；页面骨架 |
+
+页面用 React 与 [UI 库](../ui/README.md)组件实现，样式、图标和交互都来自 UI 库；原型包只保留页面、内存数据和演示控制，不复制组件代码。页面与产品 Hub 各自实现，原型的改动不会影响正式前端；改 UI 库就是改产品。
 
 右下角“演示”切换数据场景（正常、空数据、首次加载失败、刷新失败、离线或结果未知、登录过期）、在“产品协作”的角色（所有者、管理员、成员）、外观（跟随系统、浅色、深色）和账号场景。账号页可用任意用户名和密码；重置码和邀请输入 `demo`。刷新或“重置演示”恢复初始数据。
 
-在本目录运行：
+React、Radix 与 Tailwind 来自仓库根目录的依赖，先在根目录执行 `bun install --frozen-lockfile`，再在本目录运行：
 
 ```sh
 bun install --frozen-lockfile
@@ -23,7 +26,7 @@ bun run test
 bun run screenshots
 ```
 
-构建将 HTML/CSS/JavaScript 合成自包含的 `dist/<id>/index.html`；`bun build.mjs --git-preview` 同时写出 Git 交付用的 `preview/<id>/index.html`。`verify.mjs` 在受限 iframe 中覆盖 8 个入口 × 桌面 1440×1000、平板 834×1112、手机 390×844：加载、隔离、无外部请求和存储、无横向溢出、各入口主要操作（平板和手机用触摸），以及数据场景、键盘焦点回归、外观切换、减少动态效果和减少透明度。`--screenshots` 另存每个入口与设备的浅色和深色截图，并改用 SwiftShader GPU 合成：无头 Chromium 的软件渲染不会对带圆角的玻璃做背景模糊，截图会比真实浏览器显得更不透明。CI 的临时 Ubuntu runner 和不允许 user namespace 的机器上设置 `CI=true`，关闭 Chromium 进程沙箱；iframe 权限仍仅为 allow-scripts。
+构建调用 UI 库的 `buildFrontend`（IIFE 格式）打包页面并生成 Tailwind 样式，合成自包含的 `dist/<id>/index.html`；`bun build.mjs --git-preview` 同时写出 Git 交付用的 `preview/<id>/index.html`。`verify.mjs` 在受限 iframe 中覆盖 8 个入口 × 桌面 1440×1000、平板 834×1112、手机 390×844：加载、隔离、无外部请求和存储、无横向溢出、各入口主要操作（平板和手机用触摸），以及数据场景、键盘焦点回归、外观切换、减少动态效果和减少透明度。`--screenshots` 另存每个入口与设备的浅色和深色截图，并改用 SwiftShader GPU 合成：无头 Chromium 的软件渲染不会对带圆角的玻璃做背景模糊，截图会比真实浏览器显得更不透明。CI 的临时 Ubuntu runner 和不允许 user namespace 的机器上设置 `CI=true`，关闭 Chromium 进程沙箱；iframe 权限仍仅为 allow-scripts。
 
 清单在 `prototype.json`，上传入口在 `publish-entries.json`。每次发布必须从干净、已推送的源码提交构建，再登记固定版本；后续更新不会覆盖历史地址。
 

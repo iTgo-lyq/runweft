@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState, type ComponentProps, type KeyboardEvent, type ReactNode } from 'react';
 import { Icon, Mark, type IconName } from '../icons';
 import { cn } from '../lib/cn';
+import type { Tone } from '../lib/status';
 import { Avatar } from './display';
 import { Button } from './button';
 
@@ -206,10 +207,12 @@ export function RowList({ label, table = false, children, className }: { label: 
   return <ul className={cn('rows', table && 'rows-table', className)} aria-label={label} onKeyDown={onKeyDown}>{children}</ul>;
 }
 
-export function Row({ rowKey, opened, onOpen, children, label }: { rowKey: string; opened: boolean; onOpen: (from: HTMLElement) => void; children: ReactNode; label?: string }) {
+export function Row({ rowKey, opened, onOpen, children, label, className, tone }: {
+  rowKey: string; opened: boolean; onOpen: (from: HTMLElement) => void; children: ReactNode; label?: string; className?: string; tone?: Tone;
+}) {
   return (
     <li>
-      <button type="button" className="row" data-key={rowKey} data-opened={String(opened)} aria-label={label} onClick={event => onOpen(event.currentTarget)}>
+      <button type="button" className={cn('row', className)} data-key={rowKey} data-opened={String(opened)} data-tone={tone} aria-label={label} onClick={event => onOpen(event.currentTarget)}>
         {children}
         <Icon name="chevron-right" className="icon row-go" />
       </button>

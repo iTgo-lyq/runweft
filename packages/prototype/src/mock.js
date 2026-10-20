@@ -1,6 +1,6 @@
 // Fictional, in-memory data only. Reload or "重置演示" discards every change.
 // Field names follow the real Hub projections so the prototype cannot promise data the product lacks.
-import { NOW, ago, later } from './ui/dom.js';
+import { NOW, ago, later } from './time.js';
 
 export const HUB_ORIGIN = 'https://hub.example.com';
 const SPACE = 'space-7c21', LAB = 'space-a903';

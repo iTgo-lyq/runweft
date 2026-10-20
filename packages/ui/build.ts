@@ -9,9 +9,10 @@ export const UI_ROOT = import.meta.dir;
 
 export type FrontendBuild = { js: string; css: string };
 
-export async function buildFrontend({ entry, css, minify = true }: { entry: string; css: string; minify?: boolean }): Promise<FrontendBuild> {
+/** `iife` suits inline scripts in sandboxed previews, which cannot load modules. */
+export async function buildFrontend({ entry, css, minify = true, format = 'esm' }: { entry: string; css: string; minify?: boolean; format?: 'esm' | 'iife' }): Promise<FrontendBuild> {
   const result = await Bun.build({
-    entrypoints: [entry], target: 'browser', format: 'esm', minify, sourcemap: 'none',
+    entrypoints: [entry], target: 'browser', format, minify, sourcemap: 'none',
     define: { 'process.env.NODE_ENV': JSON.stringify(minify ? 'production' : 'development') },
     tsconfig: resolve(UI_ROOT, '../../tsconfig.json'),
   });

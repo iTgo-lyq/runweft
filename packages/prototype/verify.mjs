@@ -38,7 +38,7 @@ function tools(page, f, device) {
   const touch = device !== 'pc-web';
   const press = async locator => (touch ? locator.tap() : locator.click());
   const button = (name, scope = f) => scope.getByRole('button', { name, exact: true });
-  const dialog = () => f.locator('dialog[open]');
+  const dialog = () => f.locator('.dialog[data-state=open]');
   const toast = text => f.locator('.toast', { hasText: text }).first().waitFor();
   const heading = name => f.getByRole('heading', { name, exact: true }).first().waitFor();
   const demo = async (group, option) => {
@@ -304,7 +304,8 @@ async function scenarioFlow(t, f, page, client) {
   await t.dialog().getByRole('heading', { name: '让 Agent 帮你接入' }).waitFor();
   await page.keyboard.press('Escape');
   await t.dialog().waitFor({ state: 'detached' });
-  assert.equal(await t.frame().evaluate(() => document.activeElement?.textContent), '接入新环境');
+  // Radix returns focus one task after the dialog unmounts.
+  await t.frame().waitForFunction(() => document.activeElement?.textContent === '接入新环境', null, { timeout: 2000 });
   // Theme follows the system and can be switched in the demo controls.
   await t.demo('外观', '深色');
   assert.equal(await f.locator('html').getAttribute('data-theme'), 'dark');

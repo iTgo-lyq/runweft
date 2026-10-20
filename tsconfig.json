@@ -28,6 +28,8 @@
     "test/**/*.ts",
     "scripts/**/*.ts",
     "packages/ui/**/*.ts",
-    "packages/ui/**/*.tsx"
+    "packages/ui/**/*.tsx",
+    "packages/prototype/src/**/*.ts",
+    "packages/prototype/src/**/*.tsx"
   ]
 }
