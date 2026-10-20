@@ -4,14 +4,62 @@
   "title": "Hub 前端交互与样式重构",
   "size": "large",
   "status": "active",
-  "stage": "requirement",
+  "stage": "plan",
   "branch": "codex/hub-glass-prototype",
-  "confirmations": {},
+  "confirmations": {
+    "requirement": {
+      "at": "2026-10-20T04:33:27.962Z",
+      "summary": "按验收原型重做 Hub，建立自有 UI 库，可按需调整后端",
+      "source": "用户：继续吧。后面不用我再确认了，一直推进到重构完成。"
+    },
+    "technical": {
+      "at": "2026-10-20T04:33:29.407Z",
+      "summary": "React、Radix/shadcn 与 Tailwind 自有库，原型独立，样式允许内联",
+      "source": "用户：继续吧。后面不用我再确认了，一直推进到重构完成。"
+    },
+    "plan": {
+      "at": "2026-10-20T04:35:25.948Z",
+      "summary": "先建 UI 库与构建链，再逐入口实现，最后迁移原型并清理",
+      "source": "用户：继续吧。后面不用我再确认了，一直推进到重构完成。"
+    }
+  },
   "tasks": {
     "T1": {
       "title": "完成蓝色轻玻璃八入口原型与交互验证",
       "status": "done",
       "verification": "Bun 1.4.2 构建通过；10项工具测试、24组三尺寸交互与截图通过；已人工查看截图，文档/工作流/diff检查通过。"
+    },
+    "T9": {
+      "title": "UI 库基础与前端构建链",
+      "status": "todo"
+    },
+    "T10": {
+      "title": "Hub 前端骨架、账号与连接",
+      "status": "todo"
+    },
+    "T11": {
+      "title": "任务",
+      "status": "todo"
+    },
+    "T12": {
+      "title": "机器与 Runtime",
+      "status": "todo"
+    },
+    "T13": {
+      "title": "Agent、仓库与我的选择",
+      "status": "todo"
+    },
+    "T14": {
+      "title": "成员与空间",
+      "status": "todo"
+    },
+    "T15": {
+      "title": "原型包改用 UI 库",
+      "status": "todo"
+    },
+    "T16": {
+      "title": "收尾",
+      "status": "todo"
     }
   },
   "closure": {},
@@ -318,9 +366,5 @@
       "answer": "原型独立实现页面，只共用 UI 库",
       "source": "用户：Q7 如果合并的话，协作分支的原型改动是不是会影响正式前端，我觉得还是保持独立比较好"
     }
-  },
-  "waitingFor": {
-    "kind": "confirmation",
-    "summary": "等待确认补充后的需求与技术方案，含放开内联样式与去掉邀请下载"
   }
 }
