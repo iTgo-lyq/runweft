@@ -1,6 +1,6 @@
 import { afterEach, expect, test } from 'bun:test';
 import { join } from 'node:path';
-import { readFileSync, statSync } from 'node:fs';
+import { readFileSync, statSync, writeFileSync } from 'node:fs';
 import { accountWebFixture } from './account-web-fixture';
 import { IdentityConnection } from '../../src/hub/connect/client';
 import { fixtureCleanup } from '../fixture-cleanup';
@@ -15,11 +15,14 @@ test('Web and CLI invitation files can be used across both entrances without cha
     await page.getByRole('button', { name: /^当前空间：/ }).click(); await page.getByRole('menuitem', { name: '创建空间…' }).click();
     const create = page.getByRole('dialog', { name: '创建空间' }); await create.getByLabel('空间名称').fill('Cross entrance team'); await create.getByRole('button', { name: '创建空间' }).click();
     await create.waitFor({ state: 'detached' }); const target = (await savedSession(page))!.spaceId!; expect(target).not.toBe(selected);
-    // Web invitations are created on the members page (T14) and only copied; the owner's CLI issues this one.
+    // The Web shows an invitation once for copying; the guest saves it to a file for the CLI.
+    await page.getByRole('link', { name: '成员', exact: true }).click(); await page.getByRole('button', { name: '邀请成员' }).first().click();
+    const invite = page.getByRole('dialog', { name: '邀请成员' }); await invite.getByRole('button', { name: '生成邀请' }).click();
+    const file = join(h.root, 'web-invitation.txt'); writeFileSync(file, `${await invite.locator('.secret-value').innerText()}\n`, { mode: 0o600 });
+    expect(readFileSync(file, 'utf8')).toMatch(/^rw_inv_[A-Za-z0-9_-]{43}\n$/);
+    await invite.getByRole('button', { name: '完成' }).click(); await invite.waitFor({ state: 'detached' });
     const ownerHome = join(h.root, 'owner-client'), owner = new IdentityConnection(ownerHome, h.url);
     await owner.password('invite-owner', password); await owner.complete({ spaceId: selected });
-    const file = join(h.root, 'web-invitation.txt'); await h.cli(['--space', target, 'space', 'invitation', 'create', '--output', file], ownerHome);
-    expect(readFileSync(file, 'utf8')).toMatch(/^rw_inv_[A-Za-z0-9_-]{43}\n$/);
     const guest = new IdentityConnection(h.clientHome, h.url); await guest.password('invite-guest', password, true); await guest.complete();
     const original = guest.status().spaceId;
     const accepted = await h.cli(['space', 'invitation', 'accept', '--file', file]);

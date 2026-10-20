@@ -5,7 +5,6 @@ import { HubApiError } from './api/http';
 import { accounts, clearSaved, identityApi, readSaved, spaceApi, writeSaved, type ConnectionRequest, type Identity, type Space } from './api/hub';
 import { patchHash, readHash, type View } from './route';
 import { WorkspaceContext, type Notice, type Workspace } from './workspace/context';
-import { PendingPage } from './workspace/pending-page';
 import { SettingsPage } from './workspace/settings-page';
 import { TasksPage } from './tasks/tasks-page';
 import { MachinesPage } from './resources/machines-page';
@@ -13,6 +12,7 @@ import { RuntimesPage } from './resources/runtimes-page';
 import { AgentsPage } from './agents/agents-page';
 import { RepositoriesPage } from './repositories/repositories-page';
 import { SelectionsPage } from './selections/selections-page';
+import { MembersPage } from './members/members-page';
 import { pages, WorkspaceShell } from './workspace/shell';
 
 type Session = { token: string; identity: Identity; username: string; spaces: Space[]; space?: Space };
@@ -35,15 +35,14 @@ function remember(session: Session) {
     writeSaved({ token: session.token, ...(session.space ? { spaceId: session.space.id } : {}) });
 }
 
-/** Pages that have moved to the new interface. The rest show a placeholder until their task lands. */
+/** The page for each workspace entry. */
+const screens: Record<View, () => ReactNode> = {
+    tasks: TasksPage, machines: MachinesPage, runtimes: RuntimesPage, agents: AgentsPage,
+    repositories: RepositoriesPage, selections: SelectionsPage, members: MembersPage, settings: SettingsPage,
+};
 function Page({ view }: { view: View }) {
-    if (view === 'tasks') return <TasksPage />;
-    if (view === 'machines') return <MachinesPage />;
-    if (view === 'runtimes') return <RuntimesPage />;
-    if (view === 'agents') return <AgentsPage />;
-    if (view === 'repositories') return <RepositoriesPage />;
-    if (view === 'selections') return <SelectionsPage />;
-    return view === 'settings' ? <SettingsPage /> : <PendingPage view={view} />;
+    const Screen = screens[view];
+    return <Screen />;
 }
 
 export function HubApp() {

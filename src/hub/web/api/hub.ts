@@ -65,7 +65,7 @@ export function identityApi(token: string) {
         setRole: (id: string, userId: string, role: Role) => call(`/spaces/${encodeURIComponent(id)}/members/${encodeURIComponent(userId)}`, { role }, 'PATCH'),
         removeMember: (id: string, userId: string) => call(`/spaces/${encodeURIComponent(id)}/members/${encodeURIComponent(userId)}`, undefined, 'DELETE'),
         invitations: (id: string) => call<{ invitations: Invitation[] }>(`/spaces/${encodeURIComponent(id)}/invitations`).then(value => value.invitations),
-        createInvitation: (id: string, role: Role) => call<{ token: string }>(`/spaces/${encodeURIComponent(id)}/invitations`, { role }),
+        createInvitation: (id: string, role: Role) => call<{ invitation: Invitation; token: string }>(`/spaces/${encodeURIComponent(id)}/invitations`, { role }),
         revokeInvitation: (id: string, invitationId: string) => call(`/spaces/${encodeURIComponent(id)}/invitations/${encodeURIComponent(invitationId)}`, undefined, 'DELETE'),
         confirmConnection: (requestId: string, spaceId: string) =>
             hubFetch<ConnectionRequest>(`/${encodeURIComponent(requestId)}/confirm`, { body: { spaceId }, token, base: '/api/runweft/connect' }),

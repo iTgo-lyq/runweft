@@ -61,7 +61,9 @@
     },
     "T14": {
       "title": "成员与空间",
-      "status": "todo"
+      "status": "done",
+      "verification": "typecheck；bun run test 30 项；全部 web- 浏览器测试与 hub-console、space-cli 共 19 项通过；成员页与邀请对话框深浅色、桌面与手机截图人工核对",
+      "commitTitle": "hub-glass-prototype T14: move the Hub members and space page to React"
     },
     "T15": {
       "title": "原型包改用 UI 库",
