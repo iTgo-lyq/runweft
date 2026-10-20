@@ -182,13 +182,7 @@ function buildShell() {
     h('div', { class: 'toolbar-actions' }, button('刷新', { icon: 'refresh', iconOnly: true, variant: 'ghost', onClick: () => refresh() })));
   const page = h('main', { class: 'page', id: 'page', tabIndex: -1 });
   const scrim = h('div', { class: 'scrim', 'aria-hidden': 'true', onClick: () => { setNav(false); app.split?.close(); } });
-  // The bar stays clear at rest; the scroll edge and deeper shadow appear only when content passes underneath.
-  const surface = h('section', { class: 'surface', 'aria-label': '内容', dataset: { scrolled: 'false' } }, h('div', { class: 'scroll-edge', 'aria-hidden': 'true' }), toolbar, page);
-  // Desktop scrolls the surface; phones scroll the document.
-  const markScrolled = () => { surface.dataset.scrolled = String(surface.scrollTop > 2 || window.scrollY > 2); };
-  surface.addEventListener('scroll', markScrolled, { passive: true });
-  window.addEventListener('scroll', markScrolled, { passive: true });
-  const node = h('div', { class: 'app' }, sidebar, h('div', { class: 'main' }, surface), scrim);
+  const node = h('div', { class: 'app' }, sidebar, h('div', { class: 'main' }, h('section', { class: 'surface', 'aria-label': '内容' }, toolbar, page)), scrim);
   return { node, nav, spaceButton, accountButton, crumbs, page };
 }
 
