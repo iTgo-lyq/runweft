@@ -8,6 +8,8 @@ import { WorkspaceContext, type Notice, type Workspace } from './workspace/conte
 import { PendingPage } from './workspace/pending-page';
 import { SettingsPage } from './workspace/settings-page';
 import { TasksPage } from './tasks/tasks-page';
+import { MachinesPage } from './resources/machines-page';
+import { RuntimesPage } from './resources/runtimes-page';
 import { pages, WorkspaceShell } from './workspace/shell';
 
 type Session = { token: string; identity: Identity; username: string; spaces: Space[]; space?: Space };
@@ -33,6 +35,8 @@ function remember(session: Session) {
 /** Pages that have moved to the new interface. The rest show a placeholder until their task lands. */
 function Page({ view }: { view: View }) {
     if (view === 'tasks') return <TasksPage />;
+    if (view === 'machines') return <MachinesPage />;
+    if (view === 'runtimes') return <RuntimesPage />;
     return view === 'settings' ? <SettingsPage /> : <PendingPage view={view} />;
 }
 

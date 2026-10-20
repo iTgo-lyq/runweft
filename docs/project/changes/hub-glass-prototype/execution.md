@@ -175,3 +175,20 @@ T1 仅交付独立原型，未修改 src/hub、HAPI、产品配置或模型凭�
 - `bun run typecheck` 通过；`bun run test` 29 项通过；`bun run test:ui` 18 项通过。
 - `bun run build` 后 `web-tasks`、`web-task-links`、`web-workspace`、`web-identity`、`web-connect`、`web-invitations`、`hub-console` 共 15 项通过。
 - 任务列表、检查器（报告、交付、详情）在桌面与手机、浅色与深色下截图，人工查看与原型一致；手机深色的纯黑背景来自原型 token。
+
+## T12 机器与 Runtime
+
+**范围**：`src/hub/web/resources`：机器列表与检查器（所有者：凭据状态与撤销、取消与恢复登记、改名、空间关联、探测原生工具、首次连接与凭据撤销提示；他人机器只显示概要；空间治理按权限显示），Runtime 列表与检查器（选用资格、检查工具与版本、改名、取消与恢复登记、共享到空间、空间治理；他人共享的 Runtime 只能检查），以及登记 Runtime 对话框。资源所有者名称取自当前空间成员，已离开的所有者写作“已离开此空间的成员”。
+
+**实现取舍**：
+- 共享到某个空间前，机器必须已关联到该空间；未关联时开关不可用并说明原因，已共享的仍可撤回。
+- 撤回关联、撤回共享、停用、撤销凭据和取消登记都先确认；共享会说明消耗对方机器的模型额度、不提供系统隔离。
+- 菜单与弹出层关闭时不再保留入场动画。测试中发现，入场动画未结束时选择菜单项，Radix 会让菜单保持挂载到动画结束，此时再次点击触发器不会打开菜单。
+- 工作区中出现两处非本人会话所做的修改：`packages/ui/src/components/overlay.tsx` 让从菜单项打开的对话框关闭后把焦点还给菜单触发器，`web-resources` 测试在撤销凭据后等待焦点回到“机器操作”。两处都合理，予以保留，并在第二次确认后补上同样的等待。
+
+**测试**：新增 `web-resources`，使用资源 fixture 的两台本人机器（一台未首次连接）与一台成员机器：改名、凭据有效、探测到两种工具、关联与撤回关联第二个空间、未连接机器不能探测、他人机器只有概要、停用与解除停用、登记并检查 Runtime、未关联空间的共享开关不可用、共享后成员看到只读的共享 Runtime、撤回共享与取消登记、撤销机器凭据、取消与恢复机器登记、三档尺寸无横向溢出，浏览器无错误与 CSP 违规。连续运行 5 次均通过。
+
+**验证**：
+- `bun run typecheck` 通过；`bun run test:ui` 18 项通过。
+- `bun run build` 后 `web-identity`、`web-connect`、`web-workspace`、`web-invitations`、`web-task-links`、`web-tasks`、`web-resources`、`hub-console`、`cli-resources` 共 21 项通过。
+- 机器、Runtime 列表与检查器在桌面与手机、浅色与深色下截图，人工查看与原型一致。

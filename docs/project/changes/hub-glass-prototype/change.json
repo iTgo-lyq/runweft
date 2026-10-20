@@ -49,7 +49,9 @@
     },
     "T12": {
       "title": "机器与 Runtime",
-      "status": "doing"
+      "status": "done",
+      "verification": "typecheck；test:ui 18 项；web-identity/web-connect/web-workspace/web-invitations/web-task-links/web-tasks/web-resources/hub-console/cli-resources 21 项通过；web-resources 连续 5 次通过；机器与 Runtime 深浅色、桌面与手机截图人工核对",
+      "commitTitle": "hub-glass-prototype T12: move the Hub machines and Runtime pages to React"
     },
     "T13": {
       "title": "Agent、仓库与我的选择",

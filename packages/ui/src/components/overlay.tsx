@@ -78,10 +78,17 @@ function focusFirst(content: HTMLElement | null) {
   target?.focus();
 }
 
-/** Radix returns focus only to its own Trigger; controlled dialogs remember whatever opened them instead. */
+/**
+ * Radix returns focus only to its own Trigger; controlled dialogs remember whatever opened them instead. A dialog
+ * opened from a menu item returns to the menu's trigger, because the item goes away with the menu.
+ */
 function useOpener(open: boolean) {
   const opener = useRef<HTMLElement | null>(null);
-  useLayoutEffect(() => { if (open) opener.current = document.activeElement as HTMLElement | null; }, [open]);
+  useLayoutEffect(() => {
+    if (!open) return;
+    const active = document.activeElement as HTMLElement | null, menu = active?.closest('[role=menu]');
+    opener.current = (menu && document.getElementById(menu.getAttribute('aria-labelledby') ?? '')) || active;
+  }, [open]);
   return (event: Event) => { event.preventDefault(); if (opener.current?.isConnected) opener.current.focus(); opener.current = null; };
 }
 
