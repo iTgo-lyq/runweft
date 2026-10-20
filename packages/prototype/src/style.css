@@ -39,12 +39,19 @@
   --shadow-card: 0 0 0 1px var(--line), 0 1px 2px rgba(20, 27, 38, .05), 0 18px 44px -20px rgba(20, 27, 38, .22);
   --shadow-sheet: 0 0 0 1px var(--line), 0 28px 70px -20px rgba(14, 20, 32, .4);
   --glass-bg: rgba(255, 255, 255, .64);
-  --glass-tint: linear-gradient(180deg, rgba(255, 255, 255, .62), rgba(238, 243, 255, .32));
+  --glass-tint: linear-gradient(180deg, rgba(255, 255, 255, .62), rgba(255, 255, 255, .32));
   --glass-edge: rgba(255, 255, 255, .78);
   --glass-highlight: rgba(255, 255, 255, .95);
   --glass-lowlight: rgba(20, 27, 38, .05);
   --glass-shadow: 0 1px 1px rgba(20, 27, 38, .04), 0 10px 28px -12px rgba(20, 27, 38, .22);
   --glass-blur: blur(22px) saturate(175%);
+  /* Small bars use thinner glass than menus and drawers, letting content through. */
+  --bar-bg: rgba(255, 255, 255, .16);
+  --bar-tint: linear-gradient(180deg, rgba(255, 255, 255, .3), rgba(255, 255, 255, .06));
+  --bar-blur: blur(6px) saturate(180%);
+  --bar-shadow-rest: 0 1px 1px rgba(20, 27, 38, .03);
+  --bar-shadow: 0 1px 2px rgba(20, 27, 38, .06), 0 12px 28px -14px rgba(20, 27, 38, .3);
+  --edge-strength: 28%;
   --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", "Source Han Sans SC", system-ui, sans-serif;
   --font-display: ui-rounded, "SF Pro Rounded", -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", system-ui, sans-serif;
   --font-mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
@@ -76,6 +83,9 @@
     --glass-bg: rgba(30, 35, 44, .58); --glass-tint: linear-gradient(180deg, rgba(255, 255, 255, .07), rgba(255, 255, 255, .015));
     --glass-edge: rgba(255, 255, 255, .11); --glass-highlight: rgba(255, 255, 255, .1); --glass-lowlight: rgba(0, 0, 0, .35);
     --glass-shadow: 0 1px 1px rgba(0, 0, 0, .3), 0 12px 30px -12px rgba(0, 0, 0, .7);
+    --bar-bg: rgba(30, 35, 44, .58); --bar-tint: linear-gradient(180deg, rgba(255, 255, 255, .07), rgba(255, 255, 255, .015));
+    --bar-blur: blur(22px) saturate(175%); --edge-strength: 30%;
+    --bar-shadow-rest: 0 1px 1px rgba(0, 0, 0, .3), 0 12px 30px -12px rgba(0, 0, 0, .7); --bar-shadow: var(--bar-shadow-rest);
   }
 }
 :root[data-theme=dark] {
@@ -98,6 +108,9 @@
   --glass-bg: rgba(30, 35, 44, .58); --glass-tint: linear-gradient(180deg, rgba(255, 255, 255, .07), rgba(255, 255, 255, .015));
   --glass-edge: rgba(255, 255, 255, .11); --glass-highlight: rgba(255, 255, 255, .1); --glass-lowlight: rgba(0, 0, 0, .35);
   --glass-shadow: 0 1px 1px rgba(0, 0, 0, .3), 0 12px 30px -12px rgba(0, 0, 0, .7);
+  --bar-bg: rgba(30, 35, 44, .58); --bar-tint: linear-gradient(180deg, rgba(255, 255, 255, .07), rgba(255, 255, 255, .015));
+  --bar-blur: blur(22px) saturate(175%); --edge-strength: 30%;
+  --bar-shadow-rest: 0 1px 1px rgba(0, 0, 0, .3), 0 12px 30px -12px rgba(0, 0, 0, .7); --bar-shadow: var(--bar-shadow-rest);
 }
 /* Phones in dark mode use a true black canvas. */
 @media (max-width: 760px) and (prefers-color-scheme: dark) { :root:not([data-theme=light]) { --canvas: #000; --surface: #000; --surface-2: #121419; --surface-3: #1b1e25; --field: #15181e; } }
@@ -218,7 +231,14 @@ p { text-wrap: pretty; }
 
 .main { min-width: 0; padding: 8px 8px 8px 0; }
 .surface { position: relative; height: calc(100vh - 16px); height: calc(100dvh - 16px); overflow: auto; overscroll-behavior: contain; border-radius: 18px; background: var(--surface); box-shadow: var(--shadow-surface); scroll-padding-top: 76px; }
-.toolbar { position: sticky; top: 10px; z-index: 20; display: flex; align-items: center; gap: 6px; height: var(--toolbar); margin: 10px 12px 0; padding: 0 6px 0 14px; border-radius: 14px; }
+.toolbar { position: sticky; top: 10px; z-index: 20; display: flex; align-items: center; gap: 6px; height: var(--toolbar); margin: 10px 12px 0; padding: 0 6px 0 14px; border-radius: 14px;
+  --glass-bg: var(--bar-bg); --glass-tint: var(--bar-tint); --glass-blur: var(--bar-blur); --glass-shadow: var(--bar-shadow-rest); transition: box-shadow .2s var(--ease); }
+.surface[data-scrolled=true] .toolbar { --glass-shadow: var(--bar-shadow); }
+/* Soft scroll edge: content fades into the surface just under the bar so its labels stay legible. */
+.scroll-edge { position: sticky; top: 0; z-index: 19; height: calc(var(--toolbar) + 34px); margin-bottom: calc(-1 * (var(--toolbar) + 34px)); pointer-events: none;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--surface) var(--edge-strength), transparent), color-mix(in srgb, var(--surface) 8%, transparent) 70%, transparent);
+  opacity: 0; transition: opacity .2s var(--ease); }
+.surface[data-scrolled=true] .scroll-edge { opacity: 1; }
 .nav-open { display: none; }
 .crumbs { display: flex; align-items: center; gap: 6px; min-width: 0; font-size: 13.5px; }
 .crumb-space { color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
