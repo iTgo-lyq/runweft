@@ -5,7 +5,7 @@
       "id": "account-onboarding",
       "title": "账号与首次连接",
       "description": "注册登录、CLI 连接核对与授权结果、过期请求和密码重置",
-      "sourcePath": "packages/prototype/src/pages/account.js",
+      "sourcePath": "packages/prototype/src/pages/account.tsx",
       "kind": "page",
       "devices": [
         "pc-web",
@@ -37,7 +37,7 @@
     {
       "id": "tasks",
       "title": "任务与轮次详情",
-      "sourcePath": "packages/prototype/src/pages/tasks.js",
+      "sourcePath": "packages/prototype/src/pages/tasks.tsx",
       "kind": "page",
       "devices": [
         "pc-web",
@@ -70,7 +70,7 @@
     {
       "id": "machines",
       "title": "机器管理",
-      "sourcePath": "packages/prototype/src/pages/resources.js",
+      "sourcePath": "packages/prototype/src/pages/resources.tsx",
       "kind": "page",
       "devices": [
         "pc-web",
@@ -103,7 +103,7 @@
     {
       "id": "runtimes",
       "title": "Runtime 管理",
-      "sourcePath": "packages/prototype/src/pages/resources.js",
+      "sourcePath": "packages/prototype/src/pages/resources.tsx",
       "kind": "page",
       "devices": [
         "pc-web",
@@ -136,7 +136,7 @@
     {
       "id": "agents",
       "title": "Agent 定义与分享",
-      "sourcePath": "packages/prototype/src/pages/agents.js",
+      "sourcePath": "packages/prototype/src/pages/agents.tsx",
       "kind": "page",
       "devices": [
         "pc-web",
@@ -169,7 +169,7 @@
     {
       "id": "repositories",
       "title": "仓库与 checkout",
-      "sourcePath": "packages/prototype/src/pages/repositories.js",
+      "sourcePath": "packages/prototype/src/pages/repositories.tsx",
       "kind": "page",
       "devices": [
         "pc-web",
@@ -202,7 +202,7 @@
     {
       "id": "selections",
       "title": "我的选择与配置解析",
-      "sourcePath": "packages/prototype/src/pages/selections.js",
+      "sourcePath": "packages/prototype/src/pages/selections.tsx",
       "kind": "page",
       "devices": [
         "pc-web",
@@ -235,7 +235,7 @@
     {
       "id": "members",
       "title": "成员与邀请",
-      "sourcePath": "packages/prototype/src/pages/members.js",
+      "sourcePath": "packages/prototype/src/pages/members.tsx",
       "kind": "page",
       "devices": [
         "pc-web",
