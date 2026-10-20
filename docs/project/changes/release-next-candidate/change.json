@@ -4,13 +4,13 @@
   "title": "发布新的候选版本以结束异常上传等待",
   "size": "small",
   "status": "active",
-  "stage": "requirement",
+  "stage": "execution",
   "branch": "codex/release-next-candidate",
   "confirmations": {},
   "tasks": {
     "T1": {
       "title": "将候选版本递增到 1.2.2 并验证冻结产物",
-      "status": "todo"
+      "status": "doing"
     }
   },
   "closure": {}
