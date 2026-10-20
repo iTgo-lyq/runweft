@@ -1,6 +1,6 @@
 # Hub 前端重构技术方案
 
-依据[需求](requirement.md)的产品重构阶段：按已验收原型重做 Hub，并建立长期维护的自有 UI 库。视觉规范以原型包 [DESIGN.md](../../../../packages/prototype/DESIGN.md) 为准。技术 Q6 已选定 React + Radix/shadcn + Tailwind，技术 Q7 已选定原型独立实现页面。
+依据[需求](requirement.md)的产品重构阶段：按已验收原型重做 Hub，并建立长期维护的自有 UI 库。视觉规范以 [DESIGN.md](../../../../packages/ui/DESIGN.md) 为准（原在原型包，T9 移入 UI 库）。技术 Q6 已选定 React + Radix/shadcn + Tailwind，技术 Q7 已选定原型独立实现页面。
 
 ## 现状
 

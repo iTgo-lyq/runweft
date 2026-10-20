@@ -31,7 +31,9 @@
     },
     "T9": {
       "title": "UI 库基础与前端构建链",
-      "status": "todo"
+      "status": "done",
+      "verification": "typecheck 通过；bun test 22 项通过；CI=true test:ui 在 Hub CSP 下 18 项通过；浅深色截图已人工查看；文档、工作流与 diff 检查通过。",
+      "commitTitle": "hub-glass-prototype T9: add the Runweft UI library and front-end build"
     },
     "T10": {
       "title": "Hub 前端骨架、账号与连接",

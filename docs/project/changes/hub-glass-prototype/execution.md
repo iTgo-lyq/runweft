@@ -106,3 +106,23 @@ T1 仅交付独立原型，未修改 src/hub、HAPI、产品配置或模型凭�
 最终版本：源码 `9e32488`，R2 版本 `6585f1b8…`，登记提交 `7e88b95`，[任务入口](https://pub-cc623a99ce8e4606a3491cc2d4b4436c.r2.dev/runweft/6585f1b84a54da747a6b72ae5cfb53540520834b6c1d76eaa6d2112662e4302f/tasks/index.html)。发布前 `CI=true node verify.mjs` 的 24 组入口流程和场景检查通过，`node --test publish-r2.test.mjs` 12 项通过；发布后 8 个入口从公网读回与本地构建逐字节一致。
 
 用户验收原话：“行了，原型验收结束了。接下来准备正式的前端样式和交互重构方案。”
+
+## T9 UI 库基础与前端构建链
+
+**范围**：新增 `packages/ui`：token 与 Tailwind 4 主题映射、自绘图标、基础组件、工作台壳、列表与检查器、共用构建函数、组件目录与浏览器检查；DESIGN.md 移入 UI 库，原型包保留只记录例外的 DESIGN.md；根目录加入依赖、`jsx` 配置、`@runweft/ui` 路径别名与 `test:ui` 脚本；Hub CSP 抽到 `src/hub/csp.ts`，样式允许内联（`page.ts` 在 T10 切换）。
+
+**依赖**（精确固定）：`react`/`react-dom` 19.3.0、`radix-ui` 1.6.7、`clsx` 2.1.1、`tailwind-merge` 3.7.0；构建与类型：`tailwindcss`、`@tailwindcss/node`、`@tailwindcss/oxide` 4.3.3，`@types/react`/`@types/react-dom` 19.3.0。React 10 月 14 日的补丁（19.3.1 等）只改 React Server Components 传输协议，与纯浏览器端用法无关，因此选用发布满五周的 19.3.0；`radix-ui` 1.7.0 发布刚满两周，选用 1.6.7。轻提示沿用原型的实现，未引入 sonner。
+
+**实现取舍**：
+- 样式从已验收原型的 `style.css` 拆为 `tokens`、`base`、`components` 三层，菜单、弹出层与对话框按 Radix 的结构调整，演示控制的样式留在原型包。复杂组件沿用原型类名而不改写为工具类，以保证与验收版本一致；shadcn 标准 token 名已映射，复制来的组件可直接使用。
+- 侧边抽屉由检查器在平板与手机上的浮层、手机导航抽屉承担，未单独引入 Radix Sheet。
+- 菜单与弹出层为非模态，页面继续可滚动。Radix 只把焦点还给自己的 Trigger，受控对话框与确认框在打开时记录打开它的元素，关闭后归还。
+- Radix 的 RadioGroup 在定时器里移动焦点，只有按键仍按下时才选中；真实按键不受影响，测试用按下、等待、松开模拟。
+
+**环境准备**：本 worktree 首次初始化 `hapi` 子模块并在其中 `bun install --frozen-lockfile`（AGENTS 首次准备步骤），否则类型检查会因引用 HAPI 源码失败。
+
+**验证**：
+- `bun run typecheck` 通过；`bun run test` 22 项通过。
+- `CI=true bun run test:ui`：组件目录在 Hub CSP（样式允许内联）下 18 项检查通过，覆盖可见焦点、分段与筛选方向键、标签页、开关、菜单键盘与焦点归还、菜单单选、弹出层、对话框首字段焦点与归还、确认框默认焦点、轻提示播报、列表方向键与检查器、就地编辑、`/` 聚焦查找、深色、减少动态效果、减少透明度、手机工作台壳与抽屉、手机无横向溢出，浏览器无错误与 CSP 违规。
+- `--screenshots` 的桌面与手机、浅色与深色截图已人工查看，与原型视觉一致。
+- 原型包 `bun run build` 不受影响；`check-docs`、`check-workflow`、`git diff --check` 通过。
