@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "id": "npm-main-recovery",
+  "title": "恢复平台包已发布后的 npm 主包发布",
+  "size": "small",
+  "status": "completed",
+  "stage": "close",
+  "branch": "codex/npm-main-recovery",
+  "confirmations": {},
+  "tasks": {
+    "T1": {
+      "title": "处理发布读取瞬断并安全续发原候选主包",
+      "status": "done",
+      "verification": "工具测试 67 项通过；真实 1.2.2 四平台元数据与原回执一致，恢复主包 SHA-512 与原 CI 完全一致；文档/流程检查通过，产品及原生验收输入不变"
+    }
+  },
+  "closure": {
+    "verification": {
+      "result": "passed",
+      "at": "2026-10-21T08:47:54.632Z",
+      "summary": "67 项工具测试、真实候选恢复演练和差异自评审通过"
+    },
+    "acceptance": {
+      "result": "accepted",
+      "at": "2026-10-21T08:47:55.975Z",
+      "summary": "Agent 自验收确认恢复边界、冻结摘要与不重复上传保障",
+      "source": "用户授权完成原 1.2.2；本地自动测试通过，恢复 tarball 与原 CI SHA-512 一致；公开发布验收由后续恢复 Actions 完成"
+    },
+    "specs": {
+      "result": "synced",
+      "at": "2026-10-21T08:47:57.343Z",
+      "summary": "发行规格及操作文档补充主包恢复与网络读取预算"
+    },
+    "archive": {
+      "result": "done",
+      "at": "2026-10-21T08:47:58.698Z",
+      "summary": "恢复控制逻辑验证完成，合入后续接原候选发布",
+      "path": "docs/project/archive/2026-10-21-npm-main-recovery"
+    }
+  }
+}
