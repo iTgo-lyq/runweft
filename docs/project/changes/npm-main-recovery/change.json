@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "id": "npm-main-recovery",
+  "title": "恢复平台包已发布后的 npm 主包发布",
+  "size": "small",
+  "status": "active",
+  "stage": "requirement",
+  "branch": "develop",
+  "confirmations": {},
+  "tasks": {
+    "T1": {
+      "title": "处理发布读取瞬断并安全续发原候选主包",
+      "status": "todo"
+    }
+  },
+  "closure": {}
+}
