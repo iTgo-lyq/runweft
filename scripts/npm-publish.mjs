@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { assertFrozenCandidate } from './release-inputs.mjs';
+import { publicReadBudget, publicReadError } from './npm-read.mjs';
 
 export const registry = 'https://registry.npmjs.org/';
 export const packageNames = ['runweft-linux-x64', 'runweft-linux-arm64', 'runweft-darwin-x64', 'runweft-darwin-arm64', 'runweft'];
@@ -80,7 +81,7 @@ export function checkManifest(entry, manifest) {
 }
 
 // Persist before starting an upload so an interrupted request is never blindly repeated.
-export async function publishCandidate(index, entries, { metadata, tags, upload, save, receipt = {}, channel = releaseChannel(index.version), pause = () => new Promise(r => setTimeout(r, 5000)), timeoutMs = 45 * 60_000 }) {
+export async function publishCandidate(index, entries, { metadata: readMetadata, tags: readTags, upload, save, receipt = {}, channel = releaseChannel(index.version), pause = () => new Promise(r => setTimeout(r, 5000)), timeoutMs = 45 * 60_000 }) {
     if (receipt.version) {
         assert.equal(receipt.version, index.version, 'Receipt version differs from candidate');
         assert.equal(receipt.sourceRevision, index.source.revision, 'Restore the original candidate for partial publication');
@@ -88,6 +89,8 @@ export async function publishCandidate(index, entries, { metadata, tags, upload,
     }
     // Metadata and dist-tags share one budget, so phase changes cannot extend the job indefinitely.
     const deadline = Date.now() + timeoutMs;
+    const reads = registryReaders({ timeoutMs: Math.max(1, timeoutMs) });
+    const metadata = readMetadata ?? reads.metadata, tags = readTags ?? reads.tags;
     const state = { ...receipt, channel, version: index.version, sourceRevision: index.source.revision, packages: receipt.packages ?? [], success: false };
     for (const record of state.packages) {
         const entry = entries.find(p => p.name === record.name);
@@ -122,6 +125,8 @@ export async function publishCandidate(index, entries, { metadata, tags, upload,
         await Promise.all(entries.map(async entry => {
             const current = await tags(entry);
             assertReleaseForward(index.version, current, entry.name);
+            if (channel === 'beta' && current.beta) assert(compareReleaseVersions(current.beta, index.version) <= 0,
+                entry.name + ': beta advanced beyond this candidate; inspect npm dist-tags');
             before[entry.name] = current.latest ?? null;
         }));
         if (!state.latestBefore) {
@@ -174,18 +179,24 @@ export async function publishCandidate(index, entries, { metadata, tags, upload,
     }
 }
 
-export async function metadata(entry, version = entry.version) {
-    const response = await fetch(`${registry}${entry.name}/${version}`, {
-        headers: { 'cache-control': 'no-cache' }, signal: AbortSignal.timeout(30_000) });
-    if (response.status === 404) return null;
-    assert.equal(response.status, 200, `${entry.name}: npm HTTP ${response.status}`);
-    return response.json();
+export function registryReaders({ request = fetch, timeoutMs = 180_000, ...options } = {}) {
+    const budget = publicReadBudget({ timeoutMs, requestTimeoutMs: 30_000, ...options });
+    const json = (path, empty) => budget(path, async signal => {
+        const response = await request(registry + path, {
+            redirect: 'error', headers: { 'cache-control': 'no-cache' }, signal });
+        if (response.status !== 200) {
+            const error = publicReadError(response.status, response.headers.get('retry-after'));
+            try { await response.body?.cancel(); } catch { /* Preserve the known HTTP status. */ }
+            if (response.status === 404) return empty;
+            throw error;
+        }
+        return response.json();
+    });
+    return {
+        metadata: (entry, version = entry.version) => json(entry.name + '/' + version, null),
+        tags: entry => json('-/package/' + entry.name + '/dist-tags', {}),
+    };
 }
 
-export async function distTags(entry) {
-    const response = await fetch(`${registry}-/package/${entry.name}/dist-tags`, {
-        headers: { 'cache-control': 'no-cache' }, signal: AbortSignal.timeout(30_000) });
-    if (response.status === 404) return {};
-    assert.equal(response.status, 200, `${entry.name}: npm dist-tags HTTP ${response.status}`);
-    return response.json();
-}
+export const metadata = (entry, version) => registryReaders().metadata(entry, version);
+export const distTags = entry => registryReaders().tags(entry);

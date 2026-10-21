@@ -5,6 +5,7 @@ const networkCodes = new Set(['ECONNRESET', 'ECONNREFUSED', 'EPIPE', 'ETIMEDOUT'
 
 function transient(error, signal) {
     if (error instanceof AggregateError) return error.errors.length > 0 && error.errors.every(item => transient(item, signal));
+    if (error.cause instanceof AggregateError) return transient(error.cause, signal);
     return error.retryable || signal.aborted && ['AbortError', 'TimeoutError'].includes(error.name)
         || networkCodes.has(error.cause?.code ?? error.code);
 }
