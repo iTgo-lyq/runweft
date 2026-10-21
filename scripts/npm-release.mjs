@@ -1,14 +1,14 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { appendFileSync, createWriteStream, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
+import { appendFileSync, chmodSync, copyFileSync, cpSync, createWriteStream, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 import { Transform } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import { assertFrozenCandidate } from './release-inputs.mjs';
-import { checkManifest, compareReleaseVersions, distTags, metadata, npmPublishArgs, packageNames,
-    publishCandidate, registry, releaseChannel, validateCandidate } from './npm-publish.mjs';
+import { checkManifest, compareReleaseVersions, distTags, npmPublishArgs, packageNames,
+    publishCandidate, registry, registryReaders, releaseChannel, validateCandidate } from './npm-publish.mjs';
 
 import { publicReadBudget, publicReadError, publicResponse } from './npm-read.mjs';
 import { assertCandidateBinaries } from './installed-binaries.mjs';
@@ -16,6 +16,8 @@ import { assertCandidateBinaries } from './installed-binaries.mjs';
 const delay = () => new Promise(resolve => setTimeout(resolve, 5000));
 const descriptorMarker = 'RUNWEFT_RELEASE_DESCRIPTOR=';
 const uploadMarker = 'RUNWEFT_UPLOAD_STARTED=';
+const receiptMarker = 'RUNWEFT_PUBLICATION_STATE=';
+const recoveryMarker = 'RUNWEFT_RECOVERY_SOURCE=';
 function output(values) {
     if (process.env.GITHUB_OUTPUT) appendFileSync(process.env.GITHUB_OUTPUT,
         Object.entries(values).map(([key, value]) => key + '=' + value + '\n').join(''));
@@ -65,28 +67,52 @@ export function readReleaseLog(log) {
         for (const descriptor of descriptors) assertDescriptor(descriptor);
         for (const descriptor of descriptors) assert.deepEqual(descriptor, descriptors[0], 'Conflicting release descriptors in source run');
     }
-    return { release: descriptors[0], uploadStarted: log.includes(uploadMarker) };
+    const receipts = log.split('\n').filter(line => line.includes(receiptMarker))
+        .map(line => JSON.parse(line.slice(line.indexOf(receiptMarker) + receiptMarker.length).trim()));
+    const uploads = log.split('\n').filter(line => line.includes(uploadMarker))
+        .map(line => line.slice(line.indexOf(uploadMarker) + uploadMarker.length).trim());
+    return { release: descriptors[0], uploadStarted: uploads.length > 0, uploads, receipt: receipts.at(-1) };
 }
 
 export function recoveryMode(published, prior, sourceRevision, version) {
     const count = published.filter(Boolean).length;
     assert.equal(published.length, 5);
-    if (count > 0 && count < 5) throw new Error('Partial beta publication: do not rebuild or reupload this version; inspect the source run and publish a new version.');
+    const mainOnly = count === 4 && published.slice(0, 4).every(Boolean) && !published[4];
+    if (count > 0 && count < 5 && !mainOnly) throw new Error('Partial beta publication: missing platform packages cannot be rebuilt or reuploaded.');
     if (count === 0) {
         assert(!prior.uploadStarted, 'Upload outcome unknown: do not rebuild or retry; inspect npm and the source run.');
         return 'build';
     }
-    assert(prior.release, 'Five versions already exist; supply source-run-id with the original release descriptor. Never reconstruct a candidate from registry metadata.');
+    assert(prior.release, 'Published versions already exist; supply source-run-id with the original release descriptor. Never reconstruct a candidate from registry metadata.');
     assert.equal(prior.release.source.revision, sourceRevision, 'Source run belongs to a different tag commit');
     assert.equal(prior.release.version, version, 'Source run version differs');
     assert.equal(prior.prepublicationVerified, true, 'Original upload must have successful prepublication integration evidence');
+    if (mainOnly) {
+        const receipt = prior.receipt;
+        assert(receipt, 'Partial beta publication requires the original publication receipt');
+        assert.equal(receipt.version, version); assert.equal(receipt.sourceRevision, sourceRevision);
+        assert.equal(receipt.channel, 'beta'); assert.deepEqual(receipt.latestBefore, prior.release.latestBefore);
+        assert.equal(new Set(receipt.packages.map(p => p.name)).size, receipt.packages.length, 'Duplicate receipt packages');
+        for (const record of receipt.packages) {
+            const entry = prior.release.packages.find(p => p.name === record.name);
+            assert(entry && record.integrity === 'sha512-' + entry.sha512, 'Receipt integrity differs');
+            assert(['accepted', 'confirmed'].includes(record.status), 'Upload outcome unknown; inspect npm before retry');
+        }
+        for (let i = 0; i < 4; i++) {
+            const entry = prior.release.packages.find(p => p.name === packageNames[i]);
+            checkManifest(entry, published[i]);
+            assert(receipt.packages.some(p => p.name === entry.name), 'Missing platform upload receipt');
+        }
+        assert(!prior.uploads?.includes('runweft') || receipt.packages.some(p => p.name === 'runweft'), 'Main upload outcome unknown');
+        return 'main-only';
+    }
     return 'existing';
 }
 
 export function releaseChecks(version, publishing, mode) {
-    assert(['build', 'existing'].includes(mode), 'Unknown release mode');
+    assert(['build', 'existing', 'main-only'].includes(mode), 'Unknown release mode');
     const stable = releaseChannel(version) === 'latest';
-    return { publicIntegration: publishing && (stable || mode === 'existing'),
+    return { publicIntegration: publishing && (stable || mode !== 'build'),
         inlineIntegration: !(publishing && stable),
         siteInstall: publishing && stable };
 }
@@ -211,21 +237,58 @@ export async function previousRunLog(env, { query = path => JSON.parse(command('
     const id = env.SOURCE_RUN_ID || env.GITHUB_RUN_ID;
     assert.match(id ?? '', /^\d+$/);
     assert.match(env.GITHUB_REPOSITORY ?? '', /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/);
-    const base = 'repos/' + env.GITHUB_REPOSITORY + '/actions/runs/' + id;
-    const info = await query(base);
-    assert.equal(info.path, '.github/workflows/npm-publish.yml', 'Source run must use npm-publish.yml in this repository');
-    const attempts = id === env.GITHUB_RUN_ID ? Number(env.GITHUB_RUN_ATTEMPT) - 1 : info.run_attempt;
     let log = '', prepublicationVerified = false;
-    for (let attempt = 1; attempt <= attempts; attempt++) {
-        const jobs = (await query(base + '/attempts/' + attempt + '/jobs?per_page=100')).jobs;
-        for (const job of jobs.filter(job => job.name === 'beta')) {
-            const part = await readLog(env.GITHUB_REPOSITORY, job.id, { token: env.GH_TOKEN });
-            if (readReleaseLog(part).uploadStarted && job.steps?.some(step =>
-                step.name === 'Check every model-free integration group on the frozen candidate' && step.conclusion === 'success')) prepublicationVerified = true;
-            log += part + '\n';
+    const visited = new Set(), active = new Set();
+    async function collect(id) {
+        assert.match(String(id), /^[1-9]\d*$/);
+        assert(!active.has(id), 'Recovery source cycle');
+        if (visited.has(id)) return;
+        assert(visited.size + active.size < 20, 'Recovery source chain too long');
+        active.add(id);
+        const base = 'repos/' + env.GITHUB_REPOSITORY + '/actions/runs/' + id;
+        const info = await query(base);
+        assert.equal(info.path, '.github/workflows/npm-publish.yml', 'Source run must use npm-publish.yml in this repository');
+        const attempts = id === env.GITHUB_RUN_ID ? Number(env.GITHUB_RUN_ATTEMPT) - 1 : info.run_attempt;
+        for (let attempt = 1; attempt <= attempts; attempt++) {
+            const jobs = (await query(base + '/attempts/' + attempt + '/jobs?per_page=100')).jobs;
+            for (const job of jobs.filter(job => job.name === 'beta')) {
+                const part = await readLog(env.GITHUB_REPOSITORY, job.id, { token: env.GH_TOKEN });
+                for (const line of part.split('\n').filter(line => line.includes(recoveryMarker))) {
+                    await collect(line.slice(line.indexOf(recoveryMarker) + recoveryMarker.length).trim());
+                }
+                if (readReleaseLog(part).uploadStarted && job.steps?.some(step =>
+                    step.name === 'Check every model-free integration group on the frozen candidate' && step.conclusion === 'success')) prepublicationVerified = true;
+                log += part + '\n';
+            }
         }
+        active.delete(id); visited.add(id);
     }
+    await collect(id);
+    if (id !== env.GITHUB_RUN_ID && Number(env.GITHUB_RUN_ATTEMPT) > 1) await collect(env.GITHUB_RUN_ID);
     return { ...readReleaseLog(log), prepublicationVerified };
+}
+
+// Recover only the source-only launcher archive, then require the original CI byte digest.
+// Compiled platform packages are never reconstructed by this path.
+export function restoreMainTarball(release, directory, cwd = process.cwd()) {
+    assertDescriptor(release); assertFrozenCandidate(release, cwd);
+    const entry = release.packages.find(p => p.name === 'runweft');
+    const source = join(directory, 'source'), main = join(directory, 'runweft'), tarballs = join(directory, 'tarballs');
+    for (const path of [source, join(main, 'bin'), tarballs]) mkdirSync(path, { recursive: true });
+    const archive = join(directory, 'source.tar');
+    command('git', ['archive', '--format=tar', '--output', archive, release.source.revision, '--',
+        'src/npm-launcher.cjs', 'docs/usage.md', '.agents/skills/runweft-kit'], { cwd });
+    command('tar', ['-xf', archive, '-C', source]);
+    copyFileSync(join(source, 'src/npm-launcher.cjs'), join(main, 'bin/runweft.cjs'));
+    chmodSync(join(main, 'bin/runweft.cjs'), 0o755);
+    copyFileSync(join(source, 'docs/usage.md'), join(main, 'README.md'));
+    cpSync(join(source, '.agents/skills/runweft-kit'), join(main, 'skills/runweft-kit'), { recursive: true });
+    writeFileSync(join(main, 'package.json'), JSON.stringify(entry.manifest, null, 2));
+    command('npm', ['pack', '--json', '--ignore-scripts', '--pack-destination', tarballs], { cwd: main });
+    const tarball = join(directory, entry.tarball);
+    assert.equal(createHash('sha512').update(readFileSync(tarball)).digest('base64'), entry.sha512,
+        'Restored main tarball differs from original candidate; do not upload');
+    return { ...entry, tarball };
 }
 
 export async function prepareVerification(env, { load = previousRunLog, verify = verifyPublicRelease, checkInputs = assertFrozenCandidate } = {}) {
@@ -265,19 +328,36 @@ async function prepare(env) {
     assert.equal(command('git', ['rev-parse', revision + ':hapi']), pkg.hapi.revision, 'HAPI gitlink differs');
     assertFrozenCandidate({ source: { revision, dirty: false } });
     let prior = {};
-    if (publishing && (env.SOURCE_RUN_ID || Number(env.GITHUB_RUN_ATTEMPT) > 1)) prior = await previousRunLog(env);
-    const manifests = publishing ? await Promise.all(packageNames.map(name => metadata({ name, version: pkg.version }))) : Array(5).fill(null);
+    if (publishing && (env.SOURCE_RUN_ID || Number(env.GITHUB_RUN_ATTEMPT) > 1)) {
+        if (env.SOURCE_RUN_ID) console.log(recoveryMarker + env.SOURCE_RUN_ID);
+        prior = await previousRunLog(env);
+    }
+    const reads = registryReaders();
+    const manifests = publishing ? await Promise.all(packageNames.map(name => reads.metadata({ name, version: pkg.version }))) : Array(5).fill(null);
     const mode = recoveryMode(manifests, prior, revision, pkg.version);
     const checks = releaseChecks(pkg.version, publishing, mode);
-    if (mode === 'existing') {
+    if (mode !== 'build') {
         assert.deepEqual(prior.release.hapi, pkg.hapi);
-        await verifyPublicRelease(prior.release);
         console.log(descriptorMarker + JSON.stringify(prior.release));
+        if (mode === 'main-only') {
+            assert(env.RUNWEFT_WORK_DIR, 'Set RUNWEFT_WORK_DIR for main recovery');
+            const main = restoreMainTarball(prior.release, resolve(env.RUNWEFT_WORK_DIR, 'main-recovery'));
+            const npm = npmRunner();
+            await publishCandidate(prior.release, packageNames.map(name => name === 'runweft' ? main : prior.release.packages.find(p => p.name === name)), {
+                channel: 'beta', receipt: prior.receipt,
+                upload: entry => {
+                    assert.equal(entry.name, 'runweft', 'Recovery must never upload a platform package');
+                    console.log(uploadMarker + entry.name);
+                    try { npm.publish(entry, false); return 0; } catch (error) { console.error(error.message); return 1; }
+                }, save: state => report('PUBLICATION_STATE', state),
+            });
+        }
+        await verifyPublicRelease(prior.release);
     }
     output({ 'source-ref': revision, publish: publishing, build: mode === 'build', 'verify-only': false,
         'public-integration': checks.publicIntegration, 'inline-integration': checks.inlineIntegration,
         'validation-mode': checks.publicIntegration ? 'public' : 'inline', 'site-install': checks.siteInstall,
-        release: mode === 'existing' ? JSON.stringify(prior.release) : '' });
+        release: mode !== 'build' ? JSON.stringify(prior.release) : '' });
     report('RELEASE_PLAN', { tag: env.RELEASE_TAG || null, sourceRevision: revision, controlRevision: env.GITHUB_SHA, mode, publishing });
 }
 
@@ -330,7 +410,7 @@ async function beta(env) {
         return;
     }
     await publishCandidate(index, entries, {
-        channel: 'beta', metadata, tags: distTags,
+        channel: 'beta',
         receipt: { version: index.version, sourceRevision: index.source.revision, channel: 'beta', latestBefore, packages: [] },
         upload: entry => {
             console.log(uploadMarker + entry.name);
