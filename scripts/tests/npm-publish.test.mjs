@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { packageNames, publishCandidate, checkManifest, npmPublishArgs } from '../npm-publish.mjs';
+import { packageNames, publishCandidate, checkManifest, npmPublishArgs, registryReaders } from '../npm-publish.mjs';
 import { checkNpmTrust } from '../check-npm-trust.mjs';
 
 const index = { version: '1.2.0', source: { revision: 'a'.repeat(40) } };
@@ -211,4 +211,44 @@ test('metadata and channel propagation share one bounded processing budget', asy
     assert.equal(uploaded.size, 5);
     assert.equal(saved.packages.every(p => p.status === 'confirmed'), true);
     assert.equal(saved.success, false);
+});
+
+test('registry reads recover network and server failures with one shared deadline', async () => {
+    let clock = 0, calls = 0;
+    const reads = registryReaders({ timeoutMs: 10_000, now: () => clock, pause: async ms => { clock += ms; },
+        request: async () => {
+            calls++;
+            if (calls === 1) throw new TypeError('fetch failed', { cause: new AggregateError([
+                Object.assign(new Error('reset'), { code: 'ECONNRESET' }),
+            ]) });
+            if (calls === 2) return new Response(null, { status: 503 });
+            return Response.json({ version: index.version });
+        },
+    });
+    assert.equal((await reads.metadata(entries[0])).version, index.version);
+    assert.equal(calls, 3); assert.equal(clock, 7000);
+    clock = 10_000;
+    await assert.rejects(reads.tags(entries[0]), /budget exhausted/);
+    assert.equal(calls, 3);
+});
+
+test('registry absence, authentication and malformed JSON never trigger an upload retry', async () => {
+    for (const status of [404, 401, 403, 410]) {
+        let calls = 0;
+        const reads = registryReaders({ pause: async () => assert.fail('Unexpected retry'), request: async () => {
+            calls++; return new Response(null, { status });
+        } });
+        if (status === 404) assert.equal(await reads.metadata(entries[0]), null);
+        else await assert.rejects(reads.metadata(entries[0]), new RegExp('HTTP ' + status));
+        assert.equal(calls, 1);
+    }
+    const reads = registryReaders({ request: async () => new Response('{bad'), pause: async () => assert.fail('Unexpected retry') });
+    await assert.rejects(reads.tags(entries[0]), SyntaxError);
+});
+
+test('a newer beta prevents a stable recovery from uploading the missing main', async () => {
+    await assert.rejects(publishCandidate(index, entries, { channel: 'beta',
+        tags: async () => ({ latest: '1.1.0', beta: '1.3.0' }), metadata: async () => null,
+        upload: async () => assert.fail('Must not regress beta'), save() {},
+    }), /beta advanced/);
 });

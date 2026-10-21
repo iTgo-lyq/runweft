@@ -7,7 +7,7 @@ import { createServer } from 'node:http';
 import { spawnSync } from 'node:child_process';
 import { join, resolve } from 'node:path';
 import { parse } from 'yaml';
-import { assertDescriptor, downloadJobLog, downloadRelease, prepareVerification, promoteRelease, previousRunLog, readReleaseLog, recoveryMode, releaseChecks, unpackRelease, verifyPublicRelease } from '../npm-release.mjs';
+import { assertDescriptor, downloadJobLog, downloadRelease, prepareVerification, promoteRelease, previousRunLog, readReleaseLog, recoveryMode, releaseChecks, restoreMainTarball, unpackRelease, verifyPublicRelease } from '../npm-release.mjs';
 import { npmPublishArgs, packageNames, publishCandidate, registry } from '../npm-publish.mjs';
 import { publicReadBudget, publicResponse } from '../npm-read.mjs';
 
@@ -88,7 +88,7 @@ test('recovery refuses partial, unknown, missing provenance log and wrong source
     assert.throws(() => recoveryMode(Array(5).fill({}), { release }, 'f'.repeat(40), version), /different tag/);
     assert.equal(recoveryMode(Array(5).fill({}), { release, prepublicationVerified: true }, source, version), 'existing');
     const log = '2026-10-11T00:00:00Z RUNWEFT_RELEASE_DESCRIPTOR=' + JSON.stringify(release) + '\nRUNWEFT_UPLOAD_STARTED=runweft-linux-x64\n';
-    assert.deepEqual(readReleaseLog(log), { release, uploadStarted: true });
+    assert.deepEqual(readReleaseLog(log), { release, uploadStarted: true, uploads: ['runweft-linux-x64'], receipt: undefined });
     const bad = structuredClone(release); bad.packages[0].path = '../escape';
     assert.throws(() => assertDescriptor(bad));
 });
@@ -101,7 +101,7 @@ test('source log recovery captures ANSI as data and keeps GitHub authorization o
         calls.push({ url: String(url), options });
         return calls.length === 1 ? new Response(null, { status: 302, headers: { location } }) : new Response(log);
     } });
-    assert.deepEqual(readReleaseLog(recovered), { release, uploadStarted: true });
+    assert.deepEqual(readReleaseLog(recovered), { release, uploadStarted: true, uploads: ['runweft'], receipt: undefined });
     assert.equal(calls[0].url, 'https://api.github.com/repos/owner/repo/actions/jobs/123/logs');
     assert.equal(calls[0].options.redirect, 'manual');
     assert.equal(calls[0].options.headers.authorization, 'Bearer fixture-token');
@@ -151,7 +151,7 @@ test('prerelease recovery reads original successful gates for rerun-all and main
         const original = sourceRun || env.GITHUB_RUN_ID, paths = [];
         const options = {
             query: async path => {
-                paths.push(path); assert(path.startsWith('repos/owner/repo/actions/runs/' + original));
+                paths.push(path); assert([original, env.GITHUB_RUN_ID].some(id => path.startsWith('repos/owner/repo/actions/runs/' + id)));
                 return path.endsWith('/jobs?per_page=100') ? { jobs: [{ name: 'beta', id: 1, steps: [{
                     name: 'Check every model-free integration group on the frozen candidate', conclusion: 'success',
                 }] }] } : { path: '.github/workflows/npm-publish.yml', run_attempt: 1 };
@@ -160,7 +160,7 @@ test('prerelease recovery reads original successful gates for rerun-all and main
         const prior = await previousRunLog(env, options);
         assert.equal(recoveryMode(Array(5).fill({}), prior, release.source.revision, release.version), 'existing');
         assert.equal(releaseChecks(release.version, true, 'existing').publicIntegration, true);
-        assert.equal(paths.length, 2);
+        assert.equal(paths.length, sourceRun ? 4 : 2);
         const missing = await previousRunLog(env, { ...options, query: async path => {
             const value = await options.query(path); if (value.jobs) value.jobs[0].steps[0].conclusion = 'skipped'; return value;
         } });
@@ -390,4 +390,96 @@ test('explicit report collection rejects absent/conflicting evidence and keeps w
         const child = spawnSync(process.execPath, ['scripts/report-evidence.mjs', file, join(directory, 'missing.json')], { encoding: 'utf8' });
         assert.notEqual(child.status, 0); assert.equal(child.stdout, '', 'No partial success envelope on missing later report');
     } finally { rmSync(directory, { recursive: true, force: true }); }
+});
+
+function partialCandidate() {
+    const release = descriptor();
+    const receipt = { version: release.version, sourceRevision: release.source.revision, channel: 'beta',
+        latestBefore: release.latestBefore, packages: release.packages.filter(p => p.name !== 'runweft').map(p => ({
+            name: p.name, integrity: 'sha512-' + p.sha512, status: 'accepted',
+        })) };
+    return { release, receipt, uploads: packageNames.slice(0, 4), prepublicationVerified: true };
+}
+
+test('only the missing main can resume after four exact published platform receipts', async () => {
+    const prior = partialCandidate(), { release } = prior;
+    const manifests = release.packages.map(p => p.name === 'runweft' ? null : publicManifest(p));
+    assert.equal(recoveryMode(manifests, prior, release.source.revision, release.version), 'main-only');
+    let main = false; const uploads = [];
+    await publishCandidate(release, release.packages, { channel: 'beta', receipt: prior.receipt,
+        metadata: async p => p.name !== 'runweft' || main ? publicManifest(p) : null,
+        tags: async p => ({ latest: '1.1.1', ...(p.name !== 'runweft' || main ? { beta: release.version } : {}) }),
+        upload: async p => { uploads.push(p.name); main = true; return 0; }, save() {},
+    });
+    assert.deepEqual(uploads, ['runweft']);
+    for (const mutate of [
+        p => { delete p.receipt; }, p => { p.receipt.sourceRevision = 'f'.repeat(40); },
+        p => { p.receipt.packages.pop(); }, p => { p.receipt.packages[0].integrity = 'bad'; },
+        p => { p.receipt.packages[0].status = 'uploading'; }, p => { p.uploads.push('runweft'); },
+        p => { p.receipt.latestBefore = {}; }, p => { p.prepublicationVerified = false; },
+    ]) {
+        const invalid = structuredClone(prior); mutate(invalid);
+        assert.throws(() => recoveryMode(manifests, invalid, release.source.revision, release.version));
+    }
+    const bad = structuredClone(manifests); bad[0].dist.integrity = 'bad';
+    assert.throws(() => recoveryMode(bad, prior, release.source.revision, release.version), /published version differs/);
+});
+
+test('recovery follows original gates and retains newer main upload uncertainty across retries', async () => {
+    const prior = partialCandidate(), { release, receipt } = prior;
+    const original = 'RUNWEFT_RELEASE_DESCRIPTOR=' + JSON.stringify(release) + '\nRUNWEFT_PUBLICATION_STATE=' + JSON.stringify(receipt) + '\nRUNWEFT_UPLOAD_STARTED=runweft-linux-x64';
+    const uncertain = structuredClone(receipt);
+    uncertain.packages.push({ name: 'runweft', integrity: 'sha512-' + release.packages.at(-1).sha512, status: 'uploading' });
+    const resumed = 'RUNWEFT_RECOVERY_SOURCE=100\nRUNWEFT_RELEASE_DESCRIPTOR=' + JSON.stringify(release) +
+        '\nRUNWEFT_PUBLICATION_STATE=' + JSON.stringify(uncertain) + '\nRUNWEFT_UPLOAD_STARTED=runweft';
+    const options = { query: async path => path.endsWith('/jobs?per_page=100') ? { jobs: [{ name: 'beta',
+        id: path.includes('/100/') ? 1 : 2, steps: path.includes('/100/') ? [{
+            name: 'Check every model-free integration group on the frozen candidate', conclusion: 'success',
+        }] : [],
+    }] } : { path: '.github/workflows/npm-publish.yml', run_attempt: 1 },
+    readLog: async (repo, id) => id === 1 ? original : resumed };
+    for (const env of [
+        { SOURCE_RUN_ID: '100', GITHUB_RUN_ID: '101', GITHUB_RUN_ATTEMPT: '2' },
+        { SOURCE_RUN_ID: '101', GITHUB_RUN_ID: '102', GITHUB_RUN_ATTEMPT: '1' },
+    ]) {
+        const recovered = await previousRunLog({ ...env, GITHUB_REPOSITORY: 'owner/repo' }, options);
+        assert.equal(recovered.prepublicationVerified, true);
+        assert.deepEqual(recovered.receipt, uncertain);
+        assert.throws(() => recoveryMode(release.packages.map(p => p.name === 'runweft' ? null : publicManifest(p)),
+            recovered, release.source.revision, release.version), /outcome unknown/);
+    }
+});
+
+test('main recovery packs only frozen source files and requires the original tarball digest', () => {
+    const root = mkdtempSync(join(tmpdir(), 'restore-main-'));
+    const repo = join(root, 'repo'), expected = join(root, 'expected'), release = descriptor();
+    const entry = release.packages.at(-1);
+    const run = (program, args, cwd) => {
+        const result = spawnSync(program, args, { cwd, encoding: 'utf8' });
+        assert.equal(result.status, 0, result.stderr); return result.stdout.trim();
+    };
+    const put = (directory, path, content) => { mkdirSync(join(directory, path, '..'), { recursive: true }); writeFileSync(join(directory, path), content); };
+    try {
+        put(repo, 'src/npm-launcher.cjs', '#!/usr/bin/env node\n');
+        put(repo, 'docs/usage.md', 'Usage fixture');
+        put(repo, '.agents/skills/runweft-kit/SKILL.md', 'Skill fixture');
+        put(repo, 'package.json', JSON.stringify({ version: release.version }));
+        run('git', ['init', '-q'], repo);
+        run('git', ['add', '.'], repo);
+        run('git', ['-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.test', 'commit', '-qm', 'Frozen package'], repo);
+        release.source.revision = run('git', ['rev-parse', 'HEAD'], repo);
+        put(expected, 'package.json', JSON.stringify(entry.manifest, null, 2));
+        put(expected, 'bin/runweft.cjs', '#!/usr/bin/env node\n');
+        run('chmod', ['755', join(expected, 'bin/runweft.cjs')], root);
+        put(expected, 'README.md', 'Usage fixture');
+        put(expected, 'skills/runweft-kit/SKILL.md', 'Skill fixture');
+        run('npm', ['pack', '--ignore-scripts', '--pack-destination', root], expected);
+        entry.sha512 = createHash('sha512').update(readFileSync(join(root, 'runweft-' + release.version + '.tgz'))).digest('base64');
+        const restored = restoreMainTarball(release, join(root, 'restored'), repo);
+        assert.equal(createHash('sha512').update(readFileSync(restored.tarball)).digest('base64'), entry.sha512);
+        const wrong = structuredClone(release); wrong.packages.at(-1).sha512 = hash;
+        assert.throws(() => restoreMainTarball(wrong, join(root, 'wrong'), repo), /differs from original/);
+        writeFileSync(join(repo, 'docs/usage.md'), 'uncommitted change');
+        assert.throws(() => restoreMainTarball(release, join(root, 'dirty'), repo), /Package inputs changed/);
+    } finally { rmSync(root, { recursive: true, force: true }); }
 });
