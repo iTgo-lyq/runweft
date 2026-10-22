@@ -37,7 +37,7 @@ function fixture(t) {
     };
     const file = join(repo, 'docs/project/changes/feature/change.json');
     mkdirSync(dirname(file), { recursive: true });
-    writeFileSync(join(repo, 'docs/project/workflow.json'), JSON.stringify({ schemaVersion: 2, collaborationBranch: 'develop', protectedBranches: ['main'], prototype: { status: 'enabled', packagePath: 'packages/prototype', hosting: { provider: 'custom' } } }));
+    writeFileSync(join(repo, 'docs/project/workflow.json'), JSON.stringify({ schemaVersion: 3, integrationBranch: 'develop', releaseBranch: 'main', prototype: { status: 'enabled', packagePath: 'packages/prototype', hosting: { provider: 'custom' } } }));
     writeFileSync(file, JSON.stringify(state, null, 2) + '\n');
     localGit('add', '.'); localGit('commit', '-m', 'Register Change');
     localGit('remote', 'add', 'origin', remote); localGit('push', 'origin', 'develop');

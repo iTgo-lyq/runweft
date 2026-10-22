@@ -1,9 +1,7 @@
 {
-  "schemaVersion": 2,
-  "collaborationBranch": "develop",
-  "protectedBranches": [
-    "main"
-  ],
+  "schemaVersion": 3,
+  "integrationBranch": "develop",
+  "releaseBranch": "main",
   "openfolioUrl": null,
   "prototype": {
     "status": "enabled",
