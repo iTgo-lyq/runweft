@@ -3,6 +3,7 @@
   "id": "maintenance-cleanup",
   "title": "收敛规格与验证工具并清空临时现场",
   "size": "small",
+  "deliveryOverride": "releaseMerged",
   "status": "completed",
   "stage": "close",
   "branch": "codex/redundancy-cleanup",

@@ -3,6 +3,7 @@
   "id": "hapi-subagent-foundation",
   "title": "HAPI 内置能力验证与调用封装",
   "size": "large",
+  "deliveryOverride": "releaseMerged",
   "status": "completed",
   "stage": "close",
   "branch": "codex/spec-trail-adoption",

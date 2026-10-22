@@ -3,6 +3,7 @@
   "id": "website-hapi-capabilities",
   "title": "官网补充原生执行与 HAPI 能力",
   "size": "medium",
+  "deliveryOverride": "releaseMerged",
   "status": "completed",
   "stage": "close",
   "branch": "codex/spec-trail-adoption",

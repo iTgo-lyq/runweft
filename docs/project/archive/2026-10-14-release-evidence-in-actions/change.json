@@ -3,6 +3,7 @@
   "id": "release-evidence-in-actions",
   "title": "发布证据由 GitHub Actions 留存",
   "size": "small",
+  "deliveryOverride": "releaseMerged",
   "status": "completed",
   "stage": "close",
   "branch": "codex/release-evidence-in-actions",

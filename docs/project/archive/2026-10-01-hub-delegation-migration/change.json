@@ -3,6 +3,7 @@
   "id": "hub-delegation-migration",
   "title": "委派接入与配置切换",
   "size": "large",
+  "deliveryOverride": "releaseMerged",
   "status": "completed",
   "stage": "close",
   "branch": "codex/spec-trail-adoption",

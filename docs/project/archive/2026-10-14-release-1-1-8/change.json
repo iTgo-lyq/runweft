@@ -3,6 +3,7 @@
   "id": "release-1-1-8",
   "title": "准备 Runweft 1.1.8 正式发布",
   "size": "small",
+  "deliveryOverride": "releaseMerged",
   "status": "completed",
   "stage": "close",
   "branch": "codex/release-1-1-8",

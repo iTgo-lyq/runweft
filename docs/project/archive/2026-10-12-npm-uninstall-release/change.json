@@ -3,6 +3,7 @@
   "id": "npm-uninstall-release",
   "title": "1.1.4 完整卸载正式发布",
   "size": "large",
+  "deliveryOverride": "releaseMerged",
   "status": "completed",
   "stage": "close",
   "branch": "codex/spec-trail-adoption",

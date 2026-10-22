@@ -3,6 +3,7 @@
   "id": "release-throughput",
   "title": "缩短正常发布与失败恢复时间",
   "size": "medium",
+  "deliveryOverride": "releaseMerged",
   "status": "completed",
   "stage": "close",
   "branch": "codex/release-throughput",

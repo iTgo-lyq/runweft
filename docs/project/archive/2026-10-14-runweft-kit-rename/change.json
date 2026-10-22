@@ -3,6 +3,7 @@
   "id": "runweft-kit-rename",
   "title": "统一 Runweft Kit 的公开仓库与 Skill 身份",
   "size": "small",
+  "deliveryOverride": "releaseMerged",
   "status": "completed",
   "stage": "close",
   "branch": "codex/runweft-kit-rename",

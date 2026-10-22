@@ -3,6 +3,7 @@
   "id": "redundancy-cleanup",
   "title": "清理冗余规划文档与失效验收辅助",
   "size": "small",
+  "deliveryOverride": "releaseMerged",
   "status": "completed",
   "stage": "close",
   "branch": "codex/redundancy-cleanup",

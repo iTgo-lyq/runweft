@@ -3,6 +3,7 @@
   "id": "npm-publication",
   "title": "npm 首次公开发布",
   "size": "medium",
+  "deliveryOverride": "releaseMerged",
   "status": "completed",
   "stage": "close",
   "branch": "codex/spec-trail-adoption",

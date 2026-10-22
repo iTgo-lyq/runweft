@@ -3,6 +3,7 @@
   "id": "website-content-onboarding",
   "title": "官网内容与上手路径优化",
   "size": "medium",
+  "deliveryOverride": "releaseMerged",
   "status": "completed",
   "stage": "close",
   "branch": "codex/spec-trail-adoption",

@@ -3,6 +3,7 @@
   "id": "npm-patch-release",
   "title": "1.1.1 npm 正式补丁发布",
   "size": "medium",
+  "deliveryOverride": "releaseMerged",
   "status": "completed",
   "stage": "close",
   "branch": "codex/spec-trail-adoption",

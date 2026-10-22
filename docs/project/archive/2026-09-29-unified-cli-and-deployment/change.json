@@ -3,6 +3,7 @@
   "id": "unified-cli-and-deployment",
   "title": "统一 CLI、身份与部署",
   "size": "large",
+  "deliveryOverride": "releaseMerged",
   "status": "completed",
   "stage": "close",
   "branch": "codex/spec-trail-adoption",

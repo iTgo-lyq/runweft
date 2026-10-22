@@ -3,6 +3,7 @@
   "id": "developer-docs",
   "title": "收敛开发必读与打包发行文档",
   "size": "small",
+  "deliveryOverride": "releaseMerged",
   "status": "completed",
   "stage": "close",
   "branch": "codex/redundancy-cleanup",

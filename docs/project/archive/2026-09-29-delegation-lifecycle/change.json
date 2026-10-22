@@ -3,6 +3,7 @@
   "id": "delegation-lifecycle",
   "title": "本地共享目录的完整委派协作",
   "size": "large",
+  "deliveryOverride": "releaseMerged",
   "status": "completed",
   "stage": "close",
   "branch": "codex/spec-trail-adoption",

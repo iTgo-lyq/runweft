@@ -3,6 +3,7 @@
   "id": "account-password-onboarding",
   "title": "账号密码登录与 Agent 主导的首次接入",
   "size": "large",
+  "deliveryOverride": "releaseMerged",
   "status": "completed",
   "stage": "close",
   "branch": "codex/account-password-onboarding",

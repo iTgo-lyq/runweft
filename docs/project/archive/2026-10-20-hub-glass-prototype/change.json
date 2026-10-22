@@ -3,6 +3,7 @@
   "id": "hub-glass-prototype",
   "title": "Hub 前端交互与样式重构",
   "size": "large",
+  "deliveryOverride": "releaseMerged",
   "status": "completed",
   "stage": "close",
   "branch": "codex/hub-glass-prototype",

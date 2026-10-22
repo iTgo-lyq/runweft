@@ -3,6 +3,7 @@
   "id": "hapi-session-and-shutdown",
   "title": "Claude 历史目录与 Runner 退出修复",
   "size": "large",
+  "deliveryOverride": "releaseMerged",
   "status": "completed",
   "stage": "close",
   "branch": "codex/spec-trail-adoption",

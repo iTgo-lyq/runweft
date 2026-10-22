@@ -3,6 +3,7 @@
   "id": "task-artifact-delivery",
   "title": "任务附件与持久交付",
   "size": "large",
+  "deliveryOverride": "releaseMerged",
   "status": "completed",
   "stage": "close",
   "branch": "codex/spec-trail-adoption",

@@ -3,6 +3,7 @@
   "id": "release-validation-efficiency",
   "title": "缩短发行验收等待并保留完整门禁",
   "size": "medium",
+  "deliveryOverride": "releaseMerged",
   "status": "completed",
   "stage": "close",
   "branch": "codex/release-validation-efficiency",

@@ -3,6 +3,7 @@
   "id": "remote-workspace-preparation",
   "title": "远端任务启动前的工作区准备",
   "size": "large",
+  "deliveryOverride": "releaseMerged",
   "status": "completed",
   "stage": "close",
   "branch": "codex/spec-trail-adoption",

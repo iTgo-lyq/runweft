@@ -3,6 +3,7 @@
   "id": "release-1-1-7",
   "title": "1.1.7 正式发布版本准备",
   "size": "small",
+  "deliveryOverride": "releaseMerged",
   "status": "completed",
   "stage": "close",
   "branch": "codex/release-1-1-7",

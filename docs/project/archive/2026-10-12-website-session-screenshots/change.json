@@ -3,6 +3,7 @@
   "id": "website-session-screenshots",
   "title": "官网 HAPI 会话截图",
   "size": "small",
+  "deliveryOverride": "releaseMerged",
   "status": "completed",
   "stage": "close",
   "branch": "codex/spec-trail-adoption",

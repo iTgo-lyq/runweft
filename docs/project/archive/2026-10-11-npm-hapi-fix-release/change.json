@@ -3,6 +3,7 @@
   "id": "npm-hapi-fix-release",
   "title": "HAPI 修复与 macOS 数据库校验正式发布",
   "size": "medium",
+  "deliveryOverride": "releaseMerged",
   "status": "completed",
   "stage": "close",
   "branch": "codex/spec-trail-adoption",

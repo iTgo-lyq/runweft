@@ -3,6 +3,7 @@
   "id": "execution-resource-registry",
   "title": "全局机器与 Runtime 注册",
   "size": "large",
+  "deliveryOverride": "releaseMerged",
   "status": "completed",
   "stage": "close",
   "branch": "codex/spec-trail-adoption",

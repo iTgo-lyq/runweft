@@ -3,6 +3,7 @@
   "id": "release-website-recovery",
   "title": "恢复 1.1.5 官网接续",
   "size": "small",
+  "deliveryOverride": "releaseMerged",
   "status": "completed",
   "stage": "close",
   "branch": "codex/release-website-recovery",

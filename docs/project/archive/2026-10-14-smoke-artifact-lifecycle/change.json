@@ -3,6 +3,7 @@
   "id": "smoke-artifact-lifecycle",
   "title": "清理无用的 .dev-smoke 历史产物",
   "size": "small",
+  "deliveryOverride": "releaseMerged",
   "status": "completed",
   "stage": "close",
   "branch": "codex/smoke-artifact-lifecycle",

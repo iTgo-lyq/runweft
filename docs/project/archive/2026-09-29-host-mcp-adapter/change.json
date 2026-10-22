@@ -3,6 +3,7 @@
   "id": "host-mcp-adapter",
   "title": "Codex 与 Claude Code 的宿主身份及 MCP 适配",
   "size": "large",
+  "deliveryOverride": "releaseMerged",
   "status": "completed",
   "stage": "close",
   "branch": "codex/spec-trail-adoption",

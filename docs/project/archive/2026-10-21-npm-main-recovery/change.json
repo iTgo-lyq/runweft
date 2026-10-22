@@ -3,6 +3,7 @@
   "id": "npm-main-recovery",
   "title": "恢复平台包已发布后的 npm 主包发布",
   "size": "small",
+  "deliveryOverride": "releaseMerged",
   "status": "completed",
   "stage": "close",
   "branch": "codex/npm-main-recovery",

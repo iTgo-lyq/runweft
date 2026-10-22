@@ -3,6 +3,7 @@
   "id": "test-workflow-redesign",
   "title": "重构测试与工程辅助流程",
   "size": "large",
+  "deliveryOverride": "releaseMerged",
   "status": "completed",
   "stage": "close",
   "branch": "codex/test-workflow-redesign",

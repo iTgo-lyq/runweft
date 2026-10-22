@@ -3,6 +3,7 @@
   "id": "hub-resource-ownership",
   "title": "机器与 runtime 的归属和共享",
   "size": "large",
+  "deliveryOverride": "releaseMerged",
   "status": "completed",
   "stage": "close",
   "branch": "codex/spec-trail-adoption",

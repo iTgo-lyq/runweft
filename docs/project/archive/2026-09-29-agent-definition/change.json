@@ -3,6 +3,7 @@
   "id": "agent-definition",
   "title": "轻量 Agent 定义与原生配置继承",
   "size": "large",
+  "deliveryOverride": "releaseMerged",
   "status": "completed",
   "stage": "close",
   "branch": "codex/spec-trail-adoption",

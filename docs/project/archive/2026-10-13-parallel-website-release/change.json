@@ -3,6 +3,7 @@
   "id": "parallel-website-release",
   "title": "官网与 npm 并行发布及部署定向复验",
   "size": "medium",
+  "deliveryOverride": "releaseMerged",
   "status": "completed",
   "stage": "close",
   "branch": "codex/parallel-website-release",

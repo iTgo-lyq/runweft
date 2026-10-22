@@ -3,6 +3,7 @@
   "id": "product-website",
   "title": "产品官网与安装指南",
   "size": "medium",
+  "deliveryOverride": "releaseMerged",
   "status": "completed",
   "stage": "close",
   "branch": "codex/spec-trail-adoption",

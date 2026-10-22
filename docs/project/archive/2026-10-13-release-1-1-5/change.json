@@ -3,6 +3,7 @@
   "id": "release-1-1-5",
   "title": "准备 1.1.5 正式发行候选",
   "size": "small",
+  "deliveryOverride": "releaseMerged",
   "status": "completed",
   "stage": "close",
   "branch": "codex/release-1-1-5",

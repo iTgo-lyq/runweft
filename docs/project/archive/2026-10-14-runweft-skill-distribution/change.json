@@ -3,6 +3,7 @@
   "id": "runweft-skill-distribution",
   "title": "公开分发 Runweft Skill 并自动同步",
   "size": "small",
+  "deliveryOverride": "releaseMerged",
   "status": "completed",
   "stage": "close",
   "branch": "codex/runweft-skill-distribution",

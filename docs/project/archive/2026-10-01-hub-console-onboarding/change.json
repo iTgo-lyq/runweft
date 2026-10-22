@@ -3,6 +3,7 @@
   "id": "hub-console-onboarding",
   "title": "Hub 后台与 Agent 接入 Skill",
   "size": "large",
+  "deliveryOverride": "releaseMerged",
   "status": "completed",
   "stage": "close",
   "branch": "codex/spec-trail-adoption",

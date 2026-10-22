@@ -3,6 +3,7 @@
   "id": "subagent-dashboard",
   "title": "简单的全局 Subagent 看板",
   "size": "medium",
+  "deliveryOverride": "releaseMerged",
   "status": "completed",
   "stage": "close",
   "branch": "codex/spec-trail-adoption",

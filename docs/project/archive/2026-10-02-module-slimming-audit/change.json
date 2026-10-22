@@ -3,6 +3,7 @@
   "id": "module-slimming-audit",
   "title": "Runweft 逐模块瘦身审计",
   "size": "large",
+  "deliveryOverride": "releaseMerged",
   "status": "completed",
   "stage": "close",
   "branch": "codex/spec-trail-adoption",

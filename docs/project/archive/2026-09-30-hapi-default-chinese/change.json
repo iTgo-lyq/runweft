@@ -3,6 +3,7 @@
   "id": "hapi-default-chinese",
   "title": "HAPI 默认简体中文",
   "size": "small",
+  "deliveryOverride": "releaseMerged",
   "status": "completed",
   "stage": "close",
   "branch": "codex/spec-trail-adoption",

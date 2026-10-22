@@ -3,6 +3,7 @@
   "id": "hub-identities-and-spaces",
   "title": "身份 token 与空间",
   "size": "large",
+  "deliveryOverride": "releaseMerged",
   "status": "completed",
   "stage": "close",
   "branch": "codex/spec-trail-adoption",

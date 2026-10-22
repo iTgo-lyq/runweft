@@ -3,6 +3,7 @@
   "id": "hub-repository-agents",
   "title": "仓库关联与中心 Agent 配置",
   "size": "large",
+  "deliveryOverride": "releaseMerged",
   "status": "completed",
   "stage": "close",
   "branch": "codex/spec-trail-adoption",

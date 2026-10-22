@@ -3,6 +3,7 @@
   "id": "test-backbone-slimming",
   "title": "第二轮瘦身：核心测试与可靠验收",
   "size": "large",
+  "deliveryOverride": "releaseMerged",
   "status": "completed",
   "stage": "close",
   "branch": "codex/spec-trail-adoption",

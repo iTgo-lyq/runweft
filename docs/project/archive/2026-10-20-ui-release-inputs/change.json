@@ -3,6 +3,7 @@
   "id": "ui-release-inputs",
   "title": "冻结前端发布输入并准备新版发行",
   "size": "small",
+  "deliveryOverride": "releaseMerged",
   "status": "completed",
   "stage": "close",
   "branch": "codex/ui-release-inputs",

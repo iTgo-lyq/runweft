@@ -3,6 +3,7 @@
   "id": "hub-spaces-and-agent-configuration",
   "title": "Hub 空间、身份与集中 Agent 配置",
   "size": "large",
+  "deliveryOverride": "releaseMerged",
   "status": "completed",
   "stage": "close",
   "branch": "codex/spec-trail-adoption",

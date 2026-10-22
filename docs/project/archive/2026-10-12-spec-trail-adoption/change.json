@@ -3,6 +3,7 @@
   "id": "spec-trail-adoption",
   "title": "SpecTrail 工作流、历史 Change 与交互原型接入",
   "size": "large",
+  "deliveryOverride": "releaseMerged",
   "status": "completed",
   "stage": "close",
   "branch": "codex/spec-trail-adoption",

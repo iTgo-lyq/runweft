@@ -3,6 +3,7 @@
   "id": "npm-trusted-publishing",
   "title": "npm 可信发布",
   "size": "medium",
+  "deliveryOverride": "releaseMerged",
   "status": "completed",
   "stage": "close",
   "branch": "codex/spec-trail-adoption",

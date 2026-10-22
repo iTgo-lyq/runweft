@@ -3,6 +3,7 @@
   "id": "integrated-release",
   "title": "完整版本集成与发布验收",
   "size": "large",
+  "deliveryOverride": "releaseMerged",
   "status": "completed",
   "stage": "close",
   "branch": "codex/spec-trail-adoption",

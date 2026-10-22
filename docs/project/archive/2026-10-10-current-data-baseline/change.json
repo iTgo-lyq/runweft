@@ -3,6 +3,7 @@
   "id": "current-data-baseline",
   "title": "当前数据基线与本机测试环境清理",
   "size": "medium",
+  "deliveryOverride": "releaseMerged",
   "status": "completed",
   "stage": "close",
   "branch": "codex/spec-trail-adoption",

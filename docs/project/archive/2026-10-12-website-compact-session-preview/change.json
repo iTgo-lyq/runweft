@@ -3,6 +3,7 @@
   "id": "website-compact-session-preview",
   "title": "官网截图融入会话介绍",
   "size": "small",
+  "deliveryOverride": "releaseMerged",
   "status": "completed",
   "stage": "close",
   "branch": "codex/spec-trail-adoption",

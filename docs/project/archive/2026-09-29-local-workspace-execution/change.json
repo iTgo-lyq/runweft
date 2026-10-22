@@ -3,6 +3,7 @@
   "id": "local-workspace-execution",
   "title": "独立 Git 工作区与本地 worktree 协作",
   "size": "large",
+  "deliveryOverride": "releaseMerged",
   "status": "completed",
   "stage": "close",
   "branch": "codex/spec-trail-adoption",

@@ -3,6 +3,7 @@
   "id": "remote-result-delivery",
   "title": "远端代码成果回收",
   "size": "large",
+  "deliveryOverride": "releaseMerged",
   "status": "completed",
   "stage": "close",
   "branch": "codex/spec-trail-adoption",

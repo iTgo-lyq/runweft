@@ -3,6 +3,7 @@
   "id": "prerelease-uninstall-fixture",
   "title": "隔离预发行卸载测试的原始程序夹具",
   "size": "small",
+  "deliveryOverride": "releaseMerged",
   "status": "completed",
   "stage": "close",
   "branch": "codex/prerelease-uninstall-fixture",

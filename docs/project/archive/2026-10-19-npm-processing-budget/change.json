@@ -3,6 +3,7 @@
   "id": "npm-processing-budget",
   "title": "延长 npm 异步处理确认预算",
   "size": "small",
+  "deliveryOverride": "releaseMerged",
   "status": "completed",
   "stage": "close",
   "branch": "codex/npm-processing-budget",

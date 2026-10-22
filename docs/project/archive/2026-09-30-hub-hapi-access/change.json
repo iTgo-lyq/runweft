@@ -3,6 +3,7 @@
   "id": "hub-hapi-access",
   "title": "HAPI 通道的身份与对象授权",
   "size": "large",
+  "deliveryOverride": "releaseMerged",
   "status": "completed",
   "stage": "close",
   "branch": "codex/spec-trail-adoption",
