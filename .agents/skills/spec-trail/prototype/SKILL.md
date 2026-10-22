@@ -84,7 +84,7 @@ node .agents/skills/spec-trail/prototype/scripts/publish.mjs register --request 
 
 OpenFolio 上传失败可原请求重试；上传成功但本地登记失败时，使用保存的 request/result 重试 register。成功后提交引用；临时协议文件放仓库外，普通 dist 不提交。
 
-引用提交推送后，按[分享链接](../references/sharing.md)匿名验证并主动提供定位此原型的 Change 阅读链接。
+引用提交推送后，按[分享链接](../references/sharing.md)直接提供定位此原型的 Change 阅读链接。
 
 ## 嵌入与验证
 
@@ -97,7 +97,7 @@ node .agents/skills/spec-trail/prototype/scripts/validate.mjs
 node .agents/skills/spec-trail/prototype/scripts/validate.mjs --browser
 ```
 
-浏览器检查使用宿主安装的 Playwright；可用 --playwright 指向已有模块。静态检查不代替浏览器检查，初始加载也不代替关键交互及各声明视口验证。宿主可按视口提供截图引用，缺失时总览使用占位；不要求 OpenFolio 服务联网截图。
+浏览器检查使用宿主安装的 Playwright；可用 --playwright 指向已有模块。静态检查不代替浏览器检查，初始加载也不代替关键交互及各声明视口验证。OpenFolio 自动生成托管原型截图，项目提供的截图优先覆盖对应视口。
 
 ## Git 兜底
 
